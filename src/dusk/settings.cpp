@@ -7,6 +7,7 @@ UserSettings g_userSettings = {
     .video = {
         .enableFullscreen {"video.enableFullscreen", false},
         .enableVsync {"video.enableVsync", true},
+        .lockAspectRatio {"video.lockAspectRatio", false},
     },
 
     .audio = {
@@ -31,6 +32,7 @@ UserSettings g_userSettings = {
         .fastClimbing {"game.fastClimbing", false},
         .noMissClimbing {"game.noMissClimbing", false},
         .fastTears {"game.fastTears", false},
+        .instantSaves {"game.instantSaves", false},
 
         // Preferences
         .enableMirrorMode {"game.enableMirrorMode", false},
@@ -65,6 +67,7 @@ void registerSettings() {
     // Video
     Register(g_userSettings.video.enableFullscreen);
     Register(g_userSettings.video.enableVsync);
+    Register(g_userSettings.video.lockAspectRatio);
 
     // Audio
     Register(g_userSettings.audio.masterVolume);
@@ -85,6 +88,7 @@ void registerSettings() {
     Register(g_userSettings.game.instantDeath);
     Register(g_userSettings.game.fastClimbing);
     Register(g_userSettings.game.fastTears);
+    Register(g_userSettings.game.instantSaves);
     Register(g_userSettings.game.enableMirrorMode);
     Register(g_userSettings.game.invertCameraXAxis);
     Register(g_userSettings.game.enableBloom);
