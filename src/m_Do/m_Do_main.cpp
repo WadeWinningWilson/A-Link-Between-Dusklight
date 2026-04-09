@@ -63,6 +63,7 @@
 
 #if RANDOMIZER_ONLY
 #include "dusk/randomizer/randomizer.hpp"
+#include "dusk/randomizer/test/test.hpp"
 #endif
 
 // --- GLOBALS ---
@@ -288,7 +289,12 @@ static const char* CalculateConfigPath() {
 int game_main(int argc, char* argv[]) {
 
     #if RANDOMIZER_ONLY
-    randomizerMain();
+    #ifdef LOGIC_TESTS
+    randomizer::test::test::RunTests();
+    #else
+    randomizer::Randomizer rando{};
+    rando.Generate();
+    #endif
     exit(0);
     #endif
         

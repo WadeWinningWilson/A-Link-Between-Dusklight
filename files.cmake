@@ -1389,8 +1389,6 @@ set(DUSK_FILES
         src/dusk/randomizer/logic/flatten/flatten.hpp
         src/dusk/randomizer/logic/flatten/simplify_algebraic.cpp
         src/dusk/randomizer/logic/flatten/simplify_algebraic.hpp
-        src/dusk/randomizer/logic/generate.cpp
-        src/dusk/randomizer/logic/generate.hpp
         src/dusk/randomizer/logic/item.cpp
         src/dusk/randomizer/logic/item.hpp
         src/dusk/randomizer/logic/item_pool.cpp
