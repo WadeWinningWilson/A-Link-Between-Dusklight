@@ -1535,7 +1535,12 @@ void dFile_select_c::nameInput2() {
     case 2:
         dComIfGs_setHorseName(mpName->getInputStrPtr());
         mIsSelectEnd = true;
-        dComIfGs_setupRandomizerSave();
+#if TARGET_PC
+        // Create a randomizer save if Z is being held
+        if (mDoCPd_c::getHoldZ(PAD_1)) {
+            dComIfGs_setupRandomizerSave();
+        }
+#endif
         mDataSelProc = DATASELPROC_NEXT_MODE_WAIT;
     }
 }
