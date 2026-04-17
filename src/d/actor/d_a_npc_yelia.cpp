@@ -9,6 +9,10 @@
 #include "d/actor/d_a_demo_item.h"
 #include <cstring>
 
+#if TARGET_PC
+#include "dusk/randomizer/game/tools.h"
+#endif
+
 static daNpc_GetParam1 l_bmdData[3] = {
     {3, 1},
     {3, 4},
@@ -1124,6 +1128,11 @@ BOOL daNpc_Yelia_c::cutTakeWoodStatue(int i_staffId) {
             if (prm == 99) {
                 daNpcT_onEvtBit(0x11f);
                 daNpcT_onEvtBit(0x17a);
+                #if TARGET_PC
+                if (randomizer_IsActive()) {
+                    offWarashibeItem(dItemNo_Randomizer_WOOD_STATUE_e); // Unset the statue item so it doesn't appear in the item wheel.
+                } else
+                #endif
                 dComIfGs_setWarashibeItem(0xff);
                 daNpcT_offTmpBit(0xb);
                 daNpcT_offTmpBit(0xc);
