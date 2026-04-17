@@ -1034,8 +1034,9 @@ bool daNpcBouS_c::wait(void* param_1) {
                     mTurnMode = 0;
                 }
             }
-
-            if (!checkItemGet(dItemNo_HVY_BOOTS_e, 1) && dComIfGs_isTbox(2)) {
+            
+            // In randomizer, we don't want bo to try and talk to us once the chest has been opened.
+            if (IF_DUSK(!randomizer_IsActive() &&) !checkItemGet(dItemNo_HVY_BOOTS_e, 1) && dComIfGs_isTbox(2)) {
                 mForcibleTalk = 1;
             }
 
