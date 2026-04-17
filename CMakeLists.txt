@@ -299,7 +299,7 @@ include(src/dusk/randomizer/randomizer.cmake)
 
 # Edit & Continue
 if (MSVC)
-    if (CMAKE_MSVC_DEBUG_INFORMATION_FORMAT STREQUAL "" AND CMAKE_BUILD_TYPE STREQUAL Debug)
+    if ("${CMAKE_MSVC_DEBUG_INFORMATION_FORMAT}" STREQUAL "" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
         set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "EditAndContinue")
     endif ()
     if (CMAKE_MSVC_DEBUG_INFORMATION_FORMAT STREQUAL "EditAndContinue")

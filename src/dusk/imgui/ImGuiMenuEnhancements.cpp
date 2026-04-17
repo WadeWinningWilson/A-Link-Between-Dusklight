@@ -148,10 +148,39 @@ namespace dusk {
                                       "Slingshot, Gale Boomerang, Hero's Bow, Clawshot(s), Ball and Chain, and Dominion Rod.");
                 }
 
-                config::ImGuiSliderFloat("Gyro Pitch Sensitivity", getSettings().game.gyroAimSensitivityY, 0.25f, 4.0f, "%.2f");
-                config::ImGuiSliderFloat("Gyro Yaw Sensitivity", getSettings().game.gyroAimSensitivityX, 0.25f, 4.0f, "%.2f");
-                config::ImGuiCheckbox("Invert Gyro Pitch", getSettings().game.gyroAimInvertPitch);
-                config::ImGuiCheckbox("Invert Gyro Yaw", getSettings().game.gyroAimInvertYaw);
+                config::ImGuiCheckbox("Gyro Rollgoal", getSettings().game.enableGyroRollgoal);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Enables the gyroscope on supported controllers to\n"
+                                      "tilt the Rollgoal table in Hena's Cabin.");
+                }
+
+                if (getSettings().game.enableGyroAim || getSettings().game.enableGyroRollgoal) {
+                    config::ImGuiSliderFloat("Gyro Pitch Sensitivity", getSettings().game.gyroSensitivityY, 0.25f, 4.0f, "%.2f");
+                    config::ImGuiSliderFloat("Gyro Yaw Sensitivity", getSettings().game.gyroSensitivityX, 0.25f, 4.0f, "%.2f");
+
+                    if (getSettings().game.enableGyroRollgoal) {
+                        config::ImGuiSliderFloat("Rollgoal Sensitivity", getSettings().game.gyroSensitivityRollgoal, 0.25f, 4.0f, "%.2f");
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("Additional multiplier for scaling how strongly\n"
+                                              "the gyroscope affects the Rollgoal table.");
+                        }
+                    }
+
+                    config::ImGuiSliderFloat("Gyro Deadband", getSettings().game.gyroDeadband, 0.0f, 0.5f, "%.3f");
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("Angular rates below this magnitude are treated as zero,\n"
+                                          "reducing drift and jitter when the controller is still.");
+                    }
+
+                    config::ImGuiSliderFloat("Gyro Smoothing", getSettings().game.gyroSmoothing, 0.0f, 1.0f, "%.2f");
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("Low values track raw gyro input more closely,\n"
+                                          "while higher values smooth out input over time.");
+                    }
+
+                    config::ImGuiCheckbox("Invert Gyro Pitch", getSettings().game.gyroInvertPitch);
+                    config::ImGuiCheckbox("Invert Gyro Yaw", getSettings().game.gyroInvertYaw);
+                }
 
                 ImGui::SeparatorText("Tools");
 
