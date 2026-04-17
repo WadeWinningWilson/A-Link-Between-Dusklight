@@ -356,15 +356,25 @@ cPhs_Step daNpcShad_c::Create() {
         mMode = 0;
     } else {
         if (strcmp(dComIfGp_getStartStageName(), "R_SP209") == 0) {
+#if TARGET_PC
+            if ((daNpcF_chkEvtBit(0x311) && !randomizer_IsActive()) ||
+                (daNpcF_chkEvtBit(0x333) && randomizer_IsActive())) { // Check custom flag before spawning
+#else
             if (daNpcF_chkEvtBit(0x311)) {
+#endif
                 return cPhs_ERROR_e;
             }
 
+#if TARGET_PC
+            if (!randomizer_IsActive() &&
+                (!daNpcF_chkEvtBit(0x10B) || (daNpcF_chkEvtBit(0x12E) && !daNpcF_chkEvtBit(0x31C)))) {
+#else
             if (!daNpcF_chkEvtBit(0x10B) || (daNpcF_chkEvtBit(0x12E) && !daNpcF_chkEvtBit(0x31C))) {
+#endif
                 return cPhs_ERROR_e;
             }
 
-            if (daNpcF_chkEvtBit(0x12F)) {
+            if (daNpcF_chkEvtBit(0x12F) IF_DUSK(&& !randomizer_IsActive())) {
                 if (!daNpcF_chkEvtBit(0x312)) {
                     if (getPathPoint(getPathID(), 1, &home.pos)) {
                         current.pos = home.pos;
@@ -1336,7 +1346,8 @@ bool daNpcShad_c::wait_type1(void* param_1) {
                         }
 
                         u8 sVar1 = dComIfGp_event_getPreItemNo();
-                        if (sVar1 == 0xE9) {
+                        // In randomizer we want Shad to give us the dominion rod check no matter which skybook we have.
+                        if (sVar1 == 0xE9 IF_DUSK(|| (randomizer_IsActive() && sVar1 >= 0xE9))) {
                             field_0xe14 = 64;
                             daNpcF_offTmpBit(0xB);
                             daNpcF_offTmpBit(0xC);
@@ -1344,7 +1355,7 @@ bool daNpcShad_c::wait_type1(void* param_1) {
                             daNpcF_offTmpBit(0xE);
                             mOrderEvtNo = 3;
                             changeEvent(l_evtArcs[mOrderEvtNo], l_evtNames[mOrderEvtNo], 1, 0xFFFF);
-                        } else if (sVar1 == 0xEB) {
+                        } else if (sVar1 == 0xEB IF_DUSK(&& !randomizer_IsActive())) {
                             field_0xe14 = 65;
                             daNpcF_offTmpBit(0xB);
                             daNpcF_offTmpBit(0xC);
