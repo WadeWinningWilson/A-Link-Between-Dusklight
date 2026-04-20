@@ -215,28 +215,36 @@ FetchContent_Declare(cxxopts
     URL_HASH SHA256=3bfc70542c521d4b55a46429d808178916a579b28d048bd8c727ee76c39e2072
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
+
 message(STATUS "dusk: Fetching nlohmann/json")
 FetchContent_Declare(json
     URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
     URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
+
 message(STATUS "dusk: Fetching miniz")
 FetchContent_Declare(miniz
     URL https://github.com/richgel999/miniz/releases/download/3.0.2/miniz-3.0.2.zip
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
+
 message(STATUS "dusk: Fetching funchook")
+# cmake/patch_funchook.cmake patches funchook's cmake/capstone.cmake.in to inject a
+# PATCH_COMMAND into capstone's inner ExternalProject. That PATCH_COMMAND runs
+# cmake/fix_capstone_policy.cmake after capstone is cloned, which removes the
+# cmake_policy(SET CMP0048 OLD) line that CMake >= 3.27 rejects.
+# This is incredibly scuffed and we should probably think of a better way to do this
+set(CAPSTONE_FIX_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/cmake/fix_capstone_policy.cmake")
 FetchContent_Declare(funchook
     GIT_REPOSITORY https://github.com/kubo/funchook.git
     GIT_TAG v1.1.3
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
+    PATCH_COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=<SOURCE_DIR> -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/patch_funchook.cmake
 )
 set(FUNCHOOK_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(FUNCHOOK_BUILD_SHARED OFF CACHE BOOL "" FORCE)
-# funchook bundles capstone which uses cmake_minimum_required < 3.5
-set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 FetchContent_MakeAvailable(cxxopts json miniz funchook)
 
 if (DUSK_ENABLE_SENTRY_NATIVE)
