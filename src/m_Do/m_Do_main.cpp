@@ -71,6 +71,7 @@
 #include "dusk/config.hpp"
 #include "dusk/settings.h"
 #include "dusk/imgui/ImGuiConsole.hpp"
+#include "dusk/discord_presence.hpp"
 #include "tracy/Tracy.hpp"
 #include "f_pc/f_pc_draw.h"
 
@@ -292,6 +293,11 @@ void main01(void) {
         aurora_end_frame();
 
         FrameMark;
+
+#ifdef DUSK_DISCORD_RPC
+        dusk::discord::RunCallbacks();
+        dusk::discord::UpdatePresence();
+#endif
     } while (dusk::IsRunning);
 
     exit:;
@@ -536,6 +542,10 @@ int game_main(int argc, char* argv[]) {
 
     auroraInfo = aurora_initialize(argc, argv, &config);
 
+#ifdef DUSK_DISCORD_RPC
+    dusk::discord::Initialize();
+#endif
+
     VISetWindowTitle(
         fmt::format("Dusk {} [{}]", DUSK_WC_DESCRIBE, dusk::backend_name(auroraInfo.backend))
         .c_str());
@@ -569,6 +579,9 @@ int game_main(int argc, char* argv[]) {
         // pre game launch ui main loop
         if (!launchUILoop()) {
             dusk::ShutdownCrashReporting();
+#ifdef DUSK_DISCORD_RPC
+            dusk::discord::Shutdown();
+#endif
             aurora_shutdown();
             return 0;
         }
@@ -615,6 +628,9 @@ int game_main(int argc, char* argv[]) {
     // Notifies all CVs and causes threads to exit
     OSResetSystem(OS_RESET_SHUTDOWN, 0, 0);
 
+#ifdef DUSK_DISCORD_RPC
+    dusk::discord::Shutdown();
+#endif
     aurora_shutdown();
 
     return 0;

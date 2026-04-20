@@ -1391,4 +1391,5 @@ set(DUSK_FILES
         src/dusk/mod_loader.cpp
         src/dusk/imgui/ImGuiMenuMods.cpp
         src/dusk/gx_helper.cpp
+        src/dusk/discord_presence.cpp
 )
