@@ -5,16 +5,21 @@
 
 #include "d/dolzel.h" // IWYU pragma: keep
 
-#include "d/actor/d_a_obj_item.h"
 #include "SSystem/SComponent/c_math.h"
-#include "d/d_a_itembase_static.h"
+#include "d/actor/d_a_obj_item.h"
 #include "d/actor/d_a_player.h"
+#include "d/d_a_itembase_static.h"
 #include "d/d_com_inf_game.h"
 #include "d/d_item.h"
 #include "d/d_item_data.h"
 #include "d/d_s_play.h"
+#include "dusk/randomizer/game/verify_item_functions.h"
 #include "f_op/f_op_camera_mng.h"
 #include "m_Do/m_Do_mtx.h"
+
+#if TARGET_PC
+#include "dusk/randomizer/game/tools.h"
+#endif
 
 static f32 Reflect(cXyz* i_vec, cBgS_PolyInfo const& i_polyinfo, f32 i_scale) {
     cM3dGPla plane;
@@ -228,11 +233,7 @@ void daItem_c::CreateInit() {
     initBaseMtx();
     animPlay(1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 
-#if TARGET_PC
-    if (m_itemNo == dItemNo_BOOMERANG_e && !randomizer_IsActive()) {
-#else
-    if (m_itemNo == dItemNo_BOOMERANG_e) {
-#endif
+    if (m_itemNo == dItemNo_BOOMERANG_e IF_DUSK(&& !randomizer_IsActive())) {
         itemGetNextExecute();
     } else if ((m_itemNo == dItemNo_ORANGE_RUPEE_e || m_itemNo == dItemNo_SILVER_RUPEE_e) &&
                mSparkleEmtr.getEmitter() == NULL)
@@ -292,6 +293,23 @@ int daItem_c::_daItem_create() {
 
         field_0x95d = true;
     }
+
+#if TARGET_PC
+    if (randomizer_IsActive()) {
+        u32 params = fopAcM_GetParam(this);
+        u8 flag = daItem_prm::getItemBitNo(this);
+        u8 stageIdx = getStageID();
+        const auto& freestandingOverrides = randomizer_GetContext().mFreestandingItemOverrides;
+        // If we found an override for this freestanding item
+        if (freestandingOverrides.contains(stageIdx) && freestandingOverrides.at(stageIdx).contains(flag)) {
+            // Clear the itemId and set it to out new itemId
+            params &= 0xFFFFFF00;
+            u8 newItemId = freestandingOverrides.at(stageIdx).at(flag);
+            params |= verifyProgressiveItem(newItemId);
+            fopAcM_SetParam(this, params);
+        }
+    }
+#endif
 
     m_itemNo = daItem_prm::getItemNo(this);
     BOOL flag = dItem_data::chkFlag(m_itemNo, 2);
@@ -835,49 +853,90 @@ void daItem_c::itemGetNextExecute() {
         setFlag(FLAG_INIT_GET_ITEM_e);
         BOOL haveItem = false;
 
-        switch (m_itemNo) {
-        case dItemNo_HEART_e:
-        case dItemNo_GREEN_RUPEE_e:
-        case dItemNo_ARROW_10_e:
-        case dItemNo_ARROW_20_e:
-        case dItemNo_ARROW_30_e:
-        case dItemNo_ARROW_1_e:
-            procInitSimpleGetDemo();
-            itemGet();
-            break;
-        case dItemNo_BLUE_RUPEE_e:
-        case dItemNo_YELLOW_RUPEE_e:
-        case dItemNo_RED_RUPEE_e:
-        case dItemNo_PURPLE_RUPEE_e:
-        case dItemNo_ORANGE_RUPEE_e:
-        case dItemNo_SILVER_RUPEE_e:
-        case dItemNo_PACHINKO_SHOT_e:
-            if (daPy_getPlayerActorClass()->checkCanoeRide() ||
-                daPy_getPlayerActorClass()->checkHorseRide())
-            {
-                if (checkItemGet(m_itemNo, 1)) {
-                    haveItem = true;
-                }
-                procInitSimpleGetDemo();
-                itemGet();
+#if TARGET_PC
+        // Randomizer specific stuff for choosing if to play a demo or not
+        // Just copying the whole switch statement here and modifying it
+        // is better than littering the original switch statement with #if TARGET_PC
+        if (randomizer_IsActive()) {
+            switch (m_itemNo) {
+            case dItemNo_BLUE_RUPEE_e:
+            case dItemNo_YELLOW_RUPEE_e:
+            case dItemNo_RED_RUPEE_e:
+            case dItemNo_PURPLE_RUPEE_e:
+            case dItemNo_ORANGE_RUPEE_e:
+            case dItemNo_SILVER_RUPEE_e:
+            case dItemNo_PACHINKO_SHOT_e:
+                if (daPy_getPlayerActorClass()->checkCanoeRide() ||
+                    daPy_getPlayerActorClass()->checkHorseRide())
+                {
+                    if (checkItemGet(m_itemNo, 1)) {
+                        haveItem = true;
+                    }
+                    procInitSimpleGetDemo();
+                    itemGet();
 
-                if (!haveItem) {
-                    dComIfGs_offItemFirstBit(m_itemNo);
+                    if (!haveItem) {
+                        dComIfGs_offItemFirstBit(m_itemNo);
+                    }
+                } else if (!checkItemGet(m_itemNo, 1)) {
+                    procInitGetDemoEvent();
+                } else {
+                    procInitSimpleGetDemo();
+                    itemGet();
                 }
-            } else if (!checkItemGet(m_itemNo, 1)) {
+                break;
+            default:
                 procInitGetDemoEvent();
-            } else {
+                break;
+            }
+        } else {
+#endif
+            switch (m_itemNo) {
+            case dItemNo_HEART_e:
+            case dItemNo_GREEN_RUPEE_e:
+            case dItemNo_ARROW_10_e:
+            case dItemNo_ARROW_20_e:
+            case dItemNo_ARROW_30_e:
+            case dItemNo_ARROW_1_e:
                 procInitSimpleGetDemo();
                 itemGet();
+                break;
+            case dItemNo_BLUE_RUPEE_e:
+            case dItemNo_YELLOW_RUPEE_e:
+            case dItemNo_RED_RUPEE_e:
+            case dItemNo_PURPLE_RUPEE_e:
+            case dItemNo_ORANGE_RUPEE_e:
+            case dItemNo_SILVER_RUPEE_e:
+            case dItemNo_PACHINKO_SHOT_e:
+                if (daPy_getPlayerActorClass()->checkCanoeRide() ||
+                    daPy_getPlayerActorClass()->checkHorseRide())
+                {
+                    if (checkItemGet(m_itemNo, 1)) {
+                        haveItem = true;
+                    }
+                    procInitSimpleGetDemo();
+                    itemGet();
+
+                    if (!haveItem) {
+                        dComIfGs_offItemFirstBit(m_itemNo);
+                    }
+                } else if (!checkItemGet(m_itemNo, 1)) {
+                    procInitGetDemoEvent();
+                } else {
+                    procInitSimpleGetDemo();
+                    itemGet();
+                }
+                break;
+            case dItemNo_BOOMERANG_e:
+                procInitGetDemoEvent();
+                break;
+            default:
+                // "[daItem_c] Get process not defined[%d]\n"
+                OS_REPORT_ERROR("[daItem_c]ゲット処理が定義されていません[%d]\n", m_itemNo);
             }
-            break;
-        case dItemNo_BOOMERANG_e:
-            procInitGetDemoEvent();
-            break;
-        default:
-            // "[daItem_c] Get process not defined[%d]\n"
-            OS_REPORT_ERROR("[daItem_c]ゲット処理が定義されていません[%d]\n", m_itemNo);
+#if TARGET_PC
         }
+#endif
 
         fopAcM_onItem(this, mItemBitNo);
         mCcCyl.SetTgType(0);

@@ -12,6 +12,8 @@
 #include <cmath>
 #include <cstring>
 
+#include "dusk/randomizer/game/verify_item_functions.h"
+
 static const f32 l_cull_size_box[6] = { -150.0f, -10.0f, -150.0f, 150.0f, 300.0f, 100.0f };
 
 static const cM3dGCylS l_cyl_info[3] = {
@@ -1791,7 +1793,8 @@ cPhs_Step daTbox_c::create1st() {
             home.angle.z &= ~0xFF00;
             auto stage = dComIfGp_getStartStageName();
             auto tboxId = static_cast<u8>(getTboxNo());
-            home.angle.z |= randomizer_GetContext().mTreasureChestOverrides[stage][tboxId] << 8;
+            u8 itemId = randomizer_GetContext().mTreasureChestOverrides[stage][tboxId];
+            home.angle.z |= verifyProgressiveItem(itemId) << 8;
         }
 #endif
         field_0x982 = home.angle.z;
