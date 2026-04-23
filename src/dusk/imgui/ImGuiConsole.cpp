@@ -329,7 +329,6 @@ namespace dusk {
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
         if (showMenu && ImGui::BeginMainMenuBar()) {
             m_menuGame.draw();
-            m_menuEnhancements.draw();
             m_menuMods.draw();
             m_menuTools.draw();
 
