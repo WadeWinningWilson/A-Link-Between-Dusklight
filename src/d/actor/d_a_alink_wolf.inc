@@ -300,6 +300,7 @@ void daAlink_c::changeWolf() {
     mAtSph.SetR(40.0f);
 
     mpKanteraModel = NULL;
+    mpGhostLanternModel = NULL;
     mpLinkHatModel = NULL;
     mpLinkFaceModel = NULL;
     mpLinkHandModel = NULL;
@@ -403,14 +404,21 @@ void daAlink_c::changeLink(int param_0) {
     }
 
     mpKanteraModel = initModelEnv(static_cast<J3DModelData*>(dComIfG_getObjectRes(mArcName, "al_kantera.bmd")), 0);
+    mpGhostLanternModel = initModelEnv(static_cast<J3DModelData*>(dComIfG_getObjectRes(mArcName, "al_bootsH.bmd")), 0);
 
     modelData = static_cast<J3DModelData*>(dComIfG_getObjectRes(mArcName, "ef_ktGlow.bmd"));
     mpKanteraGlowModel = initModel(modelData, 0x200);
+    mpGhostLanternGlowModel = initModel(modelData, 0x200);
 
     mpKanteraGlowBtk = static_cast<J3DAnmTextureSRTKey*>(dComIfG_getObjectRes(mArcName, "ef_ktGlow.btk"));
     mpKanteraGlowBtk->setFrame(0.0f);
     mpKanteraGlowBtk->searchUpdateMaterialID(modelData);
     modelData->entryTexMtxAnimator(mpKanteraGlowBtk);
+
+    mpGhostLanternGlowBtk = static_cast<J3DAnmTextureSRTKey*>(dComIfG_getObjectRes(mArcName, "ef_ktGlow.btk"));
+    mpGhostLanternGlowBtk->setFrame(0.0f);
+    mpGhostLanternGlowBtk->searchUpdateMaterialID(modelData);
+    modelData->entryTexMtxAnimator(mpGhostLanternGlowBtk);
 
     mWoodSwordModel = initModel(static_cast<J3DModelData*>(dComIfG_getObjectRes(mArcName, "al_SWB.bmd")), 0);
 
@@ -504,6 +512,10 @@ void daAlink_c::changeLink(int param_0) {
 
     mpKanteraModel->setUserArea((uintptr_t)this);
     mpKanteraModel->getModelData()->getJointNodePointer(1)->setCallBack(daAlink_kandelaarModelCallBack);
+
+    mpGhostLanternModel->setUserArea((uintptr_t)this);
+    mpGhostLanternModel->getModelData()->getJointNodePointer(1)->setCallBack(daAlink_ghostLanternModelCallBack);
+
     mZ2Link.setLinkState(var_r27);
 
 #if VERSION != VERSION_SHIELD_DEBUG

@@ -6088,6 +6088,20 @@ void daAlink_c::setItemMatrix(int param_0) {
             modelCalc(mpKanteraGlowModel);
         }
 
+        if (mEquipItem == dItemNo_LENS_OF_TRUTH_e) {
+            simpleAnmPlay(mpGhostLanternGlowBtk);
+
+            mDoMtx_stack_c::copy(mpLinkModel->getAnmMtx(mLeftItemJntNo));
+            mDoMtx_stack_c::transM(-2.0f, -0.1f, -0.7f);
+            mDoMtx_stack_c::XYZrotM(cM_deg2s(100.0f), cM_deg2s(9.3f), cM_deg2s(183.0f));
+            mpGhostLanternModel->setBaseTRMtx(mDoMtx_stack_c::get());
+
+            modelCalc(mpGhostLanternModel);
+            mDoMtx_stack_c::transS(mGhostLanternFlamePos);
+            mpGhostLanternGlowModel->setBaseTRMtx(mDoMtx_stack_c::get());
+            modelCalc(mpGhostLanternGlowModel);
+        }
+
         setSwordPos();
         simpleAnmPlay(m_mSwordBtk);
         simpleAnmPlay(m_mSwordBrk);
@@ -6908,7 +6922,7 @@ const daAlink_BckData* daAlink_c::getMainBckData(daAlink_c::daAlink_ANM i_anmID)
         {dRes_ID_ALANM_BCK_WAITHS_e, dRes_ID_ALANM_BCK_WAITHK_e},
     };
 
-    if (mEquipItem == dItemNo_KANTERA_e) {
+    if (mEquipItem == dItemNo_KANTERA_e || mEquipItem == dItemNo_LENS_OF_TRUTH_e) {
         if (i_anmID == ANM_WAIT) {
             return &kandelaarAnm[0];
         }
@@ -14584,8 +14598,6 @@ int daAlink_c::checkNewItemChange(u8 i_selItemIdx) {
         )
     {
         return ITEM_PROC_NONE;
-    } else if (sel_item == dItemNo_LENS_OF_TRUTH_e) {
-        return ITEM_PROC_LENS_OF_TRUTH;
     } else if (sel_item == dItemNo_HVY_BOOTS_e
                 || checkDungeonWarpItem(sel_item)
                 || checkTradeItem(sel_item)
@@ -19723,6 +19735,12 @@ int daAlink_c::draw() {
             basicModelDraw(mpKanteraModel);
             preKandelaarDraw();
             basicModelDraw(mpKanteraGlowModel);
+        }
+
+        if (mEquipItem == dItemNo_LENS_OF_TRUTH_e) {
+            modelDraw(mpGhostLanternModel, isPlayerNoDraw);
+            preGhostLanternDraw();
+            modelDraw(mpGhostLanternGlowModel, isPlayerNoDraw);
         }
 
         if (checkEquipHeavyBoots()) {

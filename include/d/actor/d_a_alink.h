@@ -2657,8 +2657,11 @@ public:
     void checkWaterInKandelaar(f32);
     void offKandelaarModel();
     int kandelaarModelCallBack();
+    int ghostLanternModelCallBack();
     BOOL checkKandelaarEquipAnime() const;
     void preKandelaarDraw();
+    void preGhostLanternDraw();
+    static void* srchPoe(void*, void*);
     void setKandelaarModel();
     void resetOilBottleModel();
     void commonKandelaarPourInit();
@@ -3978,6 +3981,9 @@ public:
     /* 0x006FC */ J3DModel* mpKanteraModel;
     /* 0x00700 */ J3DModel* mpKanteraGlowModel;
     /* 0x00704 */ J3DAnmTextureSRTKey* mpKanteraGlowBtk;
+    /* 0x006FC */ J3DModel* mpGhostLanternModel;
+    /* 0x00700 */ J3DModel* mpGhostLanternGlowModel;
+    /* 0x00704 */ J3DAnmTextureSRTKey* mpGhostLanternGlowBtk;
     /* 0x00708 */ J3DModel* mHeldItemModel;
     /* 0x0070C */ J3DModel* mpHookTipModel;  // related to held item
     /* 0x00710 */ J3DModel* field_0x0710;    // related to held item
@@ -4510,6 +4516,7 @@ public:
     /* 0x035F4 */ cXyz mMidnaAtnPos;
     /* 0x03600 */ cXyz mMidnaHairAtnPos;
     /* 0x0360C */ cXyz mKandelaarFlamePos;
+    /* 0x0360C */ cXyz mGhostLanternFlamePos;
     /* 0x03618 */ cXyz field_0x3618;
     /* 0x03624 */ cXyz field_0x3624;
     /* 0x03630 */ cXyz field_0x3630;

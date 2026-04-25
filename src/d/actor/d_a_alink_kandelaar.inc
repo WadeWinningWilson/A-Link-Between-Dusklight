@@ -9,6 +9,7 @@
 #include "d/actor/d_a_tag_ss_drink.h"
 #include "m_Do/m_Do_lib.h"
 #include "SSystem/SComponent/c_math.h"
+#include "d/actor/d_a_e_hp.h"
 
 static fopAc_ac_c* daAlink_searchTagKandelaar(fopAc_ac_c* i_actor, void* i_data) {
     UNUSED(i_data);
@@ -138,6 +139,49 @@ int daAlink_c::kandelaarModelCallBack() {
     return 1;
 }
 
+int daAlink_c::ghostLanternModelCallBack() {
+    cXyz sp44;
+    mDoMtx_multVecZero(J3DSys::mCurrentMtx, &sp44);
+
+    field_0x3630 = field_0x3624;
+    field_0x3624 = mGhostLanternFlamePos;
+
+    cXyz sp38 = (mGhostLanternFlamePos - sp44) + field_0x3618;
+    sp38.y -= 3.0f;
+
+    cXyz sp2C;
+    mDoMtx_multVec(J3DSys::mCurrentMtx, &cXyz::BaseZ, &sp2C);
+
+    s16 var_r29 = sp2C.atan2sX_Z();
+    mDoMtx_stack_c::YrotS(-var_r29);
+    mDoMtx_stack_c::multVec(&sp38, &sp38);
+
+    s16 var_r28 = cLib_minMaxLimit<s16>(cM_atan2s(-sp38.z, -sp38.y), -0x1800, 0x1800);
+    s16 var_r27 = cLib_minMaxLimit<s16>(cM_atan2s(sp38.x, JMAFastSqrt(SQUARE(sp38.y) + SQUARE(sp38.z))), -0x1800, 0x1800);
+
+    mDoMtx_stack_c::transS(sp44);
+    if (mProcID != PROC_OPEN_TREASURE && (mProcID != PROC_GET_ITEM || mProcVar4.field_0x3010 == 0)) {
+        mDoMtx_stack_c::ZXYrotM(var_r28, var_r29, var_r27);
+    }
+
+    static Vec const kandelaarOffset = {0.0f, -17.0f, 0.0f};
+    mDoMtx_stack_c::multVec(&kandelaarOffset, &mGhostLanternFlamePos);
+
+    field_0x3618 = (mGhostLanternFlamePos - field_0x3624) * 0.9f;
+
+    if (!checkEndResetFlg1(ERFLG1_UNK_8)) {
+        f32 scale = JMAFastSqrt(SQUARE(J3DSys::mCurrentMtx[0][0]) + SQUARE(J3DSys::mCurrentMtx[1][0]) + SQUARE(J3DSys::mCurrentMtx[2][0]));
+        mDoMtx_stack_c::transS(J3DSys::mCurrentMtx[0][3], J3DSys::mCurrentMtx[1][3], J3DSys::mCurrentMtx[2][3]);
+        mDoMtx_stack_c::ZXYrotM(var_r28, var_r29, var_r27);
+        mDoMtx_stack_c::scaleM(scale, scale, scale);
+
+        mpGhostLanternModel->setAnmMtx(1, mDoMtx_stack_c::get());
+        cMtx_copy(mDoMtx_stack_c::get(), J3DSys::mCurrentMtx);
+    }
+
+    return 1;
+}
+
 static int daAlink_kandelaarModelCallBack(J3DJoint* i_joint, int param_1) {
     UNUSED(i_joint);
 
@@ -145,6 +189,18 @@ static int daAlink_kandelaarModelCallBack(J3DJoint* i_joint, int param_1) {
 
     if (param_1 == 0) {
         player_p->kandelaarModelCallBack();
+    }
+
+    return 1;
+}
+
+static int daAlink_ghostLanternModelCallBack(J3DJoint* i_joint, int param_1) {
+    UNUSED(i_joint);
+
+    daAlink_c* player_p = (daAlink_c*)j3dSys.getModel()->getUserArea();
+
+    if (param_1 == 0) {
+        player_p->ghostLanternModelCallBack();
     }
 
     return 1;
@@ -162,6 +218,61 @@ cXyz* daAlink_c::getKandelaarFlamePos() {
 
 BOOL daAlink_c::checkKandelaarEquipAnime() const {
     return checkUpperAnime(dRes_ID_ALANM_BCK_WAITHK_e) || checkUpperAnime(dRes_ID_ALANM_BCK_WAITK_e);
+}
+
+void* daAlink_c::srchPoe(void* i_actor, void* i_this) {
+    if (i_actor != NULL && i_actor != i_this) {
+        if (fopAcM_IsExecuting(fopAcM_GetID(i_actor)) && fopAcM_GetName(i_actor) == fpcNm_E_HP_e) {
+            return i_actor;
+        }
+    }
+    return NULL;
+}
+
+void daAlink_c::preGhostLanternDraw() {
+    J3DMaterial* mat_p = mpGhostLanternGlowModel->getModelData()->getMaterialNodePointer(0);
+
+    daE_HP_c* foundPoe = (daE_HP_c*)fopAcM_Search(srchPoe, this);
+
+    J3DGXColorS10 color;
+    color.r = 0;
+    color.g = 0;
+    color.b = foundPoe != NULL ? 255 : 0;
+    color.a = foundPoe != NULL ? 255 : 0;
+    mat_p->setTevColor(1, &color);
+
+    color.r = 0;
+    color.g = 0;
+    color.b = foundPoe != NULL ? 255 : 0;
+    mat_p->setTevColor(2, &color);
+
+    cXyz proj;
+    mDoLib_project(&mGhostLanternFlamePos, &proj);
+
+    camera_process_class* camera_p = dComIfGp_getCamera(0);
+    f32 trimHeight;
+    if (camera_p != NULL) {
+        trimHeight = camera_p->mCamera.TrimHeight();
+    } else {
+        trimHeight = 0.0f;
+    }
+
+    if (proj.x > 0.0f && proj.x < FB_WIDTH && proj.y > trimHeight && proj.y < FB_HEIGHT - trimHeight) {
+        dComIfGd_peekZ(proj.x, proj.y, &field_0x32c8);
+    } else {
+        field_0x32c8 = 0;
+    }
+
+    f32 near_ = dComIfGd_getView()->near_;
+    f32 far_ = dComIfGd_getView()->far_;
+
+    mDoLib_pos2camera(&mKandelaarFlamePos, &proj);
+    proj.z += 30.0f;
+    if (proj.z > -0.01f) {
+        proj.z = -0.01f;
+    }
+
+    field_0x344c = ((near_ + (far_ * near_) / proj.z) / (far_ - near_) + 1.0f) * 1.6777215E7f;
 }
 
 void daAlink_c::preKandelaarDraw() {
