@@ -13,7 +13,15 @@
 
 J3DMaterialFactory::J3DMaterialFactory(J3DMaterialBlock const& i_block) {
     mMaterialNum = i_block.mMaterialNum;
+#if DUSK_TPHD
+    u32 material_init_data_size = sizeof(J3DMaterialInitData);
+    if (i_block.mBlockType == 'MAT4') {
+        material_init_data_size += sizeof(u16);
+    }
+    mpMaterialInitData.set(JSUConvertOffsetToPtr<void>(&i_block, i_block.mpMaterialInitData), material_init_data_size);
+#else
     mpMaterialInitData = JSUConvertOffsetToPtr<J3DMaterialInitData>(&i_block, i_block.mpMaterialInitData);
+#endif
     mpMaterialID = JSUConvertOffsetToPtr<BE(u16)>(&i_block, i_block.mpMaterialID);
     if (i_block.mpIndInitData != (uintptr_t)NULL && (uintptr_t)i_block.mpIndInitData - (uintptr_t)i_block.mpNameTable > 4) {
         mpIndInitData = JSUConvertOffsetToPtr<J3DIndInitData>(&i_block, i_block.mpIndInitData);
@@ -54,7 +62,11 @@ J3DMaterialFactory::J3DMaterialFactory(J3DMaterialBlock const& i_block) {
 
 J3DMaterialFactory::J3DMaterialFactory(J3DMaterialDLBlock const& i_block) {
     mMaterialNum = i_block.mMaterialNum;
+#if DUSK_TPHD
+    mpMaterialInitData.set(NULL, sizeof(J3DMaterialInitData));
+#else
     mpMaterialInitData = NULL;
+#endif
     mpDisplayListInit = JSUConvertOffsetToPtr<J3DDisplayListInit>(&i_block, i_block.mpDisplayListInit);
     mpPatchingInfo = JSUConvertOffsetToPtr<J3DPatchingInfo>(&i_block, i_block.mpPatchingInfo);
     mpCurrentMtxInfo = JSUConvertOffsetToPtr<J3DCurrentMtxInfo>(&i_block, i_block.mpCurrentMtxInfo);

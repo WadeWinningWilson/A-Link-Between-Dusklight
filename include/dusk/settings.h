@@ -175,6 +175,9 @@ struct UserSettings {
         ConfigVar<bool> checkForUpdates;
         ConfigVar<int> cardFileType;
         ConfigVar<bool> enableAdvancedSettings;
+#if DUSK_TPHD
+        ConfigVar<std::string> hdContentPath;  // path to TP-HD decrypted "content" folder
+#endif
     } backend;
 };
 

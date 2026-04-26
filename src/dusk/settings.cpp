@@ -122,6 +122,9 @@ UserSettings g_userSettings = {
         .checkForUpdates {"backend.checkForUpdates", true},
         .cardFileType {"backend.cardFileType", static_cast<int>(CARD_GCIFOLDER)},
         .enableAdvancedSettings {"backend.enableAdvancedSettings", false},
+#if DUSK_TPHD
+        .hdContentPath {"backend.hdContentPath", ""},
+#endif
     }
 };
 
@@ -226,6 +229,9 @@ void registerSettings() {
     Register(g_userSettings.backend.checkForUpdates);
     Register(g_userSettings.backend.cardFileType);
     Register(g_userSettings.backend.enableAdvancedSettings);
+#if DUSK_TPHD
+    Register(g_userSettings.backend.hdContentPath);
+#endif
 }
 
 // Transient settings

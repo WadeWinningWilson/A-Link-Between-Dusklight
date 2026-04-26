@@ -85,6 +85,33 @@ struct J3DDisplayListInit {
     /* 0x4 */ BE(u32) field_0x4;
 }; // size 8
 
+#if DUSK_TPHD
+// MAT4 material-entry blocks have 2 trailing bytes per entry compared to MAT3.
+// This strided view skips over the extras at indexing time, leaving the
+// in-memory data untouched.
+class J3DMaterialInitDataView {
+public:
+    J3DMaterialInitDataView() : mpData(NULL), mStride(sizeof(J3DMaterialInitData)) {}
+
+    void set(const void* data, u32 stride) {
+        mpData = (u8*)data;
+        mStride = stride;
+    }
+
+    J3DMaterialInitData& operator[](int idx) {
+        return *(J3DMaterialInitData*)(mpData + (idx * mStride));
+    }
+
+    J3DMaterialInitData& operator[](int idx) const {
+        return *(J3DMaterialInitData*)(mpData + (idx * mStride));
+    }
+
+private:
+    u8* mpData;
+    u32 mStride;
+};
+#endif
+
 struct J3DTexCoord2Info;
 class J3DCurrentMtxInfo;
 
@@ -146,7 +173,11 @@ public:
     u8 getMaterialMode(int idx) const { return mpMaterialInitData[mpMaterialID[idx]].mMaterialMode; }
     
     /* 0x00 */ u16 mMaterialNum;
+#if DUSK_TPHD
+    /* 0x04 */ J3DMaterialInitDataView mpMaterialInitData;
+#else
     /* 0x04 */ J3DMaterialInitData* mpMaterialInitData;
+#endif
     /* 0x08 */ BE(u16)* mpMaterialID;
     /* 0x0C */ J3DIndInitData* mpIndInitData;
     /* 0x10 */ GXColor* mpMatColor;

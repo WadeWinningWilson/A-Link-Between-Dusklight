@@ -10,10 +10,23 @@
 #include <stdint.h>
 #include "os_report.h"
 
+#if DUSK_TPHD
+#include "dusk/tphd/HdAssetLayer.hpp"
+#endif
+
 JKRMemArchive::JKRMemArchive(s32 entryNum, JKRArchive::EMountDirection mountDirection)
     : JKRArchive(entryNum, MOUNT_MEM) {
     mIsMounted = false;
     mMountDirection = mountDirection;
+#if DUSK_TPHD
+    // TPHD arc redirect by entrynum.
+    if (const auto* hd = dusk::tphd::getHdBytesForEntryNum(entryNum)) {
+        if (!open(const_cast<u8*>(hd->data()), static_cast<u32>(hd->size()),
+                  JKRMEMBREAK_FLAG_UNKNOWN0)) {
+            return;
+        }
+    } else
+#endif
     if (!open(entryNum, mMountDirection)) {
         return;
     }

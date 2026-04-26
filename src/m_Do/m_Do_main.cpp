@@ -79,6 +79,10 @@
 #include "dusk/settings.h"
 #include "dusk/version.hpp"
 #include "dusk/discord_presence.hpp"
+#if DUSK_TPHD
+#include "dusk/tphd/HdAssetLayer.hpp"
+#include "dusk/tphd/TphdPack.hpp"
+#endif
 #include "tracy/Tracy.hpp"
 #include "f_pc/f_pc_draw.h"
 #include "tracy/Tracy.hpp"
@@ -569,7 +573,14 @@ int game_main(int argc, char* argv[]) {
         config.desiredBackend = ResolveDesiredBackend(parsed_arg_options);
         config.logCallback = &aurora_log_callback;
         config.logLevel = startupLogLevel;
+        // 256 MB is GC-sized. HD-asset injection (HD BMDs + HD pixel buffers
+        // registered via aurora::gfx::hd_register_replacement) blows past
+        // that for stages+Link, so bump to 1 GB when TPHD is on.
+#if DUSK_TPHD
+        config.mem1Size = 1024 * 1024 * 1024;
+#elif TARGET_PC
         config.mem1Size = 256 * 1024 * 1024;
+#endif
         config.mem2Size = 24 * 1024 * 1024;
         config.allowJoystickBackgroundEvents = true;
         config.imGuiInitCallback = &aurora_imgui_init_callback;
@@ -693,6 +704,15 @@ int game_main(int argc, char* argv[]) {
     LanguageInit();
 
     OSInit();
+
+#if DUSK_TPHD
+    {
+        const std::string& hdPath = dusk::getSettings().backend.hdContentPath;
+        if (!hdPath.empty()) {
+            dusk::tphd::setHdContentPath(hdPath);
+        }
+    }
+#endif
 
     mDoMain::sPowerOnTime = OSGetTime();
 

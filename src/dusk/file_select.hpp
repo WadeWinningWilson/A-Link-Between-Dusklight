@@ -12,4 +12,7 @@ void ShowFileSelect(FileCallback callback, void* userdata, SDL_Window* window,
                     const SDL_DialogFileFilter* filters, int nfilters, const char* default_location,
                     bool allow_many);
 
+void ShowFolderSelect(FileCallback callback, void* userdata, SDL_Window* window,
+                      const char* default_location);
+
 }  // namespace dusk

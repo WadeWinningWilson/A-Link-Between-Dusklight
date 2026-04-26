@@ -88,4 +88,21 @@ void ShowFileSelect(FileCallback callback, void* userdata, SDL_Window* window,
                            default_location, allow_many);
 #endif
 }
+
+void ShowFolderSelect(FileCallback callback, void* userdata, SDL_Window* window,
+                      const char* default_location) {
+    if (callback == nullptr) {
+        return;
+    }
+
+#if USE_IOS_DIALOG
+    // iOS doesn't expose a folder picker — report unsupported.
+    callback(userdata, nullptr, "Folder selection is not supported on this platform");
+#else
+    auto state = std::make_unique<SDLDialogCallbackState>();
+    state->callback = callback;
+    state->userdata = userdata;
+    SDL_ShowOpenFolderDialog(&onSDLDialogFinished, state.release(), window, default_location, false);
+#endif
+}
 }  // namespace dusk

@@ -101,6 +101,10 @@ endif ()
 set(AURORA_ENABLE_DVD ON CACHE BOOL "Enable DVD API support" FORCE)
 set(AURORA_ENABLE_CARD ON CACHE BOOL "Enable CARD API support" FORCE)
 set(AURORA_ENABLE_RMLUI ON CACHE BOOL "Enable RmlUi UI support" FORCE)
+# Force Freetype (pulled by aurora/RmlUi) to use its bundled mini-zlib.
+# Otherwise its find_package(ZLIB) latches onto our FetchContent'd shared zlib,
+# duplicating inflate*/inflateInit2_ symbols against zlibstatic.
+set(FT_DISABLE_ZLIB TRUE CACHE BOOL "" FORCE)
 add_subdirectory(extern/aurora EXCLUDE_FROM_ALL)
 target_compile_definitions(aurora_mtx PRIVATE MTX_USE_PS=1)
 
@@ -115,6 +119,7 @@ else ()
     set(DUSK_ENABLE_UPDATE_CHECKER_DEFAULT ON)
 endif ()
 option(DUSK_ENABLE_UPDATE_CHECKER "Enable update checking support" ${DUSK_ENABLE_UPDATE_CHECKER_DEFAULT})
+option(DUSK_TPHD "Enable Twilight Princess HD asset support" ON)
 
 if(ANDROID)
     set(DUSK_MOVIE_SUPPORT OFF)
@@ -218,7 +223,6 @@ elseif (MSVC)
     add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/utf-8>)
 endif ()
 
-
 include(FetchContent)
 
 # Declare all dependencies first so CMake can download them in parallel
@@ -234,7 +238,17 @@ FetchContent_Declare(json
     URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
-FetchContent_MakeAvailable(cxxopts json)
+message(STATUS "dusk: Fetching zlib")
+FetchContent_Declare(zlib
+    URL https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz
+    URL_HASH SHA256=bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_MakeAvailable(cxxopts json zlib)
+
+if (NOT TARGET zlibstatic)
+    set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+endif ()
 
 if (DUSK_ENABLE_SENTRY_NATIVE)
     message(STATUS "dusk: Fetching sentry-native")
@@ -293,6 +307,9 @@ source_group("dolzel" FILES ${DOLZEL_FILES} ${Z2AUDIOLIB_FILES} ${REL_FILES})
 source_group("dusk" FILES ${DUSK_FILES} ${DUSK_HTTP_BACKEND_FILES})
 
 set(GAME_COMPILE_DEFS TARGET_PC WIDESCREEN_SUPPORT=1 AVOID_UB=1 VERSION=0 MTX_USE_PS=1)
+if (DUSK_TPHD)
+    list(APPEND GAME_COMPILE_DEFS DUSK_TPHD=1)
+endif ()
 
 set(GAME_INCLUDE_DIRS
     include
@@ -310,6 +327,7 @@ set(GAME_LIBS aurora::core aurora::gx aurora::gd aurora::si aurora::vi aurora::p
     Threads::Threads)
 
 list(APPEND GAME_LIBS libzstd_static)
+list(APPEND GAME_LIBS zlibstatic)
 
 if (DUSK_ENABLE_SENTRY_NATIVE)
     list(APPEND GAME_LIBS sentry)
