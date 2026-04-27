@@ -1473,6 +1473,7 @@ set(DUSK_FILES
         src/dusk/discord_presence.cpp
         src/dusk/version.cpp
         # Randomizer files
+        src/dusk/randomizer/game/flags.cpp
         src/dusk/randomizer/game/flags.h
         src/dusk/randomizer/game/stages.cpp
         src/dusk/randomizer/game/stages.h

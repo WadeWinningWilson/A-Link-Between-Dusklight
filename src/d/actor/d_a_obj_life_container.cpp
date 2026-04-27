@@ -14,6 +14,7 @@
 
 #if TARGET_PC
 #include "d/actor/d_a_alink.h"
+#include "dusk/randomizer/game/flags.h"
 #include "dusk/randomizer/game/tools.h"
 #include "dusk/randomizer/game/verify_item_functions.h"
 #include "dusk/randomizer/game/stages.h"
@@ -188,104 +189,126 @@ int daObjLife_c::create() {
 
 #if TARGET_PC
     if (randomizer_IsActive()) {
+        // Overwrite the item for this location in randomizer
         u32 params = fopAcM_GetParam(this);
-        u8 flag = getSaveBitNo();
-        u8 stageIdx = getStageID();
-        const auto& freestandingOverrides = randomizer_GetContext().mFreestandingItemOverrides;
-        // If we found an override for this freestanding item
-        if (freestandingOverrides.contains(stageIdx) && freestandingOverrides.at(stageIdx).contains(flag)) {
-            // Clear the itemId and set it to out new itemId
-            params &= 0xFFFFFF00;
-            u8 overrideItem = freestandingOverrides.at(stageIdx).at(flag);
-            u8 newItemId = verifyProgressiveItem(overrideItem);
-            params |= newItemId;
-            fopAcM_SetParam(this, params);
+        u8 itemId = params & 0xFF;
+        u8 roomNo = fopAcM_GetRoomNo(this);
+        // If this is a golden wolf replacement, handle it differently
+        if (itemId == dItemNo_Randomizer_ENDING_BLOW_e) {
+            auto goldenWolfFlags = getCurrentGoldenWolfFlags(roomNo);
+            // Don't spawn this item if we haven't howled at the howling stone, or if we've already
+            // obtained the item
+            if ((goldenWolfFlags.howledAtStoneFlag != 0xFFFF && !dComIfGs_isEventBit(goldenWolfFlags.howledAtStoneFlag)) ||
+                dComIfGs_isEventBit(goldenWolfFlags.obtainedItemFlag)) {
+                return cPhs_ERROR_e;
+            }
+            // Store the map marker flag and obtained item flags to turn off/on later if
+            // the player collects the item
+            home.angle.z = goldenWolfFlags.mapMarkerFlag;
+            home.angle.x = static_cast<s16>(goldenWolfFlags.obtainedItemFlag);
+            // Set the overriden item id
+            auto& goldenWolfOverrides = randomizer_GetContext().mGoldenWolfOverrides;
+            itemId = verifyProgressiveItem(goldenWolfOverrides[goldenWolfFlags.obtainedItemFlag]);
+        } else {
+            u8 flag = getSaveBitNo();
+            u8 stageIdx = getStageID();
+            const auto& freestandingOverrides = randomizer_GetContext().mFreestandingItemOverrides;
+            // If we found an override for this freestanding item
+            if (freestandingOverrides.contains(stageIdx) && freestandingOverrides.at(stageIdx).contains(flag)) {
+                // Clear the itemId and set it to out new itemId
+                u8 overrideItem = freestandingOverrides.at(stageIdx).at(flag);
+                itemId = verifyProgressiveItem(overrideItem);
+            }
+        }
 
-            // Also adjust the height of the object depending on the item
-            switch (newItemId) {
-                case dItemNo_Randomizer_MASTER_SWORD_e:
-                case dItemNo_Randomizer_LIGHT_SWORD_e:
-                case dItemNo_Randomizer_WOOD_SHIELD_e:
-                case dItemNo_Randomizer_HYLIA_SHIELD_e:
-                case dItemNo_Randomizer_SHIELD_e:
-                case dItemNo_Randomizer_SPINNER_e:
-                {
-                    current.pos.y += 30.f;
-                    break;
-                }
-                case dItemNo_Randomizer_WOOD_STICK_e:
-                {
-                    current.pos.y += 60.f;
-                    break;
-                }
-                case dItemNo_Randomizer_SWORD_e:
-                case dItemNo_Randomizer_MIRROR_PIECE_1_e:
-                case dItemNo_Randomizer_MIRROR_PIECE_2_e:
-                case dItemNo_Randomizer_MIRROR_PIECE_3_e:
-                case dItemNo_Randomizer_MIRROR_PIECE_4_e:
-                case dItemNo_Randomizer_FUSED_SHADOW_1_e:
-                case dItemNo_Randomizer_FUSED_SHADOW_2_e:
-                case dItemNo_Randomizer_FUSED_SHADOW_3_e:
-                case dItemNo_Randomizer_COPY_ROD_e:
-                case dItemNo_Randomizer_COPY_ROD_2_e:
-                {
-                    current.pos.y += 50.f;
-                    break;
-                }
+        params &= 0xFFFFFF00;
+        params |= itemId;
+        fopAcM_SetParam(this, params);
 
-                case dItemNo_Randomizer_BOW_e:
-                {
-                    current.pos.y += 55.f;
-                    break;
-                }
-                case dItemNo_Randomizer_BOOMERANG_e:
-                case dItemNo_Randomizer_FISHING_ROD_1_e:
-                case dItemNo_Randomizer_ARROW_LV2_e:
-                case dItemNo_Randomizer_ARROW_LV3_e:
-                {
-                    current.pos.y += 40.f;
-                    break;
-                }
-                case dItemNo_Randomizer_FOREST_SMALL_KEY_e:
-                case dItemNo_Randomizer_MINES_SMALL_KEY_e:
-                case dItemNo_Randomizer_LAKEBED_SMALL_KEY_e:
-                case dItemNo_Randomizer_ARBITERS_SMALL_KEY_e:
-                case dItemNo_Randomizer_SNOWPEAK_SMALL_KEY_e:
-                case dItemNo_Randomizer_TEMPLE_OF_TIME_SMALL_KEY_e:
-                case dItemNo_Randomizer_CITY_SMALL_KEY_e:
-                case dItemNo_Randomizer_PALACE_SMALL_KEY_e:
-                case dItemNo_Randomizer_HYRULE_SMALL_KEY_e:
-                case dItemNo_Randomizer_FOREST_BOSS_KEY_e:
-                case dItemNo_Randomizer_LAKEBED_BOSS_KEY_e:
-                case dItemNo_Randomizer_ARBITERS_BOSS_KEY_e:
-                case dItemNo_Randomizer_TEMPLE_OF_TIME_BOSS_KEY_e:
-                case dItemNo_Randomizer_CITY_BOSS_KEY_e:
-                case dItemNo_Randomizer_PALACE_BOSS_KEY_e:
-                case dItemNo_Randomizer_HYRULE_BOSS_KEY_e:
-                case dItemNo_Randomizer_SMALL_KEY2_e:
-                case dItemNo_Randomizer_LV5_BOSS_KEY_e:
-                case dItemNo_Randomizer_CAMP_SMALL_KEY_e:
-                case dItemNo_Randomizer_BOSSRIDER_KEY_e:
-                case dItemNo_Randomizer_PACHINKO_e:
-                case dItemNo_Randomizer_BOMB_BAG_LV2_e:
-                case dItemNo_Randomizer_BOMB_BAG_LV1_e:
-                case dItemNo_Randomizer_BOMB_IN_BAG_e:
-                case dItemNo_Randomizer_NORMAL_BOMB_e:
-                case dItemNo_Randomizer_POU_SPIRIT_e:
-                {
-                    current.pos.y += 20.f;
-                    break;
-                }
+        // Also adjust the height of the object depending on the item
+        switch (itemId) {
+            case dItemNo_Randomizer_MASTER_SWORD_e:
+            case dItemNo_Randomizer_LIGHT_SWORD_e:
+            case dItemNo_Randomizer_WOOD_SHIELD_e:
+            case dItemNo_Randomizer_HYLIA_SHIELD_e:
+            case dItemNo_Randomizer_SHIELD_e:
+            case dItemNo_Randomizer_SPINNER_e:
+            {
+                current.pos.y += 30.f;
+                break;
+            }
+            case dItemNo_Randomizer_WOOD_STICK_e:
+            {
+                current.pos.y += 60.f;
+                break;
+            }
+            case dItemNo_Randomizer_SWORD_e:
+            case dItemNo_Randomizer_MIRROR_PIECE_1_e:
+            case dItemNo_Randomizer_MIRROR_PIECE_2_e:
+            case dItemNo_Randomizer_MIRROR_PIECE_3_e:
+            case dItemNo_Randomizer_MIRROR_PIECE_4_e:
+            case dItemNo_Randomizer_FUSED_SHADOW_1_e:
+            case dItemNo_Randomizer_FUSED_SHADOW_2_e:
+            case dItemNo_Randomizer_FUSED_SHADOW_3_e:
+            case dItemNo_Randomizer_COPY_ROD_e:
+            case dItemNo_Randomizer_COPY_ROD_2_e:
+            {
+                current.pos.y += 50.f;
+                break;
+            }
 
-                case dItemNo_Randomizer_ARMOR_e:
-                {
-                    current.pos.y += 25.f;
-                    break;
-                }
-                default:
-                {
-                    break;
-                }
+            case dItemNo_Randomizer_BOW_e:
+            {
+                current.pos.y += 55.f;
+                break;
+            }
+            case dItemNo_Randomizer_BOOMERANG_e:
+            case dItemNo_Randomizer_FISHING_ROD_1_e:
+            case dItemNo_Randomizer_ARROW_LV2_e:
+            case dItemNo_Randomizer_ARROW_LV3_e:
+            {
+                current.pos.y += 40.f;
+                break;
+            }
+            case dItemNo_Randomizer_FOREST_SMALL_KEY_e:
+            case dItemNo_Randomizer_MINES_SMALL_KEY_e:
+            case dItemNo_Randomizer_LAKEBED_SMALL_KEY_e:
+            case dItemNo_Randomizer_ARBITERS_SMALL_KEY_e:
+            case dItemNo_Randomizer_SNOWPEAK_SMALL_KEY_e:
+            case dItemNo_Randomizer_TEMPLE_OF_TIME_SMALL_KEY_e:
+            case dItemNo_Randomizer_CITY_SMALL_KEY_e:
+            case dItemNo_Randomizer_PALACE_SMALL_KEY_e:
+            case dItemNo_Randomizer_HYRULE_SMALL_KEY_e:
+            case dItemNo_Randomizer_FOREST_BOSS_KEY_e:
+            case dItemNo_Randomizer_LAKEBED_BOSS_KEY_e:
+            case dItemNo_Randomizer_ARBITERS_BOSS_KEY_e:
+            case dItemNo_Randomizer_TEMPLE_OF_TIME_BOSS_KEY_e:
+            case dItemNo_Randomizer_CITY_BOSS_KEY_e:
+            case dItemNo_Randomizer_PALACE_BOSS_KEY_e:
+            case dItemNo_Randomizer_HYRULE_BOSS_KEY_e:
+            case dItemNo_Randomizer_SMALL_KEY2_e:
+            case dItemNo_Randomizer_LV5_BOSS_KEY_e:
+            case dItemNo_Randomizer_CAMP_SMALL_KEY_e:
+            case dItemNo_Randomizer_BOSSRIDER_KEY_e:
+            case dItemNo_Randomizer_PACHINKO_e:
+            case dItemNo_Randomizer_BOMB_BAG_LV2_e:
+            case dItemNo_Randomizer_BOMB_BAG_LV1_e:
+            case dItemNo_Randomizer_BOMB_IN_BAG_e:
+            case dItemNo_Randomizer_NORMAL_BOMB_e:
+            case dItemNo_Randomizer_POU_SPIRIT_e:
+            {
+                current.pos.y += 20.f;
+                break;
+            }
+
+            case dItemNo_Randomizer_ARMOR_e:
+            {
+                current.pos.y += 25.f;
+                break;
+            }
+            default:
+            {
+                break;
             }
         }
     }
@@ -476,6 +499,19 @@ int daObjLife_c::actionGetDemo() {
         if (savebit != 0xFF) {
             fopAcM_onItem(this, savebit);
         }
+#if TARGET_PC
+        // In randomizer, turn off the map marker flag for this golden wolf replacement item
+        // if we're collecting it. We store the map marker flag in unused home.angle.z
+        // Also set the flag for having collected this golden wolf item, stored in home.angle.x
+        if (randomizer_IsActive()) {
+            if (static_cast<u16>(home.angle.z) != 0xFFFF) {
+                dComIfGs_offSwitch(static_cast<u16>(home.angle.z), fopAcM_GetRoomNo(this));
+            }
+            if (static_cast<u16>(home.angle.x) != 0xFFFF) {
+                dComIfGs_onEventBit(static_cast<u16>(home.angle.x));
+            }
+        }
+#endif
 
         if (m_itemNo == dItemNo_KAKERA_HEART_e) {
             if (strcmp(dComIfGp_getStartStageName(), "F_SP121") == 0) {
