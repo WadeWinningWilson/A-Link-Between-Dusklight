@@ -11,6 +11,11 @@
 #include "m_Do/m_Do_lib.h"
 #include <cstring>
 
+#if TARGET_PC
+#include "d/d_item_data.h"
+#include "dusk/randomizer/game/verify_item_functions.h"
+#endif
+
 const char* daShopItem_c::getShopArcname() {
     switch (m_itemNo) {
     case dItemNo_NONE_e:
@@ -87,6 +92,26 @@ const char* daShopItem_c::getShopArcname() {
     default:
         return NULL;
     }
+
+#if TARGET_PC
+    // Override the item model with whichever item is randomized to this shop item
+    if (randomizer_IsActive()) {
+        u8 randoItem{0};
+        switch (mShopItemID) {
+            // Sera's Shop Slingshot
+        case SHOP_ITEMNO_PACHINKO:
+            randoItem = randomizer_getItemAtLocation("Sera Shop Slingshot");
+            break;
+        default:
+            break;
+        }
+
+        if (randoItem) {
+            randoItem = verifyProgressiveItem(randoItem);
+            return dItem_data::getArcName(randoItem);
+        }
+    }
+#endif
 
     return mData[mShopItemID].get_arcName();
 }
