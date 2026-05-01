@@ -321,12 +321,13 @@ int daItem_c::_daItem_create() {
         u32 params = fopAcM_GetParam(this);
         u8 flag = daItem_prm::getItemBitNo(this);
         u8 stageIdx = getStageID();
-        const auto& freestandingOverrides = randomizer_GetContext().mFreestandingItemOverrides;
+        u16 key = (stageIdx << 8) | flag;
+        auto& freestandingOverrides = randomizer_GetContext().mFreestandingItemOverrides;
         // If we found an override for this freestanding item
-        if (freestandingOverrides.contains(stageIdx) && freestandingOverrides.at(stageIdx).contains(flag)) {
+        if (freestandingOverrides.contains(key)) {
             // Clear the itemId and set it to out new itemId
             params &= 0xFFFFFF00;
-            u8 newItemId = freestandingOverrides.at(stageIdx).at(flag);
+            u8 newItemId = freestandingOverrides[key];
             params |= verifyProgressiveItem(newItemId);
             fopAcM_SetParam(this, params);
         }

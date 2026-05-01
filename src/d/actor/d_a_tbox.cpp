@@ -12,7 +12,10 @@
 #include <cmath>
 #include <cstring>
 
+#if TARGET_PC
+#include "dusk/randomizer/game/tools.h"
 #include "dusk/randomizer/game/verify_item_functions.h"
+#endif
 
 static const f32 l_cull_size_box[6] = { -150.0f, -10.0f, -150.0f, 150.0f, 300.0f, 100.0f };
 
@@ -1788,12 +1791,14 @@ cPhs_Step daTbox_c::create1st() {
     if (!mParamsInit) {
         field_0x980 = home.angle.x;
 #if TARGET_PC
-        // The upper 8 bits of home.angle.z hold the itemId
+        // The upper 8 bits of home.angle.z hold the itemId. Replace with our randomized
+        // item in randomizer
         if (randomizer_IsActive()) {
             home.angle.z &= ~0xFF00;
-            auto stage = dComIfGp_getStartStageName();
+            auto stage = getStageID();
             auto tboxId = static_cast<u8>(getTboxNo());
-            u8 itemId = randomizer_GetContext().mTreasureChestOverrides[stage][tboxId];
+            u16 key = (stage << 8) | tboxId;
+            u8 itemId = randomizer_GetContext().mTreasureChestOverrides[key];
             home.angle.z |= verifyProgressiveItem(itemId) << 8;
         }
 #endif

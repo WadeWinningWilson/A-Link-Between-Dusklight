@@ -212,11 +212,12 @@ int daObjLife_c::create() {
         } else {
             u8 flag = getSaveBitNo();
             u8 stageIdx = getStageID();
+            u16 key = (stageIdx << 8) | flag;
             const auto& freestandingOverrides = randomizer_GetContext().mFreestandingItemOverrides;
             // If we found an override for this freestanding item
-            if (freestandingOverrides.contains(stageIdx) && freestandingOverrides.at(stageIdx).contains(flag)) {
+            if (freestandingOverrides.contains(key)) {
                 // Clear the itemId and set it to out new itemId
-                u8 overrideItem = freestandingOverrides.at(stageIdx).at(flag);
+                u8 overrideItem = freestandingOverrides.at(key);
                 itemId = verifyProgressiveItem(overrideItem);
             }
         }

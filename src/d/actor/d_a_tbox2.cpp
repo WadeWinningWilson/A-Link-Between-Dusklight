@@ -10,7 +10,10 @@
 #include "d/actor/d_a_midna.h"
 #include <cstring>
 
+#if TARGET_PC
+#include "dusk/randomizer/game/tools.h"
 #include "dusk/randomizer/game/verify_item_functions.h"
+#endif
 
 void daTbox2_c::initBaseMtx() {
     mpModel->setBaseScale(scale);
@@ -161,9 +164,10 @@ int daTbox2_c::create1st() {
 #if TARGET_PC
     if (randomizer_IsActive()) {
         // Get the override item for this chest
-        auto stage = dComIfGp_getStartStageName();
+        auto stage = getStageID();
         u8 tboxId = getTboxNo();
-        u8 itemId = randomizer_GetContext().mTreasureChestOverrides[stage][tboxId];
+        u16 key = (stage << 8) | tboxId;
+        u8 itemId = randomizer_GetContext().mTreasureChestOverrides[key];
         // Set the item in the params
         u32 params = fopAcM_GetParam(this);
         params &= 0xFFFFFF00;
