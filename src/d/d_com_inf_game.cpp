@@ -2563,7 +2563,11 @@ u8 dComIfG_getNowCalcRegion() {
 
 bool dComIfGp_isLightDropMapVisible() {
     for (int i = 0; i < 3; i++) {
+        #if DUSK_TPHD
+        if (dComIfGs_isLightDropGetFlag(i) != FALSE && dComIfGs_getLightDropNum(i) < 12) {
+        #else
         if (dComIfGs_isLightDropGetFlag(i) != FALSE && dComIfGs_getLightDropNum(i) < 16) {
+        #endif
             return true;
         }
     }

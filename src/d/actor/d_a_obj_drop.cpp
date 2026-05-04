@@ -103,9 +103,13 @@ void daObjDrop_c::dropGet() {
         dComIfGs_setLightDropNum(dComIfGp_getStartStageDarkArea(), num + 1);
 
         if (dComIfGp_getStartStageDarkArea() == 2 &&
+            #if DUSK_TPHD
+            dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea()) == 11)
+            #else
             dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea()) == 15)
+            #endif
         {
-            /* dSv_event_flag_c::F_0005 - Misc. - Gathered 14 Tears of Light in area 4 */
+            /* dSv_event_flag_c::F_0005 - Misc. - Gathered 15 Tears of Light in area 4 */
             dComIfGs_onEventBit(dSv_event_flag_c::saveBitLabels[9]);
         }
 

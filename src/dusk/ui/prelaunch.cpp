@@ -495,6 +495,21 @@ void file_dialog_callback(void*, const char* path, const char* error) {
     begin_disc_verification(path);
 }
 
+void folder_dialog_callback(void*, const char* path, const char* error) {
+    auto& state = prelaunch_state();
+    if (error != nullptr) {
+        return;
+    }
+    if (path == nullptr) {
+        return;
+    }
+
+    state.selectedHdContentPath = path;
+    state.errorString.clear();
+    getSettings().backend.hdContentPath.setValue(state.selectedHdContentPath);
+    config::Save();
+}
+
 PrelaunchState sPrelaunchState;
 
 }  // namespace
@@ -642,6 +657,11 @@ void open_iso_picker() noexcept {
     ensure_initialized();
     ShowFileSelect(&file_dialog_callback, nullptr, aurora::window::get_sdl_window(),
         kDiscFileFilters.data(), kDiscFileFilters.size(), nullptr, false);
+}
+
+void open_folder_picker() noexcept {
+    ensure_initialized();
+    ShowFolderSelect(&folder_dialog_callback, nullptr, aurora::window::get_sdl_window(), nullptr);
 }
 
 bool is_restart_pending() noexcept {

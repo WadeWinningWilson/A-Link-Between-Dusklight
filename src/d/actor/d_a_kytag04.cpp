@@ -260,12 +260,20 @@ static int daKytag04_Create(fopAc_ac_c* i_this) {
 
     a_this->mNeedDropNum = i_this->current.angle.z & 0xFF;
 
+    #if DUSK_TPHD
+    a_this->mNeedDropNum = 12;
+    #endif
+
     int phase_state = dComIfG_resLoad(&a_this->mPhase, "Kytag04");
     if (phase_state == cPhs_COMPLEATE_e) {
         a_this->field_0x5b4 = (fopAcM_GetParam(i_this) >> 8) & 7;
         a_this->mStageNo = (i_this->current.angle.z >> 8) & 0xFF;
         a_this->mExitID = fopAcM_GetParam(i_this) & 0xFF;
         a_this->mNeedDropNum = i_this->current.angle.z & 0xFF;
+        #if DUSK_TPHD
+        a_this->mNeedDropNum = 12;
+        #endif
+
         a_this->field_0x5b5 = fopAcM_GetParam(i_this) >> 0x10;
         a_this->field_0x5b6 = fopAcM_GetParam(i_this) >> 0x18;
 

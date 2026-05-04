@@ -131,9 +131,9 @@ std::vector<u8> expandR5G6B5toRgba8(std::span<const u8> in, u32 width, u32 heigh
         // GX2 stores RGB565 pixel data in GPU-native LE
         u16 px;
         std::memcpy(&px, &in[i * 2], sizeof(px));
-        u8 r5 = static_cast<u8>((px >> 11) & 0x1F);
+        u8 b5 = static_cast<u8>((px >> 11) & 0x1F);
         u8 g6 = static_cast<u8>((px >> 5) & 0x3F);
-        u8 b5 = static_cast<u8>(px & 0x1F);
+        u8 r5 = static_cast<u8>(px & 0x1F);
         out[i * 4 + 0] = static_cast<u8>((r5 << 3) | (r5 >> 2));
         out[i * 4 + 1] = static_cast<u8>((g6 << 2) | (g6 >> 4));
         out[i * 4 + 2] = static_cast<u8>((b5 << 3) | (b5 >> 2));
@@ -316,7 +316,7 @@ void registerHdSurface(const Gx2FormatMapping& m, const GtxSurface& s,
     r.width    = s.width;
     r.height   = s.height;
     r.gxFormat = m.newGxFormat;
-    r.mipCount = std::max(decoded.mipCount, 1u);
+    r.mipCount = 0; // r.mipCount = std::max(decoded.mipCount, 1u);
     aurora::gfx::hd_register_replacement(pixelPtr, std::move(r));
 }
 
@@ -522,9 +522,18 @@ void setHdContentPath(std::filesystem::path contentPath) {
 
 // HD arcs whose Wii-U layouts don't match the GC UI pipeline.
 static constexpr std::string_view kHdSkipList[] = {
+    "res/Object/LogoUs.arc",
+    "res/Object/balloon2D.arc",
+    "res/Object/Coach2D.arc",
+    "res/Object/fileSel.arc",
     "res/Layout/button.arc",
     "res/Layout/Title2D.arc",
     "res/Layout/main2D.arc",
+    "res/Layout/dmapres.arc",
+    "res/Layout/fmapres.arc",
+    "res/Layout/saveres.arc",
+    "res/FieldMap/res-f.arc",
+    "res/FieldMap/res-d.arc",
 };
 
 std::optional<std::vector<u8>*> tryLoadHdArchive(std::string_view gcPath) {
