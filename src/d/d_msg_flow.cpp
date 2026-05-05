@@ -519,16 +519,6 @@ int dMsgFlow_c::setNormalMsg(mesg_flow_node* i_flowNode_p, fopAc_ac_c* i_speaker
         if (msg_no == 0x71E && g_randomizerState.mFishingBottleItemId != 0) {
             msg_no = getItemMessageID(g_randomizerState.mFishingBottleItemId);
             g_randomizerState.mFishingBottleItemId = 0;
-        }
-        // If this is Hena's message about catching a piece of heart, replace it with our
-        // randomized item. This happens before the execItemGet function, so we don't need
-        // to store it like the fishing bottle check above.
-        else if ((msg_no == 0x1D8C || msg_no == 0x1D9A) && dMsgObject_getGroupID() == 7) {
-            u16 key = (getStageID() << 8) | 0x80;
-            u8 itemId = verifyProgressiveItem(randomizer_GetContext().mFreestandingItemOverrides[key]);
-            msg_no = getItemMessageID(itemId);
-            // Ignore the rest of the flow after this
-            var_r29->next_node_idx = -1;
         } else {
             u32 key = (dMsgObject_getGroupID() << 16) | msg_no;
             auto& flowItemOverrides = randomizer_GetContext().mFlowItemMessageOverrides;

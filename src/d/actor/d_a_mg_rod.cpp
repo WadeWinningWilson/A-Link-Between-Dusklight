@@ -2907,12 +2907,8 @@ static void lure_heart(dmg_rod_class* i_this) {
                 fopAcM_delete(obj_life);
                 fopAcM_onItem(obj_life, 0x80);
 #if TARGET_PC
-                if (randomizer_IsActive()) {
-                    // Call the item get function for the ranodmized item instead
-                    u16 key = (getStageID() << 8) | 0x80;
-                    u8 itemId = verifyProgressiveItem(randomizer_GetContext().mFreestandingItemOverrides[key]);
-                    execItemGet(itemId);
-                } else
+                // Don't give the item here in rando. We give it later when the FLW message happens
+                if (!randomizer_IsActive())
 #endif
                 execItemGet(dItemNo_KAKERA_HEART_e);
                 u8 eventReg = dComIfGs_getEventReg(0xECFF);
