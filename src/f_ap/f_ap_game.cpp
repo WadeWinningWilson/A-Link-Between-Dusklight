@@ -15,6 +15,7 @@
 #include "d/d_model.h"
 #include "d/d_tresure.h"
 #include "dusk/frame_interpolation.h"
+#include "dusk/livesplit.h"
 #include "dusk/logging.h"
 #include "f_op/f_op_camera_mng.h"
 #include "f_op/f_op_draw_tag.h"
@@ -22,8 +23,12 @@
 #include "f_op/f_op_scene_mng.h"
 #include "m_Do/m_Do_graphic.h"
 #include "m_Do/m_Do_main.h"
+
+#if TARGET_PC
 #include "tracy/Tracy.hpp"
 #include <dusk/gamepad_color.h>
+#include <dusk/autosave.h>
+#endif
 
 fapGm_HIO_c::fapGm_HIO_c() {
     mUsingHostIO = true;
@@ -736,7 +741,8 @@ static void fapGm_AfterRecord() {
 
 static void duskExecute() {
     handleGamepadColor();
-    
+    updateAutoSave();
+
     if (mDoCPd_c::getHoldR(PAD_1) && mDoCPd_c::getTrigX(PAD_1)) {
         if (const auto link = g_dComIfG_gameInfo.play.getPlayer(0)) {
             dynamic_cast<daAlink_c*>(link)->handleWolfHowl();
@@ -814,7 +820,11 @@ void fapGm_Execute() {
 #else
     fpcM_ManagementFunc(NULL, fapGm_After);
 #endif
+
     cCt_Counter(0);
+#ifdef TARGET_PC
+    dusk::speedrun::onGameFrame();
+#endif
 }
 
 fapGm_HIO_c g_HIO;

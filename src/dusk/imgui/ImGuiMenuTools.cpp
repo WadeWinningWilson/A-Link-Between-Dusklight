@@ -41,6 +41,10 @@ static void OpenDataFolder() {
 #define DUSK_CAN_OPEN_DATA_FOLDER 0
 #endif
 
+namespace aurora::gx {
+extern bool enableLodBias;
+}
+
 namespace dusk {
     ImGuiMenuTools::ImGuiMenuTools() {}
 
@@ -50,15 +54,18 @@ namespace dusk {
                 ImGui::BeginDisabled();
             }
 
+            ImGui::BeginDisabled(getSettings().game.speedrunMode);
+
             ImGui::MenuItem("Save Editor", hotkeys::SHOW_SAVE_EDITOR, &m_showSaveEditor);
             ImGui::MenuItem("Map Loader", hotkeys::SHOW_MAP_LOADER, &m_showMapLoader);
             ImGui::MenuItem("State Share", hotkeys::SHOW_STATE_SHARE, &m_showStateShare);
+
+            ImGui::EndDisabled();
 
             if (!dusk::IsGameLaunched) {
                 ImGui::EndDisabled();
             }
 
-            ImGui::MenuItem("Achievements", nullptr, &m_showAchievements);
 
 #if DUSK_CAN_OPEN_DATA_FOLDER
             ImGui::Separator();
@@ -71,6 +78,8 @@ namespace dusk {
         }
 
         if (ImGui::BeginMenu("Debug")) {
+            ImGui::BeginDisabled(getSettings().game.speedrunMode);
+
             bool developmentMode = mDoMain::developmentMode == 1;
             if (ImGui::Checkbox("Development Mode", &developmentMode)) {
                 mDoMain::developmentMode = developmentMode ? 1 : -1;
@@ -85,6 +94,7 @@ namespace dusk {
                     getSettings().game.disableWaterRefraction.setValue(disableWaterRefraction);
                     config::Save();
                 }
+                ImGui::Checkbox("Enable LOD Bias", &aurora::gx::enableLodBias);
                 ImGui::EndMenu();
             }
 
@@ -119,6 +129,9 @@ namespace dusk {
             }
 
             ImGui::MenuItem("OSReport Force", nullptr, &OSReportReallyForceEnable);
+
+            ImGui::EndDisabled();
+
             ImGui::EndMenu();
         }
     }
@@ -255,11 +268,65 @@ namespace dusk {
         ImGui::PopFont();
     }
 
-    void ImGuiMenuTools::ShowAchievements() {
-        m_achievementsWindow.draw(m_showAchievements);
+    void ImGuiMenuTools::notifyAchievement(std::string name) {
+        if (m_notifyTimer <= 0.f) {
+            m_notifyName = std::move(name);
+            m_notifyTimer = NOTIFY_DURATION;
+        } else {
+            m_notifyQueue.push(std::move(name));
+        }
     }
 
-    void ImGuiMenuTools::notifyAchievement(std::string name) {
-        m_achievementsWindow.notify(std::move(name));
+    void ImGuiMenuTools::showAchievementNotification() {
+        if (!getSettings().game.enableAchievementNotifications.getValue()) {
+            return;
+        }
+        if (m_notifyTimer <= 0.f) {
+            if (m_notifyQueue.empty()) {
+                return;
+            }
+            m_notifyName = std::move(m_notifyQueue.front());
+            m_notifyQueue.pop();
+            m_notifyTimer = NOTIFY_DURATION;
+        }
+
+        m_notifyTimer -= ImGui::GetIO().DeltaTime;
+
+        const float alpha = std::min({
+            m_notifyTimer / NOTIFY_FADE_TIME,
+            (NOTIFY_DURATION - m_notifyTimer) / NOTIFY_FADE_TIME,
+            1.0f
+        });
+
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        const float padding = 12.0f;
+        ImGui::SetNextWindowPos(
+            ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - padding, viewport->WorkPos.y + padding),
+            ImGuiCond_Always, ImVec2(1.0f, 0.0f)
+        );
+
+        ImGui::SetNextWindowBgAlpha(alpha * 0.92f);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.08f, 0.06f, 0.01f, alpha * 0.92f));
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1.0f, 0.8f, 0.1f, alpha));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, alpha));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 2.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f, 10.0f));
+
+        constexpr ImGuiWindowFlags flags =
+            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+            ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+            ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs;
+
+        if (ImGui::Begin("##achievement_notify", nullptr, flags)) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.82f, 0.1f, alpha));
+            ImGui::TextUnformatted("Achievement Unlocked!");
+            ImGui::PopStyleColor();
+            ImGui::Spacing();
+            ImGui::TextUnformatted(m_notifyName.c_str());
+        }
+        ImGui::End();
+
+        ImGui::PopStyleVar(2);
+        ImGui::PopStyleColor(3);
     }
 }
