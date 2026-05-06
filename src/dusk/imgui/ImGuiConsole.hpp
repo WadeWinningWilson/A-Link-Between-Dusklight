@@ -10,7 +10,6 @@
 #include "ImGuiMenuGame.hpp"
 #include "ImGuiMenuTools.hpp"
 #include "ImGuiMenuRandomizer.hpp"
-#include "ImGuiPreLaunchWindow.hpp"
 #include "imgui.h"
 
 union SDL_Event;
@@ -47,7 +46,6 @@ private:
 
     ImGuiMenuGame m_menuGame;
     ImGuiMenuRandomizer m_menuRandomizer;
-    ImGuiPreLaunchWindow m_preLaunchWindow;
 
     // Keep always last
     ImGuiMenuTools m_menuTools;
