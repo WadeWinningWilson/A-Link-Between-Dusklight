@@ -1398,7 +1398,7 @@ BOOL dSv_event_c::isEventBit(const u16 i_no) const {
             case CITY_IN_THE_SKY_CLEARED: // Would like to find where this is checked and patch it there.
             {
                 if (!dComIfGs_isEventBit(FIXED_THE_MIRROR_OF_TWILIGHT)) {
-                    if (randomizer_GetContext().mSettings.at("Palace of Twilight Requirements") == "Vanilla") {
+                    if (randomizer_GetContext().mSettings[RandomizerContext::PALACE_OF_TWILIGHT_REQUIREMENTS] != RandomizerContext::VANILLA) {
                         return false;
                     }
                 }
