@@ -451,7 +451,7 @@ std::map<int, itemInfo> itemMap = {
     {dItemNo_NOENTRY_222_e, {"Reserved"}},
     {dItemNo_NOENTRY_223_e, {"Reserved"}},
     {dItemNo_POU_SPIRIT_e, {"Poe Soul"}},
-    {dItemNo_NOENTRY_225_e, {"Reserved"}},
+    {dItemNo_GHOST_LANTERN_e, {"Reserved"}},
     {dItemNo_NOENTRY_226_e, {"Reserved"}},
     {dItemNo_NOENTRY_227_e, {"Reserved"}},
     {dItemNo_NOENTRY_228_e, {"Reserved"}},

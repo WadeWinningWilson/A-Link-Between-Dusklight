@@ -28,6 +28,8 @@
 #include "tracy/Tracy.hpp"
 #include <dusk/gamepad_color.h>
 #include <dusk/autosave.h>
+#include <d/actor/d_a_npc.h>
+#include <d/d_item.h>
 #endif
 
 fapGm_HIO_c::fapGm_HIO_c() {
@@ -742,6 +744,13 @@ static void fapGm_AfterRecord() {
 static void duskExecute() {
     handleGamepadColor();
     updateAutoSave();
+
+    if (daNpcT_chkEvtBit(0x2B6)) {
+        execItemGet(dItemNo_GHOST_LANTERN_e);
+    } else {
+        dComIfGs_offItemFirstBit(dItemNo_GHOST_LANTERN_e);
+        dComIfGp_setItem(SLOT_7, dItemNo_NONE_e);
+    }
 
     if (dusk::getSettings().game.recordingMode) {
         Z2GetSeqMgr()->bgmAllMute(0, 0);

@@ -6096,7 +6096,7 @@ void daAlink_c::setItemMatrix(int param_0) {
             modelCalc(mpKanteraGlowModel);
         }
 
-        if (mEquipItem == dItemNo_LENS_OF_TRUTH_e) {
+        if (mEquipItem == dItemNo_GHOST_LANTERN_e) {
             simpleAnmPlay(mpGhostLanternGlowBtk);
 
             mDoMtx_stack_c::copy(mpLinkModel->getAnmMtx(mLeftItemJntNo));
@@ -6931,7 +6931,7 @@ const daAlink_BckData* daAlink_c::getMainBckData(daAlink_c::daAlink_ANM i_anmID)
         {dRes_ID_ALANM_BCK_WAITHS_e, dRes_ID_ALANM_BCK_WAITHK_e},
     };
 
-    if (mEquipItem == dItemNo_KANTERA_e || mEquipItem == dItemNo_LENS_OF_TRUTH_e) {
+    if (mEquipItem == dItemNo_KANTERA_e || mEquipItem == dItemNo_GHOST_LANTERN_e) {
         if (i_anmID == ANM_WAIT) {
             return &kandelaarAnm[0];
         }
@@ -12073,7 +12073,7 @@ void daAlink_c::itemUnequip(u16 i_itemID, f32 i_playSpeed) {
     const daAlinkHIO_anm_c* anm_data;
 
     if (i_itemID == dItemNo_BOOMERANG_e || i_itemID == dItemNo_COPY_ROD_e ||
-        i_itemID == dItemNo_KANTERA_e || i_itemID == dItemNo_LENS_OF_TRUTH_e ||
+        i_itemID == dItemNo_KANTERA_e || i_itemID == dItemNo_GHOST_LANTERN_e ||
         i_itemID == dItemNo_HOOKSHOT_e || checkBottleItem(i_itemID))
     {
         anm_id = dRes_ID_ALANM_BCK_TAKEL_e;
@@ -14163,7 +14163,7 @@ BOOL daAlink_c::setItemModel() {
         }
     }
 
-    if (mEquipItem == dItemNo_LENS_OF_TRUTH_e) {
+    if (mEquipItem == dItemNo_GHOST_LANTERN_e) {
         setGhostLanternModel();
         return 1;
     }
@@ -14509,16 +14509,8 @@ enum daAlink_ItemProc {
     /* 13 */ ITEM_PROC_BOTTLE_SWING,
     /* 14 */ ITEM_PROC_NOT_USE_ITEM,
     /* 15 */ ITEM_PROC_GRASS_WHISTLE,
-    /* 16 */ ITEM_PROC_LENS_OF_TRUTH,
+    /* 16 */ ITEM_PROC_GHOST_LANTERN,
 };
-
-void daAlink_c::procLensOfTruthOn() {
-    if (!checkWolfEyeUp()) {
-        onWolfEyeUp();
-    } else {
-        offWolfEyeUp();
-    }
-}
 
 int daAlink_c::changeItemTriggerKeepProc(u8 i_selItemIdx, int i_procType) {
     u32 sel_item = dComIfGp_getSelectItem(i_selItemIdx);
@@ -14543,9 +14535,7 @@ int daAlink_c::changeItemTriggerKeepProc(u8 i_selItemIdx, int i_procType) {
             procKandelaarPourInit();
         }
     }
-    else if (i_procType == ITEM_PROC_LENS_OF_TRUTH) {
-        procLensOfTruthOn();
-    } else if (i_procType == ITEM_PROC_FISHING_FOOD) {
+    else if (i_procType == ITEM_PROC_FISHING_FOOD) {
         procFishingFoodInit();
     } else if (i_procType == ITEM_PROC_BOOTS_EQUIP) {
         procBootsEquipInit();
@@ -14854,7 +14844,7 @@ void daAlink_c::setGhostLanternLight() {
 
     f32 lightPower = 0.0f;
     daE_HP_c* foundPoe = (daE_HP_c*)fopAcM_Search(srchPoe, this);
-    if (mEquipItem == dItemNo_LENS_OF_TRUTH_e && foundPoe != NULL) {
+    if (mEquipItem == dItemNo_GHOST_LANTERN_e && foundPoe != NULL) {
         lightPower = 1.0f;
     }
 
@@ -18282,7 +18272,7 @@ int daAlink_c::execute() {
                 resetUpperAnime(UPPER_2, 5.0f);
             }
 
-            if ((mEquipItem == dItemNo_KANTERA_e || mEquipItem == dItemNo_LENS_OF_TRUTH_e) &&
+            if ((mEquipItem == dItemNo_KANTERA_e || mEquipItem == dItemNo_GHOST_LANTERN_e) &&
                 checkNoUpperAnime() && !checkKandelaarEquipAnime() &&
                 (checkModeFlg(MODE_UNK_1000) || mProcID == PROC_CROUCH))
             {
@@ -18639,7 +18629,7 @@ int daAlink_c::execute() {
             #endif
             setEffect();
 
-            if (mEquipItem == dItemNo_LENS_OF_TRUTH_e) {
+            if (mEquipItem == dItemNo_GHOST_LANTERN_e) {
                 cXyz effscale(0.75f, 0.75f, 0.75f);
 
                 static u16 particleNmaeDt[2] = {
@@ -19358,7 +19348,7 @@ void daAlink_c::shadowDraw() {
                     dComIfGd_addRealShadow(shadowID, mpKanteraModel);
                 }
 
-                if (mEquipItem == dItemNo_LENS_OF_TRUTH_e) {
+                if (mEquipItem == dItemNo_GHOST_LANTERN_e) {
                     dComIfGd_addRealShadow(shadowID, mpGhostLanternModel);
                 }
 
@@ -19522,7 +19512,7 @@ int daAlink_c::draw() {
         }
     }
 
-    if (mEquipItem == dItemNo_LENS_OF_TRUTH_e) {
+    if (mEquipItem == dItemNo_GHOST_LANTERN_e) {
         daE_HP_c* foundPoe = (daE_HP_c*)fopAcM_Search(srchPoe, this);
 
         for (s32 i = 0; i < 2; i++) {
@@ -19842,7 +19832,7 @@ int daAlink_c::draw() {
             basicModelDraw(mpKanteraGlowModel);
         }
 
-        if (mEquipItem == dItemNo_LENS_OF_TRUTH_e) {
+        if (mEquipItem == dItemNo_GHOST_LANTERN_e) {
             daE_HP_c* foundPoe = (daE_HP_c*)fopAcM_Search(srchPoe, this);
             modelDraw(mpGhostLanternModel, isPlayerNoDraw);
             if (foundPoe != NULL) {

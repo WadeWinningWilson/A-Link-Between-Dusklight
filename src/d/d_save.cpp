@@ -434,14 +434,14 @@ u8 dSv_player_item_c::getItem(int i_slotNo, bool i_checkCombo) const {
 void dSv_player_item_c::setLineUpItem() {
     static u8 i_item_lst[24] = {
         10, 8,  6,  2,  9,  4,  3,
-        0,  1,  23, 20, 5,  15, 16,
-        17, 11, 12, 13, 14, 19, 18,
-        22, 21, 24
+        0,  1,  7,  23, 20, 5,  15,
+        16, 17, 11, 12, 13, 14, 19,
+        18, 22, 21
     };
 
     int slot_idx = 0;
 
-    for (int i = 0; i < 25; i++) {
+    for (int i = 0; i < 24; i++) {
         mItemSlots[i] = dItemNo_NONE_e;
     }
 

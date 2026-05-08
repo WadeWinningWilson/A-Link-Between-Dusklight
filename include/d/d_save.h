@@ -15,7 +15,7 @@ static const int MAX_SELECT_ITEM = 4;
 static const int SELECT_ITEM_NUM = 2;
 static const int MAX_EQUIPMENT = 6;
 static const int MAX_EVENTS = 256;
-static const int MAX_ITEM_SLOTS = 25;
+static const int MAX_ITEM_SLOTS = 24;
 static const int LIGHT_DROP_STAGE = 4;
 static const int LETTER_INFO_BIT = 64;
 static const int MAX_INSECT_NUM = 24;
@@ -75,8 +75,7 @@ enum ItemSlots {
     /* 0x14 */ SLOT_20,
     /* 0x15 */ SLOT_21,
     /* 0x16 */ SLOT_22,
-    /* 0x17 */ SLOT_23,
-    /* 0x18 */ SLOT_24,
+    /* 0x17 */ SLOT_23
 };
 
 enum CollectItem {
@@ -350,8 +349,8 @@ public:
     static const int BOMB_BAG_MAX = 3;
     static const int BOTTLE_MAX = 4;
 
-    /* 0x00 */ u8 mItems[25];
-    /* 0x18 */ u8 mItemSlots[25];
+    /* 0x00 */ u8 mItems[24];
+    /* 0x18 */ u8 mItemSlots[24];
 };  // Size: 0x30
 
 class dSv_player_get_item_c {

@@ -317,7 +317,7 @@ enum {
     /* 0xDE */ dItemNo_NOENTRY_222_e,
     /* 0xDF */ dItemNo_NOENTRY_223_e,
     /* 0xE0 */ dItemNo_POU_SPIRIT_e,
-    /* 0xE1 */ dItemNo_LENS_OF_TRUTH_e,
+    /* 0xE1 */ dItemNo_GHOST_LANTERN_e,
     /* 0xE2 */ dItemNo_NOENTRY_226_e,
     /* 0xE3 */ dItemNo_NOENTRY_227_e,
     /* 0xE4 */ dItemNo_NOENTRY_228_e,

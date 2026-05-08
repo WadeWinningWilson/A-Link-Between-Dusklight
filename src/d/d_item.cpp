@@ -236,7 +236,7 @@ static void (*item_func_ptr[256])() = {
     item_func_noentry,
     item_func_noentry,
     item_func_POU_SPIRIT,
-    item_func_LENS_OF_TRUTH,
+    item_func_GHOST_LANTERN,
     item_func_noentry,
     item_func_noentry,
     item_func_noentry,
@@ -504,7 +504,7 @@ static int (*item_getcheck_func_ptr[256])() = {
     item_getcheck_func_noentry,
     item_getcheck_func_noentry,
     item_getcheck_func_POU_SPIRIT,
-    item_getcheck_func_LENS_OF_TRUTH,
+    item_getcheck_func_GHOST_LANTERN,
     item_getcheck_func_noentry,
     item_getcheck_func_noentry,
     item_getcheck_func_noentry,
@@ -791,8 +791,8 @@ void item_func_IRONBALL() {
     dComIfGs_setItem(SLOT_6, dItemNo_IRONBALL_e);
 }
 
-void item_func_LENS_OF_TRUTH() {
-    dComIfGs_setItem(SLOT_24, dItemNo_LENS_OF_TRUTH_e);
+void item_func_GHOST_LANTERN() {
+    dComIfGs_setItem(SLOT_7, dItemNo_GHOST_LANTERN_e);
 }
 
 void item_func_BOW() {
@@ -1457,8 +1457,8 @@ int item_getcheck_func_IRONBALL() {
     return dComIfGs_getItem(SLOT_6, true) == dItemNo_IRONBALL_e ? TRUE : FALSE;
 }
 
-int item_getcheck_func_LENS_OF_TRUTH() {
-    return dComIfGs_getItem(SLOT_24, true) == dItemNo_LENS_OF_TRUTH_e ? TRUE : FALSE;
+int item_getcheck_func_GHOST_LANTERN() {
+    return dComIfGs_getItem(SLOT_7, true) == dItemNo_GHOST_LANTERN_e ? TRUE : FALSE;
 }
 
 int item_getcheck_func_BOW() {

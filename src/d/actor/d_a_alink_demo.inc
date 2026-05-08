@@ -2183,7 +2183,7 @@ void daAlink_c::setGetSubBgm(int i_itemNo) {
         /* dItemNo_NOENTRY_222_e       */ SETYPE_NONE,
         /* dItemNo_NOENTRY_223_e       */ SETYPE_NONE,
         /* dItemNo_POU_SPIRIT_e        */ SETYPE_ITEM_GET_POU,
-        /* dItemNo_LENS_OF_TRUTH_e     */ SETYPE_NONE,
+        /* dItemNo_GHOST_LANTERN_e     */ SETYPE_ITEM_GET,
         /* dItemNo_NOENTRY_226_e       */ SETYPE_NONE,
         /* dItemNo_NOENTRY_227_e       */ SETYPE_NONE,
         /* dItemNo_NOENTRY_228_e       */ SETYPE_NONE,
