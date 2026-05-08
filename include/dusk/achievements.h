@@ -12,9 +12,8 @@
 namespace dusk {
 
 enum class AchievementCategory : uint8_t {
-    Story,
-    Collection,
     Challenge,
+    Collection,
     Minigame,
     Misc,
     Glitched

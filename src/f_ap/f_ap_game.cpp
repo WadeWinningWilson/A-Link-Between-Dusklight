@@ -14,6 +14,7 @@
 #include "d/actor/d_a_midna.h"
 #include "d/d_model.h"
 #include "d/d_tresure.h"
+#include "dusk/achievements.h"
 #include "dusk/frame_interpolation.h"
 #include "dusk/livesplit.h"
 #include "dusk/logging.h"
@@ -828,6 +829,7 @@ void fapGm_Execute() {
     cCt_Counter(0);
 #ifdef TARGET_PC
     dusk::speedrun::onGameFrame();
+    dusk::AchievementSystem::get().tick();
 #endif
 }
 

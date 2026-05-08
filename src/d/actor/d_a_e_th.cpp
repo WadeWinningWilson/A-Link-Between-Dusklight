@@ -12,6 +12,9 @@
 #include "c/c_damagereaction.h"
 #include "f_op/f_op_actor_enemy.h"
 #include "f_op/f_op_camera_mng.h"
+#if TARGET_PC
+#include "dusk/achievements.h"
+#endif
 
 class daE_TH_HIO_c : public JORReflexible {
 public:
@@ -542,6 +545,7 @@ static void damage_check(e_th_class* i_this) {
             if (i_this->field_0x6a4 == 0 && i_this->mAction != ACTION_SPIN) {
                 daPy_py_c* player = (daPy_py_c*)dComIfGp_getPlayer(0);
                 OS_REPORT("E_th HP1 %d\n", i_this->health);
+                s16 prevHealth = i_this->health;
                 cc_at_check(i_this, &i_this->mAtInfo);
                 OS_REPORT("E_th HP2 %d\n", i_this->health);
 
@@ -554,6 +558,11 @@ static void damage_check(e_th_class* i_this) {
                 dComIfGs_onOneZoneSwitch(3, -1);
 
                 if (i_this->health <= 0) {
+#if TARGET_PC
+                    if (prevHealth == i_this->field_0x560) {
+                        dusk::AchievementSystem::get().signal("dark_hammer_one_hit");
+                    }
+#endif
                     i_this->mAction = ACTION_END;
                     i_this->mMode = 0;
                     i_this->field_0x68a |= 4;

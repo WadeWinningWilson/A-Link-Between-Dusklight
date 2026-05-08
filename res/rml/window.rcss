@@ -17,6 +17,7 @@ body {
 window {
     display: flex;
     flex-flow: column;
+    position: relative;
     height: 100%;
     width: 100%;
     max-width: 1088dp;
@@ -289,6 +290,19 @@ icon.celebration {
 
 icon.question-mark {
     decorator: text("&#xeb8b;" center center);
+}
+
+.achievement-total {
+    position: absolute;
+    top: 0;
+    right: 64dp;
+    height: 64dp;
+    line-height: 64dp;
+    font-family: "Fira Sans Condensed";
+    font-weight: bold;
+    font-size: 16dp;
+    color: rgba(224, 219, 200, 55%);
+    pointer-events: none;
 }
 
 .achievement-row {
