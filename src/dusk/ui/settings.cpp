@@ -871,7 +871,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addCheat(
             "Moon Jump (R+A)", getSettings().game.moonJump, "Hold R and A to rise into the air.");
         addCheat("Super Clawshot", getSettings().game.superClawshot,
-            "Extends clawshot behavior beyond the normal game rules.");
+            "Extends Clawshot behavior beyond the normal game rules.<br/>This will disable chains from rendering to prevent crashes.");
         addCheat("Always Greatspin", getSettings().game.alwaysGreatspin,
             "Allows the Great Spin attack without requiring full health.");
         addCheat("Fast Iron Boots", getSettings().game.enableFastIronBoots,
@@ -916,6 +916,12 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             {
                 .key = "Show Pipeline Compilation",
                 .helpText = "Show an overlay when shaders are being compiled for your hardware.",
+            });
+        config_bool_select(leftPane, rightPane, getSettings().backend.checkForUpdates,
+            {
+                .key = "Check for Updates",
+                .helpText = "Checks GitHub releases for a new Dusk version on startup.<br/><br/>"
+                            "No personal information is transmitted or collected.",
             });
         config_bool_select(leftPane, rightPane, getSettings().backend.enableAdvancedSettings,
             {
