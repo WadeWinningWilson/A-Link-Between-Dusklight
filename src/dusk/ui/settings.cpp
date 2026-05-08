@@ -6,6 +6,7 @@
 #include "dusk/audio/DuskAudioSystem.h"
 #include "dusk/audio/DuskDsp.hpp"
 #include "dusk/config.hpp"
+#include "dusk/file_select.hpp"
 #include "dusk/imgui/ImGuiEngine.hpp"
 #include "dusk/livesplit.h"
 #include "graphics_tuner.hpp"
@@ -317,7 +318,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                                 if (path.empty()) {
                                     display = "(none)";
                                 } else {
-                                    display = std::filesystem::path(path).filename().string();
+                                    display = display_name_for_path(path);
                                     if (display.empty()) {
                                         display = path;
                                     }
@@ -611,6 +612,12 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             rightPane, [](Pane& pane) {
                 pane.clear();
                 pane.add_text("Open controller binding configuration.");
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.allowBackgroundInput,
+            {
+                .key = "Allow Background Input",
+                .helpText = "Allow controller input even when the game window is not focused.",
+                .onChange = [](bool value) { aurora_set_background_input(value); },
             });
 
         leftPane.add_section("Camera");
@@ -922,6 +929,12 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .key = "Check for Updates",
                 .helpText = "Checks GitHub releases for a new Dusk version on startup.<br/><br/>"
                             "No personal information is transmitted or collected.",
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.pauseOnFocusLost,
+            {
+                .key = "Pause On Focus Lost",
+                .helpText = "Pause the game when window focus is lost.",
+                .onChange = [](bool value) { aurora_set_pause_on_focus_lost(value); },
             });
         config_bool_select(leftPane, rightPane, getSettings().backend.enableAdvancedSettings,
             {

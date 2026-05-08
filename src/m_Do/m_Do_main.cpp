@@ -105,7 +105,6 @@ const int audioHeapSize = 0x14D800;
 bool dusk::IsRunning = true;
 bool dusk::IsShuttingDown = false;
 bool dusk::IsGameLaunched = false;
-bool dusk::IsFocusPaused = false;
 bool dusk::RestartRequested = false;
 std::filesystem::path dusk::ConfigPath;
 #endif
@@ -228,19 +227,16 @@ void main01(void) {
             switch (event->type) {
             case AURORA_NONE:
                 goto eventsDone;
+            case AURORA_PAUSED:
+                dusk::audio::SetPaused(true);
+                break;
+            case AURORA_UNPAUSED:
+                dusk::audio::SetPaused(false);
+                dusk::game_clock::reset_frame_timer();
+                break;
             case AURORA_SDL_EVENT:
                 dusk::ui::handle_event(event->sdl);
                 dusk::g_imguiConsole.HandleSDLEvent(event->sdl);
-                if (event->sdl.type == SDL_EVENT_WINDOW_FOCUS_LOST &&
-                    dusk::getSettings().game.pauseOnFocusLost) {
-                    dusk::IsFocusPaused = true;
-                    dusk::audio::SetPaused(true);
-                } else if (event->sdl.type == SDL_EVENT_WINDOW_FOCUS_GAINED &&
-                           dusk::IsFocusPaused) {
-                    dusk::IsFocusPaused = false;
-                    dusk::audio::SetPaused(false);
-                    dusk::game_clock::reset_frame_timer();
-                }
                 break;
             case AURORA_DISPLAY_SCALE_CHANGED:
                 dusk::ImGuiEngine_Initialize(event->windowSize.scale);
@@ -254,19 +250,14 @@ void main01(void) {
 
         eventsDone:;
 
-        if (dusk::IsFocusPaused) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        if (!aurora_begin_frame()) {
+            DuskLog.debug("aurora_begin_frame returned false, skipping draw this frame");
             continue;
         }
 
         VIWaitForRetrace();
 
         dusk::lastFrameAuroraStats = *aurora_get_stats();
-        if (!aurora_begin_frame()) {
-            DuskLog.debug("aurora_begin_frame returned false, skipping draw this frame");
-            continue;
-        }
-
         mDoGph_gInf_c::updateRenderSize();
 
         dusk::ui::update();
@@ -571,7 +562,8 @@ int game_main(int argc, char* argv[]) {
         config.logLevel = startupLogLevel;
         config.mem1Size = 256 * 1024 * 1024;
         config.mem2Size = 24 * 1024 * 1024;
-        config.allowJoystickBackgroundEvents = true;
+        config.allowJoystickBackgroundEvents = dusk::getSettings().game.allowBackgroundInput;
+        config.pauseOnFocusLost = dusk::getSettings().game.pauseOnFocusLost;
         config.imGuiInitCallback = &aurora_imgui_init_callback;
         config.allowTextureReplacements = true;
         config.allowTextureDumps = false;
@@ -618,13 +610,19 @@ int game_main(int argc, char* argv[]) {
 
     // Invalidate a bad saved isoPath so that Dusk can't get blocked from starting up.
     // This is only a metadata check; full hash verification is handled by the prelaunch UI.
+    bool forcePreLaunchUI = false;
+    bool saveConfigBeforePrelaunch = false;
+
     const std::string p = dusk::getSettings().backend.isoPath;
     dusk::iso::DiscInfo discInfo{};
     if (!p.empty() &&
         dusk::iso::inspect(p.c_str(), discInfo) != dusk::iso::ValidationError::Success)
     {
+        DuskLog.warn("Saved DVD image path failed validation, clearing configured path: {}", p);
         dusk::getSettings().backend.isoPath.setValue("");
         dusk::getSettings().backend.isoVerification.setValue(dusk::DiscVerificationState::Unknown);
+        forcePreLaunchUI = true;
+        saveConfigBeforePrelaunch = true;
     }
 
     std::string dvd_path;
@@ -636,6 +634,7 @@ int game_main(int argc, char* argv[]) {
             dvd_opened = aurora_dvd_open(dvd_path.c_str());
             if (!dvd_opened) {
                 DuskLog.warn("Failed to open DVD image from command line: {}, opening prelaunch UI", dvd_path);
+                forcePreLaunchUI = true;
             } else {
                 dusk::getSettings().backend.isoPath.setValue(dvd_path);
                 dusk::getSettings().backend.isoVerification.setValue(
@@ -645,10 +644,23 @@ int game_main(int argc, char* argv[]) {
             }
         } else {
             DuskLog.warn("DVD image from command line failed validation: {}, opening prelaunch UI", dvd_path);
+            forcePreLaunchUI = true;
         }
     }
 
     if (!dvd_opened) {
+        if (dusk::getSettings().backend.isoPath.getValue().empty()) {
+            forcePreLaunchUI = true;
+        }
+        if (forcePreLaunchUI && dusk::getSettings().backend.skipPreLaunchUI.getValue()) {
+            DuskLog.warn("Prelaunch UI was disabled with no usable DVD image, enabling prelaunch UI");
+            dusk::getSettings().backend.skipPreLaunchUI.setValue(false);
+            saveConfigBeforePrelaunch = true;
+        }
+        if (saveConfigBeforePrelaunch) {
+            dusk::config::Save();
+        }
+
         if (!dusk::getSettings().backend.skipPreLaunchUI) {
             dusk::ui::push_document(std::make_unique<dusk::ui::Prelaunch>(), true);
 

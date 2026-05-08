@@ -16,10 +16,7 @@ namespace dusk::ui {
 namespace {
 
 float base_body_padding(Rml::Context* context) noexcept {
-    if (context == nullptr) {
-        return 64.0f;
-    }
-    const float dpRatio = std::max(context->GetDensityIndependentPixelRatio(), 0.001f);
+    const float dpRatio = context->GetDensityIndependentPixelRatio();
     const float heightDp = static_cast<float>(context->GetDimensions().y) / dpRatio;
     if (heightDp <= 640.0f) {
         return 16.0f * dpRatio;

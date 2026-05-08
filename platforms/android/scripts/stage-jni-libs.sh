@@ -14,9 +14,22 @@ if [[ -z "$ANDROID_NDK_VER" ]] && [[ -d "$ANDROID_HOME_DIR/ndk" ]]; then
 fi
 
 if [[ -n "$ANDROID_NDK_VER" ]]; then
-  TOOLCHAIN_BIN="$ANDROID_HOME_DIR/ndk/$ANDROID_NDK_VER/toolchains/llvm/prebuilt/linux-x86_64/bin"
-  if [[ -x "$TOOLCHAIN_BIN/llvm-strip" ]]; then
-    STRIP_TOOL="$TOOLCHAIN_BIN/llvm-strip"
+  case "$(uname -s)" in
+    Darwin) HOST_TAG="darwin-x86_64" ;;
+    Linux) HOST_TAG="linux-x86_64" ;;
+    *) HOST_TAG="" ;;
+  esac
+
+  PREBUILT_DIR="$ANDROID_HOME_DIR/ndk/$ANDROID_NDK_VER/toolchains/llvm/prebuilt"
+  if [[ -n "$HOST_TAG" && -x "$PREBUILT_DIR/$HOST_TAG/bin/llvm-strip" ]]; then
+    STRIP_TOOL="$PREBUILT_DIR/$HOST_TAG/bin/llvm-strip"
+  else
+    for candidate in "$PREBUILT_DIR"/*/bin/llvm-strip; do
+      if [[ -x "$candidate" ]]; then
+        STRIP_TOOL="$candidate"
+        break
+      fi
+    done
   fi
 fi
 
@@ -25,29 +38,35 @@ copy_lib() {
   local src="$2"
   local dst_dir="$APP_DIR/$abi"
   local dst="$dst_dir/libmain.so"
+  local tmp="$dst_dir/.libmain.so.$$"
+  if [[ ! -f "$src" ]]; then
+    echo "Missing native library for $abi: $src" >&2
+    exit 1
+  fi
+
   mkdir -p "$dst_dir"
-  cp -f "$src" "$dst"
+  cp -f "$src" "$tmp"
   if [[ "$ANDROID_STAGE_STRIP" != "0" ]] && [[ -n "$STRIP_TOOL" ]]; then
-    "$STRIP_TOOL" --strip-debug "$dst"
-    echo "Staged and stripped $src -> $dst"
+    "$STRIP_TOOL" --strip-unneeded "$tmp"
+    mv -f "$tmp" "$dst"
+    echo "Stripped and staged $src -> $dst"
   else
+    mv -f "$tmp" "$dst"
     echo "Staged $src -> $dst (strip disabled or strip tool unavailable)"
   fi
 }
-
-declare -A ABI_TO_LIB=(
-  ["arm64-v8a"]="$ROOT_DIR/build/android-arm64/libmain.so"
-  ["x86_64"]="$ROOT_DIR/build/android-x86_64/libmain.so"
-)
 
 # Drop any previously staged ABI directories to avoid stale APK contents.
 rm -rf "$APP_DIR/x86" "$APP_DIR/arm64-v8a" "$APP_DIR/x86_64"
 
 for abi in $ANDROID_STAGE_ABIS; do
-  src="${ABI_TO_LIB[$abi]:-}"
-  if [[ -z "$src" ]]; then
-    echo "Unsupported ABI '$abi'. Supported ABIs: arm64-v8a x86_64" >&2
-    exit 1
-  fi
+  case "$abi" in
+    arm64-v8a) src="$ROOT_DIR/build/android-arm64/libmain.so" ;;
+    x86_64) src="$ROOT_DIR/build/android-x86_64/libmain.so" ;;
+    *)
+      echo "Unsupported ABI '$abi'. Supported ABIs: arm64-v8a x86_64" >&2
+      exit 1
+      ;;
+  esac
   copy_lib "$abi" "$src"
 done

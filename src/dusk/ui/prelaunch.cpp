@@ -445,8 +445,7 @@ private:
         }
 
         if (mFileName != nullptr) {
-            std::string fileName =
-                std::filesystem::path(sDiscVerificationTask->path).filename().string();
+            std::string fileName = display_name_for_path(sDiscVerificationTask->path);
             if (fileName.empty()) {
                 fileName = sDiscVerificationTask->path;
             }

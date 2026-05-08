@@ -1,9 +1,16 @@
 #include "file_select.hpp"
 
 #include <memory>
+#include <string_view>
 
 #include <SDL3/SDL_dialog.h>
 #include <SDL3/SDL_error.h>
+#include <SDL3/SDL_stdinc.h>
+
+#if defined(__ANDROID__) || defined(ANDROID)
+#include <SDL3/SDL_system.h>
+#include <jni.h>
+#endif
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -18,6 +25,92 @@
 
 namespace dusk {
 namespace {
+
+std::string fallback_display_name(std::string_view path) {
+    if (path.empty()) {
+        return {};
+    }
+
+    std::string pathString(path);
+    const std::size_t slash = pathString.find_last_of("/\\");
+    if (slash == std::string::npos || slash + 1 >= pathString.size()) {
+        return pathString;
+    }
+    return pathString.substr(slash + 1);
+}
+
+#if defined(__ANDROID__) || defined(ANDROID)
+bool clear_pending_exception(JNIEnv* env) {
+    if (env == nullptr || !env->ExceptionCheck()) {
+        return false;
+    }
+    env->ExceptionClear();
+    return true;
+}
+
+std::string to_string(JNIEnv* env, jstring value) {
+    if (env == nullptr || value == nullptr) {
+        return {};
+    }
+
+    const char* utf8 = env->GetStringUTFChars(value, nullptr);
+    if (utf8 == nullptr) {
+        clear_pending_exception(env);
+        return {};
+    }
+
+    std::string result(utf8);
+    env->ReleaseStringUTFChars(value, utf8);
+    return result;
+}
+
+std::string android_display_name(std::string_view path) {
+    auto* env = static_cast<JNIEnv*>(SDL_GetAndroidJNIEnv());
+    if (env == nullptr) {
+        return {};
+    }
+
+    jobject activity = static_cast<jobject>(SDL_GetAndroidActivity());
+    if (activity == nullptr || clear_pending_exception(env)) {
+        if (activity != nullptr) {
+            env->DeleteLocalRef(activity);
+        }
+        return {};
+    }
+
+    jclass activityClass = env->GetObjectClass(activity);
+    if (activityClass == nullptr || clear_pending_exception(env)) {
+        env->DeleteLocalRef(activity);
+        return {};
+    }
+
+    jmethodID getDisplayName = env->GetMethodID(
+        activityClass, "getDisplayNameForUri", "(Ljava/lang/String;)Ljava/lang/String;");
+    env->DeleteLocalRef(activityClass);
+    if (getDisplayName == nullptr || clear_pending_exception(env)) {
+        env->DeleteLocalRef(activity);
+        return {};
+    }
+
+    jstring uri = env->NewStringUTF(std::string(path).c_str());
+    if (uri == nullptr || clear_pending_exception(env)) {
+        env->DeleteLocalRef(activity);
+        return {};
+    }
+
+    auto* displayName =
+        static_cast<jstring>(env->CallObjectMethod(activity, getDisplayName, uri));
+    env->DeleteLocalRef(uri);
+    env->DeleteLocalRef(activity);
+    if (displayName == nullptr || clear_pending_exception(env)) {
+        return {};
+    }
+
+    std::string result = to_string(env, displayName);
+    env->DeleteLocalRef(displayName);
+    return result;
+}
+#endif
 
 #if USE_IOS_DIALOG
 struct IOSDialogCallbackState {
@@ -87,5 +180,17 @@ void ShowFileSelect(FileCallback callback, void* userdata, SDL_Window* window,
     SDL_ShowOpenFileDialog(&onSDLDialogFinished, state.release(), window, filters, nfilters,
                            default_location, allow_many);
 #endif
+}
+
+std::string display_name_for_path(std::string_view path) {
+#if defined(__ANDROID__) || defined(ANDROID)
+    if (path.starts_with("content:") || path.starts_with("file:")) {
+        std::string displayName = android_display_name(path);
+        if (!displayName.empty()) {
+            return displayName;
+        }
+    }
+#endif
+    return fallback_display_name(path);
 }
 }  // namespace dusk

@@ -255,11 +255,7 @@ void update() noexcept {
 }
 
 std::filesystem::path resource_path(const std::filesystem::path& filename) noexcept {
-    const char* basePath = SDL_GetBasePath();
-    if (basePath == nullptr) {
-        return std::filesystem::path("res") / filename;
-    }
-    return std::filesystem::path(basePath) / "res" / filename;
+    return std::filesystem::path("res") / filename;
 }
 
 std::string escape(std::string_view str) noexcept {
