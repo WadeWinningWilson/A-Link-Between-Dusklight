@@ -17,11 +17,11 @@ enum {
     HS_MODE_RETURN_e = 6,
 };
 
-void daAlink_c::hsChainShape_c::draw() {
-    if (dusk::getSettings().game.superClawshot) {
-        return;
-    }
+#if TARGET_PC
+static const int HS_CHAIN_MAX_LINKS = 600;
+#endif
 
+void daAlink_c::hsChainShape_c::draw() {
     static const int dummy = 0;
 
     daAlink_c* alink = (daAlink_c*)getUserArea();
@@ -165,7 +165,11 @@ void daAlink_c::hsChainShape_c::draw() {
             }
             (void)0;
 
-            while (maxDistanceF > var_f30) {
+#if TARGET_PC
+            int chainLinks = 0;
+#endif
+
+            while (maxDistanceF > var_f30 IF_DUSK(&&chainLinks < HS_CHAIN_MAX_LINKS)) {
                 temp_f27 = var_f28 * cM_fsin(sp34 * var_f30);
                 s16 spC = cM_atan2s(temp_f27 - var_f26, 5.0f);
                 sp64.x = sp6C.x + spC;
@@ -187,6 +191,10 @@ void daAlink_c::hsChainShape_c::draw() {
 
                 var_f26 = temp_f27;
                 var_f30 += fabsf(cM_scos(spC)) * 5.0f;
+
+#if TARGET_PC
+                chainLinks++;
+#endif
             }
         }
 
@@ -202,7 +210,11 @@ void daAlink_c::hsChainShape_c::draw() {
             sp98 = subChainTopPos;
             sp6C.set(maxDistance.atan2sY_XZ(), maxDistance.atan2sX_Z(), 0);
 
-            while (maxDistanceF > var_f30) {
+#if TARGET_PC
+            int subChainLinks = 0;
+#endif
+
+            while (maxDistanceF > var_f30 IF_DUSK(&&subChainLinks < HS_CHAIN_MAX_LINKS)) {
                 mDoMtx_stack_c::copy(j3dSys.getViewMtx());
                 mDoMtx_stack_c::transM(sp98);
                 mDoMtx_stack_c::ZXYrotM(sp6C);
@@ -215,6 +227,9 @@ void daAlink_c::hsChainShape_c::draw() {
                 sp98 += maxDistance * 5.0f;
                 ANGLE_ADD_2(sp6C.z, 0x3000);
                 var_f30 += 5.0f;
+#if TARGET_PC
+                subChainLinks++;
+#endif
             }
         }
     }
