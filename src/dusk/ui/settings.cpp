@@ -336,6 +336,38 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                     pane.add_rml("Set the disc image that Dusk uses to launch the game.<br/><br/>"
                                  "Changes require a restart.");
                 });
+#if DUSK_TPHD
+            leftPane.register_control(
+                leftPane
+                    .add_select_button({
+                        .key = "TPHD Content",
+                        .getValue =
+                            [] {
+                                const auto& path = prelaunch_state().configuredHdContentPath;
+                                std::string display;
+                                if (path.empty()) {
+                                    display = "(none)";
+                                } else {
+                                    display = std::filesystem::path(path).string();
+                                    if (display.empty()) {
+                                        display = path;
+                                    }
+                                }
+                                return display;
+                            },
+                        .isModified =
+                            [] {
+                                const auto& state = prelaunch_state();
+                                const auto& active = state.activeHdContentPath;
+                                return !active.empty() && state.configuredHdContentPath != active;
+                            },
+                    })
+                    .on_pressed([] { open_folder_picker(); }),
+                rightPane, [](Pane& pane) {
+                    pane.add_rml("Set the directory that Dusk loads eligible TPHD content from."
+                                 "<br/><br/>Changes require a restart.");
+                });
+#endif
             leftPane.register_control(
                 leftPane.add_select_button({
                     .key = "Language",

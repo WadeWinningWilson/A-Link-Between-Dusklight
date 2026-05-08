@@ -47,8 +47,8 @@ struct PrelaunchState {
     iso::ValidationError configuredDiscValidation = iso::ValidationError::Unknown;
     std::string activeDiscPath;
     iso::DiscInfo activeDiscInfo{};
-    std::string initialHdContentPath;
-    std::string selectedHdContentPath;
+    std::string configuredHdContentPath;
+    std::string activeHdContentPath;
     GameLanguage initialLanguage = GameLanguage::English;
     std::string initialGraphicsBackend;
     int initialCardFileType = 0;

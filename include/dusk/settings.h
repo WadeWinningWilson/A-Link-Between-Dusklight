@@ -167,6 +167,9 @@ struct UserSettings {
     struct {
         ConfigVar<std::string> isoPath;
         ConfigVar<DiscVerificationState> isoVerification;
+#if DUSK_TPHD
+        ConfigVar<std::string> hdContentPath;
+#endif
         ConfigVar<std::string> graphicsBackend;
         ConfigVar<bool> skipPreLaunchUI;
         ConfigVar<bool> showPipelineCompilation;
@@ -175,9 +178,6 @@ struct UserSettings {
         ConfigVar<bool> checkForUpdates;
         ConfigVar<int> cardFileType;
         ConfigVar<bool> enableAdvancedSettings;
-#if DUSK_TPHD
-        ConfigVar<std::string> hdContentPath;  // path to TP-HD decrypted "content" folder
-#endif
     } backend;
 };
 

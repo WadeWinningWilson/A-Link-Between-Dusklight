@@ -504,9 +504,8 @@ void folder_dialog_callback(void*, const char* path, const char* error) {
         return;
     }
 
-    state.selectedHdContentPath = path;
-    state.errorString.clear();
-    getSettings().backend.hdContentPath.setValue(state.selectedHdContentPath);
+    state.configuredHdContentPath = path;
+    getSettings().backend.hdContentPath.setValue(path);
     config::Save();
 }
 
@@ -645,6 +644,8 @@ void ensure_initialized() noexcept {
     state.activeDiscPath = state.configuredDiscPath;
     state.configuredDiscValidation =
         verification_from_config(getSettings().backend.isoVerification.getValue());
+    state.configuredHdContentPath = getSettings().backend.hdContentPath;
+    state.activeHdContentPath = state.configuredHdContentPath;
     state.initialLanguage = getSettings().game.language;
     state.initialGraphicsBackend = getSettings().backend.graphicsBackend;
     state.initialCardFileType = getSettings().backend.cardFileType;
@@ -667,6 +668,9 @@ void open_folder_picker() noexcept {
 bool is_restart_pending() noexcept {
     const auto& state = prelaunch_state();
     if (!state.activeDiscPath.empty() && state.configuredDiscPath != state.activeDiscPath) {
+        return true;
+    }
+    if (state.configuredHdContentPath != state.activeHdContentPath) {
         return true;
     }
     if (getSettings().backend.graphicsBackend.getValue() != state.initialGraphicsBackend) {
