@@ -1430,11 +1430,14 @@ set(DUSK_FILES
         src/dusk/gyro.cpp
 		src/dusk/gamepad_color.cpp
 		src/dusk/autosave.cpp
+        src/dusk/http/http.hpp
         src/dusk/io.cpp
         src/dusk/layout.cpp
         src/dusk/logging.cpp
         src/dusk/settings.cpp
         src/dusk/stubs.cpp
+        src/dusk/update_check.cpp
+        src/dusk/update_check.hpp
         #src/dusk/m_Do_ext_dusk.cpp
         src/dusk/imgui/ImGuiConfig.hpp
         src/dusk/imgui/ImGuiConsole.hpp
@@ -1601,4 +1604,11 @@ set(DUSK_FILES
         src/dusk/randomizer/generator/utility/time.cpp
         src/dusk/randomizer/generator/utility/time.hpp
         src/dusk/randomizer/generator/utility/yaml.hpp
+)
+
+set(DUSK_HTTP_BACKEND_FILES
+        src/dusk/http/no_backend.cpp
+        src/dusk/http/curl.cpp
+        src/dusk/http/winhttp.cpp
+        src/dusk/http/url_session.mm
 )

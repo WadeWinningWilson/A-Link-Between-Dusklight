@@ -19,6 +19,9 @@
 
 #include "dusk/frame_interpolation.h"
 #include "dusk/settings.h"
+#if TARGET_PC
+#include "dusk/achievements.h"
+#endif
 
 class daB_GND_HIO_c : public JORReflexible {
 public:
@@ -1289,6 +1292,9 @@ static void b_gnd_g_wait(b_gnd_class* i_this) {
         if (i_this->mMoveMode < 5 && i_this->mPlayerDistXZ < 600.0f) {
             i_this->mMoveMode = 5;
             i_this->field_0xc44[0] = 10;
+#if TARGET_PC
+            dusk::AchievementSystem::get().signal("ganondorf_fishing_rod");
+#endif
         }
     } else if (i_this->mMoveMode == 5) {
         i_this->mMoveMode = 6;

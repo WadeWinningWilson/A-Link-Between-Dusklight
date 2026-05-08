@@ -273,18 +273,58 @@ body.mirrored version-info {
     font-size: 20dp;
 }
 
-/* TODO: Hidden until an actual update checker is introduced */
 .update {
     display: none;
-    font-size: 16dp;
-    font-weight: bold;
-    cursor: pointer;
-    color: #D8F999;
+    color: #A6A09B;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8dp;
+    font-size: 20dp;
 }
 
-.detail,
-.update span {
+.update[state=checking],
+.update[state=failed] {
+    display: block;
+}
+
+.update[state=available] {
+    display: flex;
+}
+
+#update-download {
+    display: none;
+    margin: 0dp;
+    padding: 0dp;
+    border-width: 0dp;
+    background-color: transparent;
+    color: #D8F999;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: bold;
+    decorator: horizontal-gradient(#00000000 #00000000);
+}
+
+.update[state=available] #update-download {
+    display: flex;
+    align-items: center;
+    gap: 2dp;
+}
+
+#update-download icon {
+    display: block;
+    width: 18dp;
+    height: 18dp;
+    font-family: "Material Symbols Rounded";
+    font-weight: normal;
+    decorator: text("&#xe5c8;" center center);
+}
+
+.detail {
     color: #A6A09B;
+}
+
+body.mirrored .update {
+    justify-content: flex-start;
 }
 
 /* Startup animation */
@@ -334,8 +374,8 @@ body.animate-in .intro-item {
     }
 
     menu {
-        left: 20dp;
-        right: 20dp;
+        left: 32dp;
+        right: 32dp;
         width: auto;
         min-width: 0;
         max-width: none;
@@ -346,8 +386,8 @@ body.animate-in .intro-item {
     }
 
     body.mirrored menu {
-        left: 20dp;
-        right: 20dp;
+        left: 32dp;
+        right: 32dp;
         flex-direction: row-reverse;
     }
 
@@ -355,7 +395,7 @@ body.animate-in .intro-item {
         flex: 1 1 0;
         min-width: 0;
         max-width: 48%;
-
+        margin-left: 32dp;
     }
 
     body.mirrored hero {
@@ -397,9 +437,61 @@ body.animate-in .intro-item {
         decorator: horizontal-gradient(#FEE685FF #FEE68500);
     }
 
-    .eyebrow,
-    disc-info,
-    version-info {
+    .eyebrow {
         display: none;
+    }
+
+    disc-info {
+        right: 32dp;
+        left: auto;
+        bottom: 32dp;
+        top: auto;
+        text-align: right;
+        font-size: 16dp;
+    }
+
+    #disc-status {
+        justify-content: flex-end;
+    }
+
+    #disc-status icon {
+        font-size: 20dp;
+    }
+
+    #disc-version {
+        font-size: 16dp;
+    }
+
+    version-info {
+        right: 32dp;
+        left: auto;
+        bottom: auto;
+        top: 32dp;
+        text-align: right;
+        font-size: 16dp;
+    }
+
+    .update {
+        font-size: 16dp;
+    }
+
+    body.mirrored disc-info {
+        right: auto;
+        left: 32dp;
+        bottom: 32dp;
+        top: auto;
+        text-align: left;
+    }
+
+    body.mirrored version-info {
+        right: auto;
+        left: 32dp;
+        bottom: auto;
+        top: 32dp;
+        text-align: left;
+    }
+
+    body.mirrored #disc-status {
+        justify-content: flex-start;
     }
 }

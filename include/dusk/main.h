@@ -11,7 +11,6 @@ namespace dusk {
     extern bool IsRunning;
     extern bool IsShuttingDown;
     extern bool IsGameLaunched;
-    extern bool IsFocusPaused;
     extern bool RestartRequested;
     extern std::filesystem::path ConfigPath;
 

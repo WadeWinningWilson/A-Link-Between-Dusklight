@@ -45,6 +45,7 @@ namespace dusk {
 
         getSettings().game.enableTurboKeybind.setValue(false);
         getSettings().game.debugFlyCam.setValue(false);
+        getSettings().game.autoSave.setValue(false);
     }
 
     SpeedrunInfo m_speedrunInfo;

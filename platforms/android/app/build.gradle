@@ -2,6 +2,16 @@ plugins {
     id 'com.android.application'
 }
 
+def duskRepoDir = rootProject.projectDir.parentFile.parentFile
+def duskGeneratedAssetsDir = layout.buildDirectory.dir('generated/assets/dusk').get().asFile
+def syncDuskAssets = tasks.register('syncDuskAssets', Sync) {
+    from(new File(duskRepoDir, 'res')) {
+        into 'res'
+        exclude '**/.DS_Store'
+    }
+    into duskGeneratedAssetsDir
+}
+
 android {
     namespace 'com.twilitrealm.dusk'
     compileSdk 36
@@ -27,7 +37,7 @@ android {
     sourceSets {
         main {
             jniLibs.srcDirs = ['src/main/jniLibs']
-            assets.srcDirs = ['../../assets']
+            assets.srcDirs = [duskGeneratedAssetsDir]
         }
     }
 
@@ -47,4 +57,10 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+}
+
+tasks.configureEach { task ->
+    if (task.name.startsWith('merge') && task.name.endsWith('Assets')) {
+        task.dependsOn(syncDuskAssets)
+    }
 }

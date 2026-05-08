@@ -50,7 +50,8 @@ UserSettings g_userSettings = {
         .minimalHUD {"game.minimalHUD", false},
         .pauseOnFocusLost {"game.pauseOnFocusLost", false},
         .enableLinkDollRotation {"game.enableLinkDollRotation", false},
-        .enableAchievementNotifications {"game.enableAchievementNotifications", true},
+        .enableAchievementToasts {"game.enableAchievementToasts", true},
+        .enableControllerToasts {"game.enableControllerToasts", true},
 
         // Graphics
         .bloomMode {"game.bloomMode", BloomMode::Dusk},
@@ -67,6 +68,7 @@ UserSettings g_userSettings = {
         .midnasLamentNonStop {"game.midnasLamentNonStop", false},
 
         // Input
+        .gyroMode {"game.gyroMode", GyroMode::Sensor},
         .enableGyroAim {"game.enableGyroAim", false},
         .enableGyroRollgoal {"game.enableGyroRollgoal", false},
         .gyroSensitivityX {"game.gyroSensitivityX", 1.0f},
@@ -82,6 +84,7 @@ UserSettings g_userSettings = {
         .freeCameraSensitivity {"game.freeCameraSensitivity", 1.0f},
         .debugFlyCam {"game.debugFlyCam", false},
         .debugFlyCamLockEvents {"game.debugFlyCamLockEvents", true},
+        .allowBackgroundInput {"game.allowBackgroundInput", true},
 
         // Cheats
         .infiniteHearts {"game.infiniteHearts", false},
@@ -119,6 +122,7 @@ UserSettings g_userSettings = {
         .showPipelineCompilation {"backend.showPipelineCompilation", false},
         .wasPresetChosen {"backend.wasPresetChosen", false},
         .enableCrashReporting {"backend.enableCrashReporting", true},
+        .checkForUpdates {"backend.checkForUpdates", true},
         .cardFileType {"backend.cardFileType", static_cast<int>(CARD_GCIFOLDER)},
         .enableAdvancedSettings {"backend.enableAdvancedSettings", false},
     }
@@ -182,7 +186,8 @@ void registerSettings() {
     Register(g_userSettings.game.freeMagicArmor);
     Register(g_userSettings.game.restoreWiiGlitches);
     Register(g_userSettings.game.enableLinkDollRotation);
-    Register(g_userSettings.game.enableAchievementNotifications);
+    Register(g_userSettings.game.enableAchievementToasts);
+    Register(g_userSettings.game.enableControllerToasts);
     Register(g_userSettings.game.noMissClimbing);
     Register(g_userSettings.game.noLowHpSound);
     Register(g_userSettings.game.midnasLamentNonStop);
@@ -202,6 +207,7 @@ void registerSettings() {
     Register(g_userSettings.game.superClawshot);
     Register(g_userSettings.game.alwaysGreatspin);
     Register(g_userSettings.game.enableFrameInterpolation);
+    Register(g_userSettings.game.gyroMode);
     Register(g_userSettings.game.enableGyroAim);
     Register(g_userSettings.game.enableGyroRollgoal);
     Register(g_userSettings.game.gyroSensitivityX);
@@ -214,6 +220,7 @@ void registerSettings() {
     Register(g_userSettings.game.freeCamera);
     Register(g_userSettings.game.debugFlyCam);
     Register(g_userSettings.game.debugFlyCamLockEvents);
+    Register(g_userSettings.game.allowBackgroundInput);
 
     Register(g_userSettings.backend.isoPath);
     Register(g_userSettings.backend.isoVerification);
@@ -222,6 +229,7 @@ void registerSettings() {
     Register(g_userSettings.backend.showPipelineCompilation);
     Register(g_userSettings.backend.wasPresetChosen);
     Register(g_userSettings.backend.enableCrashReporting);
+    Register(g_userSettings.backend.checkForUpdates);
     Register(g_userSettings.backend.cardFileType);
     Register(g_userSettings.backend.enableAdvancedSettings);
 }

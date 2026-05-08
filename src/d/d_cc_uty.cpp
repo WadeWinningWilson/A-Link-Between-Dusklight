@@ -13,6 +13,9 @@
 #include "d/d_s_play.h"
 #include "d/d_com_inf_game.h"
 #include "f_op/f_op_actor_mng.h"
+#if TARGET_PC
+#include "dusk/achievements.h"
+#endif
 
 static int plCutLRC[58] = {
     0,  //
@@ -434,6 +437,11 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* i_enemy, dCcU_AtInfo* i_AtInfo) {
         if (i_AtInfo->mAttackPower != 0 && i_enemy->health <= 0) {
             i_AtInfo->mHitStatus = 2;
             i_enemy->health = 0;
+#if TARGET_PC
+            if (fopAcM_GetGroup(i_enemy) == fopAc_ENEMY_e) {
+                dusk::AchievementSystem::get().signal("enemy_killed");
+            }
+#endif
         }
 
         int uvar8;

@@ -30,7 +30,7 @@
         "CMAKE_CXX_COMPILER_LAUNCHER": "sccache",
         "DUSK_ENABLE_SENTRY_NATIVE": {
           "type": "BOOL",
-          "value": true
+          "value": false
         },
         "DUSK_SENTRY_DSN": "$env{SENTRY_DSN}",
         "DUSK_SENTRY_ENVIRONMENT": "production"
