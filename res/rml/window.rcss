@@ -39,8 +39,8 @@ window.small {
     width: auto;
 }
 
-window.preset {
-    min-width: 650dp;
+window.modal {
+    max-width: 640dp;
 }
 
 window[open] {
@@ -98,6 +98,10 @@ window content pane:not(:last-of-type) {
 
 window content pane > * {
     flex: 0 0 auto;
+}
+
+window content pane:last-of-type > div {
+    line-height: 1.625;
 }
 
 window content pane > spacer {
@@ -194,6 +198,11 @@ button:not(:disabled):active {
     box-shadow: #C2A42D 0 0 0 2dp;
 }
 
+button.modal-btn {
+    flex: 1 1 0;
+    text-align: center;
+}
+
 select-button {
     display: flex;
     align-items: center;
@@ -254,6 +263,8 @@ select-button input {
 }
 
 icon {
+    width: 1em;
+    height: 1em;
     font-family: "Material Symbols Rounded";
     font-weight: normal;
     display: inline-block;
@@ -261,10 +272,23 @@ icon {
 }
 
 icon.warning {
-    width: 1em;
-    height: 1em;
     decorator: text("&#xe002;" center center);
-    color: #ffcc00;
+}
+
+icon.error {
+    decorator: text("&#xe000;" center center);
+}
+
+icon.verifying {
+    decorator: text("&#xe8b5;" center center);
+}
+
+icon.celebration {
+    decorator: text("&#xea65;" center center);
+}
+
+icon.question-mark {
+    decorator: text("&#xeb8b;" center center);
 }
 
 .achievement-row {
@@ -323,7 +347,7 @@ icon.warning {
     color: rgba(224, 219, 200, 45%);
 }
 
-progressbar {
+progress {
     display: block;
     width: 100%;
     height: 6dp;
@@ -332,12 +356,12 @@ progressbar {
     margin: 6dp 0 2dp 0;
 }
 
-progressbar.progress-done fill {
+progress.progress-done fill {
     background-color: #44aa22;
     border-radius: 3dp;
 }
 
-progressbar.progress-ongoing fill {
+progress.progress-ongoing fill {
     background-color: #2255bb;
     border-radius: 3dp;
 }
@@ -350,35 +374,13 @@ button.achievement-clear {
     opacity: 0.45;
 }
 
-.preset-dialog {
-    display: flex;
-    flex-flow: column;
-    padding: 32dp;
-    gap: 20dp;
-    flex: 0 1 auto;
-}
-
-.preset-title {
-    display: block;
-    font-family: "Fira Sans Condensed";
-    font-weight: bold;
-    font-size: 30dp;
-    text-align: center;
-}
-
-.preset-intro {
-    display: block;
-    font-size: 18dp;
-    text-align: center;
-    color: rgba(224, 219, 200, 65%);
-}
-
 .preset-grid {
     display: flex;
     flex-direction: row;
     gap: 20dp;
     flex: 0 1 auto;
     align-items: flex-start;
+    width: 100%;
 }
 
 .preset-col {
@@ -388,14 +390,104 @@ button.achievement-clear {
     flex: 1 1 0;
 }
 
-button.preset-btn {
-    font-size: 22dp;
-    padding: 20dp 16dp;
-}
-
 .preset-desc {
     display: block;
     font-size: 16dp;
-    color: rgba(224, 219, 200, 65%);
     text-align: center;
+}
+
+.modal-dialog {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 24dp;
+    gap: 20dp;
+    flex: 0 1 auto;
+    width: 100%;
+    text-align: left;
+}
+
+window.modal.danger {
+    border: 2dp #852221;
+}
+
+.modal-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    flex: 0 0 auto;
+    gap: 16dp;
+}
+
+.modal-header icon {
+    font-size: 24dp;
+    color: #92875B;
+}
+
+.modal-title {
+    display: block;
+    font-family: "Fira Sans Condensed";
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 18dp;
+    color: #92875B;
+    flex: 1 1 auto;
+}
+
+window.modal.danger .modal-title,
+window.modal.danger .modal-header icon {
+    color: #B3261E;
+}
+
+.modal-body {
+    display: block;
+    width: 100%;
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: 20dp;
+    color: #FFFFFF;
+    font-weight: normal;
+}
+
+.modal-body span.tip {
+    font-size: 14dp;
+    color: #92875B;
+}
+
+.verification-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 10dp;
+    width: 100%;
+}
+
+.verification-file {
+    display: block;
+    font-size: 17dp;
+    color: #FFFFFF;
+}
+
+progress.verification-progress-bar {
+    height: 8dp;
+    margin: 2dp 0 0 0;
+}
+
+.verification-detail {
+    display: block;
+    font-size: 14dp;
+    color: rgba(224, 219, 200, 65%);
+}
+
+.modal-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: stretch;
+    align-items: stretch;
+    gap: 12dp;
+    width: 100%;
+    flex: 0 0 auto;
+    padding-top: 4dp;
 }

@@ -46,6 +46,7 @@
 #include <system_error>
 #include <thread>
 #include "SSystem/SComponent/c_API.h"
+#include "dusk/achievements.h"
 #include "dusk/app_info.hpp"
 #include "dusk/crash_reporting.h"
 #include "dusk/dusk.h"
@@ -54,9 +55,11 @@
 #include "dusk/gyro.h"
 #include "dusk/imgui/ImGuiConsole.hpp"
 #include "dusk/imgui/ImGuiEngine.hpp"
+#include "dusk/iso_validate.hpp"
 #include "dusk/logging.h"
 #include "dusk/main.h"
-#include "dusk/ui/popup.hpp"
+#include "dusk/ui/menu_bar.hpp"
+#include "dusk/ui/overlay.hpp"
 #include "dusk/ui/prelaunch.hpp"
 #include "dusk/ui/preset.hpp"
 #include "dusk/ui/ui.hpp"
@@ -104,8 +107,14 @@ bool dusk::IsRunning = true;
 bool dusk::IsShuttingDown = false;
 bool dusk::IsGameLaunched = false;
 bool dusk::IsFocusPaused = false;
+bool dusk::RestartRequested = false;
 std::filesystem::path dusk::ConfigPath;
 #endif
+
+void dusk::RequestRestart() noexcept {
+    RestartRequested = SupportsProcessRestart;
+    IsRunning = false;
+}
 
 s32 LOAD_COPYDATE(void*) {
     char buffer[32];
@@ -271,10 +280,10 @@ void main01(void) {
                 for (int sim_tick = 0; sim_tick < pacing.sim_ticks_to_run; ++sim_tick) {
                     dusk::frame_interp::begin_sim_tick();
                     mDoCPd_c::read();
-                    DuskDebugPad();
                     dusk::gyro::read(pacing.sim_pace);
                     fapGm_Execute();
                     mDoAud_Execute();
+                    dusk::AchievementSystem::get().tick();
                     dusk::game_clock::commit_sim_tick();
                 }
             }
@@ -484,7 +493,7 @@ u8 OSGetLanguage() {
 }
 
 static void LanguageInit() {
-    // Keep language at 0 (English) if not on a PAL disk.
+    // Keep language at 0 (English) if not on a PAL disc.
     // Doubt this matters, but avoid funky shit.
     if (!dusk::version::isRegionPal()) {
         return;
@@ -590,35 +599,74 @@ int game_main(int argc, char* argv[]) {
     dusk::audio::SetEnableReverb(dusk::getSettings().audio.enableReverb);
     dusk::audio::EnableHrtf = dusk::getSettings().audio.enableHrtf;
 
+    // Run ImGui UI loop if Aurora couldn't initialize a backend
+    if (auroraInfo.backend == BACKEND_NULL) {
+        launchUILoop();
+        dusk::ShutdownCrashReporting();
+        dusk::ShutdownFileLogging();
+        fflush(stdout);
+        fflush(stderr);
+#ifdef DUSK_DISCORD
+        dusk::discord::shutdown();
+#endif
+        dusk::ui::shutdown();
+        aurora_shutdown();
+        return 0;
+    }
+
     dusk::ui::initialize();
+    dusk::ui::push_document(std::make_unique<dusk::ui::Overlay>(), true, true);
+    dusk::ui::push_document(std::make_unique<dusk::ui::MenuBar>(), false);
+
+    // Invalidate a bad saved isoPath so that Dusk can't get blocked from starting up.
+    // This is only a metadata check; full hash verification is handled by the prelaunch UI.
+    const std::string p = dusk::getSettings().backend.isoPath;
+    dusk::iso::DiscInfo discInfo{};
+    if (!p.empty() &&
+        dusk::iso::inspect(p.c_str(), discInfo) != dusk::iso::ValidationError::Success)
+    {
+        dusk::getSettings().backend.isoPath.setValue("");
+        dusk::getSettings().backend.isoVerification.setValue(dusk::DiscVerificationState::Unknown);
+    }
 
     std::string dvd_path;
     bool dvd_opened = false;
     if (parsed_arg_options.count("dvd")) {
         dvd_path = parsed_arg_options["dvd"].as<std::string>();
-        DuskLog.info("Loading DVD image from command line: {}", dvd_path);
-        dvd_opened = aurora_dvd_open(dvd_path.c_str());
-        if (!dvd_opened) {
-            DuskLog.warn("Failed to open DVD image from command line: {}, opening prelaunch UI", dvd_path);
+        if (dusk::iso::inspect(dvd_path.c_str(), discInfo) == dusk::iso::ValidationError::Success) {
+            DuskLog.info("Loading DVD image from command line: {}", dvd_path);
+            dvd_opened = aurora_dvd_open(dvd_path.c_str());
+            if (!dvd_opened) {
+                DuskLog.warn("Failed to open DVD image from command line: {}, opening prelaunch UI", dvd_path);
+            } else {
+                dusk::getSettings().backend.isoPath.setValue(dvd_path);
+                dusk::getSettings().backend.isoVerification.setValue(
+                    dusk::DiscVerificationState::Unknown);
+                dusk::config::Save();
+                dusk::IsGameLaunched = true;
+            }
         } else {
-            dusk::getSettings().backend.isoPath.setValue(dvd_path);
-            dusk::config::Save();
-            dusk::IsGameLaunched = true;
+            DuskLog.warn("DVD image from command line failed validation: {}, opening prelaunch UI", dvd_path);
         }
     }
 
     if (!dvd_opened) {
-        dusk::ui::push_document(std::make_unique<dusk::ui::Prelaunch>(), true);
+        if (!dusk::getSettings().backend.skipPreLaunchUI) {
+            dusk::ui::push_document(std::make_unique<dusk::ui::Prelaunch>(), true);
 
-        // pre game launch ui main loop
-        if (!launchUILoop()) {
-            dusk::ShutdownCrashReporting();
+            // pre game launch ui main loop
+            if (!launchUILoop()) {
+                dusk::ShutdownCrashReporting();
+                dusk::ShutdownFileLogging();
+                fflush(stdout);
+                fflush(stderr);
 #ifdef DUSK_DISCORD
-            dusk::discord::shutdown();
+                dusk::discord::shutdown();
 #endif
-            dusk::ui::shutdown();
-            aurora_shutdown();
-            return 0;
+                dusk::ui::shutdown();
+                aurora_shutdown();
+                return 0;
+            }
         }
 
         dvd_path = dusk::getSettings().backend.isoPath;
@@ -626,13 +674,19 @@ int game_main(int argc, char* argv[]) {
         if (dvd_path.empty()) {
             DuskLog.fatal("No DVD image specified, unable to boot!");
         }
+        if (!dusk::IsGameLaunched &&
+            dusk::iso::inspect(dvd_path.c_str(), discInfo) != dusk::iso::ValidationError::Success)
+        {
+            DuskLog.fatal("DVD image failed validation: {}", dvd_path);
+        }
         DuskLog.info("Loading DVD image: {}", dvd_path);
         if (!aurora_dvd_open(dvd_path.c_str())) {
             DuskLog.fatal("Failed to open DVD image: {}", dvd_path);
         }
+
+        dusk::IsGameLaunched = true;
     }
 
-    dusk::ui::push_document(std::make_unique<dusk::ui::Popup>(), false);
     if (!dusk::getSettings().backend.wasPresetChosen) {
         dusk::ui::push_document(std::make_unique<dusk::ui::PresetWindow>());
     }
@@ -654,7 +708,7 @@ int game_main(int argc, char* argv[]) {
     dComIfG_ct();
 
     // Development Mode
-    mDoMain::developmentMode = 1;  // Force Dev Mode for Debugging
+    // mDoMain::developmentMode = 1;  // Force Dev Mode for Debugging
     mDoDvdThd::SyncWidthSound = false;
 
     OSReport("Starting main01 (Game Loop)...\n");

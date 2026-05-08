@@ -41,7 +41,7 @@ Rml::String build_achievement_info_rml(const Achievement& a) {
     if (a.isCounter) {
         float fraction = a.goal > 0 ? float(a.progress) / float(a.goal) : 1.0f;
         s += fmt::format(
-            R"(<progressbar value="{:.3f}" class="{}"/>)"
+            R"(<progress value="{:.3f}" class="{}"/>)"
             R"(<span class="achievement-progress">{} / {}</span>)",
             fraction,
             a.unlocked ? "progress-done" : "progress-ongoing",
@@ -65,7 +65,7 @@ public:
         btn.on_nav_command([this, key = std::string(a.key)](Rml::Event&, NavCommand cmd) {
             if (cmd == NavCommand::Confirm) {
                 if (mConfirming) {
-                    mDoAud_seStartMenu(Z2SE_SY_CURSOR_OK);
+                    mDoAud_seStartMenu(kSoundClick);
                     AchievementSystem::get().clearOne(key.c_str());
                     resetConfirm();
                 } else {
@@ -158,7 +158,7 @@ AchievementsWindow::AchievementsWindow() {
             clearAllBtn.on_nav_command([clearAllPtr, confirmingAll](Rml::Event&, NavCommand cmd) {
                 if (cmd == NavCommand::Confirm) {
                     if (*confirmingAll) {
-                        mDoAud_seStartMenu(Z2SE_SY_CURSOR_OK);
+                        mDoAud_seStartMenu(kSoundClick);
                         AchievementSystem::get().clearAll();
                         *confirmingAll = false;
                         clearAllPtr->set_text("Clear All Achievements");

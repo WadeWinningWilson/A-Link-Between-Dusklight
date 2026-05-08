@@ -27,8 +27,7 @@ namespace dusk {
         void ShowAudioDebug();
         void ShowSaveEditor();
         void ShowStateShare();
-        void notifyAchievement(std::string name);
-        void showAchievementNotification();
+        void ShowInputViewer();
 
     private:
 		bool m_showDebugOverlay = false;
@@ -69,11 +68,10 @@ namespace dusk {
         bool m_showStateShare = false;
         ImGuiStateShare m_stateShare;
 
-        std::string m_notifyName;
-        float m_notifyTimer = 0.f;
-        std::queue<std::string> m_notifyQueue;
-        static constexpr float NOTIFY_DURATION = 4.0f;
-        static constexpr float NOTIFY_FADE_TIME = 0.5f;
+        bool m_showInputViewer = false;
+        bool m_showInputViewerGyro = false;
+        int m_inputOverlayCorner = 3;
+        std::string m_controllerName;
     };
 }
 

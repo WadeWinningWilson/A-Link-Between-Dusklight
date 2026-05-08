@@ -58,7 +58,7 @@ Pane::Pane(Rml::Element* parent, Type type) : FluentComponent(createRoot(parent)
         int i = focusedChild + direction;
         while (i >= 0 && i < mChildren.size()) {
             if (mChildren[i]->focus()) {
-                mDoAud_seStartMenu(Z2SE_SY_NAME_CURSOR);
+                mDoAud_seStartMenu(kSoundItemFocus);
                 event.StopPropagation();
                 break;
             }
@@ -126,11 +126,20 @@ Component& Pane::register_control(
             }
         });
     component.listen(component.root(), Rml::EventId::Focus,
-        [&component, &nextPane, callback = std::move(callback)](Rml::Event&) {
+        [this, &component, &nextPane, callback = std::move(callback)](Rml::Event&) {
             if (component.disabled()) {
                 return;
             }
             nextPane.clear();
+
+            // If an item is already selected, deselect
+            for (const auto& child : mChildren) {
+                if (child->selected()) {
+                    set_selected_item(-1);
+                    break;
+                }
+            }
+
             if (callback) {
                 callback(nextPane);
             }

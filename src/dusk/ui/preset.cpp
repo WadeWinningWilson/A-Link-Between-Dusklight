@@ -1,10 +1,8 @@
 #include "preset.hpp"
 
-#include "Z2AudioLib/Z2SeMgr.h"
 #include "button.hpp"
 #include "dusk/config.hpp"
 #include "dusk/settings.h"
-#include "m_Do/m_Do_audio.h"
 #include "ui.hpp"
 
 #include <dolphin/gx/GXAurora.h>
@@ -20,14 +18,12 @@ void applyPresetClassic() {
     s.game.internalResolutionScale.setValue(1);
     s.game.shadowResolutionMultiplier.setValue(1);
     s.game.hideTvSettingsScreen.setValue(false);
-    s.game.skipWarningScreen.setValue(false);
     AuroraSetViewportPolicy(AURORA_VIEWPORT_FIT);
 }
 
 void applyPresetDusk() {
     auto& s = getSettings();
     s.game.hideTvSettingsScreen.setValue(true);
-    s.game.skipWarningScreen.setValue(true);
     s.game.noReturnRupees.setValue(true);
     s.game.disableRupeeCutscenes.setValue(true);
     s.game.noSwordRecoil.setValue(true);
@@ -47,51 +43,30 @@ void applyPresetDusk() {
     s.game.internalResolutionScale.setValue(0);
     s.game.shadowResolutionMultiplier.setValue(4);
     s.game.enableGyroAim.setValue(true);
+    s.game.autoSave.setValue(true);
 }
-
-Rml::Element* createElement(Rml::Element* parent, const Rml::String& tag) {
-    auto* doc = parent->GetOwnerDocument();
-    auto elem = doc->CreateElement(tag);
-    return parent->AppendChild(std::move(elem));
-}
-
-const Rml::String kDocumentSource = R"RML(
-<rml>
-<head>
-    <link type="text/rcss" href="res/rml/window.rcss" />
-</head>
-<body>
-    <window id="window" class="small preset">
-        <div id="preset-dialog" class="preset-dialog"></div>
-    </window>
-</body>
-</rml>
-)RML";
 
 }  // namespace
 
-PresetWindow::PresetWindow()
-    : Document(kDocumentSource), mRoot(mDocument->GetElementById("window")) {
-    listen(mRoot, Rml::EventId::Transitionend, [this](Rml::Event& event) {
-        if (event.GetTargetElement() == mRoot && !mRoot->HasAttribute("open") &&
-            Document::visible()) {
-            Document::hide(mPendingClose);
-        }
-    });
+PresetWindow::PresetWindow() : WindowSmall("modal", "modal-dialog") {
+    mDialog->SetClass("modal-dialog", true);
 
-    auto* dialog = mDocument->GetElementById("preset-dialog");
+    auto* header = append(mDialog, "div");
+    header->SetClass("modal-header", true);
 
-    auto* title = createElement(dialog, "div");
-    title->SetClass("preset-title", true);
-    title->SetInnerRML("Welcome to Dusk!");
+    auto* title = append(header, "div");
+    title->SetClass("modal-title", true);
+    title->SetInnerRML("Welcome to Dusk");
 
-    auto* intro = createElement(dialog, "div");
-    intro->SetClass("preset-intro", true);
+    auto* headIcon = append(header, "icon");
+    headIcon->SetClass("celebration", true);
+
+    auto* intro = append(mDialog, "div");
+    intro->SetClass("modal-body", true);
     intro->SetInnerRML(
-        "Choose a preset to get started.<br/>"
-        "You can change any setting later from the Settings menu.");
+        "Choose a preset to get started. You can change any setting later from the Settings menu.");
 
-    auto* grid = createElement(dialog, "div");
+    auto* grid = append(mDialog, "div");
     grid->SetClass("preset-grid", true);
 
     struct PresetInfo {
@@ -112,11 +87,10 @@ PresetWindow::PresetWindow()
     };
 
     for (const auto& preset : kPresets) {
-        auto* col = createElement(grid, "div");
+        auto* col = append(grid, "div");
         col->SetClass("preset-col", true);
 
         auto btn = std::make_unique<Button>(col, Rml::String(preset.name));
-        btn->root()->SetClass("preset-btn", true);
         btn->on_nav_command([this, apply = preset.apply](Rml::Event&, NavCommand cmd) {
             if (cmd == NavCommand::Confirm) {
                 apply();
@@ -129,24 +103,10 @@ PresetWindow::PresetWindow()
         });
         mButtons.push_back(std::move(btn));
 
-        auto* desc = createElement(col, "div");
+        auto* desc = append(col, "div");
         desc->SetClass("preset-desc", true);
         desc->SetInnerRML(preset.desc);
     }
-}
-
-void PresetWindow::show() {
-    Document::show();
-    mRoot->SetAttribute("open", "");
-}
-
-void PresetWindow::hide(bool close) {
-    mRoot->RemoveAttribute("open");
-    mPendingClose = close;
-}
-
-bool PresetWindow::visible() const {
-    return mRoot->HasAttribute("open");
 }
 
 bool PresetWindow::focus() {
@@ -174,7 +134,7 @@ bool PresetWindow::handle_nav_command(Rml::Event& event, NavCommand cmd) {
             const int next = i + direction;
             if (next >= 0 && next < static_cast<int>(mButtons.size())) {
                 if (mButtons[next]->focus()) {
-                    mDoAud_seStartMenu(Z2SE_SY_NAME_CURSOR);
+                    mDoAud_seStartMenu(kSoundItemFocus);
                     return true;
                 }
             }
