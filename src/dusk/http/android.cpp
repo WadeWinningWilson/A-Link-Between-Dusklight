@@ -348,7 +348,7 @@ Result get(const Request& request) {
 
     jmethodID getMethod = env->GetStaticMethodID(clientClass, "get",
         "(Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;IJ)"
-        "Lcom/twilitrealm/dusk/DuskHttpClient$Response;");
+        "Ldev/twilitrealm/dusk/DuskHttpClient$Response;");
     if (getMethod == nullptr || clear_pending_exception(env)) {
         env->DeleteLocalRef(clientClass);
         return {
