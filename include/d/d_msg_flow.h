@@ -177,6 +177,11 @@ public:
     int event040(mesg_flow_node_event*, fopAc_ac_c*);
     int event041(mesg_flow_node_event*, fopAc_ac_c*);
     int event042(mesg_flow_node_event*, fopAc_ac_c*);
+#if TARGET_PC
+    // events for rando
+    int event043(mesg_flow_node_event*, fopAc_ac_c*);
+    int event044(mesg_flow_node_event*, fopAc_ac_c*);
+#endif
 
     void initWord(fopAc_ac_c*, const char*, u8, int, fopAc_ac_c**);
 
@@ -192,7 +197,7 @@ public:
     bool checkEndFlow() { return (u32)field_0x26 == 1; }
 
     static queryFunc mQueryList[DUSK_IF_ELSE(54, 53)];
-    static eventFunc mEventList[43];
+    static eventFunc mEventList[DUSK_IF_ELSE(45, 43)];
 
 private:
     /* 0x04 */ u8* mFlow_p;

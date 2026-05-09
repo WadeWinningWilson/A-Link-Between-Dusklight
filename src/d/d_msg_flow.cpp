@@ -659,6 +659,10 @@ int dMsgFlow_c::branchNodeProc(fopAc_ac_c* i_speaker_p, fopAc_ac_c** i_talkPartn
     // Overwrite this node if we have a patch for it
     if (randomizer_IsActive()) {
         u32 key = (dMsgObject_getGroupID() << 16) | mNodeIdx;
+        // Dirty check to see if this node is part of bmg 0
+        if (*(reinterpret_cast<u16*>(&mFlowNodeTBL[0])) == 0x0803) {
+            key &= 0x0000FFFF;
+        }
         if (randomizer_GetContext().mFlowPatches.contains(key)) {
             node = reinterpret_cast<mesg_flow_node_branch*>(&randomizer_GetContext().mFlowPatches[key]);
         }
@@ -679,6 +683,10 @@ int dMsgFlow_c::eventNodeProc(fopAc_ac_c* i_speaker_p, fopAc_ac_c** i_talkPartne
     // Overwrite this node if we have a patch for it
     if (randomizer_IsActive()) {
         u32 key = (dMsgObject_getGroupID() << 16) | mNodeIdx;
+        // Dirty check to see if this node is part of bmg 0
+        if (*(reinterpret_cast<u16*>(&mFlowNodeTBL[0])) == 0x0803) {
+            key &= 0x0000FFFF;
+        }
         if (randomizer_GetContext().mFlowPatches.contains(key)) {
             node = reinterpret_cast<mesg_flow_node_event*>(&randomizer_GetContext().mFlowPatches[key]);
         }
@@ -1844,7 +1852,7 @@ u16 dMsgFlow_c::query054(mesg_flow_node_branch* i_flowNode_p, fopAc_ac_c* i_spea
     return ret;
 }
 
-eventFunc dMsgFlow_c::mEventList[43] = {
+eventFunc dMsgFlow_c::mEventList[DUSK_IF_ELSE(45, 43)] = {
     &dMsgFlow_c::event000, &dMsgFlow_c::event001, &dMsgFlow_c::event002, &dMsgFlow_c::event003,
     &dMsgFlow_c::event004, &dMsgFlow_c::event005, &dMsgFlow_c::event006, &dMsgFlow_c::event007,
     &dMsgFlow_c::event008, &dMsgFlow_c::event009, &dMsgFlow_c::event010, &dMsgFlow_c::event011,
@@ -1856,6 +1864,9 @@ eventFunc dMsgFlow_c::mEventList[43] = {
     &dMsgFlow_c::event032, &dMsgFlow_c::event033, &dMsgFlow_c::event034, &dMsgFlow_c::event035,
     &dMsgFlow_c::event036, &dMsgFlow_c::event037, &dMsgFlow_c::event038, &dMsgFlow_c::event039,
     &dMsgFlow_c::event040, &dMsgFlow_c::event041, &dMsgFlow_c::event042,
+#if TARGET_PC
+    &dMsgFlow_c::event043, &dMsgFlow_c::event044,
+#endif
 };
 
 int dMsgFlow_c::event000(mesg_flow_node_event* i_flowNode_p, fopAc_ac_c* i_speaker_p) {
@@ -2706,3 +2717,19 @@ int dMsgFlow_c::event041(mesg_flow_node_event* i_flowNode_p, fopAc_ac_c* i_speak
 int dMsgFlow_c::event042(mesg_flow_node_event* i_flowNode_p, fopAc_ac_c* i_speaker_p) {
     return 1;
 }
+
+#if TARGET_PC
+// rando events
+int dMsgFlow_c::event043(mesg_flow_node_event* i_flowNode_p, fopAc_ac_c* i_speaker_p) {
+    return 1;
+}
+
+int dMsgFlow_c::event044(mesg_flow_node_event* i_flowNode_p, fopAc_ac_c* i_speaker_p) {
+    if (daPy_py_c::checkNowWolf()) {
+        g_randomizerState.setHasPendingToDChange(true);
+    } else {
+        g_randomizerState.handleTimeOfDayChange();
+    }
+    return 1;
+}
+#endif
