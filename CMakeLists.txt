@@ -115,10 +115,6 @@ option(DUSK_ENABLE_UPDATE_CHECKER "Enable update checking support" ON)
 
 if(ANDROID)
     set(DUSK_MOVIE_SUPPORT OFF)
-    set(NOD_COMPRESS_BZIP2 OFF CACHE BOOL "" FORCE)
-    set(NOD_COMPRESS_LZMA OFF CACHE BOOL "" FORCE)
-    set(NOD_COMPRESS_ZLIB OFF CACHE BOOL "" FORCE)
-    set(NOD_COMPRESS_ZSTD OFF CACHE BOOL "" FORCE)
 endif ()
 
 option(DUSK_ENABLE_SENTRY_NATIVE "Enable sentry-native crash reporting support" OFF)
