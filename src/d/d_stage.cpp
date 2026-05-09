@@ -1596,16 +1596,29 @@ u8 dStage_roomControl_c::mNoArcBank;
 
 static void dStage_actorCreate(stage_actor_data_class* i_actorData, fopAcM_prm_class* i_actorPrm) {
 #if TARGET_PC
-    // If randomizer is active, override the data for this actor if it's in the actorPatches
+    // If randomizer is active,
     if (randomizer_IsActive()) {
+        // override the data for this actor if it's in the actorPatches
         auto currentStageKey = getActorPatchesCurrentStageKey(i_actorPrm->room_no);
         if (randomizer_GetContext().mActorPatches.contains(currentStageKey)) {
             const auto& patches = randomizer_GetContext().mActorPatches.at(currentStageKey);
-            auto actorKey = getActorCRC32(i_actorData);
+            auto actorKey = getStageObjCRC32(reinterpret_cast<u8*>(i_actorData), RandomizerContext::ACTOR_CRC_SIZE);
             if (patches.contains(actorKey)) {
                 const auto& patchedActorData = patches.at(actorKey);
                 std::memcpy(i_actorPrm, patchedActorData.data() + 8, RandomizerContext::ACTOR_CRC_SIZE - 8);
                 std::memcpy(i_actorData, patchedActorData.data(), RandomizerContext::ACTOR_CRC_SIZE);
+            }
+        }
+        // Return early if this actor is in objectDeletions so it never spawns
+        if (randomizer_GetContext().mTgscDeletions.contains(currentStageKey)) {
+            const auto& deletions = randomizer_GetContext().mTgscDeletions.at(currentStageKey);
+            stage_tgsc_data_class tgscData{};
+            strncpy(tgscData.name, i_actorData->name, 8);
+            tgscData.base = i_actorPrm->base;
+            tgscData.scale = i_actorPrm->scale;
+            auto actorKey = getStageObjCRC32(reinterpret_cast<u8*>(&tgscData), RandomizerContext::TGSC_CRC_SIZE);
+            if (deletions.contains(actorKey)) {
+                return;
             }
         }
     }
