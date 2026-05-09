@@ -155,6 +155,12 @@ void daObjCRVGATE_c::Demo_Set() {
 }
 
 void daObjCRVGATE_c::SetOpen() {
+#if TARGET_PC
+    u8 doorUnlockedFlag = (fopAcM_GetParam(this) & 0xFFFF) >> 8;
+    if (doorUnlockedFlag != 0xFF) {
+        fopAcM_onSwitch(this, doorUnlockedFlag);
+    }
+#endif
     mStatus = 0x0;
 }
 
@@ -646,6 +652,8 @@ void daObjCRVGATE_c::setBaseMtx() {
         mDoMtx_stack_c::transM(0.0f, nREG_F(5) + 55.0f, 0.0f);
     }
 
+    // Don't update the key model if it's not there
+    IF_DUSK(if (mpModelKey != NULL))
     mpModelKey->setBaseTRMtx(mDoMtx_stack_c::get());
     mDoMtx_stack_c::transS(current.pos);
     mDoMtx_stack_c::ZXYrotM(shape_angle);
@@ -675,7 +683,13 @@ int daObjCRVGATE_c::CreateHeap() {
     }
 
     J3DModelData* model_data_key;
-    if (mKeyParam == 0x00) {
+
+    // Don't draw the key model if the flag for the door being unlocked
+    // was set. This is currently only used in rando
+#if TARGET_PC
+    u8 doorUnlockedFlag = (fopAcM_GetParam(this) & 0xFFFF) >> 8;
+#endif
+    if (mKeyParam == 0x00 IF_DUSK(&& doorUnlockedFlag != 0xFF && fopAcM_isSwitch(this, doorUnlockedFlag) == 0)) {
         model_data_key = (J3DModelData*)dComIfG_getObjectRes(l_arcName, "CaravanKey.bmd");
         mpModelKey = mDoExt_J3DModel__create(model_data_key, 0x80000, 0x11000084);
     }
@@ -704,7 +718,8 @@ void daObjCRVGATE_c::SetDoor() {
         mKeyParam = 0x01;
 
         // Create the second (identical) part of the door (swinging gate).
-        mDoorPairProcID = fopAcM_createChild(fpcNm_Obj_CRVGATE_e, fopAcM_GetID(this), 1, &child_pos,
+        // Pass along the flag for having unlocked the door
+        mDoorPairProcID = fopAcM_createChild(fpcNm_Obj_CRVGATE_e, fopAcM_GetID(this), IF_DUSK(fopAcM_GetParam(this) && 0xFFFFFF00 |) 1, &child_pos,
                                              fopAcM_GetRoomNo(this), &child_angle, NULL, -1, 0);
         mDoorY = shape_angle.y;
     } else {
@@ -762,6 +777,14 @@ int daObjCRVGATE_c::create() {
 
         mFlagGateClosed = false;
         field_0x5a5 = false;
+#if TARGET_PC
+        // Immediately set the door to open if the flag for it open is set
+        u8 doorUnlockedFlag = (fopAcM_GetParam(this) & 0xFFFF) >> 8;
+        if (mKeyParam == 0 && doorUnlockedFlag != 0xFF && fopAcM_isSwitch(this, doorUnlockedFlag)) {
+            SetOpen();
+            mpDoorPair->SetOpen();
+        }
+#endif
         daObjCRVGATE_Execute(this);
     }
 
@@ -808,14 +831,14 @@ int daObjCRVGATE_c::Execute(Mtx** param_0) {
 int daObjCRVGATE_c::Draw() {
     g_env_light.settingTevStruct(8, &current.pos, &tevStr);
     g_env_light.setLightTevColorType_MAJI(mpModelGate, &tevStr);
-    if (mKeyParam == 0x01) {
+    if (mKeyParam == 0x01 IF_DUSK(&& mpModelKey != NULL)) {
         g_env_light.setLightTevColorType_MAJI(mpModelKey, &tevStr);
     }
 
     dComIfGd_setListBG();
 
     mDoExt_modelUpdateDL(mpModelGate);
-    if (mKeyParam == 0x01) {
+    if (mKeyParam == 0x01 IF_DUSK(&& mpModelKey != NULL)) {
         mDoExt_modelUpdateDL(mpModelKey);
     }
 
