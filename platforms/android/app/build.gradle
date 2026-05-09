@@ -13,11 +13,11 @@ def syncDuskAssets = tasks.register('syncDuskAssets', Sync) {
 }
 
 android {
-    namespace 'com.twilitrealm.dusk'
+    namespace 'dev.twilitrealm.dusk'
     compileSdk 36
 
     defaultConfig {
-        applicationId 'com.twilitrealm.dusk'
+        applicationId 'dev.twilitrealm.dusk'
         minSdk 26
         targetSdk 36
         versionCode 1

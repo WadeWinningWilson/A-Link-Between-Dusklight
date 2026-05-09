@@ -337,7 +337,7 @@ Result get(const Request& request) {
     }
 
     jclass clientClass =
-        load_dusk_class(env, activity, "com.twilitrealm.dusk.DuskHttpClient");
+        load_dusk_class(env, activity, "dev.twilitrealm.dusk.DuskHttpClient");
     env->DeleteLocalRef(activity);
     if (clientClass == nullptr) {
         return {
