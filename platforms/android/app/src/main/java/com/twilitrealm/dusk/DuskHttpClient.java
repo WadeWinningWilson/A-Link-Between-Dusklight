@@ -1,4 +1,4 @@
-package com.twilitrealm.dusk;
+package dev.twilitrealm.dusk;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

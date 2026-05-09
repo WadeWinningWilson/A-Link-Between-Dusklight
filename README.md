@@ -4,7 +4,7 @@
   <p align="center">
     <a href="https://twilitrealm.dev">Official Website</a>
     •
-    <a href="https://discord.gg/QACynxeyna">Discord</a>
+    <a href="https://discord.gg/dusktp">Discord</a>
   </p>
 </div>
 
@@ -28,13 +28,24 @@ First, make sure your dump of the game is clean and supported by Dusk. You can d
 | GameCube USA | `75edd3ddff41f125d1b4ce1a40378f1b565519e7` |
 | GameCube EUR | `2601822a488eeb86fb89db16ca8f29c2c953e1ca` |
 
+*Support for other versions of the game is planned in the future.
+
 ### 2. Download [Dusk](https://github.com/TwilitRealm/dusk/releases)
 
 ### 3. Setup the game
-
+**Windows / macOS / Linux**
 - Extract the .zip file
 - Launch Dusk
-- Press **Select Disc Image** and provide the path to your supported game dump.
+- Press **Select Disc Image** and provide the path to your supported game dump
+- Press **Play**!
+
+**iOS**
+- Follow the [iOS setup guide](docs/ios-install-altstore.md)
+
+**Android**
+- Install the Dusk apk
+- Launch Dusk
+- Press **Select Disc Image** and provide the path to your supported game dump
 - Press **Play**!
 
 # Building

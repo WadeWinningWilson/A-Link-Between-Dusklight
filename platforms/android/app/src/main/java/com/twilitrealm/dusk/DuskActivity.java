@@ -1,4 +1,4 @@
-package com.twilitrealm.dusk;
+package dev.twilitrealm.dusk;
 
 import android.app.ActionBar;
 import android.content.ClipData;
@@ -113,11 +113,6 @@ public class DuskActivity extends SDLActivity {
                 if (!trimmed.isEmpty()) {
                     return splitArgs(trimmed);
                 }
-            }
-
-            String discPath = intent.getStringExtra("dusk_disc");
-            if (discPath != null && !discPath.isEmpty()) {
-                return new String[] { discPath };
             }
         }
         return new String[0];

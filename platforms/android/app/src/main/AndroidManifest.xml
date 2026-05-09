@@ -25,7 +25,7 @@
             android:resource="@xml/game_mode_config" />
 
         <activity
-            android:name="com.twilitrealm.dusk.DuskActivity"
+            android:name="dev.twilitrealm.dusk.DuskActivity"
             android:alwaysRetainTaskState="true"
             android:configChanges="layoutDirection|locale|grammaticalGender|fontScale|fontWeightAdjustment|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
             android:exported="true"
