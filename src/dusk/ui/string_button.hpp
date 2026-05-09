@@ -20,6 +20,7 @@ public:
     void request_stop_editing(bool commit, bool refocusRoot);
 
 protected:
+    bool is_editing() { return mInputElem != nullptr; }
     bool handle_nav_command(NavCommand cmd) override;
     virtual void set_value(Rml::String value) = 0;
     virtual Rml::String input_value() { return format_value(); }
