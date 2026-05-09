@@ -745,7 +745,8 @@ static void duskExecute() {
     updateAutoSave();
 
     if (dusk::getSettings().game.recordingMode) {
-        Z2GetSeqMgr()->bgmAllMute(0, 0);
+        Z2GetSoundMgr()->getSeqMgr()->getParams()->moveVolume(0.0f, 0);
+        Z2GetSoundMgr()->getStreamMgr()->getParams()->moveVolume(0.0f, 0);
     }
 
     if (mDoCPd_c::getHoldR(PAD_1) && mDoCPd_c::getTrigX(PAD_1)) {
