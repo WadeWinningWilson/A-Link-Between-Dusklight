@@ -1778,6 +1778,12 @@ u32 dSv_info_c::createZone(int i_roomNo) {
 }
 
 void dSv_info_c::onSwitch(int i_no, int i_roomNo) {
+#if TARGET_PC
+    // Set custom flag for temple of time pedestal strike
+    if (getStageID() == Sacred_Grove && i_no == 0xEE) {
+        onSwitch(0x63, i_roomNo);
+    }
+#endif
     JUT_ASSERT(4210, (0 <= i_no && i_no < (MEMORY_SWITCH+ DAN_SWITCH+ ZONE_SWITCH+ ONEZONE_SWITCH)) || i_no == -1 || i_no == 255);
 
     if (i_no == -1 || i_no == 255) {

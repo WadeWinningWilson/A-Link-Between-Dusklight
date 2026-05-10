@@ -10575,9 +10575,16 @@ void daAlink_c::decideDoStatus() {
                                (actor_name == fpcNm_TAG_KMSG_e &&
                                 static_cast<daTag_KMsg_c*>(field_0x27f4)->getType() == 3))
                     {
-                        if (!checkEquipAnime() && checkMasterSwordEquip()) {
+                        // Don't check vanilla condition in randomizer
+                        if (!checkEquipAnime() && checkMasterSwordEquip() IF_DUSK(&& !randomizer_IsActive())) {
                             setDoStatus(BUTTON_STATUS_STRIKE);
                         }
+#if TARGET_PC
+                        // Separate check for striking sword into the pedestal for randomizer
+                        if (!checkEquipAnime() && randomizer_IsActive() && randomizer_checkTempleOfTimeRequirement()) {
+                            setDoStatus(BUTTON_STATUS_STRIKE);
+                        }
+#endif
                     }
                 } else if (mTargetedActor != NULL && checkGoatCatchActor(mTargetedActor) &&
                            mAttention->getActionBtnB() != NULL &&
