@@ -84,6 +84,9 @@
 #include "f_pc/f_pc_draw.h"
 #include "tracy/Tracy.hpp"
 #include <RmlUi/Core.h>
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
 
 // --- GLOBALS ---
 s8 mDoMain::developmentMode = -1;
@@ -418,7 +421,71 @@ static void ApplyCVarOverrides(const cxxopts::OptionValue& option) {
     }
 }
 
-static std::filesystem::path CalculateConfigPath() {
+static void migrate_directory(const std::filesystem::path& from, const std::filesystem::path& to) {
+    std::error_code ec;
+    std::filesystem::create_directories(to, ec);
+    if (ec) {
+        return;
+    }
+
+    for (std::filesystem::recursive_directory_iterator it(
+             from, std::filesystem::directory_options::skip_permission_denied, ec);
+        it != std::filesystem::recursive_directory_iterator(); it.increment(ec))
+    {
+        if (ec) {
+            return;
+        }
+
+        const auto relativePath = std::filesystem::relative(it->path(), from, ec);
+        if (ec) {
+            return;
+        }
+
+        const auto targetPath = to / relativePath;
+        if (it->is_directory(ec)) {
+            std::filesystem::create_directories(targetPath, ec);
+            if (ec) {
+                return;
+            }
+        } else if (it->is_regular_file(ec) && !std::filesystem::exists(targetPath, ec)) {
+            std::filesystem::create_directories(targetPath.parent_path(), ec);
+            if (ec) {
+                return;
+            }
+            std::filesystem::copy_file(
+                it->path(), targetPath, std::filesystem::copy_options::skip_existing, ec);
+            if (ec) {
+                return;
+            }
+        }
+    }
+}
+
+static std::filesystem::path calculate_config_path() {
+#ifdef __APPLE__
+#if TARGET_OS_IOS && !TARGET_OS_TV
+    const char* documentsPath = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS);
+    if (!documentsPath) {
+        DuskLog.fatal("Unable to get iOS Documents path: {}", SDL_GetError());
+    }
+
+    std::filesystem::path configPath = reinterpret_cast<const char8_t*>(documentsPath);
+
+    char* oldPrefPath = SDL_GetPrefPath(dusk::OrgName, dusk::AppName);
+    if (oldPrefPath) {
+        const std::filesystem::path oldConfigPath = reinterpret_cast<const char8_t*>(oldPrefPath);
+        SDL_free(oldPrefPath);
+
+        std::error_code ec;
+        if (oldConfigPath != configPath && std::filesystem::exists(oldConfigPath, ec)) {
+            migrate_directory(oldConfigPath, configPath);
+        }
+    }
+
+    return configPath;
+#endif
+#endif
+
     const auto result = SDL_GetPrefPath(dusk::OrgName, dusk::AppName);
     if (!result) {
         DuskLog.fatal("Unable to get PrefPath: {}", SDL_GetError());
@@ -562,7 +629,7 @@ int game_main(int argc, char* argv[]) {
         exit(1);
     }
 
-    dusk::ConfigPath = CalculateConfigPath();
+    dusk::ConfigPath = calculate_config_path();
     const auto startupLogLevel = static_cast<AuroraLogLevel>(parsed_arg_options["log-level"].as<uint8_t>());
     dusk::InitializeFileLogging(dusk::ConfigPath, startupLogLevel);
 
