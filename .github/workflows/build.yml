@@ -65,7 +65,6 @@ jobs:
         run: ci/build-appimage.sh
 
       - name: Upload artifacts
-        if: startsWith(github.event.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v7
         with:
           name: dusk-${{env.DUSK_VERSION}}-linux-${{matrix.preset}}-${{matrix.artifact_arch}}
@@ -134,7 +133,6 @@ jobs:
         run: cmake --build --preset ${{matrix.preset}}
 
       - name: Upload artifacts
-        if: startsWith(github.event.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v7
         with:
           name: dusk-${{env.DUSK_VERSION}}-${{matrix.artifact_name}}
@@ -199,7 +197,6 @@ jobs:
         run: cmake --build --preset x-windows-ci-${{matrix.preset}}
 
       - name: Upload artifacts
-        if: startsWith(github.event.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v7
         with:
           name: dusk-${{env.DUSK_VERSION}}-win32-msvc-${{matrix.artifact_arch}}
