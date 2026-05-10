@@ -71,6 +71,7 @@
 #include <dolphin/dvd.h>
 
 #include "SDL3/SDL_filesystem.h"
+#include "SDL3/SDL_misc.h"
 #include "cxxopts.hpp"
 #include "d/actor/d_a_movie_player.h"
 #include "dusk/audio/DuskAudioSystem.h"
@@ -112,6 +113,31 @@ std::filesystem::path dusk::ConfigPath;
 void dusk::RequestRestart() noexcept {
     RestartRequested = SupportsProcessRestart;
     IsRunning = false;
+}
+
+bool dusk::OpenDataFolder() {
+#if DUSK_CAN_OPEN_DATA_FOLDER
+    std::error_code ec;
+    std::filesystem::path path = std::filesystem::absolute(ConfigPath, ec);
+    if (ec) {
+        DuskLog.warn("Failed to resolve absolute data folder path '{}': {}",
+            ConfigPath.string(), ec.message());
+        path = ConfigPath;
+    }
+
+#if defined(_WIN32)
+    const std::string url = "file:///" + path.generic_string();
+#else
+    const std::string url = "file://" + path.generic_string();
+#endif
+    if (!SDL_OpenURL(url.c_str())) {
+        DuskLog.warn("Failed to open data folder '{}': {}", path.string(), SDL_GetError());
+        return false;
+    }
+    return true;
+#else
+    return false;
+#endif
 }
 
 s32 LOAD_COPYDATE(void*) {

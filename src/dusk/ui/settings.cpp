@@ -9,6 +9,7 @@
 #include "dusk/file_select.hpp"
 #include "dusk/imgui/ImGuiEngine.hpp"
 #include "dusk/livesplit.h"
+#include "dusk/main.h"
 #include "graphics_tuner.hpp"
 #include "m_Do/m_Do_main.h"
 #include "menu_bar.hpp"
@@ -946,6 +947,18 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         auto& rightPane = add_child<Pane>(content, Pane::Type::Uncontrolled);
 
         leftPane.add_section("Dusk");
+#if DUSK_CAN_OPEN_DATA_FOLDER
+        leftPane.register_control(
+            leftPane.add_button("Open Data Folder").on_pressed([] {
+                mDoAud_seStartMenu(kSoundClick);
+                dusk::OpenDataFolder();
+            }),
+            rightPane, [](Pane& pane) {
+                pane.add_text(
+                    "Open the folder where Dusk stores settings, saves, logs, texture "
+                    "replacements, and other app data.");
+            });
+#endif
         leftPane.register_control(
             leftPane.add_select_button({
                 .key = "Notifications",
