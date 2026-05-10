@@ -17,6 +17,9 @@
 #include "d/actor/d_a_e_pz.h"
 #include "d/actor/d_a_horse.h"
 #include "d/actor/d_a_hozelda.h"
+#if TARGET_PC
+#include "dusk/achievements.h"
+#endif
 
 int daArrow_c::createHeap() {
     J3DModelData* model_data;
@@ -92,7 +95,12 @@ void daArrow_c::atHitCallBack(dCcD_GObjInf* i_atObjInf, fopAc_ac_c* i_tgActor, d
         if (dist_to_hitpos < field_0x998) {
             field_0x998 = dist_to_hitpos;
             mHitAcID = fopAcM_GetID(i_tgActor);
-
+#if TARGET_PC
+            if (fopAcM_GetGroup(i_tgActor) == fopAc_ENEMY_e &&
+                current.pos.abs(mStartPos) > 10000.0f) {
+                dusk::AchievementSystem::get().signal("arrow_hit_100m");
+            }
+#endif
             if (mArrowType == 1) {
                 field_0x9a8 = *hit_pos_p;
             } else if (i_tgObjInf->ChkTgShield()) {

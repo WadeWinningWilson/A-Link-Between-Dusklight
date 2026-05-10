@@ -1295,8 +1295,33 @@ namespace dusk {
                 membit.offDungeonItem(flag);
         }
     }
+    
+    static void genCommonAreaFlags(dSv_memBit_c& membit) {
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10.0f);
 
-    void genMembitFlags(const char* id, dSv_memBit_c& membit) {
+        genDungeonItemCheckbox(membit, "Got Map", dSv_memBit_c::MAP);
+        ImGui::SameLine(230.0f);
+        genDungeonItemCheckbox(membit, "Got Compass", dSv_memBit_c::COMPASS);
+
+        genDungeonItemCheckbox(membit, "Got Boss Key", dSv_memBit_c::BOSS_KEY);
+        ImGui::SameLine(230.0f);
+        genDungeonItemCheckbox(membit, "Saw Boss Demo", dSv_memBit_c::STAGE_BOSS_DEMO);
+
+        genDungeonItemCheckbox(membit, "Got Heart Container", dSv_memBit_c::STAGE_LIFE);
+        ImGui::SameLine(230.0f);
+        genDungeonItemCheckbox(membit, "Defeated Boss", dSv_memBit_c::STAGE_BOSS_ENEMY);
+
+        genDungeonItemCheckbox(membit, "Defeated Miniboss", dSv_memBit_c::STAGE_BOSS_ENEMY_2);
+        ImGui::SameLine(230.0f);
+        genDungeonItemCheckbox(membit, "Got Ooccoo", dSv_memBit_c::OOCCOO_NOTE);
+
+        int keyTemp = membit.getKeyNum();
+        if (ImGui::SliderInt("Keys", &keyTemp, 0, 5)) {
+            membit.setKeyNum(keyTemp);
+        }
+    }
+
+    static void genMembitFlags(const char* id, dSv_memBit_c& membit) {
         ImGuiBeginGroupPanel("Chest", { 100, 100 });
         for (int j = 0; j < 2; j++) {
             drawFlagList(fmt::format("##_tbox{}", j).c_str(), membit.mTbox[j]);
@@ -1322,99 +1347,329 @@ namespace dusk {
             drawFlagList(fmt::format("##_item{}", j).c_str(), membit.mItem[j]);
         }
         ImGuiEndGroupPanel();
+        ImVec2 post_item_custor = ImGui::GetCursorPos();
 
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10.0f);
+        ImGui::SetCursorPos({post_item_custor.x, post_switch_cursor.y});
+        // genCommonAreaFlags(membit);
+    }
 
-        genDungeonItemCheckbox(membit, "Got Map", dSv_memBit_c::MAP);
-        ImGui::SameLine(230.0f);
-        genDungeonItemCheckbox(membit, "Got Compass", dSv_memBit_c::COMPASS);
+    template <typename FlagIter, typename FlagTester>
+    requires requires(FlagIter a, FlagTester tester) {
+        --a; ++a; a < a; *a;
+        a + 1;
+        { tester(*a) } -> std::convertible_to<bool>;
+    }
+    static void sortByFlags(FlagIter begin, FlagIter end, FlagTester&& flagTester) {
+        if (begin == end) return;
 
-        genDungeonItemCheckbox(membit, "Got Boss Key", dSv_memBit_c::BOSS_KEY);
-        ImGui::SameLine(230.0f);
-        genDungeonItemCheckbox(membit, "Saw Boss Demo", dSv_memBit_c::STAGE_BOSS_DEMO);
+        auto fullEnd = end;
 
-        genDungeonItemCheckbox(membit, "Got Heart Container", dSv_memBit_c::STAGE_LIFE);
-        ImGui::SameLine(230.0f);
-        genDungeonItemCheckbox(membit, "Defeated Boss", dSv_memBit_c::STAGE_BOSS_ENEMY);
+        // We want to find the location of where we can swap our `On` flags to.
+        // We're gonna put the `Off` bits first, and the `On` bits last. 0 < 1
+        // We can achieve this by skipping all the `On` bits at the end.
 
-        genDungeonItemCheckbox(membit, "Defeated Miniboss", dSv_memBit_c::STAGE_BOSS_ENEMY_2);
-        ImGui::SameLine(230.0f);
-        genDungeonItemCheckbox(membit, "Got Ooccoo", dSv_memBit_c::OOCCOO_NOTE);
+        // backtrack until we find a bit that is off
+        while (begin < --end && flagTester(*end)) {
+            // move the end pointer back while we find on bits
+        }
 
-        int keyTemp = membit.getKeyNum();
-        if (ImGui::SliderInt("Keys", &keyTemp, 0, 5)) {
-            membit.setKeyNum(keyTemp);
+        // end should now be pointing to a bit that is off
+        while (begin < end) {
+            // if there's a flag that's on
+            if (flagTester(*begin)) {
+                // move it to the end
+                std::rotate(begin, begin + 1, fullEnd);
+                // move back the end of where we're checking
+                --end;
+                // begin will now point to the next piece of data
+                // because we've rotated the data >= begin to the left
+            } else {
+                // not on, check next flag
+                ++begin;
+            }
+        }
+    }
+
+    
+    static void genAreaFlagTable(uint8_t areaIndex, dSv_memBit_c& membit) {
+        const auto LoadFlag = [&](const EventAreaFlags& flag) -> bool {
+            switch (flag.flag.type) {
+            case AreaFlagType::Item: {
+                return membit.isItem(flag.flag.flagID);
+            } break;
+            case AreaFlagType::Switch: {
+                return membit.isSwitch(flag.flag.flagID);
+            } break;
+            case AreaFlagType::Tbox: {
+                return membit.isTbox(flag.flag.flagID);
+            } break;
+            }
+            return false;
+        };
+
+        const auto SetFlag = [&](const AreaFlagInd& flag, bool set) -> void {
+            if (set) {
+                switch (flag.type) {
+                case AreaFlagType::Item: {
+                    membit.onItem(flag.flagID);
+                } break;
+                case AreaFlagType::Switch: {
+                    membit.onSwitch(flag.flagID);
+                } break;
+                case AreaFlagType::Tbox: {
+                    membit.onTbox(flag.flagID);
+                } break;
+                }
+            } else {
+                switch (flag.type) {
+                case AreaFlagType::Item: {
+                    membit.offItem(flag.flagID);
+                } break;
+                case AreaFlagType::Switch: {
+                    membit.offSwitch(flag.flagID);
+                } break;
+                case AreaFlagType::Tbox: {
+                    membit.offTbox(flag.flagID);
+                } break;
+                }
+            }
+        };
+
+        const auto LoadMultiByteFlag = [&](const AreaFlagMultibit& flag) -> uint8_t {
+            BE(u32)* areaFlags = nullptr;
+            switch (flag.type) {
+            case AreaFlagType::Item: {
+                areaFlags = membit.mItem;
+            } break;
+            case AreaFlagType::Switch: {
+                areaFlags = membit.mSwitch;
+            } break;
+            case AreaFlagType::Tbox: {
+                areaFlags = membit.mTbox;
+            } break;
+            }
+            assert(areaFlags != nullptr);
+            return (areaFlags[flag.index] & flag.mask) >> flag.shift;
+        };
+
+        const auto SetMultiByteFlag = [&](const AreaFlagMultibit& flag, uint8_t val) -> void {
+            BE(u32)* areaFlags = nullptr;
+            switch (flag.type) {
+            case AreaFlagType::Item: {
+                areaFlags = membit.mItem;
+            } break;
+            case AreaFlagType::Switch: {
+                areaFlags = membit.mSwitch;
+            } break;
+            case AreaFlagType::Tbox: {
+                areaFlags = membit.mTbox;
+            } break;
+            }
+
+            areaFlags[flag.index] &= ~flag.mask;
+            areaFlags[flag.index] |= (val << flag.shift) & flag.mask;
+        };
+
+        auto iter = imguiAreaFlagLookup.find(areaIndex);
+        if (iter == imguiAreaFlagLookup.end()) return;
+
+        auto& areaFlags = iter->second;
+
+        static ImGuiTextFilter filter;
+        filter.Draw();  // Search bar
+
+        ImVec2 flagTableSize = {700, 400};
+        if (ImGui::BeginTable("Area Flags", 3,
+                              ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX |
+                                  ImGuiTableFlags_Sortable,
+                              flagTableSize))
+        {
+            ImGui::TableSetupScrollFreeze(0, 1);
+            constexpr int COLUMN_FLAG = 0, COLUMN_BIT = 1, COLUMN_DESC = 2;
+            ImGui::TableSetupColumn("Flag");
+            ImGui::TableSetupColumn("Byte:Bit");
+            ImGui::TableSetupColumn("Description");
+            ImGui::TableHeadersRow();
+
+            // if we're sorting by whether the flag is set or not,
+            // we want to re-sort whenever a flag updates, which means every frame cuz we don't
+            // know when it changes. otherwise only re-sort when the sort is dirty
+            if (auto* sort = ImGui::TableGetSortSpecs();
+                sort != nullptr && sort->SpecsCount > 0 &&
+                (sort->SpecsDirty || sort->Specs[0].ColumnIndex == COLUMN_FLAG))
+            {
+                const auto column = sort->Specs[0].ColumnIndex;
+                const auto direction = sort->Specs[0].SortDirection;
+
+                // if we're sorting by flags, do special sort, regular sort is bad for sorting
+                // bools it can swap values that are the same, and that causes constant
+                // reordering
+                if (column == COLUMN_FLAG) {
+                    if (direction == ImGuiSortDirection_Ascending) {
+                        sortByFlags(std::begin(areaFlags.bitFlags), std::end(areaFlags.bitFlags),
+                                    LoadFlag);
+                    } else {
+                        sortByFlags(std::rbegin(areaFlags.bitFlags), std::rend(areaFlags.bitFlags),
+                                    LoadFlag);
+                    }
+                } else {
+                    const auto cmp = [column](const EventAreaFlags& l,
+                                              const EventAreaFlags& r) -> bool {
+                        switch (column) {
+                        case COLUMN_DESC:
+                            return l.description < r.description;
+                        case COLUMN_BIT:
+                            return l.GetFlagID() < r.GetFlagID();
+                        }
+                        return false;
+                    };
+
+                    if (direction == ImGuiSortDirection_Ascending) {
+                        std::sort(std::begin(areaFlags.bitFlags), std::end(areaFlags.bitFlags),
+                                  cmp);
+                    } else {
+                        std::sort(std::rbegin(areaFlags.bitFlags), std::rend(areaFlags.bitFlags),
+                                  cmp);
+                    }
+                }
+
+                sort->SpecsDirty = false;
+            }
+
+            for (const auto& e : areaFlags.bitFlags) {
+                std::string formattedBitLocation =
+                    fmt::format("{0:02X}:{1:02X}", e.byteIndex, e.bitIndex);
+
+                if (!filter.PassFilter(e.description.c_str()) &&
+                    !filter.PassFilter(formattedBitLocation.c_str()))
+                {
+                    continue;
+                }
+
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                bool flag = LoadFlag(e);
+                if (ImGui::Checkbox(fmt::format("##_unused_area_flag_{}", e.flag.flagID).c_str(), &flag)) {
+                    SetFlag(e.flag, flag);
+                }
+
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(formattedBitLocation.c_str());
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(e.description.c_str());
+            }
+            ImGui::EndTable();
+        }
+
+        for (const auto& multiByteFlag : areaFlags.multibyteFlags) {
+            auto flagValue = LoadMultiByteFlag(multiByteFlag.flag);
+
+            const char* currentVal = "UNKNOWN";
+
+            auto enumValIter = multiByteFlag.enumValues.find(flagValue);
+            if (enumValIter != multiByteFlag.enumValues.end()) {
+                currentVal = enumValIter->second;
+            }
+
+            if (ImGui::BeginCombo(multiByteFlag.name, currentVal)) {
+                for (const auto& [val, name] : multiByteFlag.enumValues) {
+                    if (ImGui::Selectable(name)) {
+                        SetMultiByteFlag(multiByteFlag.flag, val);
+                    }
+                }
+                ImGui::EndCombo();
+            }
+        }
+
+        genCommonAreaFlags(membit);
+    }
+
+    static void drawCurrentRegionFlags()
+    {
+        dSv_memBit_c& membit = g_dComIfG_gameInfo.info.mMemory.mBit;
+        auto* stageData = dComIfGp_getStageStagInfo();
+        if (!stageData)
+            return;
+        uint8_t stageIndex = dStage_stagInfo_GetSaveTbl(stageData);
+
+        genAreaFlagTable(stageIndex, membit);
+
+        if (ImGui::TreeNode("Flag Matrix")) {
+            genMembitFlags("##TempSceneFlags", membit);
+            ImGui::TreePop();
+        }
+
+        stage_stag_info_class* pstag = dComIfGp_getStageStagInfo();
+        if (pstag != nullptr) {
+            int stageNo = dStage_stagInfo_GetSaveTbl(pstag);
+            if (ImGui::Button("Save##SaveTempFlags")) {
+                dComIfGs_putSave(stageNo);
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Load##LoadSaveFlags")) {
+                dComIfGs_getSave(stageNo);
+            }
         }
     }
 
     void ImGuiSaveEditor::drawFlagsTab() {
         if (ImGui::TreeNode("Current Region Flags")) {
-            dSv_memBit_c& membit = g_dComIfG_gameInfo.info.mMemory.mBit;
-            genMembitFlags("##TempSceneFlags", membit);
-
-            stage_stag_info_class* pstag = dComIfGp_getStageStagInfo();
-            if (pstag != nullptr) {
-                int stageNo = dStage_stagInfo_GetSaveTbl(pstag);
-                if (ImGui::Button("Save##SaveTempFlags")) {
-                    dComIfGs_putSave(stageNo);
-                }
-
-                ImGui::SameLine();
-
-                if (ImGui::Button("Load##LoadSaveFlags")) {
-                    dComIfGs_getSave(stageNo);
-                }
-            }
-
+            drawCurrentRegionFlags();
             ImGui::TreePop();
         }
 
         if (ImGui::TreeNode("Region Saved Flags")) {
-            static std::array<const char*, 27> regionNames = {
-                "Ordon",
-                "Hyrule Sewers",
-                "Faron",
-                "Eldin",
-                "Lanayru",
-                "Reserved",
-                "Hyrule Field",
-                "Sacred Grove",
-                "Snowpeak",
-                "Castle Town",
-                "Gerudo Desert",
-                "Fishing Pond",
-                "Reserved",
-                "Reserved",
-                "Reserved",
-                "Reserved",
-                "Forest Temple",
-                "Goron Mines",
-                "Lakebed Temple",
-                "Arbiter's Grounds",
-                "Snowpeak Ruins",
-                "Temple of Time",
-                "City in the Sky",
-                "Palace of Twilight",
-                "Hyrule Castle",
-                "Caves",
-                "Grottos",
+            static const std::map<uint8_t, const char*> regionNames = {
+                { 0x00, "Ordon"               },
+                { 0x01, "Hyrule Sewers"       },
+                { 0x02, "Faron"               },
+                { 0x03, "Eldin"               },
+                { 0x04, "Lanayru"             },
+                { 0x06, "Hyrule Field"        },
+                { 0x07, "Sacred Grove"        },
+                { 0x08, "Snowpeak"            },
+                { 0x09, "Castle Town"         },
+                { 0x0A, "Gerudo Desert"       },
+                { 0x0B, "Fishing Pond"        },
+                { 0x10, "Forest Temple"       },
+                { 0x11, "Goron Mines"         },
+                { 0x12, "Lakebed Temple"      },
+                { 0x13, "Arbiter's Grounds"   },
+                { 0x14, "Snowpeak Ruins"      },
+                { 0x15, "Temple of Time"      },
+                { 0x16, "City in the Sky"     },
+                { 0x17, "Palace of Twilight"  },
+                { 0x18, "Hyrule Castle"       },
+                { 0x19, "Caves"               },
+                { 0x1A, "Lake Hylia Long Cave"},
+                { 0x1B, "Grottos"             }
             };
 
-            if (ImGui::BeginCombo("Region", regionNames[m_selectedRegion])) {
-                for (int i = 0; i < regionNames.size(); i++) {
-                    if (strcmp(regionNames[i], "Reserved") == 0) continue;
+            if (m_selectedRegion.name == nullptr)
+            {
+                const auto& firstRegion = *regionNames.find(0);
+                m_selectedRegion = { firstRegion.first, firstRegion.second };
+            }
 
-                    if (ImGui::Selectable(regionNames[i])) {
-                        m_selectedRegion = i;
+            if (ImGui::BeginCombo("Region", m_selectedRegion.name)) {
+                for (const auto& [id, name] : regionNames) {
+                    if (ImGui::Selectable(name)) {
+                        m_selectedRegion = {id, name};
                     }
                 }
-
                 ImGui::EndCombo();
             }
 
-            dSv_memBit_c* membit = &dComIfGs_getSaveData()->mSave[m_selectedRegion].mBit;
-            if (membit != nullptr) {
-                genMembitFlags("##SaveSceneFlags", *membit);
+            dSv_memBit_c& membit = dComIfGs_getSaveData()->mSave[m_selectedRegion.id].mBit;
+
+            genAreaFlagTable(m_selectedRegion.id, membit);
+            
+            if (ImGui::TreeNode("Flag Matrix")) {
+                genMembitFlags("##SaveSceneFlags", membit);
+
+                ImGui::TreePop();
             }
 
             ImGui::TreePop();
@@ -1446,35 +1701,50 @@ namespace dusk {
                     sort != nullptr && sort->SpecsCount > 0 &&
                     (sort->SpecsDirty || sort->Specs[0].ColumnIndex == COLUMN_FLAG))
                 {
-                    auto column = sort->Specs->ColumnIndex;
-                    const auto cmp = [&](const duskImguiEventFlagEntry& l,
-                                         const duskImguiEventFlagEntry& r) -> bool {
-                        switch (column) {
-                        case COLUMN_FLAG:
-                            return (bool)event.isEventBit(l.flagID) <
-                                   (bool)event.isEventBit(r.flagID);
-                        case COLUMN_NAME:
-                            return l.flagName < r.flagName;
-                        case COLUMN_LOC:
-                            return l.location < r.location;
-                        case COLUMN_DESC:
-                            return l.description < r.description;
-                        }
-                        return false;
-                    };
-
+                    const auto column = sort->Specs[0].ColumnIndex;
                     const auto direction = sort->Specs[0].SortDirection;
 
-                    if (direction == ImGuiSortDirection_Ascending) {
-                        std::sort(std::begin(duskImguiEventFlags), std::end(duskImguiEventFlags), cmp);
+                    // if we're sorting by flags, do special sort, regular sort is bad for sorting bools
+                    // it can swap values that are the same, and that causes constant reordering
+                    if (column == COLUMN_FLAG) {
+                        const auto testEventFunc = [&event](const duskImguiEventFlagEntry& flag) -> bool {
+                            return event.isEventBit(flag.flagID);
+                        };
+
+                        if (direction == ImGuiSortDirection_Ascending) {
+                            sortByFlags(std::begin(duskImguiEventFlags),
+                                        std::end(duskImguiEventFlags), testEventFunc);
+                        } else {
+                            sortByFlags(std::rbegin(duskImguiEventFlags),
+                                        std::rend(duskImguiEventFlags), testEventFunc);
+                        }
                     } else {
-                        std::sort(std::rbegin(duskImguiEventFlags), std::rend(duskImguiEventFlags), cmp);
+                        const auto cmp = [column](const duskImguiEventFlagEntry& l,
+                                                  const duskImguiEventFlagEntry& r) -> bool {
+                            switch (column) {
+                            case COLUMN_NAME: return l.flagName < r.flagName;
+                            case COLUMN_LOC:  return l.location < r.location;
+                            case COLUMN_DESC: return l.description < r.description;
+                            default:          return false;
+                            }
+                        };
+
+                        if (direction == ImGuiSortDirection_Ascending) {
+                            std::sort(std::begin(duskImguiEventFlags),
+                                      std::end(duskImguiEventFlags), cmp);
+                        } else {
+                            std::sort(std::rbegin(duskImguiEventFlags),
+                                      std::rend(duskImguiEventFlags), cmp);
+                        }
                     }
+
                     sort->SpecsDirty = false;
                 }
                 
                 for (const auto& e : duskImguiEventFlags) {
-                    if (!filter.PassFilter((e.location + "\n" + e.description + "\n" + e.flagName).c_str())) 
+                    if (!filter.PassFilter(e.location.c_str()) &&
+                        !filter.PassFilter(e.description.c_str()) &&
+                        !filter.PassFilter(e.flagName.c_str()))
                     {
                         continue;
                     }

@@ -11,6 +11,9 @@
 #include "d/d_menu_dmap_map.h"
 #include "f_op/f_op_msg_mng.h"
 #include "m_Do/m_Do_graphic.h"
+#if TARGET_PC
+#include <dolphin/gx/GXExtra.h>
+#endif
 
 struct dMdm_HIO_prm_res_dst_s {
     static void* m_res;
@@ -291,6 +294,9 @@ void dMenu_DmapMap_c::_create(u16 param_0, u16 param_1, u16 param_2, u16 param_3
 void dMenu_DmapMap_c::_delete() {
     for (int i = 0; i < 2; i++) {
         if (mMapImage_p[i] != NULL) {
+#if TARGET_PC
+            GXDestroyCopyTex(mMapImage_p[i]);
+#endif
             JKR_DELETE_ARRAY(mMapImage_p[i]);
         }
 
@@ -362,7 +368,7 @@ void dMenu_StageMapCtrl_c::initGetTreasureList(u8 param_0, s8 param_1) {
 }
 
 inline static s16 rightModeCnvRot(s16 param_0) {
-    return param_0;
+    return IF_DUSK(dusk::getSettings().game.enableMirrorMode ? -param_0 :) param_0;
 }
 
 bool dMenu_StageMapCtrl_c::getTreasureList(f32* o_posX, f32* o_posY, s8* param_2, u8* o_swbit,
@@ -399,7 +405,7 @@ bool dMenu_StageMapCtrl_c::getTreasureList(f32* o_posX, f32* o_posY, s8* param_2
 }
 
 inline static f32 rightModeCnvPos(f32 param_0) {
-    return param_0;
+    return IF_DUSK(dusk::getSettings().game.enableMirrorMode ? -param_0 :) param_0;
 }
 
 void dMenu_StageMapCtrl_c::cnvPosTo2Dpos(f32 param_0, f32 param_1, f32* param_2,

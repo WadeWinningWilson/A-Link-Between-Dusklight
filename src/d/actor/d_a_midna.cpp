@@ -419,9 +419,30 @@ int daMidna_c::createHeap() {
             return 0;
         }
 
+#if TARGET_PC
+        if (mpDemoFCTongueBmd != NULL) {
+            if(!daAlink_c::initDemoBck(&mpDemoFCTmpBck, "demo00_Midna_cut00_FC_tmp.bck")) {
+                return 0;
+            }
+
+            // Update Midna's eye maxLOD to prevent the eyes from disappearing
+            J3DTexture* tex = mpDemoFCTongueBmd->getModelData()->getTexture();
+            JUTNameTab* nametable = mpDemoFCTongueBmd->getModelData()->getTextureName();
+            if (tex != nullptr && nametable != nullptr) {
+                for (u16 i = 0; i < tex->getNum(); i++) {
+                    const char* tex_name = nametable->getName(i);
+                    if (tex_name != NULL && strcmp(tex_name, "midona_eyeball") == 0) {
+                        ResTIMG* timg = tex->getResTIMG(i);
+                        timg->maxLOD = 0;
+                    }
+                }
+            }
+        }
+#else
         if (mpDemoFCTongueBmd != NULL && !daAlink_c::initDemoBck(&mpDemoFCTmpBck, "demo00_Midna_cut00_FC_tmp.bck")) {
             return 0;
         }
+#endif
 
         modelData =
             (J3DModelData*)dComIfG_getObjectRes(dStage_roomControl_c::getDemoArcName(), "demo00_Midna_cut00_BD_tmp.bmd");
@@ -433,6 +454,21 @@ int daMidna_c::createHeap() {
 
             modelData->getMaterialNodePointer(2)->setMaterialAnm(mpEyeMatAnm[0]);
             modelData->getMaterialNodePointer(3)->setMaterialAnm(mpEyeMatAnm[1]);
+
+#if TARGET_PC
+            // Update Midna's eye maxLOD to prevent the eyes from disappearing
+            J3DTexture* tex = modelData->getTexture();
+            JUTNameTab* nametable = modelData->getTextureName();
+            if (tex != nullptr && nametable != nullptr) {
+                for (u16 i = 0; i < tex->getNum(); i++) {
+                    const char* tex_name = nametable->getName(i);
+                    if (tex_name != NULL && strcmp(tex_name, "midona_eyeball") == 0) {
+                        ResTIMG* timg = tex->getResTIMG(i);
+                        timg->maxLOD = 0;
+                    }
+                }
+            }
+#endif
         }
 
         if (!initDemoModel(&mpDemoBDMaskBmd, "demo00_Midna_cut00_BD_mask.bmd", 0)) {
@@ -463,6 +499,23 @@ int daMidna_c::createHeap() {
     JKRReadIdxResource(mBckHeap[0].getBuffer(), mBckHeap[0].getBufferSize(), 0x1DC, dComIfGp_getAnmArchive());
     J3DAnmTransform* md_anm = (J3DAnmTransform*)J3DAnmLoaderDataBase::load(mBckHeap[0].getBuffer());
     modelData = (J3DModelData*)dComIfG_getObjectRes(l_arcName, 14);
+
+#if TARGET_PC
+    J3DTexture* tex = modelData->getTexture();
+    JUTNameTab* nametable = modelData->getTextureName();
+    if (tex != NULL && nametable != NULL) {
+        for (u16 i = 0; i < tex->getNum(); i++) {
+            const char* name = nametable->getName(i);
+            if (name != NULL && strcmp(name, "midona_eye") == 0) {
+                ResTIMG* timg = tex->getResTIMG(i);
+                timg->mipmapEnabled = false;
+                tex->loadGXTexObj(i);
+                break;
+            }
+        }
+    }
+#endif
+
     JUT_ASSERT(852, modelData != NULL);
     mpMorf = JKR_NEW mDoExt_McaMorfSO(modelData, &mMorfCB, NULL, md_anm, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, NULL, 0, 0x11000284);
     if (mpMorf == NULL || mpMorf->getModel() == NULL) {

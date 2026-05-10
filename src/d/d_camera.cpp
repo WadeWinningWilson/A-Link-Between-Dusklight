@@ -31,6 +31,7 @@
 #if TARGET_PC
 #include "dusk/frame_interpolation.h"
 #include "dusk/logging.h"
+#include "imgui.h"
 #endif
 
 namespace {
@@ -794,6 +795,9 @@ void dCamera_c::updatePad() {
 
     if (mTriggerLeftLast > mCamSetup.ManualEndVal()) {
         if (mLockLActive == 0) {
+            #if TARGET_PC
+            mCamParam.mManualMode = 0;
+            #endif
             mLockLJustActivated = 1;
         } else {
             mLockLJustActivated = 0;
@@ -832,6 +836,12 @@ void dCamera_c::updatePad() {
     mTrigZ = mDoCPd_c::getTrigZ(mPadID) ? true : false;
     mHoldB = mDoCPd_c::getHoldB(mPadID) ? true : false;
     mTrigB = mDoCPd_c::getTrigB(mPadID) ? true : false;
+
+    #if TARGET_PC
+    if (mCamParam.mManualMode) {
+        return;
+    }
+    #endif
 
     bool sp6B = true;
     bool sp6C = true;
@@ -1031,6 +1041,11 @@ void dCamera_c::debugDrawInit() {
 bool dCamera_c::Run() {
 #if TARGET_PC
     ResetView();
+    if (executeDebugFlyCam()) {
+        mFrameCounter++;
+        mTicks++;
+        return true;
+    }
 #endif
 
     daAlink_c* link = daAlink_getAlinkActorClass();
@@ -1166,7 +1181,14 @@ bool dCamera_c::Run() {
             clrFlag(0x200000);
         }
     } else {
+        #if TARGET_PC
+        if (mCamParam.Algorythmn(mCamStyle) != 1) {
+            mCamParam.mManualMode = 0;
+        }
+        #endif
+
         sp0F = (this->*engine_tbl[mCamParam.Algorythmn(mCamStyle)])(mCamStyle);
+
         field_0x170++;
         field_0x160++;
         mCurCamStyleTimer++;
@@ -1471,7 +1493,7 @@ void dCamera_c::CalcTrimSize() {
             mTrimHeight += -mTrimHeight * 0.25f;
             break;
         case 2:
-#if WIDESCREEN_SUPPORT
+#if !TARGET_PC && WIDESCREEN_SUPPORT
             if (mDoGph_gInf_c::isWide() && mDoGph_gInf_c::isWideZoom()) {
                 mTrimHeight += (16.0f - mTrimHeight) * 0.25f;
                 break;
@@ -3078,6 +3100,7 @@ bool dCamera_c::bumpCheck(u32 i_flags) {
                     } else {
                         field_0x968 *= mMonitor.field_0xc / 5.0f;
                     }
+
                     f32 tmp = field_0x96c * (mIsWolf == 1 ? 30.0f : 30.0f);
                     center += vec3.norm() * (tmp * globe.V().Sin());
                     cSGlobe globe2(vec2 - center);
@@ -4182,6 +4205,11 @@ bool dCamera_c::chaseCamera(s32 param_0) {
         chase->field_0x8 -= chase->field_0xc;
         chase->field_0x8c = 0;
         chase->field_0x90 = false;
+
+        #if TARGET_PC
+        freeCamera();
+        #endif
+
         return true;
     }
 
@@ -4604,6 +4632,7 @@ bool dCamera_c::chaseCamera(s32 param_0) {
 
     sp110 = mViewCache.mDirection.R();
     mViewCache.mDirection.R(mViewCache.mDirection.R() + (fVar55 - mViewCache.mDirection.R()) * chase->field_0x74);
+
     chase->field_0x64 = mViewCache.mCenter + mViewCache.mDirection.Xyz();
     mViewCache.mEye = chase->field_0x64;
 
@@ -4618,6 +4647,11 @@ bool dCamera_c::chaseCamera(s32 param_0) {
     if (chase->field_0x1c != 0) {
         chase->field_0x1c--;
     }
+
+    #if TARGET_PC
+    freeCamera();
+    #endif
+
     return true;
 }
 
@@ -7065,10 +7099,12 @@ bool dCamera_c::subjectCamera(s32 param_0) {
     cXyz sp1E0(val0, val2, val1);
 
 #if TARGET_PC
-    f32 aspect = mDoGph_gInf_c::getAspect();
-    f32 baseAspect = FB_WIDTH / FB_HEIGHT;
-    if (aspect > baseAspect) {
-        sp1E0.z += (aspect - baseAspect) * 4;
+    if (sp13) {
+        f32 aspect = mDoGph_gInf_c::getAspect();
+        f32 baseAspect = FB_WIDTH / FB_HEIGHT;
+        if (aspect > baseAspect) {
+            sp1E0.z += (aspect - baseAspect) * 4;
+        }
     }
 #endif
 
@@ -7443,6 +7479,201 @@ bool dCamera_c::test1Camera(s32 param_0) {
 bool dCamera_c::test2Camera(s32 param_0) {
     return false;
 }
+
+static constexpr f32 FLYCAM_SPEED = 0.5f;
+static constexpr f32 FLYCAM_FAST_SPEED = 4.0f;
+static constexpr f32 FLYCAM_ROTATION_SPEED = 0.002f;
+static constexpr f32 FLYCAM_TRIGGER_DEADZONE = 20.0f;
+static constexpr s16 FLYCAM_ROLL_SPEED = 256;
+static ImVec2 sFlyCamLastMousePos = {-1.f, -1.f};
+
+#if TARGET_PC
+bool dCamera_c::executeDebugFlyCam() {
+    if (!dusk::getSettings().game.debugFlyCam) {
+        if (mDebugFlyCam.initialized) {
+            deactivateDebugFlyCam();
+        }
+        sFlyCamLastMousePos = {-1.f, -1.f};
+        return false;
+    }
+
+    dEvt_control_c* event = dComIfGp_getEvent();
+    if (event == nullptr) {
+        return false;
+    }
+
+    if (!mDebugFlyCam.initialized && (event->mEventStatus != 0 || dComIfGp_isPauseFlag())) {
+        dusk::getSettings().game.debugFlyCam.setValue(false);
+        return false;
+    }
+
+    if (!mDebugFlyCam.initialized) {
+        mDebugFlyCam.savedCenter = mCenter;
+        mDebugFlyCam.savedEye = mEye;
+        mDebugFlyCam.savedFovy = mFovy;
+        mDebugFlyCam.savedBank = mBank;
+
+        f32 dx = mCenter.x - mEye.x;
+        f32 dy = mCenter.y - mEye.y;
+        f32 dz = mCenter.z - mEye.z;
+        mDebugFlyCam.yaw = atan2f(dz, dx);
+        f32 horizontal = sqrtf(dx * dx + dz * dz);
+        mDebugFlyCam.pitch = atan2f(dy, horizontal);
+
+        mDebugFlyCam.initialized = true;
+    }
+
+    if (dusk::getSettings().game.debugFlyCamLockEvents) {
+        event->mEventStatus = 1;
+        dComIfGp_getEventManager().setCameraPlay(1);
+    } else {
+        if (event->mEventStatus != 0) {
+            event->mEventStatus = 0;
+        }
+        dComIfGp_getEventManager().setCameraPlay(0);
+    }
+
+    f32 stickY = 0.f;
+    f32 stickX = 0.f;
+    f32 cStickY = 0.f;
+    f32 cStickX = 0.f;
+    f32 trigL = 0.f;
+    f32 trigR = 0.f;
+    f32 rollInput = 0.f;
+    bool fast = false;
+
+    if (dusk::getSettings().game.debugFlyCamLockEvents) {
+        interface_of_controller_pad& pad = mDoCPd_c::getCpadInfo(0);
+        stickY = pad.mMainStickPosY * 72.0f;
+        stickX = pad.mMainStickPosX * 72.0f;
+        cStickY = pad.mCStickPosY * 59.0f;
+        cStickX = pad.mCStickPosX * 59.0f;
+        trigL = pad.mTriggerLeft * 150.0f;
+        trigR = pad.mTriggerRight * 150.0f;
+        fast = mDoCPd_c::getHoldZ(PAD_1);
+        if (mDoCPd_c::getHoldY(PAD_1)) rollInput -= 1.f;
+        if (mDoCPd_c::getHoldX(PAD_1)) rollInput += 1.f;
+    }
+
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        if (!io.WantCaptureKeyboard) {
+            f32 kbX = 0.0f, kbY = 0.0f;
+            if (ImGui::IsKeyDown(ImGuiKey_W) || ImGui::IsKeyDown(ImGuiKey_UpArrow)) kbY += 1.f;
+            if (ImGui::IsKeyDown(ImGuiKey_S) || ImGui::IsKeyDown(ImGuiKey_DownArrow)) kbY -= 1.f;
+            if (ImGui::IsKeyDown(ImGuiKey_D) || ImGui::IsKeyDown(ImGuiKey_RightArrow)) kbX += 1.f;
+            if (ImGui::IsKeyDown(ImGuiKey_A) || ImGui::IsKeyDown(ImGuiKey_LeftArrow)) kbX -= 1.f;
+            f32 len = sqrtf(kbX * kbX + kbY * kbY);
+            if (len > 1.f) { kbX /= len; kbY /= len; }
+            stickX += kbX * 72.0f;
+            stickY += kbY * 72.0f;
+            if (ImGui::IsKeyDown(ImGuiKey_Space)) trigR += 150.0f;
+            if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) trigL += 150.0f;
+            if (ImGui::IsKeyDown(ImGuiKey_LeftShift)) fast = true;
+            if (ImGui::IsKeyDown(ImGuiKey_Q)) rollInput -= 1.0f;
+            if (ImGui::IsKeyDown(ImGuiKey_E)) rollInput += 1.0f;
+        }
+        bool mouseValid = !io.WantCaptureMouse && io.MousePos.x >= 0.0f && io.MousePos.y >= 0.0f;
+        if (mouseValid && sFlyCamLastMousePos.x >= 0.0f) {
+            cStickX -= (io.MousePos.x - sFlyCamLastMousePos.x) * 2.0f;
+            cStickY -= (io.MousePos.y - sFlyCamLastMousePos.y) * 2.0f;
+        }
+        sFlyCamLastMousePos = mouseValid ? io.MousePos : ImVec2{-1.0f, -1.0f};
+    }
+
+    f32 verticalDisp = 0.0f;
+    if (trigR >= FLYCAM_TRIGGER_DEADZONE) {
+        verticalDisp += trigR;
+    }
+    if (trigL >= FLYCAM_TRIGGER_DEADZONE) {
+        verticalDisp -= trigL;
+    }
+
+    f32 moveDy = stickY * sinf(mDebugFlyCam.pitch) + verticalDisp;
+    f32 moveDx = stickY * cosf(mDebugFlyCam.yaw) * cosf(mDebugFlyCam.pitch) - stickX * sinf(mDebugFlyCam.yaw);
+    f32 moveDz = stickY * sinf(mDebugFlyCam.yaw) * cosf(mDebugFlyCam.pitch) + stickX * cosf(mDebugFlyCam.yaw);
+
+    f32 speed = fast ? FLYCAM_FAST_SPEED : FLYCAM_SPEED;
+
+    mEye.x += speed * moveDx;
+    mEye.y += speed * moveDy;
+    mEye.z += speed * moveDz;
+
+    static constexpr f32 FLYCAM_TARGET_DIST = 100.0f;
+    mCenter.x = mEye.x + cosf(mDebugFlyCam.yaw) * cosf(mDebugFlyCam.pitch) * FLYCAM_TARGET_DIST;
+    mCenter.z = mEye.z + sinf(mDebugFlyCam.yaw) * cosf(mDebugFlyCam.pitch) * FLYCAM_TARGET_DIST;
+    mCenter.y = mEye.y + sinf(mDebugFlyCam.pitch) * FLYCAM_TARGET_DIST;
+
+    mBank = mBank + static_cast<s16>(rollInput * FLYCAM_ROLL_SPEED * (fast ? FLYCAM_FAST_SPEED / FLYCAM_SPEED : 1.f));
+    Reset(mCenter, mEye);
+
+    f32 yawInput = dusk::getSettings().game.invertCameraXAxis ? cStickX : -cStickX;
+    mDebugFlyCam.yaw += yawInput * FLYCAM_ROTATION_SPEED;
+    mDebugFlyCam.yaw = fmodf(mDebugFlyCam.yaw + 2.0f * (f32)M_PI, 2.0f * (f32)M_PI);
+
+    f32 maxPitch = (f32)M_PI / 2.0f - 0.1f;
+    f32 minPitch = -(f32)M_PI / 2.0f + 0.1f;
+    mDebugFlyCam.pitch = std::clamp(mDebugFlyCam.pitch + cStickY * FLYCAM_ROTATION_SPEED, minPitch, maxPitch);
+
+    return true;
+}
+
+void dCamera_c::deactivateDebugFlyCam() {
+    Reset(mDebugFlyCam.savedCenter, mDebugFlyCam.savedEye, mDebugFlyCam.savedFovy, mDebugFlyCam.savedBank.Val());
+
+    dEvt_control_c* event = dComIfGp_getEvent();
+    if (event != nullptr && event->mEventStatus != 0) {
+        event->mEventStatus = 0;
+    }
+    dComIfGp_getEventManager().setCameraPlay(0);
+    mDebugFlyCam.initialized = false;
+}
+
+bool dCamera_c::freeCamera() {
+    if (dusk::getSettings().game.freeCamera && mGear == 1) {
+        mGear = 0;
+    }
+
+    if (!dusk::getSettings().game.freeCamera || mCamStyle == 70)
+    {
+        mCamParam.mManualMode = 0;
+        return false;
+    }
+
+    if (!mCamParam.mManualMode) {
+        mCamParam.freeXAngle = mViewCache.mDirection.mAzimuth.Degree();
+        mCamParam.freeYAngle = mViewCache.mDirection.mInclination.Degree();
+    }
+
+    cXyz camMovement = {mPadInfo.mCStick.mLastPosX, mPadInfo.mCStick.mLastPosY, 0.0f};
+    f32 magnitude = sqrt(mPadInfo.mCStick.mLastPosX * mPadInfo.mCStick.mLastPosX + mPadInfo.mCStick.mLastPosY * mPadInfo.mCStick.mLastPosY);
+
+    if (mPadInfo.mCStick.mLastPosX != 0 || mPadInfo.mCStick.mLastPosY != 0) {
+        mCamParam.mManualMode = 1;
+        camMovement = camMovement.normalize();
+        camMovement.y *= dusk::getSettings().game.invertCameraYAxis ? 1.0f : -1.0f;
+        mCamParam.freeXAngle += camMovement.x * magnitude * dusk::getSettings().game.freeCameraSensitivity * 5.0f;
+        mCamParam.freeYAngle += camMovement.y * magnitude * dusk::getSettings().game.freeCameraSensitivity * 5.0f;
+    }
+
+    fopAc_ac_c* player = dComIfGp_getPlayer(0);
+    if (!mCamParam.mManualMode || player == nullptr) {
+        return false;
+    }
+
+    f32 minYAngle = -30.0f;
+    f32 maxAngle = 50.0f;
+
+    mCamParam.freeYAngle = std::clamp(mCamParam.freeYAngle, minYAngle, maxAngle);
+    mViewCache.mDirection.mAzimuth = cSAngle(mCamParam.freeXAngle);
+    mViewCache.mDirection.mInclination = cSAngle(mCamParam.freeYAngle);
+
+    cXyz finalEye = mViewCache.mCenter + mViewCache.mDirection.Xyz();
+    mViewCache.mEye = finalEye;
+
+    return true;
+}
+#endif
 
 bool dCamera_c::towerCamera(s32 param_0) {
     cSAngle stack_444 = cSAngle(mCamSetup.ChargeLatitude());
@@ -11031,6 +11262,26 @@ static int camera_execute(camera_process_class* i_this) {
     return 1;
 }
 
+#ifdef TARGET_PC
+void set_ar_corrected_trim(dDlst_window_c* window, float trim_height) {
+    const auto viewport = window->getViewPort();
+    
+    if (mDoGph_gInf_c::isWideZoom()) {
+        const auto target_ar = FB_WIDTH / (FB_HEIGHT - trim_height * 2.0f);
+        const auto current_ar = mDoGph_gInf_c::m_safeWidthF / mDoGph_gInf_c::m_safeHeightF;
+
+        if (current_ar < target_ar) {
+            trim_height = FB_HEIGHT / 2.0f * (1.0f - current_ar / target_ar);
+        } else {
+            trim_height = 0.0f;
+        }
+    }
+
+    trim_height *= viewport->height / FB_HEIGHT;
+    window->setScissor(0.0f, trim_height, viewport->width, viewport->height - trim_height * 2.0f);
+}
+#endif
+
 static int camera_draw(camera_process_class* i_this) {
     camera_class* a_this = (camera_class*)i_this;
     dCamera_c* body = &i_this->mCamera;
@@ -11083,12 +11334,44 @@ static int camera_draw(camera_process_class* i_this) {
     }
 #endif
 
+#if TARGET_PC
+    set_ar_corrected_trim(window, body->TrimHeight());
+
+    if (dusk::getSettings().game.enableFrameInterpolation) {
+        dusk::frame_interp::add_interpolation_callback([](bool _, void* pUserWork) {
+            const auto i_this = static_cast<camera_process_class*>(pUserWork);
+            const auto camera = &i_this->mCamera;
+
+            const auto trim_size = camera->mTrimSize;
+
+            if (camera->mCurState != 2 && trim_size >= 0 && trim_size <= 3) {
+                // derive trim height at previous tick using current camera state
+                f32 target;
+                switch (trim_size) {
+                    case 0:
+                        target = 0.0f;
+                        break;
+                    case 1:
+                        target = camera->mCamSetup.VistaTrimHeight();
+                        break;
+                    case 2:
+                    case 3:
+                        target = camera->mCamSetup.CinemaScopeTrimHeight();
+                        break;
+                }
+
+                const auto step = dusk::frame_interp::get_interpolation_step();
+                const auto cur = camera->TrimHeight();
+                const auto prev = (4.0f * cur - target) / 3.0f; 
+                const auto trim_height = prev + (cur - prev) * step;
+
+                set_ar_corrected_trim(get_window((camera_class*)i_this), trim_height);
+            }
+        }, i_this);
+    }
+#else
     int trim_height = body->TrimHeight();
 
-#if TARGET_PC
-    trim_height *= viewport->height / FB_HEIGHT;
-    window->setScissor(0.0f, trim_height, viewport->width, viewport->height - trim_height * 2.0f);
-#else
     window->setScissor(0.0f, trim_height, FB_WIDTH, FB_HEIGHT - trim_height * 2.0f);
 #endif
 

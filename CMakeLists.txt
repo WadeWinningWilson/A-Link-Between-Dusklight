@@ -48,13 +48,15 @@ else ()
     message(STATUS "Unable to find git, commit information will not be available")
 endif ()
 
-if (DUSK_WC_DESCRIBE MATCHES "^v([0-9]+)\\.([0-9]+)\\.([0-9]+)(-([0-9]+).*)?$")
+if (DUSK_WC_DESCRIBE MATCHES "^v([0-9]+)\\.([0-9]+)\\.([0-9]+)([-+].*)?$")
     set(DUSK_SHORT_VERSION_STRING "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}")
-    if (CMAKE_MATCH_5)
-        set(DUSK_VERSION_STRING "${DUSK_SHORT_VERSION_STRING}.${CMAKE_MATCH_5}")
-    else ()
-        set(DUSK_VERSION_STRING "${DUSK_SHORT_VERSION_STRING}.0")
+    set(DUSK_VERSION_TWEAK "0")
+    if (DUSK_WC_DESCRIBE MATCHES "^v[0-9]+\\.[0-9]+\\.[0-9]+-([0-9]+)(-dirty)?$")
+        set(DUSK_VERSION_TWEAK "${CMAKE_MATCH_1}")
+    elseif (DUSK_WC_DESCRIBE MATCHES "^v[0-9]+\\.[0-9]+\\.[0-9]+-[0-9A-Za-z.-]+-([0-9]+)(-dirty)?$")
+        set(DUSK_VERSION_TWEAK "${CMAKE_MATCH_1}")
     endif ()
+    set(DUSK_VERSION_STRING "${DUSK_SHORT_VERSION_STRING}.${DUSK_VERSION_TWEAK}")
 else ()
     set(DUSK_WC_DESCRIBE "UNKNOWN-VERSION")
     set(DUSK_VERSION_STRING "0.0.0.0")
@@ -69,7 +71,7 @@ message(STATUS "Dusk version set to ${DUSK_WC_DESCRIBE}")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 project(dusk LANGUAGES C CXX VERSION ${DUSK_VERSION_STRING})
 if (APPLE)
-    enable_language(OBJC)
+    enable_language(OBJC OBJCXX)
 endif ()
 if (APPLE AND NOT TVOS AND CMAKE_SYSTEM_NAME STREQUAL tvOS)
     # ios.toolchain.cmake hack for SDL
@@ -100,25 +102,34 @@ if (CMAKE_SYSTEM_NAME STREQUAL Linux)
 endif ()
 set(AURORA_ENABLE_DVD ON CACHE BOOL "Enable DVD API support" FORCE)
 set(AURORA_ENABLE_CARD ON CACHE BOOL "Enable CARD API support" FORCE)
+set(AURORA_ENABLE_RMLUI ON CACHE BOOL "Enable RmlUi UI support" FORCE)
 add_subdirectory(extern/aurora EXCLUDE_FROM_ALL)
+target_compile_definitions(aurora_mtx PRIVATE MTX_USE_PS=1)
 
 add_subdirectory(libs/freeverb)
 
 option(DUSK_BUILD_WARNINGS "Enable compiler warnings (off by default)")
 option(DUSK_SELECTED_OPT "If on, selected parts of the project will be compiled with optimizations on Debug, intending to make the game run at 30 FPS. Note for MSVC: you will need to remove '/RTC1' from your debug flags in CMake.")
 option(DUSK_MOVIE_SUPPORT "If on, compile against libjpeg-turbo to enable THP file decoding" ON)
+option(DUSK_ENABLE_UPDATE_CHECKER "Enable update checking support" ON)
 
 if(ANDROID)
     set(DUSK_MOVIE_SUPPORT OFF)
-    set(NOD_COMPRESS_BZIP2 OFF CACHE BOOL "" FORCE)
-    set(NOD_COMPRESS_LZMA OFF CACHE BOOL "" FORCE)
-    set(NOD_COMPRESS_ZLIB OFF CACHE BOOL "" FORCE)
-    set(NOD_COMPRESS_ZSTD OFF CACHE BOOL "" FORCE)
 endif ()
 
 option(DUSK_ENABLE_SENTRY_NATIVE "Enable sentry-native crash reporting support" OFF)
 set(DUSK_SENTRY_DSN "" CACHE STRING "Sentry DSN")
 set(DUSK_SENTRY_ENVIRONMENT "development" CACHE STRING "Sentry environment")
+
+# Edit & Continue
+if (MSVC)
+    if ("${CMAKE_MSVC_DEBUG_INFORMATION_FORMAT}" STREQUAL "" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "EditAndContinue")
+    endif ()
+    if (CMAKE_MSVC_DEBUG_INFORMATION_FORMAT STREQUAL "EditAndContinue")
+        add_link_options("/INCREMENTAL")
+    endif ()
+endif ()
 
 if (DUSK_MOVIE_SUPPORT)
     find_package(libjpeg-turbo 3.0 CONFIG QUIET)
@@ -149,6 +160,7 @@ if (DUSK_MOVIE_SUPPORT)
             CMAKE_C_COMPILER_LAUNCHER
             CMAKE_MAKE_PROGRAM
             CMAKE_MSVC_RUNTIME_LIBRARY
+            CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
             CMAKE_OSX_ARCHITECTURES
             DEPLOYMENT_TARGET
             ENABLE_ARC
@@ -309,22 +321,16 @@ set(DUSK_COMPANY_NAME "Twilit Realm")
 set(DUSK_FILE_DESCRIPTION "Dusk")
 set(DUSK_PRODUCT_NAME "Dusk")
 set(DUSK_COPYRIGHT "Copyright (C) Twilit Realm contributors")
-set(DUSK_GAME_NAME "GZ2E")
-set(DUSK_GAME_VERSION "01")
-set(DUSK_TP_VERSION ${DUSK_GAME_NAME}${DUSK_GAME_VERSION})
-
-message(STATUS "dusk: Game Version: ${DUSK_TP_VERSION}")
 
 source_group("dolzel" FILES ${DOLZEL_FILES} ${Z2AUDIOLIB_FILES} ${REL_FILES})
-source_group("dusk" FILES ${DUSK_FILES})
+source_group("dusk" FILES ${DUSK_FILES} ${DUSK_HTTP_BACKEND_FILES})
 
-set(GAME_COMPILE_DEFS TARGET_PC WIDESCREEN_SUPPORT=1 AVOID_UB=1 VERSION=0
-    DUSK_TP_VERSION="${DUSK_TP_VERSION}" DUSK_GAME_NAME="${DUSK_GAME_NAME}" DUSK_GAME_VERSION="${DUSK_GAME_VERSION}")
+set(GAME_COMPILE_DEFS TARGET_PC WIDESCREEN_SUPPORT=1 AVOID_UB=1 VERSION=0 MTX_USE_PS=1)
 
 set(GAME_INCLUDE_DIRS
     include
     src
-    assets/${DUSK_TP_VERSION}
+    assets/GZ2E01 # TODO: make this dynamic if needed?
     libs/JSystem/include
     libs
     extern/aurora/include/dolphin
@@ -339,8 +345,10 @@ target_include_directories(dusk_game_headers INTERFACE ${GAME_INCLUDE_DIRS})
 target_compile_definitions(dusk_game_headers INTERFACE TARGET_PC=1)
 target_link_libraries(dusk_game_headers INTERFACE TracyClient)
 
+find_package(Threads REQUIRED)
 set(GAME_LIBS aurora::core aurora::gx aurora::gd aurora::si aurora::vi aurora::pad aurora::mtx aurora::os aurora::dvd
-    aurora::card freeverb cxxopts::cxxopts absl::flat_hash_map nlohmann_json::nlohmann_json TracyClient fmt::fmt funchook-static)
+    aurora::card freeverb cxxopts::cxxopts absl::flat_hash_map nlohmann_json::nlohmann_json TracyClient fmt::fmt funchook-static
+    Threads::Threads)
 
 list(APPEND GAME_LIBS libzstd_static)
 
@@ -348,6 +356,45 @@ if (DUSK_ENABLE_SENTRY_NATIVE)
     list(APPEND GAME_LIBS sentry)
     list(APPEND GAME_COMPILE_DEFS DUSK_ENABLE_SENTRY_NATIVE=1 SENTRY_BUILD_STATIC=1)
 endif ()
+
+if (WIN32)
+    list(APPEND GAME_LIBS Ws2_32)
+endif ()
+
+set(DUSK_HTTP_BACKEND_SOURCE src/dusk/http/no_backend.cpp)
+if (DUSK_ENABLE_UPDATE_CHECKER)
+    list(APPEND GAME_COMPILE_DEFS DUSK_ENABLE_UPDATE_CHECKER=1)
+    if (WIN32)
+        set(DUSK_HTTP_BACKEND_SOURCE src/dusk/http/winhttp.cpp)
+        list(APPEND GAME_LIBS winhttp)
+        list(APPEND GAME_COMPILE_DEFS DUSK_HTTP_BACKEND_WINHTTP=1)
+        message(STATUS "dusk: Enabled update checker (WinHTTP)")
+    elseif (ANDROID)
+        set(DUSK_HTTP_BACKEND_SOURCE src/dusk/http/android.cpp)
+        list(APPEND GAME_COMPILE_DEFS DUSK_HTTP_BACKEND_ANDROID=1)
+        message(STATUS "dusk: Enabled update checker (Android)")
+    elseif (APPLE)
+        find_library(FOUNDATION_FRAMEWORK Foundation REQUIRED)
+        set(DUSK_HTTP_BACKEND_SOURCE src/dusk/http/url_session.mm)
+        set_source_files_properties(src/dusk/http/url_session.mm PROPERTIES COMPILE_FLAGS -fobjc-arc)
+        list(APPEND GAME_LIBS ${FOUNDATION_FRAMEWORK})
+        list(APPEND GAME_COMPILE_DEFS DUSK_HTTP_BACKEND_URLSESSION=1)
+        message(STATUS "dusk: Enabled update checker (NSURLSession)")
+    elseif (CMAKE_SYSTEM_NAME STREQUAL Linux)
+        find_package(CURL QUIET OPTIONAL_COMPONENTS HTTPS SSL)
+        if (CURL_FOUND AND CURL_HTTPS_FOUND AND CURL_SSL_FOUND)
+            set(DUSK_HTTP_BACKEND_SOURCE src/dusk/http/curl.cpp)
+            list(APPEND GAME_LIBS CURL::libcurl)
+            list(APPEND GAME_COMPILE_DEFS DUSK_HTTP_BACKEND_LIBCURL=1)
+            message(STATUS "dusk: Enabled update checker (libcurl)")
+        else ()
+            message(STATUS "dusk: Disabled update checker (libcurl + HTTPS/SSL not found)")
+        endif ()
+    else ()
+        message(STATUS "dusk: Disabled update checker (unsupported platform)")
+    endif ()
+endif ()
+list(APPEND DUSK_FILES ${DUSK_HTTP_BACKEND_SOURCE})
 
 if (DUSK_MOVIE_SUPPORT)
     if (TARGET libjpeg-turbo::turbojpeg-static)
@@ -358,56 +405,13 @@ if (DUSK_MOVIE_SUPPORT)
     list(APPEND GAME_COMPILE_DEFS MOVIE_SUPPORT=1)
 endif ()
 
-option(DUSK_ENABLE_DISCORD_RPC "Enable Discord Rich Presence support" ON)
-if (DUSK_ENABLE_DISCORD_RPC AND NOT ANDROID AND NOT IOS AND NOT TVOS)
-
-    FetchContent_Populate(discord_rpc
-        URL https://github.com/discord/discord-rpc/archive/refs/tags/v3.4.0.tar.gz
-        URL_HASH SHA256=e13427019027acd187352dacba6c65953af66fdf3c35fcf38fc40b454a9d7855
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    )
-    # RapidJSON is a git submodule absent from the discord-rpc tarball; fetch separately.
-    FetchContent_Populate(rapidjson
-        URL https://github.com/Tencent/rapidjson/archive/refs/tags/v1.1.0.tar.gz
-        URL_HASH SHA256=bf7ced29704a1e696fbccf2a2b4ea068e7774fa37f6d7dd4039d0787f8bed98e
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    )
-
-    if (NOT TARGET discord-rpc)
-        set(_drpc ${discord_rpc_SOURCE_DIR}/src)
-        set(_drpc_src
-            ${_drpc}/discord_rpc.cpp
-            ${_drpc}/rpc_connection.cpp
-            ${_drpc}/serialization.cpp
-        )
-        if (WIN32)
-            list(APPEND _drpc_src ${_drpc}/connection_win.cpp ${_drpc}/discord_register_win.cpp)
-        elseif (APPLE)
-            list(APPEND _drpc_src ${_drpc}/connection_unix.cpp ${_drpc}/discord_register_osx.m)
-        else ()
-            list(APPEND _drpc_src ${_drpc}/connection_unix.cpp ${_drpc}/discord_register_linux.cpp)
-        endif ()
-        add_library(discord-rpc STATIC ${_drpc_src})
-        target_include_directories(discord-rpc PUBLIC
-            ${discord_rpc_SOURCE_DIR}/include
-            ${rapidjson_SOURCE_DIR}/include
-        )
-        if (UNIX)
-            target_link_libraries(discord-rpc PUBLIC pthread)
-        endif ()
-    endif ()
-    list(APPEND GAME_LIBS discord-rpc)
-    list(APPEND GAME_COMPILE_DEFS DUSK_DISCORD_RPC=1)
+set(DUSK_ENABLE_DISCORD_DEFAULT ON)
+if (DEFINED DUSK_ENABLE_DISCORD_RPC AND NOT DEFINED DUSK_ENABLE_DISCORD)
+    set(DUSK_ENABLE_DISCORD_DEFAULT ${DUSK_ENABLE_DISCORD_RPC})
 endif ()
-
-# Edit & Continue
-if (MSVC)
-    if ("${CMAKE_MSVC_DEBUG_INFORMATION_FORMAT}" STREQUAL "" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "EditAndContinue")
-    endif ()
-    if (CMAKE_MSVC_DEBUG_INFORMATION_FORMAT STREQUAL "EditAndContinue")
-        add_link_options("/INCREMENTAL")
-    endif ()
+option(DUSK_ENABLE_DISCORD "Enable Discord Rich Presence support" ${DUSK_ENABLE_DISCORD_DEFAULT})
+if (DUSK_ENABLE_DISCORD AND NOT ANDROID AND NOT IOS AND NOT TVOS)
+    list(APPEND GAME_COMPILE_DEFS DUSK_DISCORD=1)
 endif ()
 
 if(ANDROID)

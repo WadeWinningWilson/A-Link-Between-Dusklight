@@ -5,14 +5,15 @@
 
 #include "d/dolzel_rel.h" // IWYU pragma: keep
 
+#include "Z2AudioLib/Z2Instances.h"
+#include "d/actor/d_a_mg_fish.h"
 #include "d/actor/d_a_mg_fshop.h"
 #include "d/actor/d_a_npc_henna.h"
-#include "d/actor/d_a_mg_fish.h"
 #include "d/actor/d_a_player.h"
-#include "f_op/f_op_camera_mng.h"
-#include "d/d_timer.h"
 #include "d/d_s_play.h"
-#include "Z2AudioLib/Z2Instances.h"
+#include "d/d_timer.h"
+#include "dusk/version.hpp"
+#include "f_op/f_op_camera_mng.h"
 
 #if TARGET_PC
 #include "dusk/gyro.h"
@@ -728,10 +729,12 @@ static void koro2_game(fshop_class* i_this) {
         cLib_addCalcAngleS2(&i_this->field_0x4020.z, 0, 2, 0x200);
     case 2:
 #if TARGET_PC
-        if (dusk::getSettings().game.enableGyroRollgoal) {
+        if (dusk::gyro::rollgoal_gyro_enabled()) {
             if (!dusk::gyro::get_sensor_keep_alive()) {
                 dusk::gyro::set_sensor_keep_alive(true);
             }
+        } else if (dusk::gyro::get_sensor_keep_alive()) {
+            dusk::gyro::set_sensor_keep_alive(false);
         }
 #endif
 
@@ -752,7 +755,7 @@ static void koro2_game(fshop_class* i_this) {
             old_stick_x = mDoCPd_c::getSubStickX(PAD_1);
             cLib_addCalcAngleS2(&i_this->field_0x4060, i_this->field_0x4062, 4, 0x1000);
 #if TARGET_PC
-            if (dusk::getSettings().game.enableGyroRollgoal) {
+            if (dusk::gyro::rollgoal_gyro_enabled()) {
                 dusk::gyro::rollgoalTick(true, i_this->field_0x4060);
             }
 #endif
@@ -790,7 +793,7 @@ static void koro2_game(fshop_class* i_this) {
             s16 gyro_ax = 0;
             s16 gyro_az = 0;
 #if TARGET_PC
-            if (dusk::getSettings().game.enableGyroRollgoal) {
+            if (dusk::gyro::rollgoal_gyro_enabled()) {
                 dusk::gyro::rollgoalTableOffset(gyro_ax, gyro_az);
             }
 #endif
@@ -1742,7 +1745,18 @@ static int daFshop_Create(fopAc_ac_c* actor) {
         fopAcM_createChild(fpcNm_FSHOP_e, fopAcM_GetID(actor), 0xFFFFFF23, &actor->current.pos, fopAcM_GetRoomNo(actor), NULL, NULL, -1, NULL);
 
         u8 sp10;
-#if VERSION == VERSION_GCN_PAL || VERSION == VERSION_WII_PAL
+#if TARGET_PC
+        if (dusk::version::isRegionPal()) {
+            if (dComIfGs_getPalLanguage() == dSv_player_config_c::LANGUAGE_ENGLISH) {
+                sp10 = 2;
+            } else {
+                sp10 = 0;
+            }
+        } else {
+            sp10 = 1;
+        }
+
+#elif VERSION == VERSION_GCN_PAL || VERSION == VERSION_WII_PAL
         if (dComIfGs_getPalLanguage() == dSv_player_config_c::LANGUAGE_ENGLISH) {
             sp10 = 2;
         } else {

@@ -23,23 +23,9 @@
 #include <TargetConditionals.h>
 #endif
 
-#if defined(_WIN32) || (defined(__APPLE__) && !TARGET_OS_IOS && !TARGET_OS_MACCATALYST) || (defined(__linux__) && !defined(__ANDROID__))
-#define DUSK_CAN_OPEN_DATA_FOLDER 1
-
-namespace fs = std::filesystem;
-
-static void OpenDataFolder() {
-    const std::string path = fs::absolute(dusk::ConfigPath).generic_string();
-#if defined(_WIN32)
-    const std::string url = std::string("file:///") + path;
-#else
-    const std::string url = std::string("file://") + path;
-#endif
-    (void)SDL_OpenURL(url.c_str());
+namespace aurora::gx {
+extern bool enableLodBias;
 }
-#else
-#define DUSK_CAN_OPEN_DATA_FOLDER 0
-#endif
 
 namespace dusk {
     ImGuiMenuTools::ImGuiMenuTools() {}
@@ -50,13 +36,20 @@ namespace dusk {
                 ImGui::BeginDisabled();
             }
 
+            ImGui::BeginDisabled(getSettings().game.speedrunMode);
+
             ImGui::MenuItem("Save Editor", hotkeys::SHOW_SAVE_EDITOR, &m_showSaveEditor);
             ImGui::MenuItem("Map Loader", hotkeys::SHOW_MAP_LOADER, &m_showMapLoader);
             ImGui::MenuItem("State Share", hotkeys::SHOW_STATE_SHARE, &m_showStateShare);
 
+            ImGui::EndDisabled();
+
             if (!dusk::IsGameLaunched) {
                 ImGui::EndDisabled();
             }
+
+            ImGui::Separator();
+            ImGui::Checkbox("Show Input Viewer", &m_showInputViewer);
 
 #if DUSK_CAN_OPEN_DATA_FOLDER
             ImGui::Separator();
@@ -69,6 +62,8 @@ namespace dusk {
         }
 
         if (ImGui::BeginMenu("Debug")) {
+            ImGui::BeginDisabled(getSettings().game.speedrunMode);
+
             bool developmentMode = mDoMain::developmentMode == 1;
             if (ImGui::Checkbox("Development Mode", &developmentMode)) {
                 mDoMain::developmentMode = developmentMode ? 1 : -1;
@@ -83,6 +78,7 @@ namespace dusk {
                     getSettings().game.disableWaterRefraction.setValue(disableWaterRefraction);
                     config::Save();
                 }
+                ImGui::Checkbox("Enable LOD Bias", &aurora::gx::enableLodBias);
                 ImGui::EndMenu();
             }
 
@@ -111,18 +107,24 @@ namespace dusk {
             ImGui::MenuItem("Audio Debug", hotkeys::SHOW_AUDIO_DEBUG, &m_showAudioDebug);
             ImGui::MenuItem("Bloom", nullptr, &m_showBloomWindow);
             ImGui::MenuItem("Stub Log", nullptr, &m_showStubLog);
+            ImGui::MenuItem("Actor Spawner", nullptr, &m_showActorSpawner);
 
             if (!dusk::IsGameLaunched) {
                 ImGui::EndDisabled();
             }
 
             ImGui::MenuItem("OSReport Force", nullptr, &OSReportReallyForceEnable);
+
+            ImGui::EndDisabled();
+
             ImGui::EndMenu();
         }
     }
 
     void ImGuiMenuTools::ShowDebugOverlay() {
-        if (!ImGuiConsole::CheckMenuViewToggle(ImGuiKey_F3, m_showDebugOverlay)) {
+        if (!getSettings().backend.enableAdvancedSettings ||
+            !ImGuiConsole::CheckMenuViewToggle(ImGuiKey_F3, m_showDebugOverlay))
+        {
             return;
         }
 
@@ -186,7 +188,9 @@ namespace dusk {
     }
 
     void ImGuiMenuTools::ShowPlayerInfo() {
-        if (!ImGuiConsole::CheckMenuViewToggle(ImGuiKey_F5, m_showPlayerInfo)) {
+        if (!getSettings().backend.enableAdvancedSettings ||
+            !ImGuiConsole::CheckMenuViewToggle(ImGuiKey_F5, m_showPlayerInfo))
+        {
             return;
         }
 

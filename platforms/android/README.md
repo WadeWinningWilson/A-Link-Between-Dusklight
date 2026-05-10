@@ -66,12 +66,11 @@ Output APK:
 You can pass command-line args through the activity intent:
 
 ```bash
-adb shell am start -n com.twilitrealm.dusk/.DuskActivity \
-  --es dusk_args "'/sdcard/Download/The Legend of Zelda: Twilight Princess (USA).iso'"
+adb shell am start -n dev.twilitrealm.dusk/.DuskActivity \
+  --es dusk_args "--backend vulkan"
 ```
 
 Supported extras:
 
 - `dusk_args`: single shell-like argument string
 - `dusk_argv`: string-array argv
-- `dusk_disc`: compatibility shortcut (single ISO path)

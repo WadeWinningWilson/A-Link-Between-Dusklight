@@ -51,6 +51,7 @@
 #include "d/actor/d_a_ni.h"
 #include "d/d_s_play.h"
 
+#include "dusk/frame_interpolation.h"
 #include "dusk/settings.h"
 #include "res/Object/Alink.h"
 #include <cstring>
@@ -4962,13 +4963,16 @@ int daAlink_c::create() {
 
         setArcName(checkWolf());
         setOriginalHeap(&mpArcHeap, 0xA2800);
+        JKRHEAP_NAME(mpArcHeap, "Alink ArcHeap");
         if (dComIfG_resLoad(&mPhaseReq, mArcName, mpArcHeap) != cPhs_COMPLEATE_e) {
             return cPhs_INIT_e;
         }
 
         setShieldArcName();
         setOriginalHeap(&mpShieldArcHeap, 0x7000);
-        if (dComIfG_resLoad(&mShieldPhaseReq, mShieldArcName, mpShieldArcHeap) != cPhs_COMPLEATE_e) {
+        JKRHEAP_NAME(mpShieldArcHeap, "Alink ShieldArcHeap");
+        if (dComIfG_resLoad(&mShieldPhaseReq, mShieldArcName, mpShieldArcHeap) != cPhs_COMPLEATE_e)
+        {
             return cPhs_INIT_e;
         }
 
@@ -5877,6 +5881,11 @@ void daAlink_c::setItemMatrix(int param_0) {
     modelCalc(mSheathModel);
 
     int var_r26;
+
+    #if AVOID_UB
+    var_r26 = 0;
+    #endif
+
     if (!checkNoResetFlg3(FLG3_UNK_4000000)) {
         if (mEquipItem == 0x103 || param_0 != 0) {
             mSwordModel->setBaseTRMtx(mpLinkModel->getAnmMtx(mLeftItemJntNo));
@@ -14779,6 +14788,10 @@ void daAlink_c::deleteEquipItem(BOOL i_isPlaySound, BOOL i_isDeleteKantera) {
     mIronBallChainPos = NULL;
     mIronBallChainAngle = NULL;
     field_0x3848 = NULL;
+#if TARGET_PC
+    mIBChainInterpPrevValid = false;
+    mIBChainInterpCurrValid = false;
+#endif
     field_0x0774 = NULL;
     field_0x0778 = NULL;
     mpHookshotLinChk = NULL;
@@ -18936,11 +18949,20 @@ void daAlink_c::setDrawHand() {
     mpLinkHandModel->setBaseTRMtx(mpLinkModel->getBaseTRMtx());
     mpLinkHandModel->calc();
 
+#if TARGET_PC
+    // FRAME INTERP NOTE: Always set these, otherwise the hands occasionally zip to origin.
+    // Doing it regardless of interpolation being active seems harmless.
+    mpLinkHandModel->setAnmMtx(1, mpLinkModel->getAnmMtx(9));
+    mpLinkHandModel->setAnmMtx(2, mpLinkModel->getAnmMtx(0xE));
+#endif
+
     if (var_r30 == 0xFE || var_r30 == 0xFB) {
         field_0x06d0 = field_0x06d8;
     } else {
         field_0x06d0 = mpLinkHandModel->getModelData()->getMaterialNodePointer(var_r30)->getShape();
+#if !TARGET_PC
         mpLinkHandModel->setAnmMtx(1, mpLinkModel->getAnmMtx(9));
+#endif
     }
 
     if (var_r30 == 0xFB) {
@@ -18959,7 +18981,9 @@ void daAlink_c::setDrawHand() {
         field_0x06d4 = field_0x06dc;
     } else {
         field_0x06d4 = mpLinkHandModel->getModelData()->getMaterialNodePointer(var_r29)->getShape();
+#if !TARGET_PC
         mpLinkHandModel->setAnmMtx(2, mpLinkModel->getAnmMtx(0xE));
+#endif
     }
 
     if (var_r29 == 0xFB) {
@@ -19698,6 +19722,27 @@ int daAlink_c::draw() {
                 )
             {
                 dComIfGd_getOpaListDark()->entryImm(mpHookChain, 0);
+
+#if TARGET_PC
+                if (dusk::getSettings().game.enableFrameInterpolation &&
+                    mEquipItem == dItemNo_IRONBALL_e &&
+                    mIronBallChainPos != NULL && mIronBallChainAngle != NULL)
+                {
+                    if (mIBChainInterpCurrValid) {
+                        memcpy(mIBChainInterpPrevPos, mIBChainInterpCurrPos, IRON_BALL_CHAIN_COUNT * sizeof(cXyz));
+                        memcpy(mIBChainInterpPrevAngle, mIBChainInterpCurrAngle, IRON_BALL_CHAIN_COUNT * sizeof(csXyz));
+                        mIBChainInterpPrevHandRoot = mIBChainInterpCurrHandRoot;
+                        mIBChainInterpPrevValid = true;
+                    }
+
+                    memcpy(mIBChainInterpCurrPos, mIronBallChainPos, IRON_BALL_CHAIN_COUNT * sizeof(cXyz));
+                    memcpy(mIBChainInterpCurrAngle, mIronBallChainAngle, IRON_BALL_CHAIN_COUNT * sizeof(csXyz));
+                    mIBChainInterpCurrHandRoot = mHookshotTopPos;
+                    mIBChainInterpCurrValid = true;
+
+                    dusk::frame_interp::add_interpolation_callback(&ironBallChainInterpCallback, this);
+                }
+#endif
             }
         }
 

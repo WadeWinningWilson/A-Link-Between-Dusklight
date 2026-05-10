@@ -56,6 +56,7 @@
 #include "dusk/gx_helper.h"
 #include "dusk/imgui/ImGuiConsole.hpp"
 #include "dusk/logging.h"
+#include "dusk/settings.h"
 #endif
 
 class mDoGph_HIO_c : public JORReflexible {
@@ -501,6 +502,14 @@ void mDoGph_gInf_c::calcFade() {
     }
 
     if (mFadeColor.a != 0) {
+#ifdef TARGET_PC
+        if (dusk::frame_interp::is_enabled() && mFade != 0) {
+            const auto step = dusk::frame_interp::get_interpolation_step();
+            const auto progress = mFadeSpeed < 0.0f ? 1.0f - mFadeRate : mFadeRate;
+            const auto fade_amt = mFadeRate + mFadeSpeed * (step - 1.0f + progress);
+            mFadeColor.a = 255.0f * std::clamp(fade_amt, 0.0f, 1.0f);
+        }
+#endif
         darwFilter(mFadeColor);
     }
 }
@@ -1172,6 +1181,11 @@ static void drawDepth2(view_class* param_0, view_port_class* param_1, int param_
 }
 
 static void trimming(view_class* param_0, view_port_class* param_1) {
+#if TARGET_PC
+    if (dusk::getSettings().game.recordingMode) {
+        return;
+    }
+#endif
     ZoneScoped;
     UNUSED(param_0);
 
@@ -1180,8 +1194,13 @@ static void trimming(view_class* param_0, view_port_class* param_1) {
     if ((y_orig_pos == 0) && (param_1->scissor.y_orig != param_1->y_orig ||
                               (param_1->scissor.height != param_1->height)))
     {
+        #if TARGET_PC
+        f32 sc_top = param_1->scissor.y_orig;
+        f32 sc_bottom = param_1->scissor.y_orig + param_1->scissor.height;
+        #else
         s32 sc_top = (int)param_1->scissor.y_orig;
         s32 sc_bottom = param_1->scissor.y_orig + param_1->scissor.height;
+        #endif
         GXSetNumChans(1);
         GXSetChanCtrl(GX_ALPHA0, GX_FALSE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
         GXSetNumTexGens(0);
@@ -1210,20 +1229,20 @@ static void trimming(view_class* param_0, view_port_class* param_1) {
         GXLoadPosMtxImm(cMtx_getIdentity(), 0);
         GXClearVtxDesc();
         GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
-        GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_CLR_RGBA, GX_RGBA4, 0);
+        GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_CLR_RGBA, DUSK_IF_ELSE(GX_F32, GX_RGBA4), 0);
         GXSetProjection(ortho, GX_ORTHOGRAPHIC);
         GXSetCurrentMtx(0);
         GXBegin(GX_QUADS, GX_VTXFMT0, 8);
 
         #if TARGET_PC
-        GXPosition3s16(0, 0, -5);
-        GXPosition3s16(param_1->width, 0, -5);
-        GXPosition3s16(param_1->width, sc_top, -5);
-        GXPosition3s16(0, sc_top, -5);
-        GXPosition3s16(0, sc_bottom, -5);
-        GXPosition3s16(param_1->width, sc_bottom, -5);
-        GXPosition3s16(param_1->width, param_1->height, -5);
-        GXPosition3s16(0, param_1->height, -5);
+        GXPosition3f32(0, 0, -5);
+        GXPosition3f32(param_1->width, 0, -5);
+        GXPosition3f32(param_1->width, sc_top, -5);
+        GXPosition3f32(0, sc_top, -5);
+        GXPosition3f32(0, sc_bottom, -5);
+        GXPosition3f32(param_1->width, sc_bottom, -5);
+        GXPosition3f32(param_1->width, param_1->height, -5);
+        GXPosition3f32(0, param_1->height, -5);
         #else
         GXPosition3s16(0, 0, -5);
         GXPosition3s16(FB_WIDTH, 0, -5);
@@ -1237,8 +1256,12 @@ static void trimming(view_class* param_0, view_port_class* param_1) {
 
         GXEnd();
     }
+#ifndef TARGET_PC
+    // due to rounding, the scaled scissor region doesn't align with the untrimmed area
+    // this creates a gap when drawing the flipped image for mirror mode
     GXSetScissor(param_1->scissor.x_orig, param_1->scissor.y_orig, param_1->scissor.width,
                  param_1->scissor.height);
+#endif
 }
 
 #if !PLATFORM_WII && !TARGET_PC
@@ -2041,11 +2064,12 @@ static void drawItem3D() {
 
 int mDoGph_Painter() {
     ZoneScoped;
+
     // Diagnostic: log windowNum to track game state machine progress
     static bool sDiagLoggedWindow = false;
     if (!sDiagLoggedWindow) {
         int wn = dComIfGp_getWindowNum();
-        DuskLog.debug("mDoGph_Painter: windowNum={}", wn);
+        // DuskLog.debug("mDoGph_Painter: windowNum={}", wn);
         if (wn != 0) sDiagLoggedWindow = true;
     }
 
@@ -2146,6 +2170,7 @@ int mDoGph_Painter() {
             // FRAME INTERP NOTE: Call setViewMtx earlier so that it's interpolated in time for draw_info to use it
             j3dSys.setViewMtx(camera_p->view.viewMtx);
             JPADrawInfo draw_info(j3dSys.getViewMtx(), camera_p->view.fovy, camera_p->view.aspect);
+            mDoGph_gInf_c::setWideZoomLightProjection(draw_info.mPrjMtx);
 #else
             JPADrawInfo draw_info(camera_p->view.viewMtx, camera_p->view.fovy, camera_p->view.aspect);
 #endif

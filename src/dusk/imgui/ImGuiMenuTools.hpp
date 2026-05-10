@@ -2,6 +2,7 @@
 #define DUSK_IMGUI_MENUTOOLS_HPP
 
 #include <aurora/aurora.h>
+#include <queue>
 #include <string>
 
 #include "imgui.h"
@@ -26,6 +27,8 @@ namespace dusk {
         void ShowAudioDebug();
         void ShowSaveEditor();
         void ShowStateShare();
+        void ShowInputViewer();
+        void ShowActorSpawner();
 
     private:
 		bool m_showDebugOverlay = false;
@@ -65,6 +68,12 @@ namespace dusk {
 
         bool m_showStateShare = false;
         ImGuiStateShare m_stateShare;
+
+        bool m_showInputViewer = false;
+        bool m_showInputViewerGyro = false;
+        bool m_showActorSpawner = false;
+        int m_inputOverlayCorner = 3;
+        std::string m_controllerName;
     };
 }
 

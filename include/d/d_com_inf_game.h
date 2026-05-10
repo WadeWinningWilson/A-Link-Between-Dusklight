@@ -1845,6 +1845,12 @@ inline void dComIfGs_addDeathCount() {
     g_dComIfG_gameInfo.info.getPlayer().getPlayerInfo().addDeathCount();
 }
 
+#if TARGET_PC
+inline u16 dComIfGs_getDeathCount() {
+    return g_dComIfG_gameInfo.info.getPlayer().getPlayerInfo().getDeathCount();
+}
+#endif
+
 inline char* dComIfGs_getPlayerName() {
     return g_dComIfG_gameInfo.info.getPlayer().getPlayerInfo().getPlayerName();
 }
