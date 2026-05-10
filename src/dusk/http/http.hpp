@@ -13,6 +13,7 @@ enum class Backend {
     WinHttp,
     UrlSession,
     LibCurl,
+    Android,
 };
 
 enum class Error {

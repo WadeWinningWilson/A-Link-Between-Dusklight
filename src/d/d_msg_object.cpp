@@ -427,14 +427,15 @@ static void dummyStrings() {
 dMsgObject_HIO_c g_MsgObject_HIO_c;
 
 int dMsgObject_c::_execute() {
-#if TARGET_PC
+// TODO: enabling wii message overrides fixes direction text, but gives wrong item control text
+/*#if TARGET_PC
     if (dusk::getSettings().game.enableMirrorMode) {
         // enable wii message index override
         g_MsgObject_HIO_c.mMessageDisplay = 1;
     } else if (!dusk::getSettings().game.enableMirrorMode && g_MsgObject_HIO_c.mMessageDisplay == 1) {
         g_MsgObject_HIO_c.mMessageDisplay = 0;
     }
-#endif
+#endif*/
 
 
     field_0x4c7 = 0;

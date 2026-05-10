@@ -6,12 +6,15 @@
 #include "dusk/audio/DuskAudioSystem.h"
 #include "dusk/audio/DuskDsp.hpp"
 #include "dusk/config.hpp"
+#include "dusk/file_select.hpp"
 #include "dusk/imgui/ImGuiEngine.hpp"
 #include "dusk/livesplit.h"
+#include "dusk/main.h"
 #include "graphics_tuner.hpp"
 #include "m_Do/m_Do_main.h"
 #include "menu_bar.hpp"
 #include "number_button.hpp"
+#include "menu_bar.hpp"
 #include "pane.hpp"
 #include "prelaunch.hpp"
 #include "ui.hpp"
@@ -39,6 +42,11 @@ constexpr std::array kFpsOverlayCornerNames = {
     "Top Right",
     "Bottom Left",
     "Bottom Right",
+};
+
+constexpr std::array kGyroInputModeLabels = {
+    "Sensor",
+    "Mouse",
 };
 
 bool try_parse_backend(std::string_view backend, AuroraBackend& outBackend) {
@@ -199,7 +207,9 @@ int float_setting_percent(ConfigVar<float>& var) {
 }
 
 bool gyro_enabled() {
-    return getSettings().game.enableGyroAim || getSettings().game.enableGyroRollgoal;
+    return getSettings().game.enableGyroAim ||
+           (getSettings().game.enableGyroRollgoal &&
+            getSettings().game.gyroMode.getValue() != GyroMode::Mouse);
 }
 
 struct ConfigBoolProps {
@@ -265,7 +275,7 @@ SelectButton& config_percent_select(Pane& leftPane, Pane& rightPane, ConfigVar<f
 
 template <typename T>
 void graphics_tuner_control(Window& window, Pane& leftPane, Pane& rightPane, ConfigVar<T>& var,
-    const GraphicsTunerProps& props) {
+    const GraphicsTunerProps& props, bool prelaunch) {
     leftPane.register_control(
         leftPane
             .add_select_button({
@@ -283,10 +293,10 @@ void graphics_tuner_control(Window& window, Pane& leftPane, Pane& rightPane, Con
                 .isModified = [&var] { return var.getValue() != var.getDefaultValue(); },
                 .submit = false,
             })
-            .on_nav_command([&window, props](Rml::Event&, NavCommand cmd) {
+            .on_nav_command([&window, props, prelaunch](Rml::Event&, NavCommand cmd) {
                 if (cmd == NavCommand::Confirm || cmd == NavCommand::Left ||
                     cmd == NavCommand::Right) {
-                    window.push(std::make_unique<GraphicsTuner>(props));
+                    window.push(std::make_unique<GraphicsTuner>(props, prelaunch));
                     return true;
                 }
                 return false;
@@ -317,7 +327,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                                 if (path.empty()) {
                                     display = "(none)";
                                 } else {
-                                    display = std::filesystem::path(path).filename().string();
+                                    display = display_name_for_path(path);
                                     if (display.empty()) {
                                         display = path;
                                     }
@@ -574,7 +584,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .valueMin = 0,
                 .valueMax = 12,
                 .defaultValue = 0,
-            });
+            }, mPrelaunch);
         graphics_tuner_control(*this, leftPane, rightPane,
             getSettings().game.shadowResolutionMultiplier,
             GraphicsTunerProps{
@@ -584,7 +594,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .valueMin = 1,
                 .valueMax = 8,
                 .defaultValue = 1,
-            });
+            }, mPrelaunch);
 
         leftPane.add_section("Post-Processing");
         graphics_tuner_control(*this, leftPane, rightPane, getSettings().game.bloomMode,
@@ -595,7 +605,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .valueMin = static_cast<int>(BloomMode::Off),
                 .valueMax = static_cast<int>(BloomMode::Dusk),
                 .defaultValue = static_cast<int>(BloomMode::Classic),
-            });
+            }, mPrelaunch);
         graphics_tuner_control(*this, leftPane, rightPane, getSettings().game.bloomMultiplier,
             GraphicsTunerProps{
                 .option = GraphicsOption::BloomMultiplier,
@@ -604,7 +614,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .valueMin = 0,
                 .valueMax = 100,
                 .defaultValue = 100,
-            });
+            }, mPrelaunch);
 
         leftPane.add_section("Rendering");
         config_bool_select(leftPane, rightPane, getSettings().game.enableFrameInterpolation,
@@ -644,6 +654,12 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 pane.clear();
                 pane.add_text("Open controller binding configuration.");
             });
+        config_bool_select(leftPane, rightPane, getSettings().game.allowBackgroundInput,
+            {
+                .key = "Allow Background Input",
+                .helpText = "Allow controller input even when the game window is not focused.",
+                .onChange = [](bool value) { aurora_set_background_input(value); },
+            });
 
         leftPane.add_section("Camera");
         addOption("Free Camera", getSettings().game.freeCamera,
@@ -659,12 +675,50 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             [] { return !getSettings().game.freeCamera; });
 
         leftPane.add_section("Gyro");
+        leftPane.register_control(
+            leftPane.add_select_button({
+                .key = "Gyro Input Method",
+                .getValue =
+                    [] {
+                        const auto mode = getSettings().game.gyroMode.getValue();
+                        const auto idx = static_cast<size_t>(mode);
+                        return Rml::String{kGyroInputModeLabels[idx]};
+                    },
+                .isModified =
+                    [] {
+                        return getSettings().game.gyroMode.getValue() !=
+                               getSettings().game.gyroMode.getDefaultValue();
+                    },
+            }),
+            rightPane, [](Pane& pane) {
+                for (size_t i = 0; i < kGyroInputModeLabels.size(); i++) {
+                    pane
+                        .add_button({
+                            .text = Rml::String{kGyroInputModeLabels[i]},
+                            .isSelected =
+                                [i] {
+                                    return getSettings().game.gyroMode.getValue() == static_cast<GyroMode>(i);
+                                },
+                        })
+                        .on_pressed([i] {
+                            mDoAud_seStartMenu(kSoundItemChange);
+                            const GyroMode mode = static_cast<GyroMode>(i);
+                            getSettings().game.gyroMode.setValue(mode);
+                            config::Save();
+                        });
+                }
+                pane.add_rml(
+                    "<br/><b>Sensor</b> reads motion directly from a supported controller's gyro via SDL.<br/>"
+                    "<br/><b>Mouse</b> treats mouse input as gyro, intended for use with the Steam Deck.<br/>"
+                    "<br/>Mouse input cannot currently be used with Gyro Rollgoal.");
+            });
         addOption("Gyro Aim", getSettings().game.enableGyroAim,
             "Enables gyro controls while in look mode, aiming a hawk, and aiming "
             "supported items.<br/><br/>Supported items include the Slingshot, Gale Boomerang, "
             "Hero's Bow, Clawshot(s), Ball and Chain, and Dominion Rod.");
         addOption("Gyro Rollgoal", getSettings().game.enableGyroRollgoal,
-            "Enables gyro controls for Rollgoal in Hena's Cabin.");
+            "Enables gyro controls for Rollgoal in Hena's Cabin.",
+            [] { return getSettings().game.gyroMode.getValue() == GyroMode::Mouse; });
         config_percent_select(leftPane, rightPane, getSettings().game.gyroSensitivityY,
             "Gyro Pitch Sensitivity", "Controls vertical gyro aiming sensitivity.", 25, 400, 5,
             [] { return !gyro_enabled(); });
@@ -673,7 +727,11 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             [] { return !gyro_enabled(); });
         config_percent_select(leftPane, rightPane, getSettings().game.gyroSensitivityRollgoal,
             "Rollgoal Sensitivity", "Controls how strongly gyro input tilts the Rollgoal table.",
-            25, 400, 5, [] { return !getSettings().game.enableGyroRollgoal; });
+            25, 400, 5,
+            [] {
+                return !getSettings().game.enableGyroRollgoal ||
+                       getSettings().game.gyroMode.getValue() == GyroMode::Mouse;
+            });
         config_percent_select(leftPane, rightPane, getSettings().game.gyroDeadband, "Gyro Deadband",
             "Ignores small gyro movement to reduce drift and jitter.", 0, 50, 1,
             [] { return !gyro_enabled(); });
@@ -921,10 +979,81 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         auto& rightPane = add_child<Pane>(content, Pane::Type::Uncontrolled);
 
         leftPane.add_section("Dusk");
-        config_bool_select(leftPane, rightPane, getSettings().game.enableAchievementNotifications,
-            {
-                .key = "Achievement Notifications",
-                .helpText = "Display a toast when an achievement is unlocked.",
+#if DUSK_CAN_OPEN_DATA_FOLDER
+        leftPane.register_control(
+            leftPane.add_button("Open Data Folder").on_pressed([] {
+                mDoAud_seStartMenu(kSoundClick);
+                dusk::OpenDataFolder();
+            }),
+            rightPane, [](Pane& pane) {
+                pane.add_text(
+                    "Open the folder where Dusk stores settings, saves, logs, texture "
+                    "replacements, and other app data.");
+            });
+#endif
+        leftPane.register_control(
+            leftPane.add_select_button({
+                .key = "Notifications",
+                .getValue = [] {
+                    const bool ach = getSettings().game.enableAchievementToasts.getValue();
+                    const bool ctl = getSettings().game.enableControllerToasts.getValue();
+                    if (!ach && !ctl) {
+                        return Rml::String{"Off"};
+                    }
+                    if (ach && ctl) {
+                        return Rml::String{"All"};
+                    }
+                    return Rml::String{"Some"};
+                },
+                .isModified = [] {
+                    const auto& ach = getSettings().game.enableAchievementToasts;
+                    const auto& ctl = getSettings().game.enableControllerToasts;
+                    return ach.getValue() != ach.getDefaultValue() || ctl.getValue() != ctl.getDefaultValue();
+                },
+            }),
+            rightPane, [](Pane& pane) {
+                pane.clear();
+                pane.add_button("Select All").on_pressed([] {
+                    mDoAud_seStartMenu(kSoundItemChange);
+                    getSettings().game.enableAchievementToasts.setValue(true);
+                    getSettings().game.enableControllerToasts.setValue(true);
+                    config::Save();
+                });
+                pane.add_button("Select None").on_pressed([] {
+                    mDoAud_seStartMenu(kSoundItemChange);
+                    getSettings().game.enableAchievementToasts.setValue(false);
+                    getSettings().game.enableControllerToasts.setValue(false);
+                    config::Save();
+                });
+
+                pane.add_section("Types");
+                pane.add_button(
+                    {
+                        .text = "Achievements",
+                        .isSelected =
+                        [] {
+                            return getSettings().game.enableAchievementToasts.getValue();
+                        },
+                    })
+                    .on_pressed([] {
+                        mDoAud_seStartMenu(kSoundItemChange);
+                        auto& v = getSettings().game.enableAchievementToasts;
+                        v.setValue(!v.getValue());
+                        config::Save();
+                    });
+                pane.add_button(
+                    {
+                        .text = "Controller",
+                        .isSelected =
+                            [] { return getSettings().game.enableControllerToasts.getValue(); },
+                    })
+                    .on_pressed([] {
+                        mDoAud_seStartMenu(kSoundItemChange);
+                        auto& v = getSettings().game.enableControllerToasts;
+                        v.setValue(!v.getValue());
+                        config::Save();
+                    });
+                pane.add_rml("<br/>Choose which notifications can be displayed.");
             });
 #if DUSK_ENABLE_SENTRY_NATIVE
         config_bool_select(leftPane, rightPane, getSettings().backend.enableCrashReporting,
@@ -954,6 +1083,12 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .key = "Check for Updates",
                 .helpText = "Checks GitHub releases for a new Dusk version on startup.<br/><br/>"
                             "No personal information is transmitted or collected.",
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.pauseOnFocusLost,
+            {
+                .key = "Pause On Focus Lost",
+                .helpText = "Pause the game when window focus is lost.",
+                .onChange = [](bool value) { aurora_set_pause_on_focus_lost(value); },
             });
         config_bool_select(leftPane, rightPane, getSettings().backend.enableAdvancedSettings,
             {

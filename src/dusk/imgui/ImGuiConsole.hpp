@@ -2,11 +2,9 @@
 #define DUSK_IMGUI_HPP
 
 #include <deque>
-#include <filesystem>
 #include <string>
 #include <string_view>
 
-#include <SDL3/SDL_misc.h>
 #include <aurora/aurora.h>
 
 #include "ImGuiMenuGame.hpp"
@@ -72,25 +70,5 @@ void ImGuiTextCenter(std::string_view text);
 bool ImGuiButtonCenter(std::string_view text);
 float ImGuiScale();
 }  // namespace dusk
-
-#if defined(_WIN32) ||                                                                             \
-    (defined(__APPLE__) && !TARGET_OS_IOS && !TARGET_OS_TV && !TARGET_OS_MACCATALYST) ||           \
-    (defined(__linux__) && !defined(__ANDROID__))
-#define DUSK_CAN_OPEN_DATA_FOLDER 1
-
-namespace fs = std::filesystem;
-
-static void OpenDataFolder() {
-    const std::string path = fs::absolute(dusk::ConfigPath).generic_string();
-#if defined(_WIN32)
-    const std::string url = std::string("file:///") + path;
-#else
-    const std::string url = std::string("file://") + path;
-#endif
-    (void)SDL_OpenURL(url.c_str());
-}
-#else
-#define DUSK_CAN_OPEN_DATA_FOLDER 0
-#endif
 
 #endif  // DUSK_IMGUI_HPP

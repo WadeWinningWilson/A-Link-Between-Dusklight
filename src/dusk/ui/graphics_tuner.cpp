@@ -193,9 +193,9 @@ Rml::String format_graphics_setting_value(GraphicsOption option, int value) {
     return "";
 }
 
-GraphicsTuner::GraphicsTuner(GraphicsTunerProps props)
+GraphicsTuner::GraphicsTuner(GraphicsTunerProps props, bool prelaunch)
     : Document(kDocumentSource), mOption(props.option), mValueMin(props.valueMin),
-      mValueMax(props.valueMax), mDefaultValue(props.defaultValue) {
+      mValueMax(props.valueMax), mDefaultValue(props.defaultValue), mPrelaunch(prelaunch) {
     if (mDocument == nullptr) {
         return;
     }
@@ -207,7 +207,7 @@ GraphicsTuner::GraphicsTuner(GraphicsTunerProps props)
         description->SetInnerRML(escape(props.helpText));
     }
     if (auto* carouselParent = mDocument->GetElementById("carousel-container")) {
-        add_component<SteppedCarousel>(carouselParent,
+        mCarousel = &add_component<SteppedCarousel>(carouselParent,
             SteppedCarousel::Props{
                 .min = mValueMin,
                 .max = mValueMax,
@@ -281,7 +281,12 @@ bool GraphicsTuner::handle_nav_command(Rml::Event& event, NavCommand cmd) {
         pop();
         return true;
     }
-    return Document::handle_nav_command(event, cmd);
+
+    if (mCarousel && mCarousel->handle_nav_command(cmd)) {
+        return true;
+    }
+
+    return mPrelaunch ? false : Document::handle_nav_command(event, cmd);
 }
 
 void GraphicsTuner::reset_default() {

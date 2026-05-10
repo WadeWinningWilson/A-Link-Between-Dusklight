@@ -253,13 +253,6 @@ namespace dusk {
 
         UpdateSettings();
 
-        if (!fpcM_SearchByName(fpcNm_LOGO_SCENE_e) &&
-            (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)) &&
-            ImGui::IsKeyPressed(ImGuiKey_R))
-        {
-            JUTGamePad::C3ButtonReset::sResetSwitchPushing = true;
-        }
-
         if (ImGui::IsKeyPressed(ImGuiKey_F11)) {
             getSettings().video.enableFullscreen.setValue(!getSettings().video.enableFullscreen);
             VISetWindowFullscreen(getSettings().video.enableFullscreen);
@@ -320,7 +313,9 @@ namespace dusk {
                 ImGui::PopFont();
             }
             ImGui::PushFont(ImGuiEngine::fontLarge);
-            ImGuiTextCenter("Failed to initialize any graphics backend");
+            ImGuiTextCenter("Failed to initialize any graphics backend.");
+            ImGuiTextCenter("\nYour system may be misconfigured, or your hardware may not support the required versions of any of the available backends.");
+            ImGuiTextCenter("\nA clean reinstall of Dusk may help. For further assistance, please visit #tech-support on the Twilit Realm Discord server.");
             const auto& style = ImGui::GetStyle();
             const auto retrySize = ImGui::CalcTextSize("Retry (Auto backend)");
             const auto quitSize = ImGui::CalcTextSize("Quit");
@@ -383,18 +378,18 @@ namespace dusk {
         }
 
         // Hide mouse cursor if the F1 menu is not open and the cursor is idle for 3 seconds.
-        ImGuiIO& io = ImGui::GetIO();
-        if (showMenu) {
-            mouseHideTimer = 0.0f;
-            ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange; // Imgui will re-show cursor.
-        } else if (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f) {
-            mouseHideTimer = 0.0f;
-            ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange; // Imgui will re-show cursor.
-        } else if (mouseHideTimer <= 3.0f) {
-            mouseHideTimer += ImGui::GetIO().DeltaTime;
-        } else {
-            ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-            SDL_HideCursor();
+        if (dusk::getSettings().game.gyroMode.getValue() != GyroMode::Mouse)
+        {
+            ImGuiIO& io = ImGui::GetIO();
+            if (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f) {
+                mouseHideTimer = 0.0f;
+                ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;  // Imgui will re-show cursor.
+            } else if (mouseHideTimer <= 3.0f) {
+                mouseHideTimer += ImGui::GetIO().DeltaTime;
+            } else {
+                ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+                SDL_HideCursor();
+            }
         }
 
         ShowToasts();

@@ -740,12 +740,20 @@ static void fapGm_AfterRecord() {
     fapGm_After();
 }
 
+BOOL isRecording = false;
+
 static void duskExecute() {
     handleGamepadColor();
     updateAutoSave();
 
     if (dusk::getSettings().game.recordingMode) {
-        Z2GetSeqMgr()->bgmAllMute(0, 0);
+        Z2GetSoundMgr()->getSeqMgr()->getParams()->moveVolume(0.0f, 0);
+        Z2GetSoundMgr()->getStreamMgr()->getParams()->moveVolume(0.0f, 0);
+        isRecording = true;
+    } else if (isRecording) {
+        Z2GetSoundMgr()->getSeqMgr()->getParams()->moveVolume(1.0f, 0);
+        Z2GetSoundMgr()->getStreamMgr()->getParams()->moveVolume(1.0f, 0);
+        isRecording = false;
     }
 
     if (mDoCPd_c::getHoldR(PAD_1) && mDoCPd_c::getTrigX(PAD_1)) {

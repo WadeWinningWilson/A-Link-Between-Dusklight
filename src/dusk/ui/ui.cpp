@@ -11,6 +11,7 @@
 #include <ranges>
 
 #include "aurora/lib/window.hpp"
+#include "dusk/io.hpp"
 #include "input.hpp"
 #include "prelaunch.hpp"
 #include "window.hpp"
@@ -19,7 +20,7 @@ namespace dusk::ui {
 namespace {
 
 void load_font(const char* filename, bool fallback = false) {
-    Rml::LoadFontFace(resource_path(filename).string(), fallback);
+    Rml::LoadFontFace(io::fs_path_to_string(resource_path(filename)), fallback);
 }
 
 bool sInitialized = false;
@@ -125,43 +126,47 @@ void handle_event(const SDL_Event& event) noexcept {
     if (event.type == SDL_EVENT_GAMEPAD_ADDED) {
         auto* gamepad = SDL_GetGamepadFromID(event.gdevice.which);
         if (SDL_GamepadConnected(gamepad)) {
-            const char* name = SDL_GetGamepadName(gamepad);
-            Rml::String content = fmt::format("<span>{}</span>", name ? name : "[Unknown]");
-            Rml::String title = "Controller connected";
-            if (const char* icon = connection_state_icon(SDL_GetGamepadConnectionState(gamepad))) {
-                title = fmt::format(
-                    "<row><span>{}</span> <icon class=\"connection\">&#x{};</icon></row>", title,
-                    icon);
-            }
-            int batteryLevel = -1;
-            const auto powerState = SDL_GetGamepadPowerInfo(gamepad, &batteryLevel);
-            if (powerState != SDL_POWERSTATE_UNKNOWN) {
-                content = fmt::format(
-                    "<row>{}</row><row class=\"muted\"><icon class=\"battery\">&#x{};</icon>",
-                    content, battery_icon(powerState, batteryLevel));
-                if (batteryLevel > -1) {
-                    content = fmt::format("{}&nbsp;<span>{}%</span>", content, batteryLevel);
+            if (getSettings().game.enableControllerToasts) {
+                const char* name = SDL_GetGamepadName(gamepad);
+                Rml::String content = fmt::format("<span>{}</span>", name ? name : "[Unknown]");
+                Rml::String title = "Controller connected";
+                if (const char* icon = connection_state_icon(SDL_GetGamepadConnectionState(gamepad))) {
+                    title = fmt::format(
+                        "<row><span>{}</span> <icon class=\"connection\">&#x{};</icon></row>", title,
+                        icon);
                 }
-                content += "</row>";
+                int batteryLevel = -1;
+                const auto powerState = SDL_GetGamepadPowerInfo(gamepad, &batteryLevel);
+                if (powerState != SDL_POWERSTATE_UNKNOWN) {
+                    content = fmt::format(
+                        "<row>{}</row><row class=\"muted\"><icon class=\"battery\">&#x{};</icon>",
+                        content, battery_icon(powerState, batteryLevel));
+                    if (batteryLevel > -1) {
+                        content = fmt::format("{}&nbsp;<span>{}%</span>", content, batteryLevel);
+                    }
+                    content += "</row>";
+                }
+                push_toast({
+                    .type = "controller",
+                    .title = title,
+                    .content = content,
+                    .duration = std::chrono::seconds(4),
+                });
             }
-            push_toast({
-                .type = "controller",
-                .title = title,
-                .content = content,
-                .duration = std::chrono::seconds(4),
-            });
             sConnectedGamepads.insert(event.gdevice.which);
         }
     } else if (event.type == SDL_EVENT_GAMEPAD_REMOVED &&
                sConnectedGamepads.contains(event.gdevice.which))
     {
-        const char* name = SDL_GetGamepadNameForID(event.gdevice.which);
-        push_toast({
-            .type = "controller",
-            .title = "Controller disconnected",
-            .content = name ? name : "[Unknown]",
-            .duration = std::chrono::seconds(4),
-        });
+        if (getSettings().game.enableControllerToasts) {
+            const char* name = SDL_GetGamepadNameForID(event.gdevice.which);
+            push_toast({
+                .type = "controller",
+                .title = "Controller disconnected",
+                .content = name ? name : "[Unknown]",
+                .duration = std::chrono::seconds(4),
+            });
+        }
         sConnectedGamepads.erase(event.gdevice.which);
     }
     input::handle_event(event);
@@ -255,11 +260,7 @@ void update() noexcept {
 }
 
 std::filesystem::path resource_path(const std::filesystem::path& filename) noexcept {
-    const char* basePath = SDL_GetBasePath();
-    if (basePath == nullptr) {
-        return std::filesystem::path("res") / filename;
-    }
-    return std::filesystem::path(basePath) / "res" / filename;
+    return std::filesystem::path("res") / filename;
 }
 
 std::string escape(std::string_view str) noexcept {

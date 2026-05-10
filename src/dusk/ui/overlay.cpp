@@ -10,6 +10,10 @@
 #include <algorithm>
 #include <dolphin/pad.h>
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+
 namespace dusk::ui {
 namespace {
 aurora::Module Log{"dusk::ui::overlay"};
@@ -33,7 +37,7 @@ constexpr std::array<std::pair<const char*, const char*>, 3> kAutoSaveLayers{{
 
 constexpr auto kMenuNotificationDuration = std::chrono::milliseconds(2500);
 
-constexpr std::array<const char*, 4> kFpsCorners = { "tl", "tr", "bl", "br" };
+constexpr std::array<const char*, 4> kFpsCorners = {"tl", "tr", "bl", "br"};
 
 Rml::Element* create_toast(Rml::Element* parent, const Toast& toast) {
     if (toast.type == "autosave") {
@@ -130,13 +134,19 @@ Rml::String back_button_name() {
     return "Back";
 }
 
+#if defined(TARGET_ANDROID) || (defined(__APPLE__) && TARGET_OS_IOS && !TARGET_OS_MACCATALYST)
+constexpr auto kMenuNotificationPrefix = "3-finger tap or";
+#else
+constexpr auto kMenuNotificationPrefix = "Press F1 or";
+#endif
+
 Rml::Element* create_menu_notification(Rml::Element* parent) {
     auto* elem = append(parent, "toast");
     elem->SetClass("menu-notification", true);
 
     auto* message = append(elem, "message");
     auto* row = append(message, "row");
-    append(row, "span")->SetInnerRML("Press F1 or");
+    append(row, "span")->SetInnerRML(kMenuNotificationPrefix);
     auto* icon = append(row, "icon");
     icon->SetClass("controller", true);
     append(row, "span")->SetInnerRML(escape(back_button_name()));
@@ -242,7 +252,8 @@ void Overlay::update() {
 
             const Uint64 now = SDL_GetPerformanceCounter();
             // Limit updates to twice per second
-            const bool refreshLabel = perfFreq == 0 || mFpsLastUpdate == 0 ||
+            const bool refreshLabel =
+                perfFreq == 0 || mFpsLastUpdate == 0 ||
                 static_cast<double>(now - mFpsLastUpdate) >= 0.5 * static_cast<double>(perfFreq);
             if (refreshLabel) {
                 mFpsLastUpdate = now;

@@ -10,6 +10,7 @@
     <uses-feature android:name="android.hardware.type.pc" android:required="false" />
 
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -23,8 +24,19 @@
         <meta-data android:name="android.game_mode_config"
             android:resource="@xml/game_mode_config" />
 
+        <provider
+            android:name="dev.twilitrealm.dusk.DuskDocumentsProvider"
+            android:authorities="dev.twilitrealm.dusk.documents"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+
         <activity
-            android:name="com.twilitrealm.dusk.DuskActivity"
+            android:name="dev.twilitrealm.dusk.DuskActivity"
             android:alwaysRetainTaskState="true"
             android:configChanges="layoutDirection|locale|grammaticalGender|fontScale|fontWeightAdjustment|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
             android:exported="true"

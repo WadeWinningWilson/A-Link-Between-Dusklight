@@ -24,7 +24,7 @@ void BaseStringButton::update() {
 }
 
 void BaseStringButton::start_editing() {
-    if (mInputElem != nullptr) {
+    if (is_editing()) {
         return;
     }
 
@@ -79,14 +79,14 @@ void BaseStringButton::request_stop_editing(bool commit, bool refocusRoot) {
 
 bool BaseStringButton::handle_nav_command(NavCommand cmd) {
     if (cmd == NavCommand::Confirm) {
-        if (mInputElem == nullptr) {
+        if (!is_editing()) {
             start_editing();
         } else {
             request_stop_editing(true, true);
         }
         return true;
     } else if (cmd == NavCommand::Cancel) {
-        if (mInputElem != nullptr) {
+        if (is_editing()) {
             request_stop_editing(false, true);
             return true;
         }
@@ -95,7 +95,7 @@ bool BaseStringButton::handle_nav_command(NavCommand cmd) {
 }
 
 void BaseStringButton::focus_input() {
-    if (mInputElem == nullptr) {
+    if (!is_editing()) {
         return;
     }
 
@@ -111,7 +111,7 @@ void BaseStringButton::focus_input() {
 void BaseStringButton::stop_editing(bool commit, bool refocusRoot) {
     mPendingStopEditing = false;
     mPendingInputFocusFrames = 0;
-    if (mInputElem == nullptr) {
+    if (!is_editing()) {
         return;
     }
     if (commit) {
