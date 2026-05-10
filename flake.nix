@@ -71,6 +71,16 @@
           mkdir -p $out/bin
           cp dusk $out/bin/dusk
           cp -r ./res $out/bin/res
+          
+          # Install .desktop file
+          mkdir -p $out/share/applications
+          cp $src/platforms/freedesktop/dusk.desktop $out/share/applications/dusk.desktop
+
+
+          for size in 16 32 48 64 128 256 512 1024; do
+            install -Dm644 $src/platforms/freedesktop/''${size}x''${size}/apps/dusk.png \
+            $out/share/icons/hicolor/''${size}x''${size}/apps/dusk.png
+          done
         '';
         nativeBuildInputs = [
           pkgs.cmake
