@@ -19,6 +19,9 @@ It aims to be as accurate as possible to the original while also providing new o
 > [!IMPORTANT]
 > Dusk does *not* provide any copyrighted assets. You must provide your own copy of the original game.
 
+> [!IMPORTANT]
+> At a minimum, Dusk requires a GPU with support for either D3D12, Vulkan, or Metal. Your experience with specific hardware, operating systems, and drivers may vary. In particular, older Intel iGPUs have a high likelyhood of incompatibility. We are also aware of a number of issues on devices with Adreno GPUs and are working to resolve them.
+
 ### 1. Verify your dump
 
 First, make sure your dump of the game is clean and supported by Dusk. You can do this by checking the SHA-1 hash of your dump against this list of supported versions:
