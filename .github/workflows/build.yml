@@ -8,9 +8,9 @@ on:
   pull_request:
 
 env:
-  # SCCACHE_GHA_ENABLED: "true"
+  SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
-  SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+  # SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
 jobs:
   build-linux:
@@ -22,7 +22,7 @@ jobs:
       matrix:
         include:
           - name: GCC x86_64
-            runner: [self-hosted, Linux]
+            runner: ubuntu-latest
             preset: gcc
             artifact_arch: x86_64
           # - name: GCC aarch64
@@ -41,7 +41,6 @@ jobs:
           submodules: recursive
 
       - name: Install dependencies
-        if: 'false' # disabled for self-hosted
         run: |
           sudo apt-get update
           sudo apt-get -y install ninja-build clang lld openssl libcurl4-openssl-dev \
@@ -51,7 +50,6 @@ jobs:
             libxss-dev libfuse2 libusb-1.0-0-dev libdecor-0-dev libpipewire-0.3-dev libunwind-dev
 
       - name: Setup sccache
-        if: 'false' # disabled for self-hosted
         uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Print sccache stats
@@ -67,6 +65,7 @@ jobs:
         run: ci/build-appimage.sh
 
       - name: Upload artifacts
+        if: startsWith(github.event.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v7
         with:
           name: dusk-${{env.DUSK_VERSION}}-linux-${{matrix.preset}}-${{matrix.artifact_arch}}
@@ -76,7 +75,7 @@ jobs:
 
   build-apple:
     name: Build Apple (${{matrix.name}})
-    runs-on: [self-hosted, macOS]
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
@@ -85,14 +84,14 @@ jobs:
             platform: macos
             preset: x-macos-ci-arm64
             artifact_name: macos-appleclang-arm64
-          # - name: AppleClang macOS x86_64
-          #   platform: macos
-          #   preset: x-macos-ci-x86_64
-          #   artifact_name: macos-appleclang-x86_64
-          # - name: AppleClang iOS arm64
-          #   platform: ios
-          #   preset: x-ios-ci
-          #   artifact_name: ios-appleclang-arm64
+          - name: AppleClang macOS x86_64
+            platform: macos
+            preset: x-macos-ci-x86_64
+            artifact_name: macos-appleclang-x86_64
+          - name: AppleClang iOS arm64
+            platform: ios
+            preset: x-ios-ci
+            artifact_name: ios-appleclang-arm64
           # - name: AppleClang tvOS arm64
           #   platform: tvos
           #   preset: x-tvos-ci
@@ -105,7 +104,6 @@ jobs:
           submodules: recursive
 
       - name: Install dependencies
-        if: 'false'
         run: brew install cmake ninja
 
       - name: Install Rust iOS target
@@ -136,6 +134,7 @@ jobs:
         run: cmake --build --preset ${{matrix.preset}}
 
       - name: Upload artifacts
+        if: startsWith(github.event.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v7
         with:
           name: dusk-${{env.DUSK_VERSION}}-${{matrix.artifact_name}}
@@ -152,7 +151,7 @@ jobs:
       matrix:
         include:
           - name: MSVC x86_64
-            runner: [self-hosted, Windows]
+            runner: windows-latest
             preset: msvc
             msvc_arch: amd64
             vcpkg_arch: x64
@@ -189,7 +188,6 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Install dependencies
-        if: 'false' # disabled for self-hosted
         run: |
           choco install ninja
           vcpkg install freetype:${{matrix.vcpkg_arch}}-windows-static zstd:${{matrix.vcpkg_arch}}-windows-static
@@ -201,6 +199,7 @@ jobs:
         run: cmake --build --preset x-windows-ci-${{matrix.preset}}
 
       - name: Upload artifacts
+        if: startsWith(github.event.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v7
         with:
           name: dusk-${{env.DUSK_VERSION}}-win32-msvc-${{matrix.artifact_arch}}
