@@ -302,9 +302,17 @@ std::string get_error_msg(iso::ValidationError error) {
 }
 
 void persist_disc_choice(const std::string& path, iso::ValidationError validation) {
+    const auto previousPath = getSettings().backend.isoPath.getValue();
+    const auto previousVerification = getSettings().backend.isoVerification.getValue();
+    const auto verification = verification_to_config(validation);
+
     getSettings().backend.isoPath.setValue(path);
-    getSettings().backend.isoVerification.setValue(verification_to_config(validation));
+    getSettings().backend.isoVerification.setValue(verification);
     config::Save();
+
+    if (previousPath != path || previousVerification != verification) {
+        iso::log_verification_state(path, verification);
+    }
 }
 
 void apply_valid_disc_result(
@@ -686,6 +694,8 @@ Prelaunch::Prelaunch() : Document(kDocumentSource), mRoot(mDocument->GetElementB
                 open_iso_picker();
                 return;
             }
+
+            toggle_cursor_if_gyro(false);
 
             mDoAud_seStartMenu(kSoundPlay);
             show_menu_notification();

@@ -71,6 +71,7 @@
 #include <dolphin/dvd.h>
 
 #include "SDL3/SDL_filesystem.h"
+#include "SDL3/SDL_misc.h"
 #include "cxxopts.hpp"
 #include "d/actor/d_a_movie_player.h"
 #include "dusk/audio/DuskAudioSystem.h"
@@ -83,6 +84,9 @@
 #include "f_pc/f_pc_draw.h"
 #include "tracy/Tracy.hpp"
 #include <RmlUi/Core.h>
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
 
 #if RANDOMIZER_ONLY
 #include "dusk/randomizer/generator/randomizer.hpp"
@@ -117,6 +121,31 @@ std::filesystem::path dusk::ConfigPath;
 void dusk::RequestRestart() noexcept {
     RestartRequested = SupportsProcessRestart;
     IsRunning = false;
+}
+
+bool dusk::OpenDataFolder() {
+#if DUSK_CAN_OPEN_DATA_FOLDER
+    std::error_code ec;
+    std::filesystem::path path = std::filesystem::absolute(ConfigPath, ec);
+    if (ec) {
+        DuskLog.warn("Failed to resolve absolute data folder path '{}': {}",
+            ConfigPath.string(), ec.message());
+        path = ConfigPath;
+    }
+
+#if defined(_WIN32)
+    const std::string url = "file:///" + path.generic_string();
+#else
+    const std::string url = "file://" + path.generic_string();
+#endif
+    if (!SDL_OpenURL(url.c_str())) {
+        DuskLog.warn("Failed to open data folder '{}': {}", path.string(), SDL_GetError());
+        return false;
+    }
+    return true;
+#else
+    return false;
+#endif
 }
 
 s32 LOAD_COPYDATE(void*) {
@@ -397,13 +426,77 @@ static void ApplyCVarOverrides(const cxxopts::OptionValue& option) {
     }
 }
 
-static std::filesystem::path CalculateConfigPath() {
+static void migrate_directory(const std::filesystem::path& from, const std::filesystem::path& to) {
+    std::error_code ec;
+    std::filesystem::create_directories(to, ec);
+    if (ec) {
+        return;
+    }
+
+    for (std::filesystem::recursive_directory_iterator it(
+             from, std::filesystem::directory_options::skip_permission_denied, ec);
+        it != std::filesystem::recursive_directory_iterator(); it.increment(ec))
+    {
+        if (ec) {
+            return;
+        }
+
+        const auto relativePath = std::filesystem::relative(it->path(), from, ec);
+        if (ec) {
+            return;
+        }
+
+        const auto targetPath = to / relativePath;
+        if (it->is_directory(ec)) {
+            std::filesystem::create_directories(targetPath, ec);
+            if (ec) {
+                return;
+            }
+        } else if (it->is_regular_file(ec) && !std::filesystem::exists(targetPath, ec)) {
+            std::filesystem::create_directories(targetPath.parent_path(), ec);
+            if (ec) {
+                return;
+            }
+            std::filesystem::copy_file(
+                it->path(), targetPath, std::filesystem::copy_options::skip_existing, ec);
+            if (ec) {
+                return;
+            }
+        }
+    }
+}
+
+static std::filesystem::path calculate_config_path() {
+#ifdef __APPLE__
+#if TARGET_OS_IOS && !TARGET_OS_TV
+    const char* documentsPath = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS);
+    if (!documentsPath) {
+        DuskLog.fatal("Unable to get iOS Documents path: {}", SDL_GetError());
+    }
+
+    std::filesystem::path configPath = reinterpret_cast<const char8_t*>(documentsPath);
+
+    char* oldPrefPath = SDL_GetPrefPath(dusk::OrgName, dusk::AppName);
+    if (oldPrefPath) {
+        const std::filesystem::path oldConfigPath = reinterpret_cast<const char8_t*>(oldPrefPath);
+        SDL_free(oldPrefPath);
+
+        std::error_code ec;
+        if (oldConfigPath != configPath && std::filesystem::exists(oldConfigPath, ec)) {
+            migrate_directory(oldConfigPath, configPath);
+        }
+    }
+
+    return configPath;
+#endif
+#endif
+
     const auto result = SDL_GetPrefPath(dusk::OrgName, dusk::AppName);
     if (!result) {
         DuskLog.fatal("Unable to get PrefPath: {}", SDL_GetError());
     }
 
-    return result;
+    return reinterpret_cast<const char8_t*>(result);
 }
 
 static void EnsureInitialPipelineCache(const std::filesystem::path& configDir) {
@@ -552,7 +645,7 @@ int game_main(int argc, char* argv[]) {
         exit(1);
     }
 
-    dusk::ConfigPath = CalculateConfigPath();
+    dusk::ConfigPath = calculate_config_path();
     const auto startupLogLevel = static_cast<AuroraLogLevel>(parsed_arg_options["log-level"].as<uint8_t>());
     dusk::InitializeFileLogging(dusk::ConfigPath, startupLogLevel);
 
@@ -560,13 +653,14 @@ int game_main(int argc, char* argv[]) {
     ApplyCVarOverrides(parsed_arg_options["cvar"]);
     dusk::InitializeCrashReporting();
     EnsureInitialPipelineCache(dusk::ConfigPath);
-    PADSetDefaultMapping(&defaultPadMapping);
+    // TODO: How to handle this?
+    //PADSetDefaultMapping(&defaultPadMapping, PAD_TYPE_STANDARD);
 
     {
-        const auto configPathString = dusk::ConfigPath.string();
+        const auto configPathString = dusk::ConfigPath.u8string();
         AuroraConfig config{};
         config.appName = dusk::AppName;
-        config.configPath = configPathString.c_str();
+        config.configPath = reinterpret_cast<const char*>(configPathString.c_str());
         config.vsync = dusk::getSettings().video.enableVsync;
         config.startFullscreen = dusk::getSettings().video.enableFullscreen;
         config.windowPosX = -1;
@@ -663,6 +757,10 @@ int game_main(int argc, char* argv[]) {
             forcePreLaunchUI = true;
         }
     }
+
+    dusk::iso::log_verification_state(
+        dusk::getSettings().backend.isoPath.getValue(),
+        dusk::getSettings().backend.isoVerification.getValue());
 
     if (!dvd_opened) {
         if (dusk::getSettings().backend.isoPath.getValue().empty()) {

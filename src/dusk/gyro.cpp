@@ -140,8 +140,8 @@ void read(float dt) {
         float my_rel = 0.0f;
         SDL_GetRelativeMouseState(&mx_rel, &my_rel);
         // Convert pixels to radians
-        s_pitch_rad = my_rel * kMousePixelToRad * getSettings().game.gyroSensitivityX;
-        s_yaw_rad = -mx_rel * kMousePixelToRad * getSettings().game.gyroSensitivityY;
+        s_pitch_rad = my_rel * kMousePixelToRad * getSettings().game.gyroSensitivityY;
+        s_yaw_rad = -mx_rel * kMousePixelToRad * getSettings().game.gyroSensitivityX;
         s_roll_rad = 0.0f;
 
         s_pitch_rad = getSettings().game.gyroInvertPitch ? -s_pitch_rad : s_pitch_rad;
@@ -184,7 +184,7 @@ void read(float dt) {
     const float yaw_rate = apply_deadband(s_smooth_gy, deadband);
     const float roll_rate = apply_deadband(s_smooth_gz, deadband);
 
-    s_pitch_rad = -pitch_rate * dt * getSettings().game.gyroSensitivityX;
+    s_pitch_rad = -pitch_rate * dt * getSettings().game.gyroSensitivityY;
     s_roll_rad  = roll_rate * dt * getSettings().game.gyroSensitivityX; // GYRO NOTE: Exposing Z sensitivity seems unusual, so I'm just using X
 
     float horizontal_rate = yaw_rate;
@@ -223,7 +223,7 @@ void read(float dt) {
         }
     }
 
-    s_yaw_rad = horizontal_rate * dt * getSettings().game.gyroSensitivityY;
+    s_yaw_rad = horizontal_rate * dt * getSettings().game.gyroSensitivityX;
 
     s_pitch_rad = getSettings().game.gyroInvertPitch ? -s_pitch_rad : s_pitch_rad;
     s_yaw_rad = getSettings().game.gyroInvertYaw ? -s_yaw_rad : s_yaw_rad;
