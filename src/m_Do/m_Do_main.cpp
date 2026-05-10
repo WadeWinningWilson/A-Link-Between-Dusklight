@@ -71,6 +71,7 @@
 #include <dolphin/dvd.h>
 
 #include "SDL3/SDL_filesystem.h"
+#include "SDL3/SDL_iostream.h"
 #include "SDL3/SDL_misc.h"
 #include "cxxopts.hpp"
 #include "d/actor/d_a_movie_player.h"
@@ -78,6 +79,7 @@
 #include "dusk/audio/DuskDsp.hpp"
 #include "dusk/config.hpp"
 #include "dusk/settings.h"
+#include "dusk/io.hpp"
 #include "dusk/version.hpp"
 #include "dusk/discord_presence.hpp"
 #include "tracy/Tracy.hpp"
@@ -124,7 +126,7 @@ bool dusk::OpenDataFolder() {
     std::filesystem::path path = std::filesystem::absolute(ConfigPath, ec);
     if (ec) {
         DuskLog.warn("Failed to resolve absolute data folder path '{}': {}",
-            ConfigPath.string(), ec.message());
+            io::fs_path_to_string(ConfigPath), ec.message());
         path = ConfigPath;
     }
 
@@ -134,7 +136,8 @@ bool dusk::OpenDataFolder() {
     const std::string url = "file://" + path.generic_string();
 #endif
     if (!SDL_OpenURL(url.c_str())) {
-        DuskLog.warn("Failed to open data folder '{}': {}", path.string(), SDL_GetError());
+        DuskLog.warn(
+            "Failed to open data folder '{}': {}", io::fs_path_to_string(path), SDL_GetError());
         return false;
     }
     return true;
@@ -504,16 +507,21 @@ static void EnsureInitialPipelineCache(const std::filesystem::path& configDir) {
         return;
     }
 
-    const char* basePath = SDL_GetBasePath();
-    if (basePath == nullptr) {
-        DuskLog.warn("Unable to resolve base path while seeding pipeline cache: {}", SDL_GetError());
-        return;
-    }
+    std::string sourcePathString;
+    SDL_IOStream* source = nullptr;
 
-    const std::filesystem::path initialPipelineCachePath =
-        std::filesystem::path(basePath) / "initial_pipeline_cache.db";
-    if (!std::filesystem::exists(initialPipelineCachePath)) {
-        DuskLog.info("No bundled initial pipeline cache found at '{}'", initialPipelineCachePath.string());
+    const char* basePath = SDL_GetBasePath();
+    if (basePath != nullptr) {
+        sourcePathString = dusk::io::fs_path_to_string(
+            std::filesystem::path(basePath) / "initial_pipeline_cache.db");
+        source = SDL_IOFromFile(sourcePathString.c_str(), "rb");
+    }
+    if (source == nullptr) {
+        sourcePathString = "initial_pipeline_cache.db";
+        source = SDL_IOFromFile(sourcePathString.c_str(), "rb");
+    }
+    if (source == nullptr) {
+        DuskLog.info("No bundled initial pipeline cache found");
         return;
     }
 
@@ -521,18 +529,68 @@ static void EnsureInitialPipelineCache(const std::filesystem::path& configDir) {
     std::filesystem::create_directories(configDir, ec);
     if (ec) {
         DuskLog.warn("Failed to create config directory '{}' for pipeline cache: {}",
-                     configDir.string(), ec.message());
+            dusk::io::fs_path_to_string(configDir), ec.message());
+        SDL_CloseIO(source);
         return;
     }
 
-    std::filesystem::copy_file(initialPipelineCachePath, pipelineCachePath, std::filesystem::copy_options::none, ec);
-    if (ec) {
-        DuskLog.warn("Failed to seed pipeline cache from '{}' to '{}': {}",
-                     initialPipelineCachePath.string(), pipelineCachePath.string(), ec.message());
+    const auto pipelineCacheString = dusk::io::fs_path_to_string(pipelineCachePath);
+    SDL_IOStream* destination = SDL_IOFromFile(pipelineCacheString.c_str(), "wb");
+    if (destination == nullptr) {
+        DuskLog.warn("Failed to open '{}' for seeded pipeline cache: {}", pipelineCacheString,
+            SDL_GetError());
+        SDL_CloseIO(source);
         return;
     }
 
-    DuskLog.info("Seeded pipeline cache from '{}'", initialPipelineCachePath.string());
+    bool copied = true;
+    std::array<char, 64 * 1024> buffer{};
+    while (true) {
+        const size_t bytesRead = SDL_ReadIO(source, buffer.data(), buffer.size());
+        if (bytesRead > 0) {
+            size_t bytesWritten = 0;
+            while (bytesWritten < bytesRead) {
+                const size_t written = SDL_WriteIO(
+                    destination, buffer.data() + bytesWritten, bytesRead - bytesWritten);
+                if (written == 0) {
+                    DuskLog.warn("Failed to write seeded pipeline cache '{}': {}",
+                        pipelineCacheString, SDL_GetError());
+                    copied = false;
+                    break;
+                }
+                bytesWritten += written;
+            }
+        }
+
+        if (!copied) {
+            break;
+        }
+
+        if (bytesRead < buffer.size()) {
+            if (SDL_GetIOStatus(source) == SDL_IO_STATUS_EOF) {
+                break;
+            }
+
+            DuskLog.warn(
+                "Failed to read bundled pipeline cache '{}': {}", sourcePathString, SDL_GetError());
+            copied = false;
+            break;
+        }
+    }
+
+    if (!SDL_CloseIO(destination)) {
+        DuskLog.warn("Failed to close seeded pipeline cache '{}': {}",
+            dusk::io::fs_path_to_string(pipelineCachePath), SDL_GetError());
+        copied = false;
+    }
+    SDL_CloseIO(source);
+
+    if (!copied) {
+        std::filesystem::remove(pipelineCachePath, ec);
+        return;
+    }
+
+    DuskLog.info("Seeded pipeline cache from '{}'", sourcePathString);
 }
 
 static constexpr PADDefaultMapping defaultPadMapping = {

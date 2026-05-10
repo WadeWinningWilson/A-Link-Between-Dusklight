@@ -208,7 +208,7 @@ void dusk::InitializeFileLogging(const std::filesystem::path& configDir, AuroraL
     std::filesystem::create_directories(logsDir, ec);
     if (ec) {
         std::fprintf(stderr, "[WARNING | dusk] Failed to create log directory '%s': %s\n",
-                     logsDir.string().c_str(), ec.message().c_str());
+            io::fs_path_to_string(logsDir).c_str(), ec.message().c_str());
         return;
     }
 
@@ -216,7 +216,7 @@ void dusk::InitializeFileLogging(const std::filesystem::path& configDir, AuroraL
     g_logState.file = io::FileStream::Create(logPath).ToInner();
     if (g_logState.file == nullptr) {
         std::fprintf(stderr, "[WARNING | dusk] Failed to open log file '%s'\n",
-                     logPath.string().c_str());
+            io::fs_path_to_string(logPath).c_str());
         return;
     }
 
