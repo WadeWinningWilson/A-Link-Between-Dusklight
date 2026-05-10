@@ -1,10 +1,14 @@
 package dev.twilitrealm.dusk;
 
+import android.content.ContentResolver;
 import android.content.res.AssetFileDescriptor;
 import android.database.Cursor;
 import android.database.MatrixCursor;
+import android.net.Uri;
+import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.ParcelFileDescriptor;
+import android.provider.DocumentsContract;
 import android.provider.DocumentsContract.Document;
 import android.provider.DocumentsContract.Root;
 import android.provider.DocumentsProvider;
@@ -77,9 +81,23 @@ public class DuskDocumentsProvider extends DocumentsProvider {
     public Cursor queryChildDocuments(String parentDocumentId, String[] projection, String sortOrder)
         throws FileNotFoundException
     {
+        return queryChildDocumentsInternal(parentDocumentId, projection);
+    }
+
+    @Override
+    public Cursor queryChildDocuments(String parentDocumentId, String[] projection, Bundle queryArgs)
+        throws FileNotFoundException
+    {
+        return queryChildDocumentsInternal(parentDocumentId, projection);
+    }
+
+    private Cursor queryChildDocumentsInternal(String parentDocumentId, String[] projection)
+        throws FileNotFoundException
+    {
         final MatrixCursor result = new MatrixCursor(resolveDocumentProjection(projection));
         final File parent = getFileForDocumentId(parentDocumentId);
         final File[] files = parent.listFiles();
+        result.setNotificationUri(getContext().getContentResolver(), getChildDocumentsUri(parentDocumentId));
 
         if (files == null) {
             return result;
@@ -129,6 +147,7 @@ public class DuskDocumentsProvider extends DocumentsProvider {
             throw new FileNotFoundException("Unable to create document: " + displayName);
         }
 
+        notifyChildrenChanged(parentDocumentId);
         return getDocumentIdForFile(file);
     }
 
@@ -140,9 +159,13 @@ public class DuskDocumentsProvider extends DocumentsProvider {
         }
 
         final File target = buildUniqueFile(file.getParentFile(), sanitizeDisplayName(displayName));
+        final String parentDocumentId = getDocumentIdForFile(file.getParentFile());
         if (!file.renameTo(target)) {
             throw new FileNotFoundException("Unable to rename document: " + documentId);
         }
+        notifyDocumentChanged(documentId);
+        notifyDocumentChanged(getDocumentIdForFile(target));
+        notifyChildrenChanged(parentDocumentId);
         return getDocumentIdForFile(target);
     }
 
@@ -153,7 +176,10 @@ public class DuskDocumentsProvider extends DocumentsProvider {
         }
 
         final File file = getFileForDocumentId(documentId);
+        final String parentDocumentId = getDocumentIdForFile(file.getParentFile());
         deleteRecursively(file);
+        notifyDocumentChanged(documentId);
+        notifyChildrenChanged(parentDocumentId);
     }
 
     @Override
@@ -323,6 +349,20 @@ public class DuskDocumentsProvider extends DocumentsProvider {
             }
         }
         return "application/octet-stream";
+    }
+
+    private Uri getChildDocumentsUri(String parentDocumentId) {
+        return DocumentsContract.buildChildDocumentsUri(AUTHORITY, parentDocumentId);
+    }
+
+    private void notifyChildrenChanged(String parentDocumentId) {
+        final ContentResolver resolver = getContext().getContentResolver();
+        resolver.notifyChange(getChildDocumentsUri(parentDocumentId), null, false);
+    }
+
+    private void notifyDocumentChanged(String documentId) {
+        final ContentResolver resolver = getContext().getContentResolver();
+        resolver.notifyChange(DocumentsContract.buildDocumentUri(AUTHORITY, documentId), null, false);
     }
 
     private static void deleteRecursively(File file) throws FileNotFoundException {
