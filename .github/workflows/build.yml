@@ -10,7 +10,7 @@ on:
 env:
   SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
-  # SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+  SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
 jobs:
   build-linux:
