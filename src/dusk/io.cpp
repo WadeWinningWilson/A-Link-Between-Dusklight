@@ -1,6 +1,7 @@
-#include "dusk/io.hpp"
 #include <cstdio>
 #include <filesystem>
+
+#include "dusk/io.hpp"
 
 using namespace dusk::io;
 

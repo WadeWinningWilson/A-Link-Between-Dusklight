@@ -649,6 +649,10 @@ int game_main(int argc, char* argv[]) {
         }
     }
 
+    dusk::iso::log_verification_state(
+        dusk::getSettings().backend.isoPath.getValue(),
+        dusk::getSettings().backend.isoVerification.getValue());
+
     if (!dvd_opened) {
         if (dusk::getSettings().backend.isoPath.getValue().empty()) {
             forcePreLaunchUI = true;
