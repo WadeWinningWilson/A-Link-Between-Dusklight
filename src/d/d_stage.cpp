@@ -1600,33 +1600,44 @@ static void dStage_actorCreate(stage_actor_data_class* i_actorData, fopAcM_prm_c
     if (randomizer_IsActive()) {
         // Get the current stage/room/layer key
         auto currentStageKey = getActorPatchesCurrentStageKey(i_actorPrm->room_no);
-        // If we have patches for this stage/room/layer
-        if (randomizer_GetContext().mObjectPatches.contains(currentStageKey)) {
-            auto& patches = randomizer_GetContext().mObjectPatches.at(currentStageKey);
-
-            auto actrKey = getStageObjCRC32(reinterpret_cast<u8*>(i_actorData), RandomizerContext::ACTR_CRC_SIZE);
-            auto tgscKey = getStageObjCRC32(reinterpret_cast<u8*>(i_actorData), RandomizerContext::TGSC_CRC_SIZE);
-            std::vector<u8>* bytes = NULL;
-            // See if the patches contain either key and the correct size for the key
-            if (patches.contains(actrKey) &&
-                (patches[actrKey].size() == RandomizerContext::ACTR_CRC_SIZE || patches[actrKey].size() == RandomizerContext::OBJ_DELETE_SIZE)) {
-                bytes = &patches.at(actrKey);
-            } else if (patches.contains(tgscKey) &&
-                (patches[tgscKey].size() == RandomizerContext::TGSC_CRC_SIZE  || patches[tgscKey].size() == RandomizerContext::OBJ_DELETE_SIZE)) {
-                bytes = &patches.at(tgscKey);
+        // Iterate twice, once with the current room number, and once with the room set to 0xFF
+        // to indicate overriding an actor in the stage file instead of room file
+        for (auto i = 0; i < 2; ++i) {
+            // change to check for stage objects for 2nd iteration
+            if (i == 1) {
+                currentStageKey |= RandomizerContext::ROOM_STAGE << 8;
             }
+            // If we have patches for this stage/room/layer
+            if (randomizer_GetContext().mObjectPatches.contains(currentStageKey)) {
+                auto& patches = randomizer_GetContext().mObjectPatches.at(currentStageKey);
 
-            // If we found a match with a size of OBJ_DELETE_SIZE, this is a signal to delete the actor.
-            // Return early so we just don't spawn it
-            if (bytes != NULL && bytes->size() == RandomizerContext::OBJ_DELETE_SIZE) {
-                return;
-            }
-            // If we found a match, override the actor data
-            if (bytes != NULL) {
-                std::memcpy(i_actorPrm, bytes->data() + 8, bytes->size() - 8);
-                std::memcpy(i_actorData, bytes->data(), bytes->size());
+                auto actrKey = getStageObjCRC32(reinterpret_cast<u8*>(i_actorData), RandomizerContext::ACTR_CRC_SIZE);
+                auto tgscKey = getStageObjCRC32(reinterpret_cast<u8*>(i_actorData), RandomizerContext::TGSC_CRC_SIZE);
+                std::vector<u8>* bytes = NULL;
+                // See if the patches contain either key and the correct size for the key
+                if (patches.contains(actrKey) &&
+                    (patches[actrKey].size() == RandomizerContext::ACTR_CRC_SIZE || patches[actrKey].size() == RandomizerContext::OBJ_DELETE_SIZE))
+                {
+                    bytes = &patches.at(actrKey);
+                } else if (patches.contains(tgscKey) &&
+                        (patches[tgscKey].size() == RandomizerContext::TGSC_CRC_SIZE  || patches[tgscKey].size() == RandomizerContext::OBJ_DELETE_SIZE))
+                {
+                    bytes = &patches.at(tgscKey);
+                }
+
+                // If we found a match with a size of OBJ_DELETE_SIZE, this is a signal to delete the actor.
+                // Return early so we just don't spawn it
+                if (bytes != NULL && bytes->size() == RandomizerContext::OBJ_DELETE_SIZE) {
+                    return;
+                }
+                // If we found a match, override the actor data
+                if (bytes != NULL) {
+                    std::memcpy(i_actorPrm, bytes->data() + 8, bytes->size() - 8);
+                    std::memcpy(i_actorData, bytes->data(), bytes->size());
+                }
             }
         }
+
     }
 #endif
 
