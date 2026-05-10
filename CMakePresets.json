@@ -358,7 +358,13 @@
       "inherits": [
         "android-base",
         "ci"
-      ]
+      ],
+      "cacheVariables": {
+        "DUSK_ENABLE_SENTRY_NATIVE": {
+          "type": "BOOL",
+          "value": false
+        },
+      }
     },
     {
       "name": "x-android-ci-arm64",
