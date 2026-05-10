@@ -11,6 +11,7 @@
 #include <ranges>
 
 #include "aurora/lib/window.hpp"
+#include "dusk/io.hpp"
 #include "input.hpp"
 #include "prelaunch.hpp"
 #include "window.hpp"
@@ -19,7 +20,7 @@ namespace dusk::ui {
 namespace {
 
 void load_font(const char* filename, bool fallback = false) {
-    Rml::LoadFontFace(resource_path(filename).string(), fallback);
+    Rml::LoadFontFace(io::fs_path_to_string(resource_path(filename)), fallback);
 }
 
 bool sInitialized = false;
