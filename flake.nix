@@ -47,6 +47,9 @@
           cp -r ${aurora-src}/. $sourceRoot/extern/aurora/
           chmod -R u+w $sourceRoot/extern/aurora
           sed -i '/add_subdirectory(tests)/d' $sourceRoot/extern/aurora/CMakeLists.txt
+          # Allow Setting VERSION
+          sed -i 's/find_package(Git)/# find_package(Git)/' $sourceRoot/CMakeLists.txt
+          sed -i 's/set(DUSK_WC_DESCRIBE "UNKNOWN-VERSION")/# set(DUSK_WC_DESCRIBE "UNKNOWN-VERSION")/' $sourceRoot/CMakeLists.txt
         '';
         # Remove last line to re-enable tests
         cmakeFlags = [
@@ -66,6 +69,8 @@
           "-DFETCHCONTENT_SOURCE_DIR_IMGUI=${imgui-src}"
           "-DFETCHCONTENT_SOURCE_DIR_RMLUI=${rmlui-src}"
           "-DCMAKE_CROSSCOMPILING=ON" # Tests are not working as I didn't want to work through getting google's test suite working as well. This is the only guard I could find to disable it.
+          "-DDUSK_WC_DESCRIBE=NixOS-${builtins.substring 0 7 (self.rev or "dirty")}"
+          "-DDUSK_VERSION_STRING=NixOS-${builtins.substring 0 7 (self.rev or "dirty")}"
         ];
         installPhase = ''
           mkdir -p $out/bin
@@ -106,6 +111,7 @@
           pkgs.tracy
           pkgs.freetype
           pkgs.zstd
+          pkgs.libdecor
         ];
       };
     in {
