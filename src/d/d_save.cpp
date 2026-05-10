@@ -205,6 +205,11 @@ void dSv_player_status_b_c::offDarkClearLV(int i_no) {
 }
 
 BOOL dSv_player_status_b_c::isDarkClearLV(int i_no) const {
+#if TARGET_PC
+    if (i_no == 0 && playerIsInRoomStage(1, allStages[Ordon_Village_Interiors])) {
+        return 0; // Return false so Sera will give us the bottle if we have rescued the cat.
+    }
+#endif
     JUT_ASSERT(311, (i_no >= 0) && (i_no < 8));
     return mDarkClearLevelFlag & (u8)(1 << i_no) ? TRUE : FALSE;
 }
