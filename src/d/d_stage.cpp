@@ -1598,8 +1598,16 @@ static void dStage_actorCreate(stage_actor_data_class* i_actorData, fopAcM_prm_c
 #if TARGET_PC
     // In rando, potentially override this object's data
     if (randomizer_IsActive()) {
+
+        s8 roomNo = i_actorPrm->room_no;
+        // certain objects (like PLYR spawns) have the room set to -1.
+        // In this case, use dComIfGp_getStartStageRoomNo()
+        if (roomNo == -1) {
+            roomNo = dComIfGp_getStartStageRoomNo();
+        }
+
         // Get the current stage/room/layer key
-        auto currentStageKey = getActorPatchesCurrentStageKey(i_actorPrm->room_no);
+        auto currentStageKey = getActorPatchesCurrentStageKey(roomNo);
         // Iterate twice, once with the current room number, and once with the room set to 0xFF
         // to indicate overriding an actor in the stage file instead of room file
         for (auto i = 0; i < 2; ++i) {
