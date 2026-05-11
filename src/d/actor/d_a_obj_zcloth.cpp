@@ -40,9 +40,15 @@ int daObjZCloth_c::create() {
     // Override the item id in randomizer
     if (randomizer_IsActive()) {
         m_itemNo = verifyProgressiveItem(randomizer_getItemAtLocation("Rutelas Blessing"));
+        // Use home.angle.x as a check to see if we've set the foolish item model or not
+        // Otherwise we end up setting it twice
+        if (m_itemNo == dItemNo_Randomizer_FOOLISH_ITEM_e && home.angle.x != 0) {
+            home.angle.z = randomizer_getRandomFoolishItemModelID();
+            home.angle.x = 0;
+        }
         // TODO: Set rotation/height/scale depending on the item (low prio, can figure this out later)
         scale.setall(1.5f);
-        switch (m_itemNo) {
+        switch (M_ITEMNO_MODEL_ITEM_ID) {
         case dItemNo_Randomizer_WOOD_STICK_e:
             shape_angle.x = 0x4000;
             break;
@@ -57,7 +63,7 @@ int daObjZCloth_c::create() {
         }
     }
 #endif
-    int phase = dComIfG_resLoad(&mPhase, dItem_data::getFieldArc(m_itemNo));
+    int phase = dComIfG_resLoad(&mPhase, dItem_data::getFieldArc(M_ITEMNO_MODEL_ITEM_ID));
     if (phase == cPhs_COMPLEATE_e) {
         if (!fopAcM_entrySolidHeap(this, (heapCallbackFunc)CheckFieldItemCreateHeap, 0x2fb0)) {
             return cPhs_ERROR_e;

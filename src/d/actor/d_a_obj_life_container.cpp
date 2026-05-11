@@ -95,8 +95,8 @@ int daObjLife_c::Create() {
     mCcCyl.SetStts(&mCcStts);
     mCcCyl.SetCoHitCallback(lifeGetCoCallBack);
     mCcCyl.SetTgHitCallback(lifeGetTgCallBack);
-    mCcCyl.SetR(dItem_data::getR(m_itemNo));
-    mCcCyl.SetH(dItem_data::getH(m_itemNo));
+    mCcCyl.SetR(dItem_data::getR(M_ITEMNO_MODEL_ITEM_ID));
+    mCcCyl.SetH(dItem_data::getH(M_ITEMNO_MODEL_ITEM_ID));
 
     fopAcM_SetCullSize(this, fopAc_CULLSPHERE_0_e);
     fopAcM_SetGravity(this, -3.2f);
@@ -145,7 +145,7 @@ void daObjLife_c::setEffect() {
 #if TARGET_PC
     if (randomizer_IsActive()) {
         // In randomizer, we don't want rupees or poe souls to sparkle. They are bright enough.
-        switch(m_itemNo)
+        switch(M_ITEMNO_MODEL_ITEM_ID)
         {
             case dItemNo_Randomizer_GREEN_RUPEE_e:
             case dItemNo_Randomizer_BLUE_RUPEE_e:
@@ -238,8 +238,12 @@ int daObjLife_c::create() {
             params |= itemId;
             fopAcM_SetParam(this, params);
 
+            if (itemId == dItemNo_Randomizer_FOOLISH_ITEM_e) {
+                home.angle.z = randomizer_getRandomFoolishItemModelID();
+            }
+
             // Also adjust the height of the object depending on the item
-            switch (itemId) {
+            switch (itemId == dItemNo_Randomizer_FOOLISH_ITEM_e ? home.angle.z : itemId) {
                 case dItemNo_Randomizer_MASTER_SWORD_e:
                 case dItemNo_Randomizer_LIGHT_SWORD_e:
                 case dItemNo_Randomizer_WOOD_SHIELD_e:
@@ -341,7 +345,7 @@ int daObjLife_c::create() {
         return cPhs_ERROR_e;
     }
 
-    int phase_state = dComIfG_resLoad(&mPhase, dItem_data::getFieldArc(m_itemNo));
+    int phase_state = dComIfG_resLoad(&mPhase, dItem_data::getFieldArc(M_ITEMNO_MODEL_ITEM_ID));
     if (phase_state == cPhs_COMPLEATE_e) {
         if (!fopAcM_entrySolidHeap(this, CheckFieldItemCreateHeap, 0x4000)) {
             return cPhs_ERROR_e;
@@ -563,8 +567,8 @@ int daObjLife_c::actionInitBoomerangCarry() {
     mCcCyl.OnTgSPrmBit(1);
     mCcCyl.OnCoSPrmBit(1);
 
-    f32 height = dItem_data::getH(m_itemNo) * 4.0f;
-    f32 radius = dItem_data::getR(m_itemNo) * 4.0f;
+    f32 height = dItem_data::getH(M_ITEMNO_MODEL_ITEM_ID) * 4.0f;
+    f32 radius = dItem_data::getR(M_ITEMNO_MODEL_ITEM_ID) * 4.0f;
     mCcCyl.SetR(radius);
     mCcCyl.SetH(height);
 
@@ -603,7 +607,7 @@ void daObjLife_c::calcScale() {
     f32 newScale = 1.0f;
     if (randomizer_IsActive()) {
         // Change scale for certain items
-        switch (m_itemNo) {
+        switch (M_ITEMNO_MODEL_ITEM_ID) {
         case dItemNo_Randomizer_KAKERA_HEART_e:
         case dItemNo_Randomizer_UTAWA_HEART_e:
         case dItemNo_Randomizer_ARROW_10_e:
@@ -717,7 +721,7 @@ int daObjLife_c::_delete() {
     endEffect00();
     endEffect02();
 
-    DeleteBase(dItem_data::getFieldArc(m_itemNo));
+    DeleteBase(dItem_data::getFieldArc(M_ITEMNO_MODEL_ITEM_ID));
     return 1;
 }
 

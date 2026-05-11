@@ -11,7 +11,7 @@
 #include "d/d_item_data.h"
 
 u8 daItemBase_c::getItemNo() {
-    return m_itemNo;
+    return M_ITEMNO_MODEL_ITEM_ID;
 }
 
 static void dummy(dItem_data* data) {

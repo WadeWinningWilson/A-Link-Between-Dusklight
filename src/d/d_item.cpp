@@ -1216,16 +1216,11 @@ void item_func_PACHINKO_SHOT() {
 
 #if TARGET_PC
 void item_func_FOOLISH_ITEM() {
-    /*
-    Pasting rando code until framework is implemented
     // Failsafe: Make sure the count does not somehow exceed 100
-        rando::customItems::FoolishItems* foolishItemsPtr = rando::gRandomizer->getFoolishItemsPtr();
-        const uint32_t triggerCount = foolishItemsPtr->getTriggerCount();
-        if (triggerCount < 100)
-        {
-            foolishItemsPtr->setTriggerCount(static_cast<uint8_t>(triggerCount + 1));
-        }
-    */
+    if (g_randomizerState.foolishItemCount < 100)
+    {
+        g_randomizerState.foolishItemCount += 1;
+    }
 }
 
 void item_func_ORDON_PORTAL() {

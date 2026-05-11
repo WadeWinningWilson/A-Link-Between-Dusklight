@@ -115,7 +115,7 @@ public:
     bool checkBoomWindTgTimer() { return mBoomWindTgTimer == 0; }
 
 #if TARGET_PC
-    void setRandomizerItem();
+    void setRandomizerItem(bool setFoolishItemModel = false);
 #endif
 
     static procFunc mFuncPtr[];

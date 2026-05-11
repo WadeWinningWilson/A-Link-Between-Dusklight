@@ -46,6 +46,11 @@ public:
     s32 getSeLoadStatus(u32 wave) { return getWaveLoadStatus(wave, 0); }
     s32 getBgmLoadStatus(u32 wave) { return getWaveLoadStatus(wave, 1); }
     u8 getDemoSeWaveNum() { return loadedDemoWave; }
+#if TARGET_PC
+    u8 getLoadedSeWave_1() { return loadedSeWave_1;}
+    u8 getLoadedSeWave_2() { return loadedSeWave_2;}
+#endif
+
 
 private:
     /* 0x00 */ JAISoundID BGM_ID;

@@ -102,6 +102,15 @@ const char* daShopItem_c::getShopArcname() {
         u8 itemId = randomizer_GetContext().mShopOverrides.at(key);
         itemId = verifyProgressiveItem(itemId);
 
+        if (itemId == dItemNo_Randomizer_FOOLISH_ITEM_e) {
+            if (home.angle.x != -1) {
+                home.angle.z = randomizer_getRandomFoolishItemModelID();
+                home.angle.x = -1;
+            }
+            itemId = home.angle.z;
+
+        }
+
         // Replace the necessary index in daShopItem_c::mRandoData with the model data from dItem_data
         auto& shopModel = mRandoData[mShopItemID];
         shopModel.mArcName = dItem_data::getArcName(itemId);

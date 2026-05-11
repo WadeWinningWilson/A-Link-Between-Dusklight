@@ -9,6 +9,9 @@
 #include "d/actor/d_a_player.h"
 #include "d/d_com_inf_game.h"
 #include "d/d_item_data.h"
+#if TARGET_PC
+#include "dusk/randomizer/game/verify_item_functions.h"
+#endif
 
 static cull_box l_cull_box = {{-200.0f, 0.0f, -200.0f}, {200.0f, 100.0f, 200.0f}};
 
@@ -36,12 +39,20 @@ int daObjSword_c::Create() {
 
 cPhs_Step daObjSword_c::create() {
     fopAcM_ct(this, daObjSword_c);
-    m_itemNo = IF_DUSK(randomizer_IsActive() ? static_cast<u8>(randomizer_getItemAtLocation("Ordon Sword")): ) 0x28;
+    m_itemNo = IF_DUSK(randomizer_IsActive() ? verifyProgressiveItem(randomizer_getItemAtLocation("Ordon Sword")): ) 0x28;
+#if TARGET_PC
+    // Use home.angle.x as a check to see if we've set the foolish item model or not.
+    // Otherwise we end up setting it twice
+    if (randomizer_IsActive() && m_itemNo == dItemNo_Randomizer_FOOLISH_ITEM_e && home.angle.x != 0) {
+        home.angle.z = randomizer_getRandomFoolishItemModelID();
+        home.angle.x = 0;
+    }
+#endif
     if (fopAcM_isItem(this, getItemBit())) {
         return cPhs_ERROR_e;
     }
 
-    cPhs_Step phase = dComIfG_resLoad(&mPhase, dItem_data::getFieldArc(m_itemNo));
+    cPhs_Step phase = dComIfG_resLoad(&mPhase, dItem_data::getFieldArc(M_ITEMNO_MODEL_ITEM_ID));
     if (phase == cPhs_COMPLEATE_e) {
         if (!fopAcM_entrySolidHeap(this, CheckFieldItemCreateHeap, 0x4000)) {
             return cPhs_ERROR_e;
@@ -120,7 +131,7 @@ int daObjSword_c::draw() {
 }
 
 int daObjSword_c::_delete() {
-    DeleteBase(dItem_data::getFieldArc(m_itemNo));
+    DeleteBase(dItem_data::getFieldArc(M_ITEMNO_MODEL_ITEM_ID));
     return 1;
 }
 
