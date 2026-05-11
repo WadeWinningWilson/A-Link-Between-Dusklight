@@ -1418,7 +1418,11 @@ fpc_ProcID fopAcM_createItemForPresentDemo(cXyz const* i_pos, int i_itemNo, u8 p
 
 fpc_ProcID fopAcM_createItemForTrBoxDemo(cXyz const* i_pos, int i_itemNo, int i_itemBitNo,
                                          int i_roomNo, csXyz const* i_angle, cXyz const* i_scale) {
-   
+#if TARGET_PC
+    if (randomizer_IsActive()) {
+        i_itemNo = verifyProgressiveItem(i_itemNo);
+    }
+#endif
    JUT_ASSERT(3259, 0 <= i_itemNo && i_itemNo < 256);
    dComIfGp_event_setGtItm(i_itemNo);
 
