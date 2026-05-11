@@ -184,7 +184,6 @@ struct UserSettings {
         ConfigVar<bool> skipPreLaunchUI;
         ConfigVar<bool> showPipelineCompilation;
         ConfigVar<bool> wasPresetChosen;
-        ConfigVar<bool> enableCrashReporting;
         ConfigVar<bool> checkForUpdates;
         ConfigVar<int> cardFileType;
         ConfigVar<bool> enableAdvancedSettings;
