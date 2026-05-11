@@ -106,6 +106,12 @@ set(AURORA_ENABLE_RMLUI ON CACHE BOOL "Enable RmlUi UI support" FORCE)
 add_subdirectory(extern/aurora EXCLUDE_FROM_ALL)
 target_compile_definitions(aurora_mtx PRIVATE MTX_USE_PS=1)
 
+# rmlui_core uses its own PCH which creates a duplicate PCH marker symbol when linked
+# Disabling rmlui's PCH removes the conflicting marker and lets the link succeed
+if (MSVC AND TARGET rmlui_core)
+    set_target_properties(rmlui_core PROPERTIES DISABLE_PRECOMPILE_HEADERS ON)
+endif ()
+
 add_subdirectory(libs/freeverb)
 
 option(DUSK_BUILD_WARNINGS "Enable compiler warnings (off by default)")
