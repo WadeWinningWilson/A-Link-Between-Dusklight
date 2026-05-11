@@ -111,7 +111,8 @@ UserSettings g_userSettings = {
         // Tools
         .speedrunMode {"game.speedrunMode", false},
         .liveSplitEnabled {"game.liveSplitEnabled", false},
-        .recordingMode {"game.recordingMode", false}
+        .recordingMode {"game.recordingMode", false},
+        .randomizerEnabled =  {"game.randomizerEnabled", false}
     },
 
     .backend = {
@@ -221,6 +222,8 @@ void registerSettings() {
     Register(g_userSettings.game.debugFlyCam);
     Register(g_userSettings.game.debugFlyCamLockEvents);
     Register(g_userSettings.game.allowBackgroundInput);
+
+    Register(g_userSettings.game.randomizerEnabled);
 
     Register(g_userSettings.backend.isoPath);
     Register(g_userSettings.backend.isoVerification);

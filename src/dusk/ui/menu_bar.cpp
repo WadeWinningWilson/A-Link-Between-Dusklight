@@ -21,6 +21,8 @@
 #include <chrono>
 #include <cmath>
 
+#include "rando_config.hpp"
+
 namespace dusk::ui {
 namespace {
 
@@ -58,6 +60,9 @@ MenuBar::MenuBar() : Document(kDocumentSource), mRoot(mDocument->GetElementById(
     }
 
     mTabBar->add_tab("Achievements", [this] { push(std::make_unique<AchievementsWindow>()); });
+
+    mTabBar->add_tab("Randomizer", [this] { push(std::make_unique<RandomizerWindow>()); });
+
     mTabBar->add_tab("Reset", [this] {
         mTabBar->set_active_tab(-1);
         const auto dismiss = [](Modal& modal) { modal.pop(); };

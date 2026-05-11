@@ -757,6 +757,9 @@ int game_main(int argc, char* argv[]) {
     dusk::audio::SetEnableReverb(dusk::getSettings().audio.enableReverb);
     dusk::audio::EnableHrtf = dusk::getSettings().audio.enableHrtf;
 
+    // load rando generator configuration data
+    LoadRandomizerConfig();
+
     // Run ImGui UI loop if Aurora couldn't initialize a backend
     if (auroraInfo.backend == BACKEND_NULL) {
         launchUILoop();

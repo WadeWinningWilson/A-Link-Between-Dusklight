@@ -175,6 +175,9 @@ struct UserSettings {
         ConfigVar<bool> speedrunMode;
         ConfigVar<bool> liveSplitEnabled;
         ConfigVar<bool> recordingMode;
+
+        // Misc
+        ConfigVar<bool> randomizerEnabled;
     } game;
 
     struct {
