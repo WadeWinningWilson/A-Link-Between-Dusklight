@@ -35,15 +35,50 @@ struct HookEntryBase {
 
     static R trampoline(Self self, A... args) {
         void* ptrs[] = {static_cast<void*>(std::addressof(self)), static_cast<void*>(std::addressof(args))...};
-        const bool cancel = g_api->hook_dispatch_pre(mfpAddr(MFP), static_cast<void*>(ptrs));
         if constexpr (std::is_void_v<R>) {
+            const bool cancel = g_api->hook_dispatch_pre(mfpAddr(MFP), static_cast<void*>(ptrs), nullptr);
             if (!cancel) g_orig(self, args...);
-            g_api->hook_dispatch_post(mfpAddr(MFP), static_cast<void*>(ptrs));
+            g_api->hook_dispatch_post(mfpAddr(MFP), static_cast<void*>(ptrs), nullptr);
         } else {
             R result{};
+            const bool cancel = g_api->hook_dispatch_pre(mfpAddr(MFP), static_cast<void*>(ptrs), static_cast<void*>(std::addressof(result)));
             if (!cancel) result = g_orig(self, args...);
-            g_api->hook_dispatch_post(mfpAddr(MFP), static_cast<void*>(ptrs));
+            g_api->hook_dispatch_post(mfpAddr(MFP), static_cast<void*>(ptrs), static_cast<void*>(std::addressof(result)));
             return result;
+        }
+    }
+};
+
+template <auto FP, class R, class Orig, class... A>
+struct HookEntryFreeBase {
+    static inline Orig g_orig = nullptr;
+
+    static R trampoline(A... args) {
+        if constexpr (sizeof...(A) == 0) {
+            if constexpr (std::is_void_v<R>) {
+                const bool cancel = g_api->hook_dispatch_pre(mfpAddr(FP), nullptr, nullptr);
+                if (!cancel) g_orig(args...);
+                g_api->hook_dispatch_post(mfpAddr(FP), nullptr, nullptr);
+            } else {
+                R result{};
+                const bool cancel = g_api->hook_dispatch_pre(mfpAddr(FP), nullptr, static_cast<void*>(std::addressof(result)));
+                if (!cancel) result = g_orig(args...);
+                g_api->hook_dispatch_post(mfpAddr(FP), nullptr, static_cast<void*>(std::addressof(result)));
+                return result;
+            }
+        } else {
+            void* ptrs[] = {static_cast<void*>(std::addressof(args))...};
+            if constexpr (std::is_void_v<R>) {
+                const bool cancel = g_api->hook_dispatch_pre(mfpAddr(FP), static_cast<void*>(ptrs), nullptr);
+                if (!cancel) g_orig(args...);
+                g_api->hook_dispatch_post(mfpAddr(FP), static_cast<void*>(ptrs), nullptr);
+            } else {
+                R result{};
+                const bool cancel = g_api->hook_dispatch_pre(mfpAddr(FP), static_cast<void*>(ptrs), static_cast<void*>(std::addressof(result)));
+                if (!cancel) result = g_orig(args...);
+                g_api->hook_dispatch_post(mfpAddr(FP), static_cast<void*>(ptrs), static_cast<void*>(std::addressof(result)));
+                return result;
+            }
         }
     }
 };
@@ -57,6 +92,9 @@ struct HookEntry<MFP> : HookEntryBase<MFP, R, C*, R(*)(C*, A...), A...> {};
 template <class C, class R, class... A, R (C::*MFP)(A...) const>
 struct HookEntry<MFP> : HookEntryBase<MFP, R, const C*, R(*)(const C*, A...), A...> {};
 
+template <class R, class... A, R (*FP)(A...)>
+struct HookEntry<FP> : HookEntryFreeBase<FP, R, R(*)(A...), A...> {};
+
 template <auto MFP>
 void hookAddPre(int32_t (*fn)(void* args)) {
     using E = HookEntry<MFP>;
@@ -66,7 +104,7 @@ void hookAddPre(int32_t (*fn)(void* args)) {
 }
 
 template <auto MFP>
-void hookAddPost(void (*fn)(void* args)) {
+void hookAddPost(void (*fn)(void* args, void* retval)) {
     using E = HookEntry<MFP>;
     g_api->hook_install(mfpAddr(MFP), reinterpret_cast<void*>(E::trampoline),
                         reinterpret_cast<void**>(&E::g_orig));
@@ -74,7 +112,7 @@ void hookAddPost(void (*fn)(void* args)) {
 }
 
 template <auto MFP>
-void hookSetReplace(void (*fn)(void* args)) {
+void hookSetReplace(void (*fn)(void* args, void* retval)) {
     using E = HookEntry<MFP>;
     g_api->hook_install(mfpAddr(MFP), reinterpret_cast<void*>(E::trampoline),
                         reinterpret_cast<void**>(&E::g_orig));

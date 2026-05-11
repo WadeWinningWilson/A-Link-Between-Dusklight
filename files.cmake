@@ -1491,6 +1491,8 @@ set(DUSK_FILES
         src/dusk/ui/pane.hpp
         src/dusk/ui/menu_bar.cpp
         src/dusk/ui/menu_bar.hpp
+        src/dusk/ui/mods_window.cpp
+        src/dusk/ui/mods_window.hpp
         src/dusk/ui/prelaunch.cpp
         src/dusk/ui/prelaunch.hpp
         src/dusk/ui/preset.cpp
@@ -1517,7 +1519,6 @@ set(DUSK_FILES
         src/dusk/OSMutex.cpp
         src/dusk/hook_system.cpp
         src/dusk/mod_loader.cpp
-        src/dusk/imgui/ImGuiMenuMods.cpp
         src/dusk/gx_helper.cpp
         src/dusk/discord.cpp
         src/dusk/discord.hpp

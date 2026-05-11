@@ -276,7 +276,6 @@ namespace dusk {
         if (showMenu && ImGui::BeginMainMenuBar()) {
             m_menuGame.draw();
             m_menuTools.draw();
-            m_menuMods.draw();
 
             ImGui::EndMainMenuBar();
         }
@@ -376,7 +375,6 @@ namespace dusk {
             m_menuTools.ShowPlayerInfo();
             m_menuTools.ShowAudioDebug();
             m_menuTools.ShowSaveEditor();
-            m_menuMods.showModsWindow();
             m_menuTools.ShowStateShare();
             m_menuTools.ShowActorSpawner();
         }

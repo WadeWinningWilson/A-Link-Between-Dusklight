@@ -14,6 +14,7 @@
 #include "f_pc/f_pc_name.h"
 #include "imgui.h"
 #include "modal.hpp"
+#include "mods_window.hpp"
 #include "settings.hpp"
 #include "ui.hpp"
 #include "window.hpp"
@@ -58,6 +59,7 @@ MenuBar::MenuBar() : Document(kDocumentSource), mRoot(mDocument->GetElementById(
     }
 
     mTabBar->add_tab("Achievements", [this] { push(std::make_unique<AchievementsWindow>()); });
+    mTabBar->add_tab("Mods", [this] { push(std::make_unique<ModsWindow>()); });
     mTabBar->add_tab("Reset", [this] {
         mTabBar->set_active_tab(-1);
         const auto dismiss = [](Modal& modal) { modal.pop(); };

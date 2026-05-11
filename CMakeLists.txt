@@ -112,6 +112,7 @@ if (MSVC AND TARGET rmlui_core)
     set_target_properties(rmlui_core PROPERTIES DISABLE_PRECOMPILE_HEADERS ON)
 endif ()
 
+
 add_subdirectory(libs/freeverb)
 
 option(DUSK_BUILD_WARNINGS "Enable compiler warnings (off by default)")
@@ -457,6 +458,7 @@ set_source_files_properties(
 foreach(jsystem_lib IN LISTS JSYSTEM_LIBRARIES)
     target_compile_definitions(${jsystem_lib} PRIVATE
             ${GAME_COMPILE_DEFS}
+            DUSK_BUILDING_GAME=1
             $<$<CONFIG:Debug>:DEBUG=1>
             $<$<CONFIG:Debug>:PARTIAL_DEBUG=1>
     )
@@ -481,7 +483,8 @@ elseif(WIN32)
     add_library(dusk_game SHARED ${DUSK_FILES})
     set_target_properties(dusk_game PROPERTIES
             WINDOWS_EXPORT_ALL_SYMBOLS ON
-            OUTPUT_NAME dusk)
+            OUTPUT_NAME dusk
+            PDB_NAME dusk_game)
 
     add_executable(dusk WIN32 src/dusk/launcher_win32.cpp)
     target_link_libraries(dusk PRIVATE dusk_game)
@@ -492,10 +495,15 @@ else ()
     set(DUSK_MAIN_TARGET dusk)
 endif ()
 
+if (WIN32 AND TARGET imgui)
+    target_compile_definitions(imgui PRIVATE "IMGUI_API=__declspec(dllexport)")
+    target_sources(${DUSK_MAIN_TARGET} PRIVATE $<TARGET_OBJECTS:imgui>)
+endif ()
+
 target_compile_definitions(${DUSK_MAIN_TARGET} PRIVATE ${GAME_COMPILE_DEFS} DUSK_BUILDING_GAME=1)
 target_include_directories(${DUSK_MAIN_TARGET} PRIVATE ${GAME_INCLUDE_DIRS})
 target_link_libraries(${DUSK_MAIN_TARGET} PRIVATE aurora::main ${GAME_LIBS} ${JSYSTEM_LINK_LIBRARIES})
-target_precompile_headers(${DUSK_MAIN_TARGET} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_SOURCE_DIR}/include/dusk_pch.hpp>")
+target_precompile_headers(${DUSK_MAIN_TARGET} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_LIST_DIR}/include/dusk_pch.hpp>")
 
 if(WIN32)
     target_link_libraries(${DUSK_MAIN_TARGET} PRIVATE Psapi)

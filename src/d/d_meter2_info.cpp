@@ -592,7 +592,7 @@ BOOL dMeter2Info_c::isDirectUseItem(int param_0) {
     return (mDirectUseItem & (u8)(1 << param_0)) ? TRUE : FALSE;
 }
 
-dMeter2Info_c g_meter2_info;
+DUSK_GAME_DATA dMeter2Info_c g_meter2_info;
 
 int dMeter2Info_c::setMeterString(s32 i_string) {
     if (mMeterString != 0) {

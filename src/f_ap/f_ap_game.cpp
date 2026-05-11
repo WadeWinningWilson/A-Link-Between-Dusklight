@@ -827,6 +827,7 @@ void fapGm_Execute() {
 
 #if TARGET_PC
     duskExecute();
+    dusk::ModLoader::instance().tick();
 #endif
 
 #ifdef TARGET_PC
@@ -836,7 +837,6 @@ void fapGm_Execute() {
 #endif
 
     cCt_Counter(0);
-    dusk::ModLoader::instance().tick();
 #ifdef TARGET_PC
     dusk::speedrun::onGameFrame();
     dusk::AchievementSystem::get().tick();

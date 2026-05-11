@@ -19,7 +19,7 @@
 #include <revolution/sc.h>
 #endif
 
-u8 mDoAud_zelAudio_c::mInitFlag;
+DUSK_GAME_DATA u8 mDoAud_zelAudio_c::mInitFlag;
 
 u8 mDoAud_zelAudio_c::mResetFlag;
 

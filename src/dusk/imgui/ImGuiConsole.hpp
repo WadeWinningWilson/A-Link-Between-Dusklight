@@ -8,7 +8,6 @@
 #include <aurora/aurora.h>
 
 #include "ImGuiMenuGame.hpp"
-#include "ImGuiMenuMods.hpp"
 #include "ImGuiMenuTools.hpp"
 #include "dusk/main.h"
 #include "imgui.h"
@@ -46,7 +45,6 @@ private:
     std::deque<Toast> m_toasts;
 
     ImGuiMenuGame m_menuGame;
-    ImGuiMenuMods m_menuMods;
 
     // Keep always last
     ImGuiMenuTools m_menuTools;

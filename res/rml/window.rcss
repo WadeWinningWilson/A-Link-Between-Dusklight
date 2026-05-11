@@ -380,6 +380,11 @@ progress.progress-ongoing fill {
     border-radius: 3dp;
 }
 
+progress.progress-health fill {
+    background-color: #cc3322;
+    border-radius: 3dp;
+}
+
 button.achievement-clear {
     flex: 0 0 auto;
     align-self: center;
@@ -492,6 +497,30 @@ progress.verification-progress-bar {
     display: block;
     font-size: 14dp;
     color: rgba(224, 219, 200, 65%);
+}
+
+.mod-info-row {
+    display: flex;
+    align-items: center;
+    gap: 12dp;
+    padding: 4dp 0;
+}
+
+.mod-info-label {
+    font-family: "Fira Sans Condensed";
+    font-weight: bold;
+    opacity: 0.55;
+    flex: 0 0 80dp;
+}
+
+.mod-info-value {
+    flex: 1 1 0;
+}
+
+.mod-path {
+    font-size: 14dp;
+    word-break: break-all;
+    opacity: 0.7;
 }
 
 .modal-actions {

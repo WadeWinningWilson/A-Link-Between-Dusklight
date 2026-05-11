@@ -120,7 +120,7 @@ inline int __builtin_clz(unsigned int v) {
 #  define DUSK_GAME_EXTERN extern __declspec(dllimport)
 #  define DUSK_GAME_DATA __declspec(dllimport)
 #elif defined(TARGET_PC) && defined(_WIN32) && defined(DUSK_BUILDING_GAME)
-#  define DUSK_GAME_EXTERN extern
+#  define DUSK_GAME_EXTERN extern __declspec(dllexport)
 #  define DUSK_GAME_DATA __declspec(dllexport)
 #else
 #  define DUSK_GAME_EXTERN extern

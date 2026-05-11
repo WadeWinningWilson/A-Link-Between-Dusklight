@@ -33,7 +33,7 @@ public:
     static void onBgmSet() { mBgmSet = true; }
     static void offBgmSet() { mBgmSet = false; }
 
-    static u8 mInitFlag;
+    static DUSK_GAME_DATA u8 mInitFlag;
     static u8 mResetFlag;
     static u8 mBgmSet;
 };

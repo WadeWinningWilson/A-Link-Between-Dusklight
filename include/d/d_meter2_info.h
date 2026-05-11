@@ -2,6 +2,7 @@
 #define D_METER_D_METER2_INFO_H
 
 #include "SSystem/SComponent/c_xyz.h"
+#include "global.h"
 
 class CPaneMgr;
 class J2DTextBox;
@@ -301,7 +302,7 @@ public:
     /* 0xF3 */ u8 unk_0xf3[5];
 };
 
-extern dMeter2Info_c g_meter2_info;
+DUSK_GAME_EXTERN dMeter2Info_c g_meter2_info;
 
 void dMeter2Info_setSword(u8 i_itemId, bool i_offItemBit);
 void dMeter2Info_setCloth(u8 i_clothId, bool i_offItemBit);
@@ -848,6 +849,8 @@ inline void dMeter2Info_onTempBit(int i_bit) {
 inline void dMeter2Info_setFloatingMessage(u16 i_msgID, s16 i_msgTimer, bool i_wakuVisible) {
     g_meter2_info.setFloatingMessage(i_msgID, i_msgTimer, i_wakuVisible);
 }
+
+// Show a custom text notification using the floating-message HUD display.
 
 inline void dMeter2Info_setMiniGameCount(s8 i_count) {
     g_meter2_info.setMiniGameCount(i_count);
