@@ -144,6 +144,8 @@ struct UserSettings {
         ConfigVar<bool> freeCamera;
         ConfigVar<bool> invertCameraXAxis;
         ConfigVar<bool> invertCameraYAxis;
+        ConfigVar<bool> invertFirstPersonXAxis;
+        ConfigVar<bool> invertFirstPersonYAxis;
         ConfigVar<float> freeCameraSensitivity;
         ConfigVar<bool> debugFlyCam;
         ConfigVar<bool> debugFlyCamLockEvents;

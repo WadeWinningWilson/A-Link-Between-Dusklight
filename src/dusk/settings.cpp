@@ -81,6 +81,8 @@ UserSettings g_userSettings = {
         .freeCamera {"game.freeCamera", false},
         .invertCameraXAxis {"game.invertCameraXAxis", false},
         .invertCameraYAxis {"game.invertCameraYAxis", false},
+        .invertFirstPersonXAxis {"game.invertFirstPersonXAxis", false},
+        .invertFirstPersonYAxis {"game.invertFirstPersonYAxis", false},
         .freeCameraSensitivity {"game.freeCameraSensitivity", 1.0f},
         .debugFlyCam {"game.debugFlyCam", false},
         .debugFlyCamLockEvents {"game.debugFlyCamLockEvents", true},
@@ -170,6 +172,8 @@ void registerSettings() {
     Register(g_userSettings.game.enableMirrorMode);
     Register(g_userSettings.game.invertCameraXAxis);
     Register(g_userSettings.game.invertCameraYAxis);
+    Register(g_userSettings.game.invertFirstPersonXAxis);
+    Register(g_userSettings.game.invertFirstPersonYAxis);
     Register(g_userSettings.game.freeCameraSensitivity);
     Register(g_userSettings.game.minimalHUD);
     Register(g_userSettings.game.pauseOnFocusLost);
