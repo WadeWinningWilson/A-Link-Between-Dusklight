@@ -125,6 +125,7 @@ struct UserSettings {
         ConfigVar<int> shadowResolutionMultiplier;
         ConfigVar<bool> enableDepthOfField;
         ConfigVar<bool> enableMapBackground;
+        ConfigVar<bool> disableCutscenePillarboxing;
 
         // Audio
         ConfigVar<bool> noLowHpSound;
@@ -164,6 +165,7 @@ struct UserSettings {
         ConfigVar<bool> alwaysGreatspin;
         ConfigVar<bool> enableFastIronBoots;
         ConfigVar<bool> canTransformAnywhere;
+        ConfigVar<bool> fastRoll;
         ConfigVar<bool> fastSpinner;
         ConfigVar<bool> freeMagicArmor;
 

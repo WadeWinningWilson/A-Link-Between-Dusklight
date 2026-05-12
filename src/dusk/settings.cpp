@@ -62,6 +62,7 @@ UserSettings g_userSettings = {
         .shadowResolutionMultiplier {"game.shadowResolutionMultiplier", 1},
         .enableDepthOfField {"game.enableDepthOfField", true},
         .enableMapBackground {"game.enableMapBackground", true},
+        .disableCutscenePillarboxing {"game.disableCutscenePillarboxing", false},
 
         // Audio
         .noLowHpSound {"game.noLowHpSound", false},
@@ -101,6 +102,7 @@ UserSettings g_userSettings = {
         .alwaysGreatspin {"game.alwaysGreatspin", false},
         .enableFastIronBoots {"game.enableFastIronBoots", false},
         .canTransformAnywhere {"game.canTransformAnywhere", false},
+        .fastRoll {"game.fastRoll", false},
         .fastSpinner {"game.fastSpinner", false},
         .freeMagicArmor {"game.freeMagicArmor", false},
 
@@ -185,8 +187,10 @@ void registerSettings() {
     Register(g_userSettings.game.shadowResolutionMultiplier);
     Register(g_userSettings.game.enableDepthOfField);
     Register(g_userSettings.game.enableMapBackground);
+    Register(g_userSettings.game.disableCutscenePillarboxing);
     Register(g_userSettings.game.enableFastIronBoots);
     Register(g_userSettings.game.canTransformAnywhere);
+    Register(g_userSettings.game.fastRoll);
     Register(g_userSettings.game.freeMagicArmor);
     Register(g_userSettings.game.restoreWiiGlitches);
     Register(g_userSettings.game.enableLinkDollRotation);
