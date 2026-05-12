@@ -115,6 +115,7 @@ UserSettings g_userSettings = {
         // Tools
         .speedrunMode {"game.speedrunMode", false},
         .liveSplitEnabled {"game.liveSplitEnabled", false},
+        .showSpeedrunRTATimer {"game.showSpeedrunRTATimer", true},
         .recordingMode {"game.recordingMode", false}
     },
 
@@ -201,6 +202,7 @@ void registerSettings() {
     Register(g_userSettings.game.enableTurboKeybind);
     Register(g_userSettings.game.speedrunMode);
     Register(g_userSettings.game.liveSplitEnabled);
+    Register(g_userSettings.game.showSpeedrunRTATimer);
     Register(g_userSettings.game.recordingMode);
     Register(g_userSettings.game.fastSpinner);
     Register(g_userSettings.game.infiniteHearts);

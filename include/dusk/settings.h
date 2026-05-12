@@ -178,6 +178,7 @@ struct UserSettings {
         // Tools
         ConfigVar<bool> speedrunMode;
         ConfigVar<bool> liveSplitEnabled;
+        ConfigVar<bool> showSpeedrunRTATimer;
         ConfigVar<bool> recordingMode;
     } game;
 
