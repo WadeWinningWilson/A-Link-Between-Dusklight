@@ -116,8 +116,8 @@ UserSettings g_userSettings = {
         .speedrunMode {"game.speedrunMode", false},
         .liveSplitEnabled {"game.liveSplitEnabled", false},
         .recordingMode {"game.recordingMode", false},
+        .removeQuestMapMarkers {"game.removeQuestMapMarkers", false},
         .showSpeedrunRTATimer {"game.showSpeedrunRTATimer", true},
-        .removeQuestMapMarkers {"game.removeQuestMapMarkers", false}
     },
 
     .backend = {
