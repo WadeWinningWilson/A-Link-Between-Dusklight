@@ -626,11 +626,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                             value ? AURORA_VIEWPORT_FIT : AURORA_VIEWPORT_STRETCH);
                     },
             });
-        config_bool_select(leftPane, rightPane, getSettings().game.pauseOnFocusLost,
-            {
-                .key = "Pause on Focus Lost",
-                .isDisabled = [] { return IsMobile; },
-            });
         leftPane.register_control(
             leftPane.add_select_button({
                 .key = "Show FPS Counter",
@@ -1211,12 +1206,14 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .helpText = "Checks GitHub releases for a new Dusklight version on startup.<br/><br/>"
                             "No personal information is transmitted or collected.",
             });
-        config_bool_select(leftPane, rightPane, getSettings().game.pauseOnFocusLost,
-            {
-                .key = "Pause On Focus Lost",
-                .helpText = "Pause the game when window focus is lost.",
-                .onChange = [](bool value) { aurora_set_pause_on_focus_lost(value); },
-            });
+        if constexpr (!IsMobile) {
+            config_bool_select(leftPane, rightPane, getSettings().game.pauseOnFocusLost,
+                {
+                    .key = "Pause on Focus Lost",
+                    .helpText = "Pause the game when window focus is lost.",
+                    .onChange = [](bool value) { aurora_set_pause_on_focus_lost(value); },
+                });
+        }
         config_bool_select(leftPane, rightPane, getSettings().backend.enableAdvancedSettings,
             {
                 .key = "Enable Advanced Settings",
