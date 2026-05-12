@@ -115,9 +115,9 @@ UserSettings g_userSettings = {
         // Tools
         .speedrunMode {"game.speedrunMode", false},
         .liveSplitEnabled {"game.liveSplitEnabled", false},
+        .showSpeedrunRTATimer {"game.showSpeedrunRTATimer", true},
         .recordingMode {"game.recordingMode", false},
         .removeQuestMapMarkers {"game.removeQuestMapMarkers", false},
-        .showSpeedrunRTATimer {"game.showSpeedrunRTATimer", true},
     },
 
     .backend = {
