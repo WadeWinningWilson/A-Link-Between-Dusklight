@@ -116,6 +116,7 @@ UserSettings g_userSettings = {
         .speedrunMode {"game.speedrunMode", false},
         .liveSplitEnabled {"game.liveSplitEnabled", false},
         .recordingMode {"game.recordingMode", false},
+        .showSpeedrunRTATimer {"game.showSpeedrunRTATimer", true},
         .removeQuestMapMarkers {"game.removeQuestMapMarkers", false}
     },
 
@@ -202,6 +203,7 @@ void registerSettings() {
     Register(g_userSettings.game.enableTurboKeybind);
     Register(g_userSettings.game.speedrunMode);
     Register(g_userSettings.game.liveSplitEnabled);
+    Register(g_userSettings.game.showSpeedrunRTATimer);
     Register(g_userSettings.game.recordingMode);
     Register(g_userSettings.game.removeQuestMapMarkers);
     Register(g_userSettings.game.fastSpinner);
