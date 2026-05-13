@@ -107,6 +107,7 @@ UserSettings g_userSettings = {
         .fastRoll {"game.fastRoll", false},
         .fastSpinner {"game.fastSpinner", false},
         .freeMagicArmor {"game.freeMagicArmor", false},
+        .invincibleEnemies {"game.invincibleEnemies", false},
 
         // Technical
         .restoreWiiGlitches {"game.restoreWiiGlitches", false},
@@ -253,6 +254,7 @@ void registerSettings() {
     Register(g_userSettings.game.moonJump);
     Register(g_userSettings.game.superClawshot);
     Register(g_userSettings.game.alwaysGreatspin);
+    Register(g_userSettings.game.invincibleEnemies);
     Register(g_userSettings.game.enableFrameInterpolation);
     Register(g_userSettings.game.gyroMode);
     Register(g_userSettings.game.enableGyroAim);
