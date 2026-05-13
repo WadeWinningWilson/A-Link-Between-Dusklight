@@ -7,7 +7,6 @@
 
 #include <aurora/aurora.h>
 
-#include "ImGuiMenuGame.hpp"
 #include "ImGuiMenuTools.hpp"
 #include "ImGuiMenuRandomizer.hpp"
 #include "dusk/main.h"
@@ -45,7 +44,6 @@ private:
     ImVec2 m_dragScrollLastMousePos = {};
     std::deque<Toast> m_toasts;
 
-    ImGuiMenuGame m_menuGame;
     ImGuiMenuRandomizer m_menuRandomizer;
 
     // Keep always last

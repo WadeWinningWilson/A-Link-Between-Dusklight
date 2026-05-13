@@ -26,6 +26,7 @@
 #if TARGET_PC
 #include "dusk/imgui/ImGuiConsole.hpp"
 #include "dusk/settings.h"
+#include "dusk/speedrun.h"
 #include "dusk/randomizer/game/randomizer_context.hpp"
 #endif
 
