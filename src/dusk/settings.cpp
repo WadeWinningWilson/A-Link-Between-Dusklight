@@ -133,6 +133,34 @@ UserSettings g_userSettings = {
         .checkForUpdates {"backend.checkForUpdates", true},
         .cardFileType {"backend.cardFileType", static_cast<int>(CARD_GCIFOLDER)},
         .enableAdvancedSettings {"backend.enableAdvancedSettings", false},
+    },
+
+    // Not sure if there's a better way to declare this
+    .actionBindings = {
+        .firstPersonCamera {
+            ActionBindConfigVar{"actionBindings.firstPersonCamera_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.firstPersonCamera_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.firstPersonCamera_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.firstPersonCamera_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
+        .callMidna {
+            ActionBindConfigVar{"actionBindings.callMidna_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.callMidna_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.callMidna_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.callMidna_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
+        .openDusklightMenu {
+            ActionBindConfigVar{"actionBindings.openDusklightMenu_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.openDusklightMenu_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.openDusklightMenu_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.openDusklightMenu_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
+        .turboSpeedButton {
+            ActionBindConfigVar{"actionBindings.turboButton_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.turboButton_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.turboButton_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.turboButton_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
     }
 };
 
@@ -248,6 +276,23 @@ void registerSettings() {
     Register(g_userSettings.backend.checkForUpdates);
     Register(g_userSettings.backend.cardFileType);
     Register(g_userSettings.backend.enableAdvancedSettings);
+
+    Register(g_userSettings.actionBindings.firstPersonCamera[0]);
+    Register(g_userSettings.actionBindings.firstPersonCamera[1]);
+    Register(g_userSettings.actionBindings.firstPersonCamera[2]);
+    Register(g_userSettings.actionBindings.firstPersonCamera[3]);
+    Register(g_userSettings.actionBindings.callMidna[0]);
+    Register(g_userSettings.actionBindings.callMidna[1]);
+    Register(g_userSettings.actionBindings.callMidna[2]);
+    Register(g_userSettings.actionBindings.callMidna[3]);
+    Register(g_userSettings.actionBindings.openDusklightMenu[0]);
+    Register(g_userSettings.actionBindings.openDusklightMenu[1]);
+    Register(g_userSettings.actionBindings.openDusklightMenu[2]);
+    Register(g_userSettings.actionBindings.openDusklightMenu[3]);
+    Register(g_userSettings.actionBindings.turboSpeedButton[0]);
+    Register(g_userSettings.actionBindings.turboSpeedButton[1]);
+    Register(g_userSettings.actionBindings.turboSpeedButton[2]);
+    Register(g_userSettings.actionBindings.turboSpeedButton[3]);
 }
 
 // Transient settings

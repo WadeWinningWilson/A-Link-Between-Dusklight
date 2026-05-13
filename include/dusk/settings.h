@@ -1,6 +1,8 @@
 #ifndef DUSK_CONFIG_H
 #define DUSK_CONFIG_H
 
+#include <array>
+
 #include "dusk/config_var.hpp"
 
 namespace dusk {
@@ -197,6 +199,14 @@ struct UserSettings {
         ConfigVar<int> cardFileType;
         ConfigVar<bool> enableAdvancedSettings;
     } backend;
+
+    // Arrays of size 4 for 4 ports
+    struct {
+        std::array<ActionBindConfigVar, 4> firstPersonCamera;
+        std::array<ActionBindConfigVar, 4> callMidna;
+        std::array<ActionBindConfigVar, 4> openDusklightMenu;
+        std::array<ActionBindConfigVar, 4> turboSpeedButton;
+    } actionBindings;
 };
 
 UserSettings& getSettings();
