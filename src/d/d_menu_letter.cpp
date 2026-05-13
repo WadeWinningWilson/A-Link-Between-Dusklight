@@ -17,6 +17,10 @@
 #include "d/d_msg_scrn_arrow.h"
 #include "d/d_lib.h"
 
+#ifdef TARGET_PC
+#include "dusk/achievements.h"
+#endif
+
 #if VERSION == VERSION_GCN_JPN
 #define D_MENU_LETTER_LINE_MAX 9
 #else
@@ -514,6 +518,10 @@ void dMenu_Letter_c::read_open_init() {
     setAButtonString(0);
     setBButtonString(0);
     mpBlackTex->setAlpha(0);
+
+    #ifdef TARGET_PC
+        dusk::AchievementSystem::get().signal("open_letter");
+    #endif
 }
 
 void dMenu_Letter_c::read_open_move() {
@@ -957,7 +965,8 @@ void dMenu_Letter_c::screenSetBase() {
     }
     if (field_0x374 > 1) {
         J2DPane* pJVar6 = mpBaseScreen->search('pi_n');
-        f32 dVar18 = field_0x1f0[1]->getBounds().i.x - field_0x1f0[0]->getBounds().i.x;
+        f32 x1 = field_0x1f0[1]->getBounds().i.x;
+        f32 dVar18 = x1 - field_0x1f0[0]->getBounds().i.x;
         f32 dVar17 = dVar18 * (field_0x374 - 1);
         f32 dVar16 = (pJVar6->getWidth() / 2) - (dVar17 / 2);
         for (int i = 0; i < 9; i++) {

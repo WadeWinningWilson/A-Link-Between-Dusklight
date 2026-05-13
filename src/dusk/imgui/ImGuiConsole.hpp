@@ -6,12 +6,9 @@
 #include <string_view>
 
 #include <aurora/aurora.h>
-#include <SDL3/SDL_touch.h>
 
-#include "ImGuiFirstRunPreset.hpp"
-#include "ImGuiMenuGame.hpp"
 #include "ImGuiMenuTools.hpp"
-#include "ImGuiPreLaunchWindow.hpp"
+#include "dusk/main.h"
 #include "imgui.h"
 
 union SDL_Event;
@@ -26,7 +23,8 @@ public:
     void PreDraw();
     void PostDraw();
 
-	static bool CheckMenuViewToggle(ImGuiKey key, bool& active);
+    static bool CheckMenuViewToggle(ImGuiKey key, bool& active);
+    void AddToast(std::string_view message, float duration = 3.f);
 
 private:
     struct Toast {
@@ -41,17 +39,9 @@ private:
 
     bool m_isHidden = true;
     bool m_isLaunchInitialized = false;
-    bool m_touchTapActive = false;
-    bool m_touchTapMoved = false;
-    SDL_FingerID m_touchTapFingerId = 0;
-    ImVec2 m_touchTapStartPos = {};
     ImGuiWindow* m_dragScrollWindow = nullptr;
     ImVec2 m_dragScrollLastMousePos = {};
     std::deque<Toast> m_toasts;
-
-    ImGuiFirstRunPreset m_firstRunPreset;
-    ImGuiMenuGame m_menuGame;
-    ImGuiPreLaunchWindow m_preLaunchWindow;
 
     // Keep always last
     ImGuiMenuTools m_menuTools;
@@ -70,13 +60,12 @@ std::string BytesToString(size_t bytes);
 void SetOverlayWindowLocation(int corner);
 bool ShowCornerContextMenu(int& corner, int avoidCorner);
 void ImGuiStringViewText(std::string_view text);
+void DuskToast(std::string_view message, float duration = 3.f);
 void ImGuiBeginGroupPanel(const char* name, const ImVec2& size);
 void ImGuiEndGroupPanel();
 void ImGuiTextCenter(std::string_view text);
 bool ImGuiButtonCenter(std::string_view text);
 float ImGuiScale();
 }  // namespace dusk
-
-void DuskDebugPad();
 
 #endif  // DUSK_IMGUI_HPP

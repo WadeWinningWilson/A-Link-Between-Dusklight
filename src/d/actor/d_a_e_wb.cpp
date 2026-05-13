@@ -5852,6 +5852,8 @@ static int daE_WB_Create(fopAc_ac_c* actor) {
             daE_WB_Execute(i_this);
             c_start = 0;
 
+            // Note: this flag makes king bulblin 1 instant die when set, as it only requires 2 laps
+            // for insta-kill to trigger.
             if (dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[88])) {
                 i_this->lap_num = 1;
             }

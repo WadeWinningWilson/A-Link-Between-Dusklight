@@ -23,8 +23,8 @@ aurora::Module DuskConfigLog("dusk::config");
 static absl::flat_hash_map<std::string_view, ConfigVarBase*> RegisteredConfigVars;
 static bool RegistrationDone = false;
 
-static std::string GetConfigJsonPath() {
-    return (dusk::ConfigPath / ConfigFileName).string();
+static std::u8string GetConfigJsonPath() {
+    return (dusk::ConfigPath / ConfigFileName).u8string();
 }
 
 ConfigVarBase::ConfigVarBase(const char* name, const ConfigImplBase* impl) : name(name), registered(false), layer(ConfigVarLayer::Default), impl(impl) {
@@ -154,7 +154,9 @@ namespace dusk::config {
     template class ConfigImpl<f64>;
     template class ConfigImpl<std::string>;
     template class ConfigImpl<dusk::BloomMode>;
+    template class ConfigImpl<dusk::DiscVerificationState>;
     template class ConfigImpl<dusk::GameLanguage>;
+    template class ConfigImpl<dusk::GyroMode>;
 }
 
 void dusk::config::Register(ConfigVarBase& configVar) {
@@ -187,7 +189,7 @@ void dusk::config::LoadFromUserPreferences() {
     if (configJsonPath.empty()) {
         return;
     }
-    LoadFromFileName(configJsonPath.c_str());
+    LoadFromFileName(reinterpret_cast<const char*>(configJsonPath.c_str()));
 }
 
 static void LoadFromPath(const char* path) {
@@ -239,7 +241,9 @@ void dusk::config::Save() {
         return;
     }
 
-    DuskConfigLog.info("Saving config to '{}'", configJsonPath);
+    DuskConfigLog.info(
+        "Saving config to '{}'",
+        reinterpret_cast<const char*>(configJsonPath.c_str()));
 
     json j;
 
@@ -249,7 +253,7 @@ void dusk::config::Save() {
         }
     }
 
-    io::FileStream::WriteAllText(configJsonPath.c_str(), j.dump(4));
+    io::FileStream::WriteAllText(reinterpret_cast<const char*>(configJsonPath.c_str()), j.dump(4));
 }
 
 ConfigVarBase* dusk::config::GetConfigVar(std::string_view name) {
@@ -259,4 +263,10 @@ ConfigVarBase* dusk::config::GetConfigVar(std::string_view name) {
     }
 
     return nullptr;
+}
+
+void dusk::config::EnumerateRegistered(std::function<void(ConfigVarBase&)> callback) {
+    for (auto& pair : RegisteredConfigVars) {
+        callback(*pair.second);
+    }
 }

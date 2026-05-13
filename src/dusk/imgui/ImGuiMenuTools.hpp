@@ -2,10 +2,10 @@
 #define DUSK_IMGUI_MENUTOOLS_HPP
 
 #include <aurora/aurora.h>
+#include <queue>
 #include <string>
 
 #include "imgui.h"
-#include "ImGuiAchievements.hpp"
 #include "ImGuiSaveEditor.hpp"
 #include "ImGuiStateShare.hpp"
 
@@ -23,12 +23,13 @@ namespace dusk {
 		void ShowStubLog();
 		void ShowMapLoader();
         void ShowBloomWindow();
+        void ShowEnhancedLightingWindow();
         void ShowPlayerInfo();
         void ShowAudioDebug();
         void ShowSaveEditor();
         void ShowStateShare();
-        void ShowAchievements();
-        void notifyAchievement(std::string name);
+        void ShowInputViewer();
+        void ShowActorSpawner();
 
     private:
 		bool m_showDebugOverlay = false;
@@ -46,6 +47,7 @@ namespace dusk {
 		bool m_showMapLoader = false;
 
         bool m_showBloomWindow = false;
+        bool m_showEnhancedLightingWindow = false;
 
         bool m_showAudioDebug = false;
 		struct {
@@ -69,8 +71,11 @@ namespace dusk {
         bool m_showStateShare = false;
         ImGuiStateShare m_stateShare;
 
-        bool m_showAchievements = false;
-        ImGuiAchievements m_achievementsWindow;
+        bool m_showInputViewer = false;
+        bool m_showInputViewerGyro = false;
+        bool m_showActorSpawner = false;
+        int m_inputOverlayCorner = 3;
+        std::string m_controllerName;
     };
 }
 

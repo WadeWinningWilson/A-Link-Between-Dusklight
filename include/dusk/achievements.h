@@ -4,16 +4,18 @@
 #include <functional>
 #include <queue>
 #include <string>
+#include <string_view>
+#include <unordered_set>
 #include <vector>
 #include "nlohmann/json.hpp"
 
 namespace dusk {
 
 enum class AchievementCategory : uint8_t {
-    Story,
-    Collection,
     Challenge,
+    Collection,
     Minigame,
+    Misc,
     Glitched
 };
 
@@ -40,10 +42,13 @@ public:
     void save();
     void tick();
     void clearAll();
+    void clearOne(const char* key);
+
+    // Signals are visible to all achievement checks within the same tick, then cleared.
+    void signal(const char* key);
+    bool hasSignal(const char* key) const;
 
     std::vector<Achievement> getAchievements() const;
-    bool hasPendingUnlock() const { return !m_pendingUnlocks.empty(); }
-    std::string consumePendingUnlock();
 
 private:
     struct Entry {
@@ -57,9 +62,9 @@ private:
     void processEntry(Entry& e);
 
     std::vector<Entry> m_entries;
+    std::unordered_set<std::string_view> m_signals;
     bool m_loaded = false;
     bool m_dirty = false;
-    std::queue<std::string> m_pendingUnlocks;
 };
 
 } // namespace dusk

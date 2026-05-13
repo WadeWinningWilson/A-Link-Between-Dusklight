@@ -51,6 +51,7 @@
 #include "d/actor/d_a_ni.h"
 #include "d/d_s_play.h"
 
+#include "dusk/frame_interpolation.h"
 #include "dusk/settings.h"
 #include "res/Object/Alink.h"
 #include <cstring>
@@ -4962,13 +4963,16 @@ int daAlink_c::create() {
 
         setArcName(checkWolf());
         setOriginalHeap(&mpArcHeap, 0xA2800);
+        JKRHEAP_NAME(mpArcHeap, "Alink ArcHeap");
         if (dComIfG_resLoad(&mPhaseReq, mArcName, mpArcHeap) != cPhs_COMPLEATE_e) {
             return cPhs_INIT_e;
         }
 
         setShieldArcName();
         setOriginalHeap(&mpShieldArcHeap, 0x7000);
-        if (dComIfG_resLoad(&mShieldPhaseReq, mShieldArcName, mpShieldArcHeap) != cPhs_COMPLEATE_e) {
+        JKRHEAP_NAME(mpShieldArcHeap, "Alink ShieldArcHeap");
+        if (dComIfG_resLoad(&mShieldPhaseReq, mShieldArcName, mpShieldArcHeap) != cPhs_COMPLEATE_e)
+        {
             return cPhs_INIT_e;
         }
 
@@ -14784,6 +14788,10 @@ void daAlink_c::deleteEquipItem(BOOL i_isPlaySound, BOOL i_isDeleteKantera) {
     mIronBallChainPos = NULL;
     mIronBallChainAngle = NULL;
     field_0x3848 = NULL;
+#if TARGET_PC
+    mIBChainInterpPrevValid = false;
+    mIBChainInterpCurrValid = false;
+#endif
     field_0x0774 = NULL;
     field_0x0778 = NULL;
     mpHookshotLinChk = NULL;
@@ -16106,6 +16114,9 @@ int daAlink_c::procSlideLand() {
 
 int daAlink_c::procFrontRollInit() {
     BOOL is_guard_anime = checkUpperGuardAnime();
+#ifdef TARGET_PC    
+    const f32 fastRollMultiplier = dusk::getSettings().game.fastRoll ? 2.0f : 1.0f;
+#endif
 
     if (mProcID == PROC_FRONT_ROLL && mDemo.getDemoMode() == daPy_demo_c::DEMO_FRONT_ROLL_e) {
         return 0;
@@ -16121,10 +16132,16 @@ int daAlink_c::procFrontRollInit() {
         roll_anm_speed = mpHIO->mFrontRoll.m.mRollAnm.mStartFrame;
     }
 
-    setSingleAnime(ANM_FRONT_ROLL, mpHIO->mFrontRoll.m.mRollAnm.mSpeed, roll_anm_speed,
+    setSingleAnime(ANM_FRONT_ROLL,
+#ifdef TARGET_PC        
+                   mpHIO->mFrontRoll.m.mRollAnm.mSpeed * fastRollMultiplier, 
+#else
+                   mpHIO->mFrontRoll.m.mRollAnm.mSpeed,
+#endif
+                   roll_anm_speed,
                    mpHIO->mFrontRoll.m.mRollAnm.mEndFrame,
                    mpHIO->mFrontRoll.m.mRollAnm.mInterpolation);
-
+                   
     mNormalSpeed = speedF * mpHIO->mFrontRoll.m.mSpeedRate + mpHIO->mFrontRoll.m.mInitSpeed;
 
     f32 max_speed = mpHIO->mFrontRoll.m.mInitSpeed + mpHIO->mMove.m.mMaxSpeed * mpHIO->mFrontRoll.m.mSpeedRate;
@@ -16137,10 +16154,19 @@ int daAlink_c::procFrontRollInit() {
     }
 
     if (checkNoResetFlg0(FLG0_WATER_IN_MOVE)) {
-        mNormalSpeed *= mpHIO->mItem.mIronBoots.m.mWaterVelocityX;
+#if TARGET_PC
+        if (!(dusk::getSettings().game.enableFastIronBoots))
+#endif
+        {
+            mNormalSpeed *= mpHIO->mItem.mIronBoots.m.mWaterVelocityX;
+        }
     } else if (checkHeavyStateOn(TRUE, TRUE)) {
         mNormalSpeed *= mHeavySpeedMultiplier;
     }
+
+#ifdef TARGET_PC        
+    mNormalSpeed *= fastRollMultiplier;
+#endif
 
     current.angle.y = shape_angle.y;
     voiceStart(Z2SE_AL_V_BACKTEN);
@@ -16272,8 +16298,13 @@ int daAlink_c::procFrontRollCrashInit() {
     speed.y = mpHIO->mFrontRoll.m.mCrashSpeedV;
 
     if (checkNoResetFlg0(FLG0_WATER_IN_MOVE)) {
-        mNormalSpeed *= mpHIO->mItem.mIronBoots.m.mWaterVelocityX;
-        speed.y *= mpHIO->mItem.mIronBoots.m.mWaterVelocityY;
+#if TARGET_PC
+        if (!(dusk::getSettings().game.enableFastIronBoots))
+#endif
+        {
+            mNormalSpeed *= mpHIO->mItem.mIronBoots.m.mWaterVelocityX;
+            speed.y *= mpHIO->mItem.mIronBoots.m.mWaterVelocityY;
+        }
     }
 
     ANGLE_ADD_2(current.angle.y, 0x8000);
@@ -16367,6 +16398,9 @@ int daAlink_c::procFrontRollSuccess() {
 
 int daAlink_c::procSideRollInit(int param_0) {
     BOOL is_prev_guardAnm = checkUpperGuardAnime();
+#ifdef TARGET_PC            
+    const f32 fastRollMultiplier = dusk::getSettings().game.fastRoll ? 2.0f : 1.0f;
+#endif
 
     if (!commonProcInitNotSameProc(PROC_SIDE_ROLL)) {
         return 0;
@@ -16383,17 +16417,30 @@ int daAlink_c::procSideRollInit(int param_0) {
         current.angle.y = shape_angle.y + -0x4000;
     }
 
-    setSingleAnime(anmID, mpHIO->mGuard.mTurnMove.m.mSideRollAnmSpeed,
+    setSingleAnime(anmID, 
+#ifdef TARGET_PC        
+                   mpHIO->mGuard.mTurnMove.m.mSideRollAnmSpeed * fastRollMultiplier,
+#else
+                   mpHIO->mGuard.mTurnMove.m.mSideRollAnmSpeed,
+#endif
                    mpHIO->mGuard.mTurnMove.m.mTurnAnm.mStartFrame,
                    mpHIO->mGuard.mTurnMove.m.mTurnAnm.mEndFrame,
                    mpHIO->mGuard.mTurnMove.m.mTurnAnm.mInterpolation);
     mNormalSpeed = mpHIO->mGuard.mTurnMove.m.mSideRollSpeed;
 
     if (checkNoResetFlg0(FLG0_WATER_IN_MOVE)) {
-        mNormalSpeed *= mpHIO->mItem.mIronBoots.m.mWaterVelocityX;
+#if TARGET_PC
+        if (!(dusk::getSettings().game.enableFastIronBoots))
+#endif
+        {
+            mNormalSpeed *= mpHIO->mItem.mIronBoots.m.mWaterVelocityX;
+        }
     } else if (checkHeavyStateOn(TRUE, TRUE)) {
         mNormalSpeed *= mHeavySpeedMultiplier;
     }
+#ifdef TARGET_PC        
+    mNormalSpeed *= fastRollMultiplier;
+#endif
 
     setFootEffectProcType(0);
     field_0x2f9d = 4;
@@ -19714,6 +19761,27 @@ int daAlink_c::draw() {
                 )
             {
                 dComIfGd_getOpaListDark()->entryImm(mpHookChain, 0);
+
+#if TARGET_PC
+                if (dusk::getSettings().game.enableFrameInterpolation &&
+                    mEquipItem == dItemNo_IRONBALL_e &&
+                    mIronBallChainPos != NULL && mIronBallChainAngle != NULL)
+                {
+                    if (mIBChainInterpCurrValid) {
+                        memcpy(mIBChainInterpPrevPos, mIBChainInterpCurrPos, IRON_BALL_CHAIN_COUNT * sizeof(cXyz));
+                        memcpy(mIBChainInterpPrevAngle, mIBChainInterpCurrAngle, IRON_BALL_CHAIN_COUNT * sizeof(csXyz));
+                        mIBChainInterpPrevHandRoot = mIBChainInterpCurrHandRoot;
+                        mIBChainInterpPrevValid = true;
+                    }
+
+                    memcpy(mIBChainInterpCurrPos, mIronBallChainPos, IRON_BALL_CHAIN_COUNT * sizeof(cXyz));
+                    memcpy(mIBChainInterpCurrAngle, mIronBallChainAngle, IRON_BALL_CHAIN_COUNT * sizeof(csXyz));
+                    mIBChainInterpCurrHandRoot = mHookshotTopPos;
+                    mIBChainInterpCurrValid = true;
+
+                    dusk::frame_interp::add_interpolation_callback(&ironBallChainInterpCallback, this);
+                }
+#endif
             }
         }
 

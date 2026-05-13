@@ -24,9 +24,10 @@
 #include "d/actor/d_a_horse.h"
 #include <cstring>
 
+#if TARGET_PC
 #include "dusk/memory.h"
-
-#include "dusk/memory.h"
+#include "dusk/settings.h"
+#endif
 
 int dMeter2_c::_create() {
     stage_stag_info_class* stag_info = dComIfGp_getStageStagInfo();
@@ -316,6 +317,14 @@ int dMeter2_c::_execute() {
 }
 
 int dMeter2_c::_draw() {
+    #if TARGET_PC
+    if (dusk::getSettings().game.recordingMode || dusk::getSettings().game.minimalHUD ||
+        dusk::getSettings().game.debugFlyCam)
+    {
+        return 1;
+    }
+    #endif
+
     if (mpMap != NULL) {
         mpMap->_draw();
     }
@@ -423,12 +432,6 @@ void dMeter2_c::setLifeZero() {
 
 void dMeter2_c::checkStatus() {
     mStatus = 0;
-
-    #if TARGET_PC
-    if (dusk::getSettings().game.disableMainHUD) {
-        mStatus |= 0xF0000000;
-    }
-    #endif
 
     field_0x12c = field_0x128;
 

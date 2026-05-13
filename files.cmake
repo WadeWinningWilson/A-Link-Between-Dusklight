@@ -1,7 +1,7 @@
 
 set(DOLZEL_FILES
         src/m_Do/m_Do_main.cpp
-        src/m_Do/m_Do_printf.cpp
+        #src/m_Do/m_Do_printf.cpp
         src/m_Do/m_Do_audio.cpp
         src/m_Do/m_Do_controller_pad.cpp
         #src/m_Do/m_Re_controller_pad.cpp
@@ -1420,6 +1420,8 @@ set(DUSK_FILES
         src/dusk/asserts.cpp
         src/dusk/config.cpp
         src/dusk/crash_reporting.cpp
+        src/dusk/data.cpp
+        src/dusk/data.hpp
         src/dusk/endian.cpp
         src/dusk/extras.c
         src/dusk/file_select.cpp
@@ -1429,45 +1431,104 @@ set(DUSK_FILES
         src/dusk/globals.cpp
         src/dusk/gyro.cpp
 		src/dusk/gamepad_color.cpp
+		src/dusk/autosave.cpp
+        src/dusk/http/http.hpp
         src/dusk/io.cpp
         src/dusk/layout.cpp
         src/dusk/logging.cpp
         src/dusk/settings.cpp
+        src/dusk/speedrun.cpp
         src/dusk/stubs.cpp
+        src/dusk/update_check.cpp
+        src/dusk/update_check.hpp
         #src/dusk/m_Do_ext_dusk.cpp
         src/dusk/imgui/ImGuiConfig.hpp
         src/dusk/imgui/ImGuiConsole.hpp
         src/dusk/imgui/ImGuiConsole.cpp
         src/dusk/imgui/ImGuiEngine.cpp
         src/dusk/imgui/ImGuiEngine.hpp
-        src/dusk/imgui/ImGuiMenuGame.cpp
-        src/dusk/imgui/ImGuiMenuGame.hpp
         src/dusk/imgui/ImGuiBloomWindow.cpp
         src/dusk/imgui/ImGuiBloomWindow.hpp
+        src/dusk/imgui/ImGuiEnhancedLightingWindow.cpp
+        src/dusk/imgui/ImGuiEnhancedLightingWindow.hpp
         src/dusk/imgui/ImGuiMenuTools.cpp
         src/dusk/imgui/ImGuiMenuTools.hpp
-        src/dusk/imgui/ImGuiPreLaunchWindow.cpp
-        src/dusk/imgui/ImGuiPreLaunchWindow.hpp
-        src/dusk/imgui/ImGuiFirstRunPreset.hpp
-        src/dusk/imgui/ImGuiFirstRunPreset.cpp
+        src/dusk/imgui/ImGuiActorSpawner.cpp
         src/dusk/imgui/ImGuiProcessOverlay.cpp
         src/dusk/imgui/ImGuiCameraOverlay.cpp
         src/dusk/imgui/ImGuiHeapOverlay.cpp
-        src/dusk/imgui/ImGuiDebugPad.cpp
         src/dusk/imgui/ImGuiControllerOverlay.cpp
         src/dusk/imgui/ImGuiStubLog.cpp
         src/dusk/imgui/ImGuiMapLoader.cpp
         src/dusk/imgui/ImGuiSaveEditor.cpp
         src/dusk/imgui/ImGuiStateShare.hpp
         src/dusk/imgui/ImGuiStateShare.cpp
-        src/dusk/imgui/ImGuiAchievements.hpp
-        src/dusk/imgui/ImGuiAchievements.cpp
+        src/dusk/ui/achievements.cpp
+        src/dusk/ui/achievements.hpp
+        src/dusk/ui/bool_button.cpp
+        src/dusk/ui/bool_button.hpp
+        src/dusk/ui/button.cpp
+        src/dusk/ui/button.hpp
+        src/dusk/ui/component.cpp
+        src/dusk/ui/component.hpp
+        src/dusk/ui/controller_config.cpp
+        src/dusk/ui/controller_config.hpp
+        src/dusk/ui/document.cpp
+        src/dusk/ui/document.hpp
+        src/dusk/ui/editor.cpp
+        src/dusk/ui/editor.hpp
+        src/dusk/ui/event.cpp
+        src/dusk/ui/event.hpp
+        src/dusk/ui/graphics_tuner.cpp
+        src/dusk/ui/graphics_tuner.hpp
+        src/dusk/ui/input.cpp
+        src/dusk/ui/input.hpp
+        src/dusk/ui/modal.cpp
+        src/dusk/ui/modal.hpp
+        src/dusk/ui/nav_types.hpp
+        src/dusk/ui/number_button.cpp
+        src/dusk/ui/number_button.hpp
+        src/dusk/ui/overlay.cpp
+        src/dusk/ui/overlay.hpp
+        src/dusk/ui/pane.cpp
+        src/dusk/ui/pane.hpp
+        src/dusk/ui/menu_bar.cpp
+        src/dusk/ui/menu_bar.hpp
+        src/dusk/ui/prelaunch.cpp
+        src/dusk/ui/prelaunch.hpp
+        src/dusk/ui/preset.cpp
+        src/dusk/ui/preset.hpp
+        src/dusk/ui/reporting.cpp
+        src/dusk/ui/reporting.hpp
+        src/dusk/ui/select_button.cpp
+        src/dusk/ui/select_button.hpp
+        src/dusk/ui/settings.cpp
+        src/dusk/ui/settings.hpp
+        src/dusk/ui/string_button.cpp
+        src/dusk/ui/string_button.hpp
+        src/dusk/ui/tab_bar.cpp
+        src/dusk/ui/tab_bar.hpp
+        src/dusk/ui/ui.cpp
+        src/dusk/ui/ui.hpp
+        src/dusk/ui/window.cpp
+        src/dusk/ui/window.hpp
         src/dusk/achievements.cpp
         src/dusk/iso_validate.cpp
+        src/dusk/livesplit.cpp
         src/dusk/offset_ptr.cpp
         src/dusk/OSContext.cpp
+        src/dusk/OSReport.cpp
         src/dusk/OSThread.cpp
         src/dusk/OSMutex.cpp
+        src/dusk/discord.cpp
+        src/dusk/discord.hpp
         src/dusk/discord_presence.cpp
         src/dusk/version.cpp
+)
+
+set(DUSK_HTTP_BACKEND_FILES
+        src/dusk/http/no_backend.cpp
+        src/dusk/http/curl.cpp
+        src/dusk/http/winhttp.cpp
+        src/dusk/http/url_session.mm
 )
