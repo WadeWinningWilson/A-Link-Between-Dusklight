@@ -184,6 +184,7 @@ void reset_for_speedrun_mode() {
 
     getSettings().game.infiniteHearts.setSpeedrunValue(false);
     getSettings().game.infiniteArrows.setSpeedrunValue(false);
+    getSettings().game.infiniteSeeds.setSpeedrunValue(false);
     getSettings().game.infiniteBombs.setSpeedrunValue(false);
     getSettings().game.infiniteOil.setSpeedrunValue(false);
     getSettings().game.infiniteOxygen.setSpeedrunValue(false);
