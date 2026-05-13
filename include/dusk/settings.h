@@ -158,6 +158,7 @@ struct UserSettings {
         // Cheats
         ConfigVar<bool> infiniteHearts;
         ConfigVar<bool> infiniteArrows;
+        ConfigVar<bool> infiniteSeeds;
         ConfigVar<bool> infiniteBombs;
         ConfigVar<bool> infiniteOil;
         ConfigVar<bool> infiniteOxygen;
