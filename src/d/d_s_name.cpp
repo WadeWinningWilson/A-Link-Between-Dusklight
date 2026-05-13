@@ -20,6 +20,7 @@
 #include "m_Do/m_Do_machine.h"
 #include "m_Do/m_Do_main.h"
 #include "m_Do/m_Do_mtx.h"
+#include <dusk/autosave.h>
 
 #if TARGET_PC
 #define SHOW_TV_SETTINGS_SCREEN (this->mShowTvSettingsScreen)
@@ -423,6 +424,8 @@ void dScnName_c::changeGameScene() {
                 dusk::m_speedrunInfo.startRun();
             }
         }
+
+        toggleAutoSave(true);
 #endif
     }
 }
