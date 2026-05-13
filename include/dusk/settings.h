@@ -171,7 +171,9 @@ struct UserSettings {
         ConfigVar<bool> canTransformAnywhere;
         ConfigVar<bool> fastRoll;
         ConfigVar<bool> fastSpinner;
-        ConfigVar<bool> freeMagicArmor;
+        ConfigVar<bool> magicArmorNoDrain;
+        ConfigVar<bool> magicArmorNoDamageLoss;
+        ConfigVar<bool> magicArmorNoHeavy;
         ConfigVar<bool> invincibleEnemies;
 
         // Technical

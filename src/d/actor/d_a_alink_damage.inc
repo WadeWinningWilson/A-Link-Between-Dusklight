@@ -192,7 +192,7 @@ int daAlink_c::setDamagePoint(int i_dmgAmount, BOOL i_checkZoraMag, BOOL i_setDm
 
     if (checkMagicArmorNoDamage()) {
 #if TARGET_PC
-        if(dusk::getSettings().game.freeMagicArmor) {
+        if(dusk::getSettings().game.magicArmorNoDamageLoss) {
             i_dmgAmount = 0;
         }
 #endif

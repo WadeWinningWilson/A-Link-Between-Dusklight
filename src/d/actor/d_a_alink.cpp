@@ -12738,7 +12738,7 @@ void daAlink_c::setMagicArmorBrk(int i_status) {
 
 BOOL daAlink_c::checkMagicArmorHeavy() const {
 #if TARGET_PC
-    return checkMagicArmorWearAbility() && (dComIfGs_getRupee() == 0 && !dusk::getSettings().game.freeMagicArmor);
+    return checkMagicArmorWearAbility() && (dComIfGs_getRupee() == 0 && !dusk::getSettings().game.magicArmorNoHeavy);
 #else
     return checkMagicArmorWearAbility() && dComIfGs_getRupee() == 0;
 #endif
@@ -18711,7 +18711,7 @@ int daAlink_c::execute() {
 #if TARGET_PC
             // This handles rupee drain and transitions between rupees/no rupees
             // We can skip all of that if the magic armor doesn't use rupees
-            if (!dusk::getSettings().game.freeMagicArmor && checkMagicArmorWearAbility() && mClothesChangeWaitTimer == 0) {
+            if (!dusk::getSettings().game.magicArmorNoDrain && checkMagicArmorWearAbility() && mClothesChangeWaitTimer == 0) {
 #else
             if (checkMagicArmorWearAbility() && mClothesChangeWaitTimer == 0) {
 #endif
@@ -18724,7 +18724,8 @@ int daAlink_c::execute() {
                     }
                 }
 
-                if (dComIfGs_getRupee() == 0 && field_0x2fd7 != 0) {
+                if (dComIfGs_getRupee() == 0 && field_0x2fd7 != 0 IF_DUSK( && !dusk::getSettings().game.magicArmorNoHeavy))
+                {
                     setMagicArmorBrk(0);
                     seStartOnlyReverb(Z2SE_AL_M_ARMER_TURNOFF);
                     mZ2Link.setLinkState(5);

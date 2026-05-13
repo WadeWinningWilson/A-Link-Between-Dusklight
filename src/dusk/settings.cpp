@@ -106,7 +106,9 @@ UserSettings g_userSettings = {
         .canTransformAnywhere {"game.canTransformAnywhere", false},
         .fastRoll {"game.fastRoll", false},
         .fastSpinner {"game.fastSpinner", false},
-        .freeMagicArmor {"game.freeMagicArmor", false},
+        .magicArmorNoDrain {"game.magicArmorNoDrain", false},
+        .magicArmorNoDamageLoss {"game.magicArmorNoDamageLoss", false},
+        .magicArmorNoHeavy {"game.magicArmorNoHeavy", false},
         .invincibleEnemies {"game.invincibleEnemies", false},
 
         // Technical
@@ -226,7 +228,9 @@ void registerSettings() {
     Register(g_userSettings.game.enableFastIronBoots);
     Register(g_userSettings.game.canTransformAnywhere);
     Register(g_userSettings.game.fastRoll);
-    Register(g_userSettings.game.freeMagicArmor);
+    Register(g_userSettings.game.magicArmorNoDrain);
+    Register(g_userSettings.game.magicArmorNoDamageLoss);
+    Register(g_userSettings.game.magicArmorNoHeavy);
     Register(g_userSettings.game.restoreWiiGlitches);
     Register(g_userSettings.game.enableLinkDollRotation);
     Register(g_userSettings.game.enableAchievementToasts);

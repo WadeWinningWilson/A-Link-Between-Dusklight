@@ -200,7 +200,9 @@ void reset_for_speedrun_mode() {
     getSettings().game.canTransformAnywhere.setSpeedrunValue(false);
     getSettings().game.fastRoll.setSpeedrunValue(false);
     getSettings().game.fastSpinner.setSpeedrunValue(false);
-    getSettings().game.freeMagicArmor.setSpeedrunValue(false);
+    getSettings().game.magicArmorNoDrain.setSpeedrunValue(false);
+    getSettings().game.magicArmorNoDamageLoss.setSpeedrunValue(false);
+    getSettings().game.magicArmorNoHeavy.setSpeedrunValue(false);
     getSettings().game.invincibleEnemies.setSpeedrunValue(false);
 
     getSettings().game.pauseOnFocusLost.setSpeedrunValue(false);
@@ -1173,8 +1175,93 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Makes Link's roll animation and movement twice as fast.");
         addCheat("Fast Spinner", getSettings().game.fastSpinner,
             "Speeds up Spinner movement while holding R.");
-        addCheat("Free Magic Armor", getSettings().game.freeMagicArmor,
-            "Lets the magic armor work without consuming rupees.");
+
+       leftPane.register_control(
+            leftPane.add_select_button({
+                .key = "Magic Armor Mode",
+                .getValue =
+                    [] {
+                        const bool noDrain = getSettings().game.magicArmorNoDrain.getValue();
+                        const bool noDamageLoss = getSettings().game.magicArmorNoDamageLoss.getValue();
+                        const bool noHeavy = getSettings().game.magicArmorNoHeavy.getValue();
+
+                        if (!noDrain && !noDamageLoss && !noHeavy) {
+                            return Rml::String{"Off"};
+                        }
+
+                        if (noDrain && noDamageLoss && noHeavy) {
+                            return Rml::String{"All"};
+                        }
+
+                        return Rml::String{"Some"};
+                    },
+                .isModified =
+                    [] {
+                        const auto& noDrain = getSettings().game.magicArmorNoDrain;
+                        const auto& noDamageLoss = getSettings().game.magicArmorNoDamageLoss;
+                        const auto& noHeavy = getSettings().game.magicArmorNoHeavy;
+
+                        return noDrain.getValue() != noDrain.getDefaultValue() ||
+                               noDamageLoss.getValue() != noDamageLoss.getDefaultValue() ||
+                               noHeavy.getValue() != noHeavy.getDefaultValue();
+                    },
+            }),
+            rightPane, [](Pane& pane) {
+                pane.clear();
+                pane.add_button("Select All").on_pressed([] {
+                    mDoAud_seStartMenu(kSoundItemChange);
+                    getSettings().game.magicArmorNoDrain.setValue(true);
+                    getSettings().game.magicArmorNoDamageLoss.setValue(true);
+                    getSettings().game.magicArmorNoHeavy.setValue(true);
+                    config::Save();
+                });
+                pane.add_button("Select None").on_pressed([] {
+                    mDoAud_seStartMenu(kSoundItemChange);
+                    getSettings().game.magicArmorNoDrain.setValue(false);
+                    getSettings().game.magicArmorNoDamageLoss.setValue(false);
+                    getSettings().game.magicArmorNoHeavy.setValue(false);
+                    config::Save();
+                });
+
+                pane.add_section("Features");
+                pane.add_button({
+                        .text = "No Rupee Drain",
+                        .isSelected =
+                                [] { return getSettings().game.magicArmorNoDrain.getValue(); },
+                    })
+                    .on_pressed([] {
+                        mDoAud_seStartMenu(kSoundItemChange);
+                        auto& v = getSettings().game.magicArmorNoDrain;
+                        v.setValue(!v.getValue());
+                        config::Save();
+                    });
+                pane.add_button(
+                        {
+                            .text = "No Damage Loss",
+                            .isSelected =
+                                [] { return getSettings().game.magicArmorNoDamageLoss.getValue(); },
+                        })
+                    .on_pressed([] {
+                        mDoAud_seStartMenu(kSoundItemChange);
+                        auto& v = getSettings().game.magicArmorNoDamageLoss;
+                        v.setValue(!v.getValue());
+                        config::Save();
+                    });
+                pane.add_button(
+                        {
+                            .text = "No Heavy Armor",
+                            .isSelected =
+                                [] { return getSettings().game.magicArmorNoHeavy.getValue(); },
+                        })
+                    .on_pressed([] {
+                        mDoAud_seStartMenu(kSoundItemChange);
+                        auto& v = getSettings().game.magicArmorNoHeavy;
+                        v.setValue(!v.getValue());
+                        config::Save();
+                    });
+                pane.add_rml("<br/>Toggle which features of the Magic Armor you want active.");
+            });
+
         addCheat("Invincible Enemies", getSettings().game.invincibleEnemies,
             "Prevents enemies from taking damage.");
     });
