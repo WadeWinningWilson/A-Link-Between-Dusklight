@@ -119,6 +119,7 @@ bool dusk::IsShuttingDown = false;
 bool dusk::IsGameLaunched = false;
 bool dusk::RestartRequested = false;
 std::filesystem::path dusk::ConfigPath;
+std::filesystem::path dusk::CachePath;
 #endif
 
 void dusk::RequestRestart() noexcept {
@@ -513,8 +514,10 @@ int game_main(int argc, char* argv[]) {
 
     const auto startupLogLevel =
         static_cast<AuroraLogLevel>(parsed_arg_options["log-level"].as<uint8_t>());
-    dusk::ConfigPath = dusk::data::initialize_data();
-    dusk::InitializeFileLogging(dusk::ConfigPath, startupLogLevel);
+    const auto dataPaths = dusk::data::initialize_data();
+    dusk::ConfigPath = dataPaths.userPath;
+    dusk::CachePath = dataPaths.cachePath;
+    dusk::InitializeFileLogging(dusk::CachePath, startupLogLevel);
 
     log_build_info();
 
@@ -536,10 +539,12 @@ int game_main(int argc, char* argv[]) {
     SDL_SetAppMetadata("Dusklight", DUSK_VERSION_STRING, "dev.twilitrealm.dusk");
 
     {
-        const auto configPathString = dusk::ConfigPath.u8string();
+        const auto userPathString = dusk::ConfigPath.u8string();
+        const auto cachePathString = dusk::CachePath.u8string();
         AuroraConfig config{};
         config.appName = dusk::AppName;
-        config.configPath = reinterpret_cast<const char*>(configPathString.c_str());
+        config.userPath = reinterpret_cast<const char*>(userPathString.c_str());
+        config.cachePath = reinterpret_cast<const char*>(cachePathString.c_str());
         config.vsync = dusk::getSettings().video.enableVsync;
         config.startFullscreen = dusk::getSettings().video.enableFullscreen;
         config.windowPosX = -1;
