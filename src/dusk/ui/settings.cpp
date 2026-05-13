@@ -6,6 +6,7 @@
 #include "dusk/audio/DuskAudioSystem.h"
 #include "dusk/audio/DuskDsp.hpp"
 #include "dusk/config.hpp"
+#include "dusk/hotkeys.h"
 #include "dusk/data.hpp"
 #include "dusk/file_select.hpp"
 #include "dusk/imgui/ImGuiEngine.hpp"
@@ -711,7 +712,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 pane.add_rml(
                     "<br/>Display the current framerate in a corner of the screen while playing.");
             });
-
         leftPane.add_section("Resolution");
         graphics_tuner_control(*this, leftPane, rightPane,
             getSettings().game.internalResolutionScale,
@@ -893,6 +893,9 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Turbo Key", getSettings().game.enableTurboKeybind,
             "Hold Tab to increase game speed by up to 4x.",
             [] { return getSettings().game.speedrunMode; });
+        addOption("Reset Key (" + Rml::String{hotkeys::DO_RESET} + ")",
+            getSettings().game.enableResetKeybind,
+            "Press " + Rml::String{hotkeys::DO_RESET} + " to reset the game.");
     });
 
     add_tab("Audio", [this](Rml::Element* content) {
@@ -1281,6 +1284,17 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                         }
                     },
                 .isDisabled = [] { return getSettings().game.speedrunMode; },
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.showInputViewer,
+            {
+                .key = "Show Input Viewer",
+                .helpText = "Display a controller input overlay while playing.",
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.showInputViewerGyro,
+            {
+                .key = "Show Gyro Input Viewer",
+                .helpText = "Show gyro sensor values in the input viewer.",
+                .isDisabled = [] { return !getSettings().game.showInputViewer; },
             });
 
         leftPane.add_section("Game");
