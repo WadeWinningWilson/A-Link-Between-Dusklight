@@ -52,6 +52,7 @@ UserSettings g_userSettings = {
         .enableLinkDollRotation {"game.enableLinkDollRotation", false},
         .enableAchievementToasts {"game.enableAchievementToasts", true},
         .enableControllerToasts {"game.enableControllerToasts", true},
+        .enableDiscordPresence {"game.enableDiscordPresence", true},
 
         // Graphics
         .enhancedLighting {"game.enhancedLighting", false},
@@ -118,12 +119,15 @@ UserSettings g_userSettings = {
 
         // Controls
         .enableTurboKeybind {"game.enableTurboKeybind", false},
+        .enableResetKeybind {"game.enableResetKeybind", false},
 
         // Tools
         .speedrunMode {"game.speedrunMode", false},
         .liveSplitEnabled {"game.liveSplitEnabled", false},
         .showSpeedrunRTATimer {"game.showSpeedrunRTATimer", true},
-        .recordingMode {"game.recordingMode", false}
+        .recordingMode {"game.recordingMode", false},
+        .showInputViewer {"game.showInputViewer", false},
+        .showInputViewerGyro {"game.showInputViewerGyro", false}
     },
 
     .backend = {
@@ -136,6 +140,34 @@ UserSettings g_userSettings = {
         .checkForUpdates {"backend.checkForUpdates", true},
         .cardFileType {"backend.cardFileType", static_cast<int>(CARD_GCIFOLDER)},
         .enableAdvancedSettings {"backend.enableAdvancedSettings", false},
+    },
+
+    // Not sure if there's a better way to declare this
+    .actionBindings = {
+        .firstPersonCamera {
+            ActionBindConfigVar{"actionBindings.firstPersonCamera_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.firstPersonCamera_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.firstPersonCamera_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.firstPersonCamera_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
+        .callMidna {
+            ActionBindConfigVar{"actionBindings.callMidna_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.callMidna_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.callMidna_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.callMidna_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
+        .openDusklightMenu {
+            ActionBindConfigVar{"actionBindings.openDusklightMenu_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.openDusklightMenu_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.openDusklightMenu_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.openDusklightMenu_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
+        .turboSpeedButton {
+            ActionBindConfigVar{"actionBindings.turboButton_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.turboButton_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.turboButton_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.turboButton_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
     }
 };
 
@@ -187,6 +219,9 @@ void registerSettings() {
     Register(g_userSettings.game.freeCameraSensitivity);
     Register(g_userSettings.game.minimalHUD);
     Register(g_userSettings.game.pauseOnFocusLost);
+    Register(g_userSettings.game.enableDiscordPresence);
+    
+    // Enhanced lighting
     Register(g_userSettings.game.enhancedLighting);
     Register(g_userSettings.game.enableSpecularLighting);
     Register(g_userSettings.game.enableRimLighting);
@@ -194,6 +229,8 @@ void registerSettings() {
     Register(g_userSettings.game.rimIntensity);
     Register(g_userSettings.game.ambientLightMultiplier);
     Register(g_userSettings.game.diffuseLightMultiplier);
+
+    
     Register(g_userSettings.game.bloomMode);
     Register(g_userSettings.game.bloomMultiplier);
     Register(g_userSettings.game.disableWaterRefraction);
@@ -214,10 +251,13 @@ void registerSettings() {
     Register(g_userSettings.game.noLowHpSound);
     Register(g_userSettings.game.midnasLamentNonStop);
     Register(g_userSettings.game.enableTurboKeybind);
+    Register(g_userSettings.game.enableResetKeybind);
     Register(g_userSettings.game.speedrunMode);
     Register(g_userSettings.game.liveSplitEnabled);
     Register(g_userSettings.game.showSpeedrunRTATimer);
     Register(g_userSettings.game.recordingMode);
+    Register(g_userSettings.game.showInputViewer);
+    Register(g_userSettings.game.showInputViewerGyro);
     Register(g_userSettings.game.fastSpinner);
     Register(g_userSettings.game.infiniteHearts);
     Register(g_userSettings.game.infiniteArrows);
@@ -254,6 +294,23 @@ void registerSettings() {
     Register(g_userSettings.backend.checkForUpdates);
     Register(g_userSettings.backend.cardFileType);
     Register(g_userSettings.backend.enableAdvancedSettings);
+
+    Register(g_userSettings.actionBindings.firstPersonCamera[0]);
+    Register(g_userSettings.actionBindings.firstPersonCamera[1]);
+    Register(g_userSettings.actionBindings.firstPersonCamera[2]);
+    Register(g_userSettings.actionBindings.firstPersonCamera[3]);
+    Register(g_userSettings.actionBindings.callMidna[0]);
+    Register(g_userSettings.actionBindings.callMidna[1]);
+    Register(g_userSettings.actionBindings.callMidna[2]);
+    Register(g_userSettings.actionBindings.callMidna[3]);
+    Register(g_userSettings.actionBindings.openDusklightMenu[0]);
+    Register(g_userSettings.actionBindings.openDusklightMenu[1]);
+    Register(g_userSettings.actionBindings.openDusklightMenu[2]);
+    Register(g_userSettings.actionBindings.openDusklightMenu[3]);
+    Register(g_userSettings.actionBindings.turboSpeedButton[0]);
+    Register(g_userSettings.actionBindings.turboSpeedButton[1]);
+    Register(g_userSettings.actionBindings.turboSpeedButton[2]);
+    Register(g_userSettings.actionBindings.turboSpeedButton[3]);
 }
 
 // Transient settings

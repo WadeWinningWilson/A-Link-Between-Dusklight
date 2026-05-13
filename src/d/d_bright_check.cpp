@@ -13,6 +13,7 @@
 #include "dusk/imgui/ImGuiConsole.hpp"
 #include "dusk/speedrun.h"
 #include "m_Do/m_Do_controller_pad.h"
+#include <dusk/autosave.h>
 
 dBrightCheck_c::dBrightCheck_c(JKRArchive* i_archive) {
     mArchive = i_archive;
@@ -151,6 +152,8 @@ void dBrightCheck_c::modeMove() {
                 dusk::m_speedrunInfo.startRun();
             }
         }
+
+        toggleAutoSave(true);
 #endif
         mCompleteCheck = true;
         mMode = MODE_WAIT_e;

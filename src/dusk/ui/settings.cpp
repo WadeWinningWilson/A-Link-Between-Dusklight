@@ -6,12 +6,14 @@
 #include "dusk/audio/DuskAudioSystem.h"
 #include "dusk/audio/DuskDsp.hpp"
 #include "dusk/config.hpp"
+#include "dusk/hotkeys.h"
 #include "dusk/data.hpp"
 #include "dusk/file_select.hpp"
 #include "dusk/imgui/ImGuiEngine.hpp"
 #include "dusk/io.hpp"
 #include "dusk/livesplit.h"
 #include "dusk/main.h"
+#include "dusk/discord_presence.hpp"
 #include "graphics_tuner.hpp"
 #include "m_Do/m_Do_main.h"
 #include "menu_bar.hpp"
@@ -710,7 +712,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 pane.add_rml(
                     "<br/>Display the current framerate in a corner of the screen while playing.");
             });
-
         leftPane.add_section("Resolution");
         graphics_tuner_control(*this, leftPane, rightPane,
             getSettings().game.internalResolutionScale,
@@ -815,9 +816,9 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Free Camera Sensitivity", "Adjusts twin-stick camera sensitivity.", 50, 200, 5,
             [] { return !getSettings().game.freeCamera; });
         addOption("Invert First Person X Axis", getSettings().game.invertFirstPersonXAxis,
-            "Invert horizontal movement while aiming with items or first person camera. Applies to both stick and gyro aiming.");
+            "Invert horizontal movement while aiming with items or first person camera. Applies only to the control stick (the gyroscope can be inverted in Input settings).");
         addOption("Invert First Person Y Axis", getSettings().game.invertFirstPersonYAxis,
-            "Invert vertical movement while aiming with items or first person camera. Applies to both stick and gyro aiming.");
+            "Invert vertical movement while aiming with items or first person camera. Applies only to the control stick (the gyroscope can be inverted in Input settings).");
 
         leftPane.add_section("Gyro");
         leftPane.register_control(
@@ -892,6 +893,9 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Turbo Key", getSettings().game.enableTurboKeybind,
             "Hold Tab to increase game speed by up to 4x.",
             [] { return getSettings().game.speedrunMode; });
+        addOption("Reset Key (" + Rml::String{hotkeys::DO_RESET} + ")",
+            getSettings().game.enableResetKeybind,
+            "Press " + Rml::String{hotkeys::DO_RESET} + " to reset the game.");
     });
 
     add_tab("Audio", [this](Rml::Element* content) {
@@ -1249,6 +1253,20 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .helpText = "Checks GitHub releases for a new Dusklight version on startup.<br/><br/>"
                             "No personal information is transmitted or collected.",
             });
+#ifdef DUSK_DISCORD
+        config_bool_select(leftPane, rightPane, getSettings().game.enableDiscordPresence,
+            {
+                .key = "Enable Discord Rich Presence",
+                .helpText = "Enable Dusk to integrate with Discord Rich Presence. This allows Discord to show your status in-game.",
+                .onChange = [](bool enabled) {
+                    if (enabled) {
+                        dusk::discord::initialize();
+                    } else {
+                        dusk::discord::shutdown();
+                    }
+                },
+            });
+#endif
         config_bool_select(leftPane, rightPane, getSettings().backend.enableAdvancedSettings,
             {
                 .key = "Enable Advanced Settings",
@@ -1266,6 +1284,17 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                         }
                     },
                 .isDisabled = [] { return getSettings().game.speedrunMode; },
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.showInputViewer,
+            {
+                .key = "Show Input Viewer",
+                .helpText = "Display a controller input overlay while playing.",
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.showInputViewerGyro,
+            {
+                .key = "Show Gyro Input Viewer",
+                .helpText = "Show gyro sensor values in the input viewer.",
+                .isDisabled = [] { return !getSettings().game.showInputViewer; },
             });
 
         leftPane.add_section("Game");

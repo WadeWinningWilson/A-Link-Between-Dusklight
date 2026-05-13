@@ -13,6 +13,7 @@
 #include "ImGuiEngine.hpp"
 #include "JSystem/JUtility/JUTGamePad.h"
 #include "SDL3/SDL_mouse.h"
+#include "dusk/action_bindings.h"
 #include "dusk/audio/DuskAudioSystem.h"
 #include "dusk/config.hpp"
 #include "dusk/data.hpp"
@@ -239,7 +240,8 @@ namespace dusk {
     }
 
     void ImGuiConsole::UpdateSettings() {
-        getTransientSettings().skipFrameRateLimit = getSettings().game.enableTurboKeybind && ImGui::IsKeyDown(ImGuiKey_Tab);
+        getTransientSettings().skipFrameRateLimit = getSettings().game.enableTurboKeybind &&
+            (ImGui::IsKeyDown(ImGuiKey_Tab) || getActionBindHoldAnyPort(ActionBinds::TURBO_SPEED_BUTTON));
 
         if (dusk::frame_interp::get_ui_tick_pending() && mDoMain::developmentMode == 1 && (mDoCPd_c::getHold(PAD_1) & (PAD_TRIGGER_R | PAD_TRIGGER_L)) == (PAD_TRIGGER_R | PAD_TRIGGER_L) && mDoCPd_c::getTrigY(PAD_1)) {
             getTransientSettings().moveLinkActive = !getTransientSettings().moveLinkActive;
@@ -258,6 +260,12 @@ namespace dusk {
             getSettings().video.enableFullscreen.setValue(!getSettings().video.enableFullscreen);
             VISetWindowFullscreen(getSettings().video.enableFullscreen);
             config::Save();
+        }
+
+        if (getSettings().game.enableResetKeybind && ImGui::GetIO().KeyCtrl &&
+            ImGui::IsKeyPressed(ImGuiKey_R) && !fpcM_SearchByName(fpcNm_LOGO_SCENE_e))
+        {
+            JUTGamePad::C3ButtonReset::sResetSwitchPushing = true;
         }
 
         if (ImGui::GetIO().KeyShift && ImGui::IsKeyPressed(ImGuiKey_F1)) {

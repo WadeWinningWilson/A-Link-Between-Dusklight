@@ -1,6 +1,8 @@
 #ifndef DUSK_CONFIG_H
 #define DUSK_CONFIG_H
 
+#include <array>
+
 #include "dusk/config_var.hpp"
 
 namespace dusk {
@@ -115,6 +117,7 @@ struct UserSettings {
         ConfigVar<bool> enableLinkDollRotation;
         ConfigVar<bool> enableAchievementToasts;
         ConfigVar<bool> enableControllerToasts;
+        ConfigVar<bool> enableDiscordPresence;
 
         // Graphics
         ConfigVar<bool> enhancedLighting;
@@ -181,12 +184,15 @@ struct UserSettings {
 
         // Controls
         ConfigVar<bool> enableTurboKeybind;
+        ConfigVar<bool> enableResetKeybind;
 
         // Tools
         ConfigVar<bool> speedrunMode;
         ConfigVar<bool> liveSplitEnabled;
         ConfigVar<bool> showSpeedrunRTATimer;
         ConfigVar<bool> recordingMode;
+        ConfigVar<bool> showInputViewer;
+        ConfigVar<bool> showInputViewerGyro;
     } game;
 
     struct {
@@ -200,6 +206,14 @@ struct UserSettings {
         ConfigVar<int> cardFileType;
         ConfigVar<bool> enableAdvancedSettings;
     } backend;
+
+    // Arrays of size 4 for 4 ports
+    struct {
+        std::array<ActionBindConfigVar, 4> firstPersonCamera;
+        std::array<ActionBindConfigVar, 4> callMidna;
+        std::array<ActionBindConfigVar, 4> openDusklightMenu;
+        std::array<ActionBindConfigVar, 4> turboSpeedButton;
+    } actionBindings;
 };
 
 UserSettings& getSettings();
