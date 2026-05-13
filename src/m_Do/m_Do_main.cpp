@@ -462,6 +462,11 @@ static std::string asset_path(const char* assetName) {
     return std::string("res/") + assetName;
 }
 
+static void log_build_info() {
+    DuskLog.info("Build: {} (rev {}, built {}, type {})", DUSK_WC_DESCRIBE, DUSK_WC_REVISION, DUSK_WC_DATE, DUSK_BUILD_TYPE);
+    DuskLog.info("Platform: {}", DUSK_PLATFORM_NAME);
+}
+
 // =========================================================================
 // PC ENTRY POINT
 // =========================================================================
@@ -510,6 +515,8 @@ int game_main(int argc, char* argv[]) {
         static_cast<AuroraLogLevel>(parsed_arg_options["log-level"].as<uint8_t>());
     dusk::ConfigPath = dusk::data::initialize_data();
     dusk::InitializeFileLogging(dusk::ConfigPath, startupLogLevel);
+
+    log_build_info();
 
     dusk::config::LoadFromUserPreferences();
     ApplyCVarOverrides(parsed_arg_options["cvar"]);
