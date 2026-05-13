@@ -3,18 +3,22 @@
 #include "aurora/gfx.h"
 #include "bool_button.hpp"
 #include "controller_config.hpp"
+#include "dusk/app_info.hpp"
 #include "dusk/audio/DuskAudioSystem.h"
 #include "dusk/audio/DuskDsp.hpp"
 #include "dusk/config.hpp"
+#include "dusk/hotkeys.h"
 #include "dusk/data.hpp"
 #include "dusk/file_select.hpp"
 #include "dusk/imgui/ImGuiEngine.hpp"
 #include "dusk/io.hpp"
 #include "dusk/livesplit.h"
 #include "dusk/main.h"
+#include "dusk/discord_presence.hpp"
 #include "graphics_tuner.hpp"
 #include "m_Do/m_Do_main.h"
 #include "menu_bar.hpp"
+#include "modal.hpp"
 #include "number_button.hpp"
 #include "menu_bar.hpp"
 #include "pane.hpp"
@@ -23,6 +27,7 @@
 
 #include <aurora/lib/window.hpp>
 #include <SDL3/SDL_filesystem.h>
+#include <fmt/format.h>
 
 #if DUSK_ENABLE_SENTRY_NATIVE
 #include "dusk/crash_reporting.h"
@@ -182,6 +187,7 @@ void reset_for_speedrun_mode() {
 
     getSettings().game.infiniteHearts.setSpeedrunValue(false);
     getSettings().game.infiniteArrows.setSpeedrunValue(false);
+    getSettings().game.infiniteSeeds.setSpeedrunValue(false);
     getSettings().game.infiniteBombs.setSpeedrunValue(false);
     getSettings().game.infiniteOil.setSpeedrunValue(false);
     getSettings().game.infiniteOxygen.setSpeedrunValue(false);
@@ -195,6 +201,7 @@ void reset_for_speedrun_mode() {
     getSettings().game.fastRoll.setSpeedrunValue(false);
     getSettings().game.fastSpinner.setSpeedrunValue(false);
     getSettings().game.freeMagicArmor.setSpeedrunValue(false);
+    getSettings().game.invincibleEnemies.setSpeedrunValue(false);
 
     getSettings().game.pauseOnFocusLost.setSpeedrunValue(false);
     aurora_set_pause_on_focus_lost(false);
@@ -293,13 +300,49 @@ private:
     Rml::String mCurrentRml;
 };
 
+void show_data_folder_error_modal(std::string_view message) {
+    auto dismiss = [](Modal& modal) {
+        mDoAud_seStartMenu(kSoundWindowClose);
+        modal.pop();
+    };
+    push_document(std::make_unique<Modal>(Modal::Props{
+        .title = "Data Folder Not Changed",
+        .bodyRml = escape(message),
+        .actions =
+            {
+                ModalAction{
+                    .label = "OK",
+                    .onPressed = dismiss,
+                },
+            },
+        .onDismiss = dismiss,
+        .icon = "warning",
+    }));
+    if (auto* doc = top_document()) {
+        doc->focus();
+    }
+}
+
 void data_folder_dialog_callback(void*, const char* path, const char* error) {
-    if (error != nullptr || path == nullptr) {
+    if (error != nullptr) {
+        show_data_folder_error_modal(error);
         return;
     }
-    if (data::set_custom_data_path(path)) {
-        mDoAud_seStartMenu(kSoundItemChange);
+    if (path == nullptr) {
+        return;
     }
+
+    std::string dataPathError;
+    if (data::set_custom_data_path(path, &dataPathError)) {
+        mDoAud_seStartMenu(kSoundItemChange);
+        return;
+    }
+
+    if (dataPathError.empty()) {
+        dataPathError =
+            fmt::format("{} could not use the selected folder as its data folder.", AppName);
+    }
+    show_data_folder_error_modal(dataPathError);
 }
 
 const Rml::String kInternalResolutionHelpText =
@@ -710,7 +753,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 pane.add_rml(
                     "<br/>Display the current framerate in a corner of the screen while playing.");
             });
-
         leftPane.add_section("Resolution");
         graphics_tuner_control(*this, leftPane, rightPane,
             getSettings().game.internalResolutionScale,
@@ -815,9 +857,9 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Free Camera Sensitivity", "Adjusts twin-stick camera sensitivity.", 50, 200, 5,
             [] { return !getSettings().game.freeCamera; });
         addOption("Invert First Person X Axis", getSettings().game.invertFirstPersonXAxis,
-            "Invert horizontal movement while aiming with items or first person camera. Applies to both stick and gyro aiming.");
+            "Invert horizontal movement while aiming with items or first person camera. Applies only to the control stick (the gyroscope can be inverted in Input settings).");
         addOption("Invert First Person Y Axis", getSettings().game.invertFirstPersonYAxis,
-            "Invert vertical movement while aiming with items or first person camera. Applies to both stick and gyro aiming.");
+            "Invert vertical movement while aiming with items or first person camera. Applies only to the control stick (the gyroscope can be inverted in Input settings).");
 
         leftPane.add_section("Gyro");
         leftPane.register_control(
@@ -892,6 +934,9 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Turbo Key", getSettings().game.enableTurboKeybind,
             "Hold Tab to increase game speed by up to 4x.",
             [] { return getSettings().game.speedrunMode; });
+        addOption("Reset Key (" + Rml::String{hotkeys::DO_RESET} + ")",
+            getSettings().game.enableResetKeybind,
+            "Press " + Rml::String{hotkeys::DO_RESET} + " to reset the game.");
     });
 
     add_tab("Audio", [this](Rml::Element* content) {
@@ -908,7 +953,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                     [](int value) {
                         getSettings().audio.masterVolume.setValue(value);
                         config::Save();
-                        audio::SetMasterVolume(value / 100.f);
+                        audio::SetMasterVolume(audio::MasterVolumeToLinear(value / 100.0f));
                     },
                 .isModified =
                     [] {
@@ -1103,6 +1148,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addCheat("Infinite Hearts", getSettings().game.infiniteHearts, "Keeps your health full.");
         addCheat(
             "Infinite Arrows", getSettings().game.infiniteArrows, "Keeps your arrow count full.");
+        addCheat("Infinite Seeds", getSettings().game.infiniteSeeds, "Keeps your slingshot pellets (seeds) full.");
         addCheat("Infinite Bombs", getSettings().game.infiniteBombs, "Keeps all bomb bags full.");
         addCheat("Infinite Oil", getSettings().game.infiniteOil, "Keeps your lantern oil full.");
         addCheat("Infinite Oxygen", getSettings().game.infiniteOxygen,
@@ -1129,6 +1175,8 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Speeds up Spinner movement while holding R.");
         addCheat("Free Magic Armor", getSettings().game.freeMagicArmor,
             "Lets the magic armor work without consuming rupees.");
+        addCheat("Invincible Enemies", getSettings().game.invincibleEnemies,
+            "Prevents enemies from taking damage.");
     });
 
     add_tab("Interface", [this](Rml::Element* content) {
@@ -1249,6 +1297,20 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .helpText = "Checks GitHub releases for a new Dusklight version on startup.<br/><br/>"
                             "No personal information is transmitted or collected.",
             });
+#ifdef DUSK_DISCORD
+        config_bool_select(leftPane, rightPane, getSettings().game.enableDiscordPresence,
+            {
+                .key = "Enable Discord Rich Presence",
+                .helpText = "Enable Dusk to integrate with Discord Rich Presence. This allows Discord to show your status in-game.",
+                .onChange = [](bool enabled) {
+                    if (enabled) {
+                        dusk::discord::initialize();
+                    } else {
+                        dusk::discord::shutdown();
+                    }
+                },
+            });
+#endif
         config_bool_select(leftPane, rightPane, getSettings().backend.enableAdvancedSettings,
             {
                 .key = "Enable Advanced Settings",
@@ -1266,6 +1328,17 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                         }
                     },
                 .isDisabled = [] { return getSettings().game.speedrunMode; },
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.showInputViewer,
+            {
+                .key = "Show Input Viewer",
+                .helpText = "Display a controller input overlay while playing.",
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.showInputViewerGyro,
+            {
+                .key = "Show Gyro Input Viewer",
+                .helpText = "Show gyro sensor values in the input viewer.",
+                .isDisabled = [] { return !getSettings().game.showInputViewer; },
             });
 
         leftPane.add_section("Game");
