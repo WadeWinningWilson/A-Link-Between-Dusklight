@@ -5,8 +5,19 @@ if (NOT CMAKE_BUILD_TYPE)
             "Build type options: Debug Release RelWithDebInfo MinSizeRel" FORCE)
 endif ()
 
-# obtain revision info from git
-find_package(Git)
+set(DUSK_VERSION_OVERRIDE "" CACHE STRING "Override version string (skips git detection and format validation)")
+
+if (DUSK_VERSION_OVERRIDE)
+    set(DUSK_WC_DESCRIBE "${DUSK_VERSION_OVERRIDE}")
+    set(DUSK_VERSION_STRING "0.0.0.0")
+    set(DUSK_SHORT_VERSION_STRING "0.0.0")
+    set(DUSK_WC_REVISION "")
+    set(DUSK_WC_BRANCH "")
+    set(DUSK_WC_DATE "")
+    message(STATUS "Dusklight version overridden to ${DUSK_WC_DESCRIBE}")
+else ()
+    # obtain revision info from git
+    find_package(Git)
 if (GIT_FOUND)
     # make sure version information gets re-run when the current Git HEAD changes
     execute_process(WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} rev-parse --git-path HEAD
@@ -61,6 +72,8 @@ else ()
     set(DUSK_WC_DESCRIBE "UNKNOWN-VERSION")
     set(DUSK_VERSION_STRING "0.0.0.0")
     set(DUSK_SHORT_VERSION_STRING "0.0.0")
+endif ()
+
 endif ()
 
 # Add version information to CI environment variables

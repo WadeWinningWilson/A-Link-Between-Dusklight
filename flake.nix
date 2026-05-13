@@ -50,7 +50,11 @@
 
       # Dusklight Actual (Linux x86_64 only — relies on prebuilt dawn/nod binaries)
       mkDusklight = pkgs:
-        let srcs = buildSources pkgs; in
+        let srcs = buildSources pkgs;
+          versionSuffix = if self ? shortRev && self.shortRev != null
+            then "nix-${self.shortRev}"
+            else "nix-dirty";
+        in
         pkgs.stdenv.mkDerivation {
           name = "dusklight";
           src = ./.;
@@ -62,6 +66,7 @@
           '';
           # Remove last line to re-enable tests
           cmakeFlags = [
+            "-DDUSK_VERSION_OVERRIDE=${versionSuffix}"
             "-DFETCHCONTENT_FULLY_DISCONNECTED=ON"
             "-DFETCHCONTENT_SOURCE_DIR_CXXOPTS=${pkgs.cxxopts.src}"
             "-DFETCHCONTENT_SOURCE_DIR_JSON=${pkgs.nlohmann_json.src}"
@@ -83,6 +88,14 @@
             mkdir -p $out/bin
             cp dusklight $out/bin/dusklight
             cp -r ./res $out/bin/res
+
+            mkdir -p $out/share/applications
+            cp $src/platforms/freedesktop/dusklight.desktop $out/share/applications/dusklight.desktop
+
+            for size in 16 32 48 64 128 256 512 1024; do
+              install -Dm644 $src/platforms/freedesktop/''${size}x''${size}/apps/dusklight.png \
+                $out/share/icons/hicolor/''${size}x''${size}/apps/dusklight.png
+            done
           '';
           nativeBuildInputs = [
             pkgs.cmake
