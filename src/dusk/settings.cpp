@@ -93,6 +93,7 @@ UserSettings g_userSettings = {
         // Cheats
         .infiniteHearts {"game.infiniteHearts", false},
         .infiniteArrows {"game.infiniteArrows", false},
+        .infiniteSeeds {"game.infiniteSeeds", false},
         .infiniteBombs {"game.infiniteBombs", false},
         .infiniteOil {"game.infiniteOil", false},
         .infiniteOxygen {"game.infiniteOxygen", false},
@@ -243,6 +244,7 @@ void registerSettings() {
     Register(g_userSettings.game.fastSpinner);
     Register(g_userSettings.game.infiniteHearts);
     Register(g_userSettings.game.infiniteArrows);
+    Register(g_userSettings.game.infiniteSeeds);
     Register(g_userSettings.game.infiniteBombs);
     Register(g_userSettings.game.infiniteOil);
     Register(g_userSettings.game.infiniteOxygen);
