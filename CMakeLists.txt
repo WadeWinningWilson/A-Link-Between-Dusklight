@@ -125,11 +125,6 @@ option(DUSK_BUILD_WARNINGS "Enable compiler warnings (off by default)")
 option(DUSK_SELECTED_OPT "If on, selected parts of the project will be compiled with optimizations on Debug, intending to make the game run at 30 FPS. Note for MSVC: you will need to remove '/RTC1' from your debug flags in CMake.")
 option(DUSK_MOVIE_SUPPORT "If on, compile against libjpeg-turbo to enable THP file decoding" ON)
 option(DUSK_ENABLE_UPDATE_CHECKER "Enable update checking support" ON)
-
-if(ANDROID)
-    set(DUSK_MOVIE_SUPPORT OFF)
-endif ()
-
 option(DUSK_ENABLE_SENTRY_NATIVE "Enable sentry-native crash reporting support" OFF)
 set(DUSK_SENTRY_DSN "" CACHE STRING "Sentry DSN")
 set(DUSK_SENTRY_ENVIRONMENT "development" CACHE STRING "Sentry environment")
@@ -168,6 +163,8 @@ if (DUSK_MOVIE_SUPPORT)
             list(APPEND _jpeg_cmake_args -DCMAKE_TOOLCHAIN_FILE=${_jpeg_toolchain_file})
         endif ()
         set(_jpeg_passthrough_vars
+            ANDROID_ABI
+            ANDROID_PLATFORM
             CMAKE_BUILD_TYPE
             CMAKE_C_COMPILER
             CMAKE_C_COMPILER_LAUNCHER
