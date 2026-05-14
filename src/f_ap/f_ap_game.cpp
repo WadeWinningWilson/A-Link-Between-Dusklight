@@ -743,16 +743,19 @@ static void fapGm_AfterRecord() {
 }
 
 BOOL isRecording = false;
+BOOL gotGhostLantern = false;
 
 static void duskExecute() {
     handleGamepadColor();
     updateAutoSave();
 
-    if (daNpcT_chkEvtBit(0x2B6)) {
+    if (daNpcT_chkEvtBit(0x2B6) && !gotGhostLantern) {
         execItemGet(dItemNo_GHOST_LANTERN_e);
-    } else {
+        gotGhostLantern = true;
+    } else if (!daNpcT_chkEvtBit(0x2B6) && gotGhostLantern) {
         dComIfGs_offItemFirstBit(dItemNo_GHOST_LANTERN_e);
         dComIfGp_setItem(SLOT_7, dItemNo_NONE_e);
+        gotGhostLantern = false;
     }
 
     if (dusk::getSettings().game.recordingMode) {
