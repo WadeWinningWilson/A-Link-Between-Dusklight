@@ -1172,12 +1172,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                         });
                 }
                 pane.add_rml(
-                    "<br/>Control the behavior of the Magic Armor."
-                    "<br/><b>Normal</b> is its original behavior."
-                    "<br/><b>On Damage</b> only uses rupees when damaged. You will not become heavy when you run out."
-                    "<br/><b>Double Defense</b> never uses rupees and halves damage taken."
-                    "<br/><b>Invincible</b> never uses rupees and is immune to damage."
-                    "<br/><b>Cosmetic</b> uses no rupees and provides no other benefits.");
+                    "<br/>Control the behavior of the Magic Armor.");
             });
         addCheat("Invincible Enemies", getSettings().game.invincibleEnemies,
             "Prevents enemies from taking damage.");
