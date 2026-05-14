@@ -64,7 +64,9 @@ constexpr std::array kGyroInputModeLabels = {
 constexpr std::array kMagicArmorModes = {
     "Normal",
     "On Damage",
-    "Never",
+    "Double Defense",
+    "Invincible",
+    "Cosmetic",
 };
 
 bool try_parse_backend(std::string_view backend, AuroraBackend& outBackend) {
@@ -1142,7 +1144,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Speeds up Spinner movement while holding R.");
         leftPane.register_control(
             leftPane.add_select_button({
-                .key = "Magic Armor Rupee Drain",
+                .key = "Magic Armor Behavior",
                 .getValue =
                     [] {
                         return kMagicArmorModes[static_cast<u8>(getSettings().game.armorRupeeDrain.getValue())];
@@ -1169,7 +1171,13 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                             config::Save();
                         });
                 }
-                pane.add_rml("Control when the Magic Armor uses rupees.");
+                pane.add_rml(
+                    "<br/>Control the behavior of the Magic Armor."
+                    "<br/><b>Normal</b> is its original behavior."
+                    "<br/><b>On Damage</b> only uses rupees when damaged. You will not become heavy when you run out."
+                    "<br/><b>Double Defense</b> never uses rupees and halves damage taken."
+                    "<br/><b>Invincible</b> never uses rupees and is immune to damage."
+                    "<br/><b>Cosmetic</b> uses no rupees and provides no other benefits.");
             });
         addCheat("Invincible Enemies", getSettings().game.invincibleEnemies,
             "Prevents enemies from taking damage.");

@@ -37,7 +37,9 @@ enum class GyroMode : u8 {
 enum class MagicArmorMode : u8 {
     NORMAL = 0,
     ON_DAMAGE = 1,
-    NEVER = 2,
+    DOUBLE_DEFENSE = 2,
+    INVINCIBLE = 3,
+    COSMETIC = 4,
 };
 
 namespace config {
@@ -68,7 +70,7 @@ struct ConfigEnumRange<GyroMode> {
 template <>
 struct ConfigEnumRange<MagicArmorMode> {
     static constexpr auto min = MagicArmorMode::NORMAL;
-    static constexpr auto max = MagicArmorMode::NEVER;
+    static constexpr auto max = MagicArmorMode::COSMETIC;
 };
 }
 
