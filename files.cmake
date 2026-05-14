@@ -1523,7 +1523,9 @@ set(DUSK_FILES
         src/dusk/OSThread.cpp
         src/dusk/OSMutex.cpp
         src/dusk/hook_system.cpp
-        src/dusk/mod_loader.cpp
+        src/dusk/modding/mod_loader.cpp
+        src/dusk/modding/bundle_disk.cpp
+        src/dusk/modding/bundle_zip.cpp
         src/dusk/gx_helper.cpp
         src/dusk/discord.cpp
         src/dusk/discord.hpp

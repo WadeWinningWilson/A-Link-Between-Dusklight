@@ -5,7 +5,10 @@
 #include <vector>
 
 #include "dusk/mod_api.h"
-#include "miniz.h"
+
+namespace dusk::modding {
+class ModBundle;
+}
 
 namespace dusk {
 
@@ -40,10 +43,7 @@ struct LoadedMod {
     FnCleanup fn_cleanup = nullptr;
 
     DuskModAPI api{};
-
-    std::vector<uint8_t> zip_data;
-    mz_zip_archive res_zip{};
-    bool res_zip_open = false;
+    std::unique_ptr<modding::ModBundle> bundle;
 
     std::vector<RmlTabContentCallback> tab_content;
     std::vector<RmlTabUpdateCallback> tab_updates;
@@ -65,7 +65,7 @@ private:
     std::filesystem::path m_modsDir;
     bool m_initialized = false;
 
-    void tryLoadDusk(const std::filesystem::path& modPath);
+    void tryLoadDusk(const std::filesystem::path& modPath, bool fromDir);
     void buildAPI(LoadedMod& mod);
 };
 

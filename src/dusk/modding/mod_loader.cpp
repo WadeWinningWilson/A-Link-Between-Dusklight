@@ -1,6 +1,7 @@
 #include "dusk/mod_loader.hpp"
 #include "dusk/hook_system.hpp"
 #include "dusk/logging.h"
+#include "mod_loader.hpp"
 
 #include <RmlUi/Core.h>
 
@@ -9,9 +10,11 @@
 #include <cstdarg>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <unordered_map>
 
+#include "dusk/io.hpp"
 #include "miniz.h"
 #include "nlohmann/json.hpp"
 
@@ -19,6 +22,8 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
+
+static aurora::Module Log("dusk::modLoader");
 
 static void* pl_dlopen(const std::filesystem::path& p) {
     return LoadLibraryW(p.wstring().c_str());
@@ -67,31 +72,26 @@ static constexpr const char* k_libExt = ".so";
 #endif
 #endif
 
-#if defined(_M_ARM64) || defined(__aarch64__)
-static constexpr std::string_view k_archSuffix = "_arm64";
-#elif defined(_M_X64) || defined(__x86_64__)
-static constexpr std::string_view k_archSuffix = "_x64";
-#elif defined(_M_IX86) || defined(__i386__)
-static constexpr std::string_view k_archSuffix = "_x86";
-#else
-static constexpr std::string_view k_archSuffix = "";
-#endif
+using namespace dusk::modding;
+using namespace std::string_view_literals;
 
-static FILE* fs_fopen(const std::filesystem::path& p, const char* mode) {
-#if defined(_WIN32)
-    std::wstring wmode(mode, mode + strlen(mode));
-    return _wfopen(p.wstring().c_str(), wmode.c_str());
+#if defined(_M_ARM64) || defined(__aarch64__)
+static constexpr std::string_view k_archSuffix = "_arm64"sv;
+#elif defined(_M_X64) || defined(__x86_64__)
+static constexpr std::string_view k_archSuffix = "_x64"sv;
+#elif defined(_M_IX86) || defined(__i386__)
+static constexpr std::string_view k_archSuffix = "_x86"sv;
 #else
-    return fopen(p.c_str(), mode);
+static constexpr std::string_view k_archSuffix = ""sv;
 #endif
-}
 
 static thread_local dusk::LoadedMod* g_currentMod = nullptr;
 static std::unordered_map<std::string, void*> g_services;
 
 namespace dusk {
 thread_local void* g_dusk_hook_current_mod = nullptr;
-}
+
+}  // namespace dusk
 
 struct ModGuard {
     explicit ModGuard(dusk::LoadedMod* m) {
@@ -149,26 +149,27 @@ static void* cb_load_resource(const char* relative_path, size_t* out_size) {
         DuskLog.error("load_resource: called outside mod context or with null path");
         return nullptr;
     }
-    if (!g_currentMod->res_zip_open) {
-        DuskLog.error("[{}] load_resource: zip not available", g_currentMod->name);
+
+    std::string entry = std::string("res/") + relative_path;
+    std::vector<u8> data;
+    try {
+        data = g_currentMod->bundle->readFile(entry);
+    } catch (const std::runtime_error& e) {
+        DuskLog.error("[{}] load_resource: '{}' failed: {}", g_currentMod->name, entry, e.what());
         return nullptr;
     }
 
-    std::string entry = std::string("res/") + relative_path;
-    size_t sz = 0;
-    void* data = mz_zip_reader_extract_file_to_heap(&g_currentMod->res_zip, entry.c_str(), &sz, 0);
-    if (!data) {
-        DuskLog.error("[{}] load_resource: '{}' not found in zip", g_currentMod->name, entry);
-        return nullptr;
-    }
+    const auto retPtr = std::malloc(data.size());
+    std::memcpy(retPtr, data.data(), data.size());
+
     if (out_size) {
-        *out_size = sz;
+        *out_size = data.size();
     }
-    return data;
+    return retPtr;
 }
 
 static void cb_free_resource(void* data) {
-    mz_free(data);
+    std::free(data);
 }
 
 namespace {
@@ -378,81 +379,74 @@ void ModLoader::buildAPI(LoadedMod& mod) {
     mod.api.service_get = cb_service_get;
 }
 
-void ModLoader::tryLoadDusk(const std::filesystem::path& modPath) {
+static std::unique_ptr<ModBundle> loadBundle(const std::filesystem::path& modPath, bool fromDir) {
+    if (fromDir) {
+        return std::make_unique<ModBundleDisk>(modPath);
+    } else {
+        std::vector<u8> data = io::FileStream::ReadAllBytes(modPath);
+        return std::make_unique<ModBundleZip>(std::move(data));
+    }
+}
+
+struct DllLocateResult {
+    std::string primary;
+    std::string fallback;
+};
+
+static std::string_view getFileNameWithoutExtension(const std::string_view fileName) {
+    return fileName.substr(0, fileName.find_last_of('.'));
+}
+
+static DllLocateResult LocateDllInBundle(ModBundle& bundle) {
+    std::string dllEntry, dllFallback;
+    for (const auto name : bundle.getFileNames()) {
+        if (!name.ends_with(".dll"sv)) {
+            continue;
+        }
+
+        if (!k_archSuffix.empty() && getFileNameWithoutExtension(name).ends_with(k_archSuffix)) {
+            dllEntry = name;
+        } else if (dllFallback.empty()) {
+            dllFallback = name;
+        }
+    }
+
+    return DllLocateResult{dllEntry, dllFallback};
+}
+
+void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) {
     namespace fs = std::filesystem;
 
-    std::vector<uint8_t> zipBytes;
-    {
-        FILE* f = fs_fopen(modPath, "rb");
-        if (!f) {
-            DuskLog.error("ModLoader: failed to open {}", modPath.filename().string());
-            return;
-        }
-        fseek(f, 0, SEEK_END);
-        long fsize = ftell(f);
-        fseek(f, 0, SEEK_SET);
-        zipBytes.resize(static_cast<size_t>(fsize));
-        fread(zipBytes.data(), 1, zipBytes.size(), f);
-        fclose(f);
-    }
-
-    std::string metaName, metaVersion, metaAuthor, metaDescription;
-    {
-        mz_zip_archive zip{};
-        if (mz_zip_reader_init_mem(&zip, zipBytes.data(), zipBytes.size(), 0)) {
-            size_t jsonSize = 0;
-            void* jsonData = mz_zip_reader_extract_file_to_heap(&zip, "mod.json", &jsonSize, 0);
-            mz_zip_reader_end(&zip);
-            if (jsonData) {
-                try {
-                    std::string jsonStr(static_cast<char*>(jsonData), jsonSize);
-                    mz_free(jsonData);
-                    jsonData = nullptr;
-                    auto j = nlohmann::json::parse(jsonStr);
-                    metaName = j.value("name", "");
-                    metaVersion = j.value("version", "");
-                    metaAuthor = j.value("author", "");
-                    metaDescription = j.value("description", "");
-                } catch (const std::exception& e) {
-                    mz_free(jsonData);
-                    DuskLog.warn(
-                        "ModLoader: bad mod.json in {}: {}", modPath.filename().string(), e.what());
-                }
-            }
-        }
-    }
-
-    mz_zip_archive zip{};
-    if (!mz_zip_reader_init_mem(&zip, zipBytes.data(), zipBytes.size(), 0)) {
-        DuskLog.error("ModLoader: failed to open {}", modPath.filename().string());
+    std::unique_ptr<ModBundle> bundle;
+    try {
+        bundle = loadBundle(modPath, fromDir);
+    } catch (const std::runtime_error& e) {
+        Log.error("Failed to open {} bundle: {}", io::fs_path_to_string(modPath.filename()), e.what());
         return;
     }
 
-    std::string dllEntry, dllFallback;
-    for (mz_uint i = 0, n = mz_zip_reader_get_num_files(&zip); i < n; ++i) {
-        mz_zip_archive_file_stat stat{};
-        if (!mz_zip_reader_file_stat(&zip, i, &stat)) {
-            continue;
-        }
-        if (mz_zip_reader_is_file_a_directory(&zip, i)) {
-            continue;
-        }
-        fs::path fname(stat.m_filename);
-        if (fname.extension() == k_libExt) {
-            if (!k_archSuffix.empty() && fname.stem().string().ends_with(k_archSuffix)) {
-                dllEntry = stat.m_filename;
-                break;
-            } else if (dllFallback.empty()) {
-                dllFallback = stat.m_filename;
-            }
-        }
+    std::string metaName, metaVersion, metaAuthor, metaDescription;
+    try
+    {
+        const auto metaJson = bundle->readFile("mod.json");
+        auto j = nlohmann::json::parse(metaJson);
+        metaName = j.value("name", "");
+        metaVersion = j.value("version", "");
+        metaAuthor = j.value("author", "");
+        metaDescription = j.value("description", "");
     }
+    catch (const std::runtime_error& e) {
+        Log.error(
+            "ModLoader: bad mod.json in {}: {}", io::fs_path_to_string(modPath.filename()), e.what());
+        return;
+    }
+
+    auto [dllEntry, dllFallback] = LocateDllInBundle(*bundle);
     if (dllEntry.empty()) {
         dllEntry = dllFallback;
     }
 
     if (dllEntry.empty()) {
-        mz_zip_reader_end(&zip);
         DuskLog.warn(
             "ModLoader: no *{} found in {} — skipping", k_libExt, modPath.filename().string());
         return;
@@ -464,27 +458,26 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath) {
 
     const fs::path dllCachePath = cacheDir / fs::path(dllEntry).filename();
 
-    size_t dllSize = 0;
-    void* dllData = mz_zip_reader_extract_file_to_heap(&zip, dllEntry.c_str(), &dllSize, 0);
-    mz_zip_reader_end(&zip);
-
-    if (!dllData) {
+    std::vector<u8> dllData;
+    try {
+        dllData = bundle->readFile(dllEntry);
+    } catch (const std::runtime_error& e) {
         DuskLog.error(
-            "ModLoader: failed to extract {} from {}", dllEntry, modPath.filename().string());
+            "ModLoader: failed to extract {} from {}", dllEntry, io::fs_path_to_string(modPath.filename()));
         return;
     }
+
     {
-        FILE* out = fs_fopen(dllCachePath, "wb");
-        if (out) {
-            fwrite(dllData, 1, dllSize, out);
-            fclose(out);
-        } else {
-            mz_free(dllData);
+        std::ofstream out(dllCachePath, std::ios::binary | std::ios::out);
+        if (!out) {
             DuskLog.error("ModLoader: failed to write {}", dllCachePath.string());
             return;
         }
+
+        out.write(
+            reinterpret_cast<const char*>(dllData.data()),
+            static_cast<std::streamsize>(dllData.size()));
     }
-    mz_free(dllData);
 
     void* handle = pl_dlopen(dllCachePath);
     if (!handle) {
@@ -520,14 +513,9 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath) {
     mod.author = metaAuthor.empty() ? "unknown" : metaAuthor;
     mod.description = metaDescription;
 
-    mod.zip_data = std::move(zipBytes);
+    mod.bundle = std::move(bundle);
     m_mods.push_back(std::move(mod));
-    {
-        LoadedMod& stored = m_mods.back();
-        if (mz_zip_reader_init_mem(&stored.res_zip, stored.zip_data.data(), stored.zip_data.size(), 0)) {
-            stored.res_zip_open = true;
-        }
-    }
+
     DuskLog.info("ModLoader: found '{}' v{} by {} ({})", m_mods.back().name, m_mods.back().version,
         m_mods.back().author, modPath.filename().string());
 }
@@ -548,7 +536,9 @@ void ModLoader::init() {
     std::error_code ec;
     std::vector<fs::directory_entry> entries;
     for (auto& e : fs::directory_iterator(m_modsDir, ec)) {
-        if (e.is_regular_file() && e.path().extension() == ".dusk") {
+        if (e.is_directory() && std::filesystem::exists(e.path() / "mod.json")) {
+            entries.push_back(e);
+        } else if (e.is_regular_file() && e.path().extension() == ".dusk") {
             entries.push_back(e);
         }
     }
@@ -559,7 +549,7 @@ void ModLoader::init() {
 
     m_mods.reserve(entries.size());
     for (auto& entry : entries) {
-        tryLoadDusk(entry.path());
+        tryLoadDusk(entry.path(), entry.is_directory());
     }
 
     if (m_mods.empty()) {
@@ -623,11 +613,6 @@ void ModLoader::shutdown() {
             } catch (...) {
             }
         }
-        if (mod.res_zip_open) {
-            mz_zip_reader_end(&mod.res_zip);
-            mod.res_zip_open = false;
-        }
-        mod.zip_data.clear();
         if (mod.handle) {
             pl_dlclose(mod.handle);
             mod.handle = nullptr;
