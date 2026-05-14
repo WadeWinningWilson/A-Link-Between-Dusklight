@@ -565,19 +565,6 @@ std::optional<std::vector<u8>*> tryLoadHdArchive(std::string_view gcPath) {
 
     auto hdFiles = parseRarcFiles(std::span<const u8>(
         hdBytesOpt->data(), hdBytesOpt->size()));
-    const bool hasReplaceableContent = std::any_of(hdFiles.begin(), hdFiles.end(),
-        [](const ArcFileInfo& f) {
-            return endsWithSuffix(f.path, ".bmd") ||
-                   endsWithSuffix(f.path, ".bdl") ||
-                   endsWithSuffix(f.path, ".bti") ||
-                   endsWithSuffix(f.path, ".bfn") ||
-                   endsWithSuffix(f.path, ".brfnt");
-        });
-    if (!hasReplaceableContent) {
-        HdLog.info("HD arc {} has no replaceable assets — skipping",
-                   hdArcPath.filename().string());
-        return std::nullopt;
-    }
 
     // Sidecar pack.gz holds the HD textures.
     auto hdPackPath = hdArcPath;
