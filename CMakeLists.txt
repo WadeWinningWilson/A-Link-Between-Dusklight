@@ -356,10 +356,10 @@ set(GAME_INCLUDE_DIRS
     ${miniz_SOURCE_DIR})
 
 # Interface target for mods and sub-projects to inherit game headers/defines
-add_library(dusk_game_headers INTERFACE)
-target_include_directories(dusk_game_headers INTERFACE ${GAME_INCLUDE_DIRS})
-target_compile_definitions(dusk_game_headers INTERFACE TARGET_PC=1)
-target_link_libraries(dusk_game_headers INTERFACE TracyClient)
+add_library(dusklight_game_headers INTERFACE)
+target_include_directories(dusklight_game_headers INTERFACE ${GAME_INCLUDE_DIRS})
+target_compile_definitions(dusklight_game_headers INTERFACE TARGET_PC=1)
+target_link_libraries(dusklight_game_headers INTERFACE TracyClient)
 
 find_package(Threads REQUIRED)
 set(GAME_LIBS aurora::core aurora::gx aurora::gd aurora::si aurora::vi aurora::pad aurora::mtx aurora::os aurora::dvd
@@ -752,3 +752,5 @@ foreach (target IN LISTS BINARY_TARGETS)
         endif ()
     endforeach ()
 endforeach ()
+
+add_subdirectory(tools/mod_test)
