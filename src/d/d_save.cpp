@@ -1347,6 +1347,81 @@ void dSv_event_c::init() {
 }
 
 void dSv_event_c::onEventBit(u16 i_no) {
+#if TARGET_PC
+    // Various checks for randomizer
+    if (randomizer_IsActive()) {
+        switch (i_no) {
+            // Case block for Wolf -> Human crash patches/bug fixes. Some cutscenes/events either crash or act weird if
+            // Link is Human but needs to be Wolf and the game no longer attempts to auto-transform Link once the Shadow
+            // Crystal has been obtained.
+            case ENTERED_ORDON_SPRING_DAY_3:
+                if (dComIfGs_isEventBit(TRANSFORMING_UNLOCKED)) {
+                    // Set player to Human as the game will not do so if Shadow Crystal has been obtained.
+                    dComIfGs_setTransformStatus(0);
+                }
+                break;
+
+            case WATCHED_CUTSCENE_AFTER_BEING_CAPTURED_IN_FARON_TWILIGHT:
+                if (dComIfGs_isEventBit(TRANSFORMING_UNLOCKED)) {
+                    // Set player to Wolf as the game will not do so if Shadow Crystal has been obtained.
+                    dComIfGs_setTransformStatus(1);
+                }
+                break;
+
+            case MIDNAS_DESPERATE_HOUR_COMPLETED:
+                dComIfGs_onDarkClearLV(3);
+                break;
+
+            case CLEARED_FARON_TWILIGHT:
+                // If we've already cleared Eldin Twilight, Lanayru Twilight, and MDH
+                if (dComIfGs_isEventBit(MIDNAS_DESPERATE_HOUR_COMPLETED)) {
+                    if (dComIfGs_getDarkClearLV() == 0x6) { // Eldin and Lanayru Twilights cleared
+                        // Set the flag for the last transformed twilight.
+                        // Also puts Midna on the player's back
+                        dComIfGs_onTransformLV(3);
+                        dComIfGs_onDarkClearLV(3);
+                    }
+                }
+                break;
+
+            case CLEARED_ELDIN_TWILIGHT:
+                onEventBit(MAP_WARPING_UNLOCKED); // in glitched Logic, you can skip the gorge bridge.
+                if (dComIfGs_isEventBit(MIDNAS_DESPERATE_HOUR_COMPLETED)){
+                    if (dComIfGs_getDarkClearLV() == 0x5) { // Faron and Lanayru Twilights cleared
+                        // Set the flag for the last transformed twilight.
+                        // Also puts Midna on the player's back
+                        dComIfGs_onTransformLV(3);
+                        dComIfGs_onDarkClearLV(3);
+                    }
+                }
+                break;
+
+            case CLEARED_LANAYRU_TWILIGHT: // Cleared Lanayru Twilight
+                if (dComIfGs_isEventBit(MIDNAS_DESPERATE_HOUR_COMPLETED)) {
+                    if (dComIfGs_getDarkClearLV() == 0x3) { // Faron and Eldin Twilights Cleared
+                        // Set the flag for the last transformed twilight.
+                        // Also puts Midna on the player's back
+                        dComIfGs_onTransformLV(3);
+                        dComIfGs_onDarkClearLV(3);
+                    }
+                }
+                break;
+
+            case REMOVE_SWORD_SHIELD_FROM_WOLF_BACK:
+                if (!dComIfGs_isEventBit(CLEARED_FARON_TWILIGHT)) {
+                    dComIfGs_onTransformLV(1); // Set the last transformed twilight to include Faron
+                }
+                break;
+
+            case GAVE_TELMA_RENADOS_LETTER:
+                offWarashibeItem(dItemNo_Randomizer_LETTER_e);
+                break;
+
+            default:
+                break;
+        }
+    }
+#endif
     mEvent[i_no >> 8] |= u8(i_no);
 }
 
