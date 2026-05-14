@@ -2946,6 +2946,15 @@ void dComIfGs_setupRandomizerSave() {
     DuskLog.debug("Created Rando Save");
     randoData.mCreatingSave = false;
 }
+
+u8 dComIfGs_getCollectSmell() {
+    // In randomizer, always return the reekfish scent if the player is in Snowpeak and has gotten the
+    // smell before.
+    if (randomizer_IsActive() && getStageID() == Snowpeak && dComIfGs_isEventBit(GOT_REEKFISH_SCENT)) {
+        return dItemNo_SMELL_FISH_e;
+    }
+    return g_dComIfG_gameInfo.info.getPlayer().getPlayerStatusA().getSelectEquip(COLLECT_SMELL);
+}
 #endif
 
 void dComIfGs_gameStart() {

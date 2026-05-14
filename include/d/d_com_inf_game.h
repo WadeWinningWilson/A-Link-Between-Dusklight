@@ -1339,9 +1339,13 @@ inline u8 dComIfGs_getSelectEquipShield() {
     return g_dComIfG_gameInfo.info.getPlayer().getPlayerStatusA().getSelectEquip(COLLECT_SHIELD);
 }
 
+#if TARGET_PC
+u8 dComIfGs_getCollectSmell();
+#else
 inline u8 dComIfGs_getCollectSmell() {
     return g_dComIfG_gameInfo.info.getPlayer().getPlayerStatusA().getSelectEquip(COLLECT_SMELL);
 }
+#endif
 
 inline void dComIfGs_setCollectSmell(u8 smell) {
     g_dComIfG_gameInfo.info.getPlayer().getPlayerStatusA().setSelectEquip(COLLECT_SMELL, smell);
