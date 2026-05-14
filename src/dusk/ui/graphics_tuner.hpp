@@ -28,9 +28,9 @@ public:
 
     bool focus() override;
     void update() override;
+    bool handle_nav_command(NavCommand cmd);
 
 private:
-    bool handle_nav_command(NavCommand cmd);
     void apply(int value);
 
     Props mProps;
@@ -59,7 +59,7 @@ struct GraphicsTunerProps {
 
 class GraphicsTuner : public Document {
 public:
-    explicit GraphicsTuner(GraphicsTunerProps props);
+    explicit GraphicsTuner(GraphicsTunerProps props, bool prelaunch);
 
     void show() override;
     void hide(bool close) override;
@@ -86,7 +86,9 @@ private:
     int mValueMax = 0;
     int mDefaultValue = 0;
     std::vector<std::unique_ptr<Component> > mComponents;
+    SteppedCarousel* mCarousel;
     Rml::Element* mRoot;
+    bool mPrelaunch;
 };
 
 }  // namespace dusk::ui

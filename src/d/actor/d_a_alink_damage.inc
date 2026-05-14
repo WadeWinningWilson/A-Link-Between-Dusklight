@@ -205,6 +205,9 @@ int daAlink_c::setDamagePoint(int i_dmgAmount, BOOL i_checkZoraMag, BOOL i_setDm
         dComIfGp_setItemLifeCount(-i_dmgAmount, 0);
     }
 
+#if TARGET_PC
+    dusk::AchievementSystem::get().signal("player_damaged");
+#endif
     onResetFlg1(RFLG1_DAMAGE_IMPACT);
     mSwordUpTimer = 0;
 

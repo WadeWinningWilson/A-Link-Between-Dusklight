@@ -486,6 +486,9 @@ public:
             mDeathCount++;
         }
     }
+#if TARGET_PC
+    u16 getDeathCount() const { return mDeathCount; }
+#endif
     char* getPlayerName() const { return const_cast<char*>(mPlayerName); }
     void setPlayerName(const char* i_name) {
 #if AVOID_UB

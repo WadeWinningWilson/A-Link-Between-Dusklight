@@ -54,7 +54,7 @@ void NumberButton::set_value(Rml::String value) {
 }
 
 bool NumberButton::handle_nav_command(NavCommand cmd) {
-    if (cmd == NavCommand::Left || cmd == NavCommand::Right) {
+    if (!is_editing() && (cmd == NavCommand::Left || cmd == NavCommand::Right)) {
         const int newValue = std::clamp(
             mGetValue() + (cmd == NavCommand::Right ? mStep : -mStep), mMin, mMax);
         if (newValue != mGetValue()) {

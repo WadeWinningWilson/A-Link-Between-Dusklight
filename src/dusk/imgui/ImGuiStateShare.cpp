@@ -18,6 +18,7 @@
 
 #include <unordered_set>
 #include <zstd.h>
+#include <dusk/autosave.h>
 
 namespace dusk {
 
@@ -48,19 +49,18 @@ void ImGuiStateShare::onMergeFileSelected(void* userdata, const char* path, cons
 
 
 
-static std::string GetStatesFilePath() {
-    return (dusk::ConfigPath / STATES_FILENAME).string();
+static std::filesystem::path GetStatesFilePath() {
+    return ConfigPath / STATES_FILENAME;
 }
 
 void ImGuiStateShare::loadStatesFile() {
     m_loaded = true;
-    const std::filesystem::path filePath = dusk::ConfigPath / STATES_FILENAME;
+    const std::filesystem::path filePath = GetStatesFilePath();
     if (!std::filesystem::exists(filePath)) {
         return;
     }
     try {
-        const std::string pathStr = filePath.string();
-        auto data = io::FileStream::ReadAllBytes(pathStr.c_str());
+        auto data = io::FileStream::ReadAllBytes(filePath);
         auto j = json::parse(data);
         if (!j.is_array()) {
             return;
@@ -85,7 +85,7 @@ void ImGuiStateShare::saveStatesFile() {
         j.push_back(json{{"name", s.name}, {"data", s.encoded}});
     }
     try {
-        io::FileStream::WriteAllText(GetStatesFilePath().c_str(), j.dump(2));
+        io::FileStream::WriteAllText(GetStatesFilePath(), j.dump(2));
     } catch (const std::exception& e) {
         m_statusMsg = fmt::format("Failed to save states: {}", e.what());
     }
@@ -135,6 +135,8 @@ bool ImGuiStateShare::applyEncodedState(const std::string& encoded, const std::s
         m_statusMsg = fmt::format("Decompression failed: {}", ZSTD_getErrorName(result));
         return false;
     }
+
+    toggleAutoSave(false);
 
     StateSharePacket pkt;
     memcpy(&pkt, raw.data(), sizeof(pkt));

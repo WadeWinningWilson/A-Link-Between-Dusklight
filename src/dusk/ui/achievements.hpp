@@ -13,7 +13,9 @@ public:
     void update() override;
 
 private:
+    void updateTotal();
     std::vector<Achievement> mSnapshot;
+    Rml::Element* mTotalEl = nullptr;
 };
 
 }  // namespace dusk::ui

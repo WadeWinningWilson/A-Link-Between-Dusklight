@@ -12,6 +12,7 @@
 
 #if TARGET_PC
 #include "dusk/gyro.h"
+#include "dusk/action_bindings.h"
 #endif
 
 bool daAlink_c::checkNoSubjectModeCamera() {
@@ -119,8 +120,8 @@ BOOL daAlink_c::setBodyAngleToCamera() {
                 var_f31 /= dComIfGp_getCameraZoomScale(field_0x317c);
             }
 
-            shape_angle.y = shape_angle.y + (var_f31 * cM_ssin(mStickAngle));
-            sp8 = mBodyAngle.x + (var_f31 * cM_scos(mStickAngle));
+            shape_angle.y = shape_angle.y + (var_f31 * cM_ssin(mStickAngle) IF_DUSK(* (dusk::getSettings().game.invertFirstPersonXAxis ? -1.0f : 1.0f)));
+            sp8 = mBodyAngle.x + (var_f31 * cM_scos(mStickAngle) IF_DUSK(* (dusk::getSettings().game.invertFirstPersonYAxis ? -1.0f : 1.0f)));
 
             if (checkNotItemSinkLimit() && sp8 > 0 && sp8 > mBodyAngle.x) {
                 sp8 = mBodyAngle.x;
@@ -192,7 +193,9 @@ BOOL daAlink_c::subjectCancelTrigger() {
 BOOL daAlink_c::checkSubjectEnd(BOOL i_isPlaySe) {
     setDoStatus(BUTTON_STATUS_BACK);
 
-    if (checkEventRun() || checkEquipAnime() || doTrigger() || checkSetItemTrigger(dItemNo_HAWK_EYE_e) || subjectCancelTrigger() || checkEndResetFlg0(ERFLG0_FORCE_SUBJECT_CANCEL) || dComIfGp_checkCameraAttentionStatus(field_0x317c, 0x2000)) {
+    // Allow pressing the first person binding to also leave first person
+    if (IF_DUSK(dusk::getActionBindTrig(dusk::ActionBinds::FIRST_PERSON_CAMERA, 0)) ||
+        checkEventRun() || checkEquipAnime() || doTrigger() || checkSetItemTrigger(dItemNo_HAWK_EYE_e) || subjectCancelTrigger() || checkEndResetFlg0(ERFLG0_FORCE_SUBJECT_CANCEL) || dComIfGp_checkCameraAttentionStatus(field_0x317c, 0x2000)) {
         if (i_isPlaySe) {
             seStartSystem(Z2SE_SUBJ_VIEW_OUT);
         }

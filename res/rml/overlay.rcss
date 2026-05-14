@@ -163,30 +163,30 @@ icon {
 }
 
 icon.arrow-forward {
-    width: 24dp;
-    height: 24dp;
-    font-size: 24dp;
+    width: 1.2em;
+    height: 1.2em;
+    font-size: 1.2em;
     decorator: text("&#xe5c8;" center center);
 }
 
 icon.trophy {
-    width: 24dp;
-    height: 24dp;
-    font-size: 24dp;
+    width: 1.2em;
+    height: 1.2em;
+    font-size: 1.2em;
     decorator: text("&#xe71a;" center center);
 }
 
 icon.controller {
-    width: 24dp;
-    height: 24dp;
-    font-size: 24dp;
+    width: 1.2em;
+    height: 1.2em;
+    font-size: 1.2em;
     decorator: text("&#xf135;" center center);
 }
 
 icon.warning {
-    width: 24dp;
-    height: 24dp;
-    font-size: 24dp;
+    width: 1.2em;
+    height: 1.2em;
+    font-size: 1.2em;
     decorator: text("&#xe002;" center center);
 }
 
@@ -199,6 +199,37 @@ fps {
     border-radius: 7dp;
     pointer-events: none;
     white-space: nowrap;
+}
+
+speedrun-timer {
+    display: none;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    z-index: 99;
+    background-color: rgba(0, 0, 0, 65%);
+    padding: 2dp 4dp;
+    pointer-events: none;
+    font-family: "Noto Mono";
+    font-size: 16dp;
+    color: #ffffff;
+    white-space: nowrap;
+}
+
+speedrun-timer[open] {
+    display: block;
+}
+
+speedrun-rta {
+    display: none;
+}
+
+speedrun-rta[open] {
+    display: block;
+}
+
+speedrun-igt {
+    display: block;
 }
 
 fps[open] {
@@ -272,5 +303,20 @@ logo img.outer {
     }
     to {
         transform: rotate(360deg);
+    }
+}
+
+@media (max-height: 640dp) {
+    toast {
+        top: 20dp;
+        right: 20dp;
+    }
+
+    toast.controller-warning {
+        bottom: 20dp;
+    }
+
+    toast.menu-notification {
+        top: 20dp;
     }
 }

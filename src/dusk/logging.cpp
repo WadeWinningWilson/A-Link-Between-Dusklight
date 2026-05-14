@@ -8,6 +8,7 @@
 #include <mutex>
 #include <string>
 
+#include "dusk/io.hpp"
 #include "tracy/Tracy.hpp"
 
 #if TARGET_ANDROID
@@ -40,7 +41,7 @@ std::atomic g_logStateAlive(true);
 struct LogState {
     std::mutex mutex;
     FILE* file = nullptr;
-    std::string filePath;
+    std::u8string filePath;
 
     ~LogState() {
         CloseFile();
@@ -94,7 +95,7 @@ std::string MakeTimestampedLogName() {
 #endif
 
     std::array<char, 32> buffer{};
-    std::strftime(buffer.data(), buffer.size(), "dusk-%Y%m%d-%H%M%S.log", &localTime);
+    std::strftime(buffer.data(), buffer.size(), "dusklight-%Y%m%d-%H%M%S.log", &localTime);
     return buffer.data();
 }
 
@@ -107,6 +108,16 @@ void WriteLogLine(FILE* out, const char* levelStr, const char* module, const cha
     std::fwrite(message, 1, len, out);
     std::fputc('\n', out);
     std::fflush(out);
+}
+
+void WriteLogLineToFile(
+    const char* levelStr, const char* module, const char* message, unsigned int len) {
+    if (g_logStateAlive.load(std::memory_order_acquire)) {
+        std::lock_guard lock(g_logState.mutex);
+        if (g_logState.file != nullptr) {
+            WriteLogLine(g_logState.file, levelStr, module, message, len);
+        }
+    }
 }
 }  // namespace
 
@@ -131,6 +142,11 @@ void aurora_log_callback(AuroraLogLevel level, const char* module, const char* m
         return;
     }
 
+    if (module == nullptr) {
+        module = "";
+    }
+
+    const char* levelStr = LogLevelString(level);
     int android_log_level = 0;
     switch (level) {
     case LOG_DEBUG:
@@ -150,11 +166,13 @@ void aurora_log_callback(AuroraLogLevel level, const char* module, const char* m
         break;
     }
 
-    std::stringstream msgStream(message);
+    std::stringstream msgStream(std::string(message, len));
     std::string segment;
     while(std::getline(msgStream, segment)) {
         __android_log_print(android_log_level, module, "%s\n", segment.c_str());
     }
+
+    WriteLogLineToFile(levelStr, module, message, len);
 
     if (level == LOG_FATAL) {
         abort();
@@ -176,13 +194,7 @@ void aurora_log_callback(AuroraLogLevel level, const char* module, const char* m
     const char* levelStr = LogLevelString(level);
     FILE* out = LogStreamForLevel(level);
     WriteLogLine(out, levelStr, module, message, len);
-
-    if (g_logStateAlive.load(std::memory_order_acquire)) {
-        std::lock_guard lock(g_logState.mutex);
-        if (g_logState.file != nullptr) {
-            WriteLogLine(g_logState.file, levelStr, module, message, len);
-        }
-    }
+    WriteLogLineToFile(levelStr, module, message, len);
 
     if (level == LOG_FATAL) {
         abort();
@@ -207,19 +219,19 @@ void dusk::InitializeFileLogging(const std::filesystem::path& configDir, AuroraL
     std::filesystem::create_directories(logsDir, ec);
     if (ec) {
         std::fprintf(stderr, "[WARNING | dusk] Failed to create log directory '%s': %s\n",
-                     logsDir.string().c_str(), ec.message().c_str());
+            io::fs_path_to_string(logsDir).c_str(), ec.message().c_str());
         return;
     }
 
     const std::filesystem::path logPath = logsDir / MakeTimestampedLogName();
-    g_logState.file = std::fopen(logPath.string().c_str(), "wb");
+    g_logState.file = io::FileStream::Create(logPath).ToInner();
     if (g_logState.file == nullptr) {
         std::fprintf(stderr, "[WARNING | dusk] Failed to open log file '%s'\n",
-                     logPath.string().c_str());
+            io::fs_path_to_string(logPath).c_str());
         return;
     }
 
-    g_logState.filePath = logPath.string();
+    g_logState.filePath = logPath.u8string();
     aurora::g_config.logCallback = &aurora_log_callback;
     aurora::g_config.logLevel = logLevel;
     WriteLogLine(g_logState.file, "INFO", "dusk", "File logging initialized", 24);
@@ -237,5 +249,6 @@ const char* dusk::GetLogFilePath() {
         return nullptr;
     }
     std::lock_guard lock(g_logState.mutex);
-    return g_logState.filePath.empty() ? nullptr : g_logState.filePath.c_str();
+    return reinterpret_cast<const char*>(
+        g_logState.filePath.empty() ? nullptr : g_logState.filePath.c_str());
 }

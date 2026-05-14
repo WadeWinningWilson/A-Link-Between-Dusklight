@@ -16,9 +16,8 @@ struct CategoryInfo {
 };
 
 constexpr CategoryInfo kCategories[] = {
-    {AchievementCategory::Story,      "Story"},
-    {AchievementCategory::Collection, "Collection"},
     {AchievementCategory::Challenge,  "Challenge"},
+    {AchievementCategory::Collection, "Collection"},
     {AchievementCategory::Minigame,   "Minigame"},
     {AchievementCategory::Misc,       "Misc"},
     {AchievementCategory::Glitched,   "Glitched"},
@@ -114,6 +113,13 @@ private:
 AchievementsWindow::AchievementsWindow() {
     const auto all = AchievementSystem::get().getAchievements();
 
+    {
+        auto elem = mDocument->CreateElement("div");
+        elem->SetClass("achievement-total", true);
+        mTotalEl = mRoot->AppendChild(std::move(elem));
+        updateTotal();
+    }
+
     for (const auto& catInfo : kCategories) {
         int catTotal = 0;
         for (const auto& a : all) {
@@ -201,8 +207,25 @@ void AchievementsWindow::update() {
     if (dirty) {
         mSnapshot = current;
         refresh_active_tab();
+        updateTotal();
     }
     Window::update();
+}
+
+void AchievementsWindow::updateTotal() {
+    if (mTotalEl == nullptr) {
+        return;
+    }
+    const auto all = AchievementSystem::get().getAchievements();
+    int total = static_cast<int>(all.size());
+    int unlocked = 0;
+    for (const auto& a : all) {
+        if (a.unlocked) {
+            ++unlocked;
+        }
+    }
+    const int pct = total > 0 ? (unlocked * 100 / total) : 0;
+    mTotalEl->SetInnerRML(fmt::format("{}%", pct));
 }
 
 }  // namespace dusk::ui

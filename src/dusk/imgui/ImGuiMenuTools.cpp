@@ -12,6 +12,7 @@
 #include "d/actor/d_a_alink.h"
 #include "d/actor/d_a_horse.h"
 #include "d/d_com_inf_game.h"
+#include "dusk/data.hpp"
 #include "dusk/dusk.h"
 #include "dusk/main.h"
 #include "m_Do/m_Do_main.h"
@@ -39,7 +40,6 @@ namespace dusk {
             ImGui::BeginDisabled(getSettings().game.speedrunMode);
 
             ImGui::MenuItem("Save Editor", hotkeys::SHOW_SAVE_EDITOR, &m_showSaveEditor);
-            ImGui::MenuItem("Map Loader", hotkeys::SHOW_MAP_LOADER, &m_showMapLoader);
             ImGui::MenuItem("State Share", hotkeys::SHOW_STATE_SHARE, &m_showStateShare);
 
             ImGui::EndDisabled();
@@ -48,13 +48,10 @@ namespace dusk {
                 ImGui::EndDisabled();
             }
 
-            ImGui::Separator();
-            ImGui::Checkbox("Show Input Viewer", &m_showInputViewer);
-
 #if DUSK_CAN_OPEN_DATA_FOLDER
             ImGui::Separator();
             if (ImGui::MenuItem("Open Data Folder")) {
-                OpenDataFolder();
+                data::open_data_path();
             }
 #endif
 
@@ -107,6 +104,7 @@ namespace dusk {
             ImGui::MenuItem("Audio Debug", hotkeys::SHOW_AUDIO_DEBUG, &m_showAudioDebug);
             ImGui::MenuItem("Bloom", nullptr, &m_showBloomWindow);
             ImGui::MenuItem("Stub Log", nullptr, &m_showStubLog);
+            ImGui::MenuItem("Actor Spawner", nullptr, &m_showActorSpawner);
 
             if (!dusk::IsGameLaunched) {
                 ImGui::EndDisabled();

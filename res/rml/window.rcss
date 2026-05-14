@@ -17,6 +17,7 @@ body {
 window {
     display: flex;
     flex-flow: column;
+    position: relative;
     height: 100%;
     width: 100%;
     max-width: 1088dp;
@@ -102,6 +103,12 @@ window content pane > * {
 
 window content pane:last-of-type > div {
     line-height: 1.625;
+}
+
+.data-folder-current {
+    display: block;
+    font-size: 16dp;
+    color: rgba(224, 219, 200, 65%);
 }
 
 window content pane > spacer {
@@ -198,6 +205,11 @@ button:not(:disabled):active {
     box-shadow: #C2A42D 0 0 0 2dp;
 }
 
+button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
 button.modal-btn {
     flex: 1 1 0;
     text-align: center;
@@ -289,6 +301,19 @@ icon.celebration {
 
 icon.question-mark {
     decorator: text("&#xeb8b;" center center);
+}
+
+.achievement-total {
+    position: absolute;
+    top: 0;
+    right: 64dp;
+    height: 64dp;
+    line-height: 64dp;
+    font-family: "Fira Sans Condensed";
+    font-weight: bold;
+    font-size: 16dp;
+    color: rgba(224, 219, 200, 55%);
+    pointer-events: none;
 }
 
 .achievement-row {
@@ -484,7 +509,6 @@ progress.verification-progress-bar {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    justify-content: stretch;
     align-items: stretch;
     gap: 12dp;
     width: 100%;

@@ -14,7 +14,8 @@ void applyPresetClassic() {
     auto& s = getSettings();
     s.video.lockAspectRatio.setValue(true);
     s.game.bloomMode.setValue(BloomMode::Classic);
-    s.game.enableAchievementNotifications.setValue(false);
+    s.game.enableAchievementToasts.setValue(false);
+    s.game.enableControllerToasts.setValue(false);
     s.game.internalResolutionScale.setValue(1);
     s.game.shadowResolutionMultiplier.setValue(1);
     s.game.hideTvSettingsScreen.setValue(false);
@@ -32,8 +33,10 @@ void applyPresetDusk() {
     s.game.fastTears.setValue(true);
     s.game.biggerWallets.setValue(true);
     s.game.invertCameraXAxis.setValue(true);
+    s.game.invertFirstPersonYAxis.setValue(true);
     s.game.no2ndFishForCat.setValue(true);
-    s.game.enableAchievementNotifications.setValue(true);
+    s.game.enableAchievementToasts.setValue(true);
+    s.game.enableControllerToasts.setValue(true);
     s.game.enableQuickTransform.setValue(true);
     s.game.instantSaves.setValue(true);
     s.game.midnasLamentNonStop.setValue(true);
@@ -56,7 +59,7 @@ PresetWindow::PresetWindow() : WindowSmall("modal", "modal-dialog") {
 
     auto* title = append(header, "div");
     title->SetClass("modal-title", true);
-    title->SetInnerRML("Welcome to Dusk");
+    title->SetInnerRML("Welcome to Dusklight");
 
     auto* headIcon = append(header, "icon");
     headIcon->SetClass("celebration", true);
@@ -80,7 +83,7 @@ PresetWindow::PresetWindow() : WindowSmall("modal", "modal-dialog") {
          "Enhancements disabled to match the GameCube version. "
          "Good for speedrunning or simple nostalgia!",
          applyPresetClassic},
-        {"Dusk",
+        {"Dusklight",
          "Graphics & quality of life tweaks, including some from the Wii U version. "
          "Our recommended way to play!",
          applyPresetDusk},

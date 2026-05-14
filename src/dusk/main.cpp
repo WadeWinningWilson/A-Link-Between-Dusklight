@@ -6,6 +6,7 @@
 
 #include <aurora/main.h>
 #include "dusk/main.h"
+#include "dusk/io.hpp"
 
 #include <algorithm>
 #include <array>
@@ -43,7 +44,7 @@ bool RestartProcess(int argc, char* argv[]) {
     if (!CreateProcessW(nullptr, commandLine.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr,
             &startupInfo, &processInfo))
     {
-        fprintf(stderr, "Failed to restart Dusk: CreateProcessW error %lu\n", GetLastError());
+        fprintf(stderr, "Failed to restart Dusklight: CreateProcessW error %lu\n", GetLastError());
         return false;
     }
 
@@ -85,13 +86,13 @@ bool RestartProcess(int argc, char* argv[]) {
     }
 
     if (executablePath.empty()) {
-        fprintf(stderr, "Failed to restart Dusk: unable to resolve executable path\n");
+        fprintf(stderr, "Failed to restart Dusklight: unable to resolve executable path\n");
         return false;
     }
 
     std::vector<std::string> args;
     args.reserve(static_cast<size_t>(std::max(argc, 1)));
-    args.push_back(executablePath.string());
+    args.push_back(dusk::io::fs_path_to_string(executablePath));
     for (int i = 1; i < argc; ++i) {
         args.emplace_back(argv[i] != nullptr ? argv[i] : "");
     }
@@ -104,7 +105,7 @@ bool RestartProcess(int argc, char* argv[]) {
     execArgv.push_back(nullptr);
 
     execv(executablePath.c_str(), execArgv.data());
-    fprintf(stderr, "Failed to restart Dusk: execv failed: %s\n", std::strerror(errno));
+    fprintf(stderr, "Failed to restart Dusklight: execv failed: %s\n", std::strerror(errno));
     return false;
 #endif
 }

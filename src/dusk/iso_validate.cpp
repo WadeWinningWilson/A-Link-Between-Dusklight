@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include <string_view>
 
+#include "dusk/logging.h"
+
 namespace {
 
 constexpr uint8_t hex_nibble_to_u8(char c) {
@@ -40,6 +42,18 @@ constexpr XXH128_hash_t parse_xxh128(std::string_view hex) {
         .low64 = parse_u64_hex(hex.substr(16, 16)),
         .high64 = parse_u64_hex(hex.substr(0, 16)),
     };
+}
+
+const char* verification_state_name(dusk::DiscVerificationState state) noexcept {
+    switch (state) {
+    case dusk::DiscVerificationState::Success:
+        return "verified";
+    case dusk::DiscVerificationState::HashMismatch:
+        return "hash mismatch";
+    case dusk::DiscVerificationState::Unknown:
+    default:
+        return "unknown";
+    }
 }
 
 }  // namespace
@@ -247,5 +261,11 @@ ValidationError inspect(const char* path, DiscInfo& info) {
 bool isPal(const char* path) {
     DiscInfo info{};
     return inspect(path, info) == ValidationError::Success && info.isPal;
+}
+
+void log_verification_state(std::string_view path, DiscVerificationState state) {
+    const std::string pathText = path.empty() ? "<none>" : std::string(path);
+    DuskLog.info(
+        "Disc verification status: {} (path: {})", verification_state_name(state), pathText);
 }
 }  // namespace dusk::iso

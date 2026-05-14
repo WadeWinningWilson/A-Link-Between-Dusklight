@@ -14,6 +14,7 @@
 #include "d/actor/d_a_midna.h"
 #include "d/d_model.h"
 #include "d/d_tresure.h"
+#include "dusk/achievements.h"
 #include "dusk/frame_interpolation.h"
 #include "dusk/livesplit.h"
 #include "dusk/logging.h"
@@ -741,6 +742,8 @@ static void fapGm_AfterRecord() {
     fapGm_After();
 }
 
+BOOL isRecording = false;
+
 static void duskExecute() {
     handleGamepadColor();
     updateAutoSave();
@@ -753,7 +756,13 @@ static void duskExecute() {
     }
 
     if (dusk::getSettings().game.recordingMode) {
-        Z2GetSeqMgr()->bgmAllMute(0, 0);
+        Z2GetSoundMgr()->getSeqMgr()->getParams()->moveVolume(0.0f, 0);
+        Z2GetSoundMgr()->getStreamMgr()->getParams()->moveVolume(0.0f, 0);
+        isRecording = true;
+    } else if (isRecording) {
+        Z2GetSoundMgr()->getSeqMgr()->getParams()->moveVolume(1.0f, 0);
+        Z2GetSoundMgr()->getStreamMgr()->getParams()->moveVolume(1.0f, 0);
+        isRecording = false;
     }
 
     if (mDoCPd_c::getHoldR(PAD_1) && mDoCPd_c::getTrigX(PAD_1)) {
@@ -790,6 +799,10 @@ static void duskExecute() {
 
     if (dusk::getSettings().game.infiniteArrows) {
         dComIfGs_setArrowNum(dComIfGs_getArrowMax());
+    }
+
+    if (dusk::getSettings().game.infiniteSeeds) {
+        dComIfGs_setPachinkoNum(dComIfGs_getPachinkoMax());
     }
 
     if (dusk::getSettings().game.infiniteBombs) {
@@ -837,6 +850,7 @@ void fapGm_Execute() {
     cCt_Counter(0);
 #ifdef TARGET_PC
     dusk::speedrun::onGameFrame();
+    dusk::AchievementSystem::get().tick();
 #endif
 }
 
