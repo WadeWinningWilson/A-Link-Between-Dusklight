@@ -8,6 +8,7 @@
 
 namespace dusk::modding {
 class ModBundle;
+class NativeModule;
 }
 
 namespace dusk {
@@ -35,7 +36,7 @@ struct LoadedMod {
     std::string mod_path;
     std::string dir;
 
-    void* handle = nullptr;
+    std::unique_ptr<modding::NativeModule> handle;
     bool active = false;
     bool load_failed = false;
 

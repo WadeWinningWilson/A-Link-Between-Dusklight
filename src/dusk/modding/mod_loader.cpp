@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <cstdarg>
-#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -17,61 +16,10 @@
 #include "aurora/dvd.h"
 #include "dusk/io.hpp"
 #include "miniz.h"
+#include "native_module.hpp"
 #include "nlohmann/json.hpp"
 
-#if defined(_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
-
 static aurora::Module Log("dusk::modLoader");
-
-static void* pl_dlopen(const std::filesystem::path& p) {
-    return LoadLibraryW(p.wstring().c_str());
-}
-static void* pl_dlsym(void* h, const char* name) {
-    return reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(h), name));
-}
-static void pl_dlclose(void* h) {
-    FreeLibrary(static_cast<HMODULE>(h));
-}
-static std::string pl_dlerror() {
-    char buf[256]{};
-    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
-        GetLastError(), 0, buf, sizeof(buf), nullptr);
-    std::string s = buf;
-    while (!s.empty() && (s.back() == '\r' || s.back() == '\n')) {
-        s.pop_back();
-    }
-    return s;
-}
-static constexpr const char* k_libExt = ".dll";
-
-#else
-#include <dlfcn.h>
-static void* pl_dlopen(const std::filesystem::path& p) {
-#if defined(__linux__)
-    return dlopen(p.c_str(), RTLD_LAZY | RTLD_LOCAL | RTLD_DEEPBIND);
-#else
-    return dlopen(p.c_str(), RTLD_LAZY | RTLD_LOCAL);
-#endif
-}
-static void* pl_dlsym(void* h, const char* name) {
-    return dlsym(h, name);
-}
-static void pl_dlclose(void* h) {
-    dlclose(h);
-}
-static std::string pl_dlerror() {
-    const char* e = dlerror();
-    return e ? e : "(unknown error)";
-}
-#if defined(__APPLE__)
-static constexpr const char* k_libExt = ".dylib";
-#else
-static constexpr const char* k_libExt = ".so";
-#endif
-#endif
 
 using namespace dusk::modding;
 using namespace std::string_literals;
@@ -497,7 +445,7 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
 
     if (dllEntry.empty()) {
         DuskLog.warn(
-            "ModLoader: no *{} found in {} — skipping", k_libExt, io::fs_path_to_string(modPath.filename()));
+            "ModLoader: no *{} found in {} — skipping", NativeModule::LibraryExtension, io::fs_path_to_string(modPath.filename()));
         return;
     }
 
@@ -528,32 +476,32 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
             static_cast<std::streamsize>(dllData.size()));
     }
 
-    void* handle = pl_dlopen(dllCachePath);
-    if (!handle) {
-        DuskLog.error("ModLoader: failed to open {}: {}", io::fs_path_to_string(dllCachePath), pl_dlerror());
+    NativeModule native;
+    try {
+        native = NativeModule(dllCachePath);
+    } catch (const std::runtime_error& e) {
+        DuskLog.error("ModLoader: failed to open {}: {}", io::fs_path_to_string(dllCachePath), e.what());
         return;
     }
 
     LoadedMod mod;
     mod.mod_path = io::fs_path_to_string(fs::absolute(modPath));
     mod.dir = io::fs_path_to_string(fs::absolute(cacheDir));
-    mod.handle = handle;
-    auto* mod_api_ver = reinterpret_cast<uint32_t*>(pl_dlsym(handle, "mod_api_version"));
+    mod.handle = std::make_unique<NativeModule>(std::move(native));
+    const auto mod_api_ver = mod.handle->LookupSymbol<uint32_t*>("mod_api_version");
     if (mod_api_ver && *mod_api_ver != DUSK_MOD_API_VERSION) {
         DuskLog.error("ModLoader: {} expects API v{} but engine is v{}, skipping",
             io::fs_path_to_string(fs::path(dllEntry).filename()), *mod_api_ver, DUSK_MOD_API_VERSION);
-        pl_dlclose(handle);
         return;
     }
 
-    mod.fn_init = reinterpret_cast<LoadedMod::FnInit>(pl_dlsym(handle, "mod_init"));
-    mod.fn_tick = reinterpret_cast<LoadedMod::FnTick>(pl_dlsym(handle, "mod_tick"));
-    mod.fn_cleanup = reinterpret_cast<LoadedMod::FnCleanup>(pl_dlsym(handle, "mod_cleanup"));
+    mod.fn_init = mod.handle->LookupSymbol<LoadedMod::FnInit>("mod_init");
+    mod.fn_tick = mod.handle->LookupSymbol<LoadedMod::FnTick>("mod_tick");
+    mod.fn_cleanup = mod.handle->LookupSymbol<LoadedMod::FnCleanup>("mod_cleanup");
 
     if (!mod.fn_init || !mod.fn_tick) {
         DuskLog.error("ModLoader: {} missing mod_init or mod_tick — skipping",
             io::fs_path_to_string(fs::path(dllEntry).filename()));
-        pl_dlclose(handle);
         return;
     }
 
@@ -666,10 +614,6 @@ void ModLoader::shutdown() {
                 mod.fn_cleanup(&mod.api);
             } catch (...) {
             }
-        }
-        if (mod.handle) {
-            pl_dlclose(mod.handle);
-            mod.handle = nullptr;
         }
     }
     m_mods.clear();
