@@ -302,31 +302,32 @@ ModLoader& ModLoader::instance() {
 }
 
 void ModLoader::buildAPI(LoadedMod& mod) {
-    mod.api.api_version = DUSK_MOD_API_VERSION;
-    mod.api.mod_dir = mod.dir.c_str();
-    mod.api.log_info = cb_log_info;
-    mod.api.log_warn = cb_log_warn;
-    mod.api.log_error = cb_log_error;
-    mod.api.load_resource = cb_load_resource;
-    mod.api.free_resource = cb_free_resource;
-    mod.api.register_tab_content = cb_register_tab_content;
-    mod.api.register_tab_update = cb_register_tab_update;
-    mod.api.panel_add_section   = cb_panel_add_section;
-    mod.api.panel_add_button    = cb_panel_add_button;
-    mod.api.panel_add_badge_row = cb_panel_add_badge_row;
-    mod.api.panel_add_dyn_text  = cb_panel_add_dyn_text;
-    mod.api.elem_set_badge      = cb_elem_set_badge;
-    mod.api.elem_set_text       = cb_elem_set_text;
-    mod.api.panel_add_progress  = cb_panel_add_progress;
-    mod.api.elem_set_progress   = cb_elem_set_progress;
-    mod.api.hook_install = hookInstallByAddr;
-    mod.api.hook_pre = api_hook_pre;
-    mod.api.hook_post = api_hook_post;
-    mod.api.hook_replace = api_hook_replace;
-    mod.api.hook_dispatch_pre = hookDispatchPre;
-    mod.api.hook_dispatch_post = hookDispatchPost;
-    mod.api.service_publish = cb_service_publish;
-    mod.api.service_get = cb_service_get;
+    auto& native = *mod.native;
+    native.api.api_version = DUSK_MOD_API_VERSION;
+    native.api.mod_dir = mod.dir.c_str();
+    native.api.log_info = cb_log_info;
+    native.api.log_warn = cb_log_warn;
+    native.api.log_error = cb_log_error;
+    native.api.load_resource = cb_load_resource;
+    native.api.free_resource = cb_free_resource;
+    native.api.register_tab_content = cb_register_tab_content;
+    native.api.register_tab_update = cb_register_tab_update;
+    native.api.panel_add_section   = cb_panel_add_section;
+    native.api.panel_add_button    = cb_panel_add_button;
+    native.api.panel_add_badge_row = cb_panel_add_badge_row;
+    native.api.panel_add_dyn_text  = cb_panel_add_dyn_text;
+    native.api.elem_set_badge      = cb_elem_set_badge;
+    native.api.elem_set_text       = cb_elem_set_text;
+    native.api.panel_add_progress  = cb_panel_add_progress;
+    native.api.elem_set_progress   = cb_elem_set_progress;
+    native.api.hook_install = hookInstallByAddr;
+    native.api.hook_pre = api_hook_pre;
+    native.api.hook_post = api_hook_post;
+    native.api.hook_replace = api_hook_replace;
+    native.api.hook_dispatch_pre = hookDispatchPre;
+    native.api.hook_dispatch_post = hookDispatchPost;
+    native.api.service_publish = cb_service_publish;
+    native.api.service_get = cb_service_get;
 }
 
 static std::unique_ptr<ModBundle> loadBundle(const std::filesystem::path& modPath, bool fromDir) {
@@ -408,6 +409,77 @@ static bool checkDuplicateMod(const ModMetadata& metadata, const std::vector<Loa
     });
 }
 
+bool ModLoader::tryLoadNativeMod(LoadedMod& mod) {
+    namespace fs = std::filesystem;
+
+    auto [dllEntry, dllFallback] = LocateDllInBundle(*mod.bundle);
+    if (dllEntry.empty()) {
+        dllEntry = dllFallback;
+    }
+
+    if (dllEntry.empty()) {
+        DuskLog.error(
+            "ModLoader: no *{} found in {} — skipping", NativeModule::LibraryExtension, mod.metadata.id);
+        return false;
+    }
+
+    const fs::path cacheDir = m_modsDir / ".cache" / mod.metadata.id;
+    std::error_code ec;
+    fs::create_directories(cacheDir, ec);
+
+    const fs::path dllCachePath = cacheDir / fs::path(dllEntry).filename();
+
+    std::vector<u8> dllData;
+    try {
+        dllData = mod.bundle->readFile(dllEntry);
+    } catch (const std::runtime_error& e) {
+        DuskLog.error(
+            "ModLoader: failed to extract {} from {}", dllEntry, mod.metadata.id);
+        return false;
+    }
+
+    {
+        std::ofstream out(dllCachePath, std::ios::binary | std::ios::out);
+        if (!out) {
+            DuskLog.error("ModLoader: failed to write {}", io::fs_path_to_string(dllCachePath));
+            return false;
+        }
+
+        out.write(
+            reinterpret_cast<const char*>(dllData.data()),
+            static_cast<std::streamsize>(dllData.size()));
+    }
+
+    auto nativeMod = std::make_unique<NativeMod>();
+    try {
+        nativeMod->handle = std::make_unique<NativeModule>(dllCachePath);
+    } catch (const std::runtime_error& e) {
+        DuskLog.error("ModLoader: failed to open {}: {}", io::fs_path_to_string(dllCachePath), e.what());
+        return false;
+    }
+
+    const auto mod_api_ver = nativeMod->handle->LookupSymbol<uint32_t*>("mod_api_version");
+    if (mod_api_ver && *mod_api_ver != DUSK_MOD_API_VERSION) {
+        DuskLog.error("ModLoader: {} expects API v{} but engine is v{}, skipping",
+            io::fs_path_to_string(fs::path(dllEntry).filename()), *mod_api_ver, DUSK_MOD_API_VERSION);
+        return false;
+    }
+
+    nativeMod->fn_init = nativeMod->handle->LookupSymbol<NativeMod::FnInit>("mod_init");
+    nativeMod->fn_tick = nativeMod->handle->LookupSymbol<NativeMod::FnTick>("mod_tick");
+    nativeMod->fn_cleanup = nativeMod->handle->LookupSymbol<NativeMod::FnCleanup>("mod_cleanup");
+
+    if (!nativeMod->fn_init || !nativeMod->fn_tick) {
+        DuskLog.error("ModLoader: {} missing mod_init or mod_tick — skipping",
+            io::fs_path_to_string(fs::path(dllEntry).filename()));
+        return false;
+    }
+
+    mod.dir = io::fs_path_to_string(fs::absolute(cacheDir));
+    mod.native = std::move(nativeMod);
+    return true;
+}
+
 void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) {
     namespace fs = std::filesystem;
 
@@ -438,76 +510,14 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
         return;
     }
 
-    auto [dllEntry, dllFallback] = LocateDllInBundle(*bundle);
-    if (dllEntry.empty()) {
-        dllEntry = dllFallback;
-    }
-
-    if (dllEntry.empty()) {
-        DuskLog.warn(
-            "ModLoader: no *{} found in {} — skipping", NativeModule::LibraryExtension, io::fs_path_to_string(modPath.filename()));
-        return;
-    }
-
-    const fs::path cacheDir = m_modsDir / ".cache" / modPath.stem();
-    std::error_code ec;
-    fs::create_directories(cacheDir, ec);
-
-    const fs::path dllCachePath = cacheDir / fs::path(dllEntry).filename();
-
-    std::vector<u8> dllData;
-    try {
-        dllData = bundle->readFile(dllEntry);
-    } catch (const std::runtime_error& e) {
-        DuskLog.error(
-            "ModLoader: failed to extract {} from {}", dllEntry, io::fs_path_to_string(modPath.filename()));
-        return;
-    }
-
-    {
-        std::ofstream out(dllCachePath, std::ios::binary | std::ios::out);
-        if (!out) {
-            DuskLog.error("ModLoader: failed to write {}", io::fs_path_to_string(dllCachePath));
-            return;
-        }
-
-        out.write(
-            reinterpret_cast<const char*>(dllData.data()),
-            static_cast<std::streamsize>(dllData.size()));
-    }
-
-    NativeModule native;
-    try {
-        native = NativeModule(dllCachePath);
-    } catch (const std::runtime_error& e) {
-        DuskLog.error("ModLoader: failed to open {}: {}", io::fs_path_to_string(dllCachePath), e.what());
-        return;
-    }
-
     LoadedMod mod;
     mod.mod_path = io::fs_path_to_string(fs::absolute(modPath));
-    mod.dir = io::fs_path_to_string(fs::absolute(cacheDir));
-    mod.handle = std::make_unique<NativeModule>(std::move(native));
-    const auto mod_api_ver = mod.handle->LookupSymbol<uint32_t*>("mod_api_version");
-    if (mod_api_ver && *mod_api_ver != DUSK_MOD_API_VERSION) {
-        DuskLog.error("ModLoader: {} expects API v{} but engine is v{}, skipping",
-            io::fs_path_to_string(fs::path(dllEntry).filename()), *mod_api_ver, DUSK_MOD_API_VERSION);
-        return;
-    }
-
-    mod.fn_init = mod.handle->LookupSymbol<LoadedMod::FnInit>("mod_init");
-    mod.fn_tick = mod.handle->LookupSymbol<LoadedMod::FnTick>("mod_tick");
-    mod.fn_cleanup = mod.handle->LookupSymbol<LoadedMod::FnCleanup>("mod_cleanup");
-
-    if (!mod.fn_init || !mod.fn_tick) {
-        DuskLog.error("ModLoader: {} missing mod_init or mod_tick — skipping",
-            io::fs_path_to_string(fs::path(dllEntry).filename()));
-        return;
-    }
-
     mod.metadata = std::move(metadata);
-
     mod.bundle = std::move(bundle);
+
+    if (!tryLoadNativeMod(mod)) {
+        return;
+    }
 
     const auto& inserted = m_mods.emplace_back(std::move(mod));
 
@@ -567,7 +577,7 @@ void ModLoader::init() {
     for (auto& mod : m_mods) {
         ModGuard guard(&mod);
         try {
-            mod.fn_init(&mod.api);
+            mod.native->fn_init(&mod.native->api);
             if (!mod.load_failed) {
                 mod.active = true;
                 DuskLog.info("ModLoader: '{}' initialized", mod.metadata.id);
@@ -593,7 +603,7 @@ void ModLoader::tick() {
         }
         ModGuard guard(&mod);
         try {
-            mod.fn_tick(&mod.api);
+            mod.native->fn_tick(&mod.native->api);
         } catch (const std::exception& e) {
             DuskLog.error(
                 "ModLoader: exception in {}.mod_tick(): {} — disabling", mod.metadata.id, e.what());
@@ -608,10 +618,10 @@ void ModLoader::tick() {
 void ModLoader::shutdown() {
     for (auto& mod : m_mods) {
         hookClearMod(&mod);
-        if (mod.fn_cleanup) {
+        if (mod.native->fn_cleanup) {
             ModGuard guard(&mod);
             try {
-                mod.fn_cleanup(&mod.api);
+                mod.native->fn_cleanup(&mod.native->api);
             } catch (...) {
             }
         }

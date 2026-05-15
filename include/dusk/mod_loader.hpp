@@ -31,14 +31,9 @@ struct ModMetadata {
     std::string description;
 };
 
-struct LoadedMod {
-    ModMetadata metadata;
-    std::string mod_path;
-    std::string dir;
-
+struct NativeMod {
     std::unique_ptr<modding::NativeModule> handle;
-    bool active = false;
-    bool load_failed = false;
+    DuskModAPI api{};
 
     using FnInit = void (*)(DuskModAPI*);
     using FnTick = void (*)(DuskModAPI*);
@@ -47,8 +42,17 @@ struct LoadedMod {
     FnInit fn_init = nullptr;
     FnTick fn_tick = nullptr;
     FnCleanup fn_cleanup = nullptr;
+};
 
-    DuskModAPI api{};
+struct LoadedMod {
+    ModMetadata metadata;
+    std::string mod_path;
+    std::string dir;
+
+    bool active = false;
+    bool load_failed = false;
+
+    std::unique_ptr<NativeMod> native;
     std::unique_ptr<modding::ModBundle> bundle;
 
     std::vector<RmlTabContentCallback> tab_content;
@@ -72,6 +76,7 @@ private:
     bool m_initialized = false;
 
     void tryLoadDusk(const std::filesystem::path& modPath, bool fromDir);
+    bool tryLoadNativeMod(LoadedMod& mod);
     void buildAPI(LoadedMod& mod);
     void initOverlayFiles();
 };
