@@ -29,6 +29,7 @@ struct ModMetadata {
     std::string version;
     std::string author;
     std::string description;
+    bool hasCode;
 };
 
 struct NativeMod {

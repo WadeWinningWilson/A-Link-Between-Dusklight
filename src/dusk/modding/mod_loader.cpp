@@ -380,6 +380,7 @@ static ModMetadata loadMetadata(const std::filesystem::path& modPath, ModBundle&
     std::string metaVersion = j.value("version", "");
     std::string metaAuthor = j.value("author", "");
     std::string metaDescription = j.value("description", "");
+    const bool hasCode = j.value("has_code", false);
 
     if (metaId.empty()) {
         throw InvalidModDataException("Missing ID value in mod metadata!");
@@ -400,6 +401,7 @@ static ModMetadata loadMetadata(const std::filesystem::path& modPath, ModBundle&
         std::move(metaVersion),
         std::move(metaAuthor),
         std::move(metaDescription),
+        hasCode,
     };
 }
 
@@ -515,7 +517,7 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
     mod.metadata = std::move(metadata);
     mod.bundle = std::move(bundle);
 
-    if (!tryLoadNativeMod(mod)) {
+    if (mod.metadata.hasCode && !tryLoadNativeMod(mod)) {
         return;
     }
 
@@ -571,10 +573,16 @@ void ModLoader::init() {
 
     DuskLog.info("ModLoader: initializing {} mod(s)...", m_mods.size());
     for (auto& mod : m_mods) {
-        buildAPI(mod);
+        if (mod.native) {
+            buildAPI(mod);
+        }
     }
 
     for (auto& mod : m_mods) {
+        if (!mod.native) {
+            continue;
+        }
+
         ModGuard guard(&mod);
         try {
             mod.native->fn_init(&mod.native->api);
@@ -598,7 +606,7 @@ void ModLoader::init() {
 
 void ModLoader::tick() {
     for (auto& mod : m_mods) {
-        if (!mod.active) {
+        if (!mod.active || !mod.native) {
             continue;
         }
         ModGuard guard(&mod);
@@ -618,7 +626,7 @@ void ModLoader::tick() {
 void ModLoader::shutdown() {
     for (auto& mod : m_mods) {
         hookClearMod(&mod);
-        if (mod.native->fn_cleanup) {
+        if (mod.native && mod.native->fn_cleanup) {
             ModGuard guard(&mod);
             try {
                 mod.native->fn_cleanup(&mod.native->api);
