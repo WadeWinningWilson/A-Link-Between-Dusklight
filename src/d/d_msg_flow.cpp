@@ -764,6 +764,19 @@ int dMsgFlow_c::nodeProc(fopAc_ac_c* i_speaker_p, fopAc_ac_c** i_talkPartners) {
         }
 
         u8 type = mFlowNodeTBL[mNodeIdx].message.type;
+#if TARGET_PC
+        // Overwrite the type if we have a patch for this index
+        if (randomizer_IsActive()) {
+            u32 key = (dMsgObject_getGroupID() << 16) | mNodeIdx;
+            // Dirty check to see if this node is part of bmg 0
+            if (*(reinterpret_cast<u16*>(&mFlowNodeTBL[0])) == 0x0803) {
+                key &= 0x0000FFFF;
+            }
+            if (randomizer_GetContext().mFlowPatches.contains(key)) {
+                type = reinterpret_cast<mesg_flow_node*>(&randomizer_GetContext().mFlowPatches[key])->type;
+            }
+        }
+#endif
         switch (type) {
         case NODETYPE_MESSAGE_e:
             proc_status = messageNodeProc(aSpeaker_p, i_talkPartners);
