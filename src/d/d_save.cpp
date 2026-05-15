@@ -1193,6 +1193,55 @@ BOOL dSv_memBit_c::isTbox(int i_no) const {
 }
 
 void dSv_memBit_c::onSwitch(int i_no) {
+#if TARGET_PC
+    if (randomizer_IsActive()) {
+        if (this == &dComIfGs_getSaveInfo()->mMemory.mBit) {
+            if (getStageID() == Arbiters_Grounds) {
+                // Poe flame CS trigger
+                if (i_no == 0x26) {
+                    // Open the Poe gate
+                    offSwitch(0x45);
+                    return;
+                }
+            }
+            else if (getStageID() == Lake_Hylia) {
+                // Lanayru Twilight End CS trigger.
+                if (i_no == 0xD) {
+                    if (dComIfGs_isEventBit(TRANSFORMING_UNLOCKED)) {
+                        // Set player to Human as the game will not do so if Shadow Crystal has been obtained.
+                        dComIfGs_setTransformStatus(0);
+                    }
+                }
+            }
+            else if (getStageID() == Kakariko_Village_Interiors) {
+                // Hawkeye is for sale.
+                if (i_no == 0x3E) {
+                    // Remove the coming soon sign so the hawkeye can be bought.
+                    offSwitch(0xB);
+                }
+            }
+            else if (getStageID() == Hyrule_Field) {
+                // Destroyed North Eldin rocks barrier
+                if (i_no == 0x11) {
+                    // Unlock Eldin Province on map. We do this manually rather than calling `onRegionBit` since that
+                    // function would see that the rocks are not yet broken and would skip enabling the region.
+                    dComIfGs_getSaveInfo()->getSavedata().getPlayer().getPlayerFieldLastStayInfo().mRegion |= 0x08;
+                }
+            }
+        }
+
+        // TODO: Rando
+        if (this == &dComIfGs_getSaveInfo()->getSavedata().mSave[6].mBit) {
+            if (getStageID() == Kakariko_Village_Interiors) {
+                // Repair Castle Town Bridge
+                if (i_no == 0x1B) {
+                    // *reinterpret_cast<uint16_t*>(&savePtr->save_file.mEvent.mEvent[0xF9]) =
+                    //     rando::gRandomizer->getSeedPtr()->getHeaderPtr()->getMaloShopDonationAmount();
+                }
+            }
+        }
+    }
+#endif
     JUT_ASSERT(2786, 0 <= i_no && i_no < 128);
     mSwitch[i_no >> 5] |= 1 << (i_no & 0x1F);
 }
