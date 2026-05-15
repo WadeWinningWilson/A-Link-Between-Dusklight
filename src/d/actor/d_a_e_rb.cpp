@@ -204,7 +204,11 @@ static void e_rb_move(e_rb_class* i_this) {
     spC.x = i_this->field_0xa10.x - enemy->current.pos.x;
     spC.z = i_this->field_0xa10.z - enemy->current.pos.z;
 
+#if AVOID_UB
+    f32 speed_target{};
+#else
     f32 speed_target;
+#endif
     switch (i_this->mode) {
     case 0:
         i_this->mode = 1;
