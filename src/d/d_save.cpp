@@ -1409,7 +1409,7 @@ void dSv_event_c::onEventBit(u16 i_no) {
 
             case REMOVE_SWORD_SHIELD_FROM_WOLF_BACK:
                 if (!dComIfGs_isEventBit(CLEARED_FARON_TWILIGHT)) {
-                    dComIfGs_onTransformLV(1); // Set the last transformed twilight to include Faron
+                    dComIfGs_onTransformLV(0); // Set the last transformed twilight to include Faron
                 }
                 break;
 
