@@ -1524,6 +1524,7 @@ set(DUSK_FILES
         src/dusk/OSMutex.cpp
         src/dusk/hook_system.cpp
         src/dusk/modding/mod_loader.cpp
+        src/dusk/modding/mod_loader_overlay.cpp
         src/dusk/modding/bundle_disk.cpp
         src/dusk/modding/bundle_zip.cpp
         src/dusk/gx_helper.cpp

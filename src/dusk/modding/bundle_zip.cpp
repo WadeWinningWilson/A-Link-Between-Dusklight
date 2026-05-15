@@ -51,4 +51,15 @@ std::vector<std::string> ModBundleZip::getFileNames() {
     return results;
 }
 
+size_t ModBundleZip::getFileSize(const std::string& fileName) {
+    const auto idx = mz_zip_reader_locate_file(&res_zip, fileName.c_str(), nullptr, 0);
+    if (idx < 0) {
+        throw std::runtime_error(fmt::format("Unable to locate file in zip: {}", fileName));
+    }
+
+    mz_zip_archive_file_stat stat{};
+    mz_zip_reader_file_stat(&res_zip, idx, &stat);
+    return stat.m_uncomp_size;
+}
+
 }  // namespace dusk::modding

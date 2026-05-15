@@ -9,10 +9,8 @@ namespace dusk::modding {
 ModBundleDisk::ModBundleDisk(fs::path root) : root_path(std::move(root)) {}
 
 std::vector<u8> ModBundleDisk::readFile(const std::string& fileName) {
-    const fs::path filePath = reinterpret_cast<const char8_t*>(fileName.c_str());
-    const auto finalPath = root_path / fileName;
 
-    return io::FileStream::ReadAllBytes(finalPath);
+    return io::FileStream::ReadAllBytes(toRealPath(fileName));
 }
 
 std::vector<std::string> ModBundleDisk::getFileNames() {
@@ -49,6 +47,15 @@ std::vector<std::string> ModBundleDisk::getFileNames() {
     }
 
     return files;
+}
+
+size_t ModBundleDisk::getFileSize(const std::string& fileName) {
+    return std::filesystem::file_size(toRealPath(fileName));
+}
+
+std::filesystem::path ModBundleDisk::toRealPath(const std::string& fileName) const {
+    const fs::path filePath = reinterpret_cast<const char8_t*>(fileName.c_str());
+    return root_path / fileName;
 }
 
 }  // namespace dusk::modding

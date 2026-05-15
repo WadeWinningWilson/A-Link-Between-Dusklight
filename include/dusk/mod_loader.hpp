@@ -67,6 +67,7 @@ private:
 
     void tryLoadDusk(const std::filesystem::path& modPath, bool fromDir);
     void buildAPI(LoadedMod& mod);
+    void initOverlayFiles();
 };
 
 }  // namespace dusk

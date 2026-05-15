@@ -14,6 +14,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "aurora/dvd.h"
 #include "dusk/io.hpp"
 #include "miniz.h"
 #include "nlohmann/json.hpp"
@@ -556,6 +557,8 @@ void ModLoader::init() {
         DuskLog.info("ModLoader: no mods found");
         return;
     }
+
+    initOverlayFiles();
 
     DuskLog.info("ModLoader: initializing {} mod(s)...", m_mods.size());
     for (auto& mod : m_mods) {
