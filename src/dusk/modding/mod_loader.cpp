@@ -449,7 +449,7 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
 
     if (dllEntry.empty()) {
         DuskLog.warn(
-            "ModLoader: no *{} found in {} — skipping", k_libExt, modPath.filename().string());
+            "ModLoader: no *{} found in {} — skipping", k_libExt, io::fs_path_to_string(modPath.filename()));
         return;
     }
 
@@ -471,7 +471,7 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
     {
         std::ofstream out(dllCachePath, std::ios::binary | std::ios::out);
         if (!out) {
-            DuskLog.error("ModLoader: failed to write {}", dllCachePath.string());
+            DuskLog.error("ModLoader: failed to write {}", io::fs_path_to_string(dllCachePath));
             return;
         }
 
@@ -482,18 +482,18 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
 
     void* handle = pl_dlopen(dllCachePath);
     if (!handle) {
-        DuskLog.error("ModLoader: failed to open {}: {}", dllCachePath.string(), pl_dlerror());
+        DuskLog.error("ModLoader: failed to open {}: {}", io::fs_path_to_string(dllCachePath), pl_dlerror());
         return;
     }
 
     LoadedMod mod;
-    mod.mod_path = fs::absolute(modPath).string();
-    mod.dir = fs::absolute(cacheDir).string();
+    mod.mod_path = io::fs_path_to_string(fs::absolute(modPath));
+    mod.dir = io::fs_path_to_string(fs::absolute(cacheDir));
     mod.handle = handle;
     auto* mod_api_ver = reinterpret_cast<uint32_t*>(pl_dlsym(handle, "mod_api_version"));
     if (mod_api_ver && *mod_api_ver != DUSK_MOD_API_VERSION) {
         DuskLog.error("ModLoader: {} expects API v{} but engine is v{}, skipping",
-            fs::path(dllEntry).filename().string(), *mod_api_ver, DUSK_MOD_API_VERSION);
+            io::fs_path_to_string(fs::path(dllEntry).filename()), *mod_api_ver, DUSK_MOD_API_VERSION);
         pl_dlclose(handle);
         return;
     }
@@ -504,12 +504,12 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
 
     if (!mod.fn_init || !mod.fn_tick) {
         DuskLog.error("ModLoader: {} missing mod_init or mod_tick — skipping",
-            fs::path(dllEntry).filename().string());
+            io::fs_path_to_string(fs::path(dllEntry).filename()));
         pl_dlclose(handle);
         return;
     }
 
-    mod.name = metaName.empty() ? modPath.stem().string() : metaName;
+    mod.name = metaName.empty() ? io::fs_path_to_string(modPath.stem()) : metaName;
     mod.version = metaVersion.empty() ? "?" : metaVersion;
     mod.author = metaAuthor.empty() ? "unknown" : metaAuthor;
     mod.description = metaDescription;
@@ -518,7 +518,7 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
     m_mods.push_back(std::move(mod));
 
     DuskLog.info("ModLoader: found '{}' v{} by {} ({})", m_mods.back().name, m_mods.back().version,
-        m_mods.back().author, modPath.filename().string());
+        m_mods.back().author, io::fs_path_to_string(modPath.filename()));
 }
 
 void ModLoader::init() {
@@ -530,7 +530,7 @@ void ModLoader::init() {
     namespace fs = std::filesystem;
     if (!fs::is_directory(m_modsDir)) {
         DuskLog.info(
-            "ModLoader: mods directory '{}' not found — mod loading skipped", m_modsDir.string());
+            "ModLoader: mods directory '{}' not found — mod loading skipped", io::fs_path_to_string(m_modsDir));
         return;
     }
 
