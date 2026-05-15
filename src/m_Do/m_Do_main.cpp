@@ -223,8 +223,6 @@ void main01(void) {
     OSReport("Calling cDyl_InitAsync()...\n");
     cDyl_InitAsync();
 
-    dusk::ModLoader::instance().init();
-
     g_mDoAud_audioHeap = JKRCreateSolidHeap(audioHeapSize, JKRGetCurrentHeap(), false);
     JKRHEAP_NAME(g_mDoAud_audioHeap, "g_mDoAud_audioHeap");
 
@@ -744,6 +742,9 @@ int game_main(int argc, char* argv[]) {
     } else {
         dusk::ModLoader::instance().setModsDir(dusk::ConfigPath / "mods");
     }
+
+    DuskLog.info("Initializing mods...");
+    dusk::ModLoader::instance().init();
 
     OSReport("Starting main01 (Game Loop)...\n");
     main01();
