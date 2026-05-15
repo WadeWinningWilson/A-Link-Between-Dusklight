@@ -74,6 +74,7 @@ static constexpr const char* k_libExt = ".so";
 #endif
 
 using namespace dusk::modding;
+using namespace std::string_literals;
 using namespace std::string_view_literals;
 
 #if defined(_M_ARM64) || defined(__aarch64__)
@@ -106,7 +107,7 @@ struct ModGuard {
 };
 
 static const char* modName() {
-    return g_currentMod ? g_currentMod->name.c_str() : "mod";
+    return g_currentMod ? g_currentMod->metadata.id.c_str() : "mod";
 }
 
 static void cb_log_info(const char* fmt, ...) {
@@ -156,7 +157,7 @@ static void* cb_load_resource(const char* relative_path, size_t* out_size) {
     try {
         data = g_currentMod->bundle->readFile(entry);
     } catch (const std::runtime_error& e) {
-        DuskLog.error("[{}] load_resource: '{}' failed: {}", g_currentMod->name, entry, e.what());
+        DuskLog.error("[{}] load_resource: '{}' failed: {}", g_currentMod->metadata.id, entry, e.what());
         return nullptr;
     }
 
@@ -415,6 +416,50 @@ static DllLocateResult LocateDllInBundle(ModBundle& bundle) {
     return DllLocateResult{dllEntry, dllFallback};
 }
 
+class InvalidModDataException : public std::runtime_error {
+public:
+    explicit InvalidModDataException(const std::string& msg) : runtime_error(msg) {}
+    explicit InvalidModDataException(const char* msg) : runtime_error(msg) {}
+};
+
+static ModMetadata loadMetadata(const std::filesystem::path& modPath, ModBundle& bundle) {
+    const auto metaJson = bundle.readFile("mod.json");
+    auto j = nlohmann::json::parse(metaJson);
+
+    std::string metaId = j.value("id", "");
+    std::string metaName = j.value("name", "");
+    std::string metaVersion = j.value("version", "");
+    std::string metaAuthor = j.value("author", "");
+    std::string metaDescription = j.value("description", "");
+
+    if (metaId.empty()) {
+        throw InvalidModDataException("Missing ID value in mod metadata!");
+    }
+    if (metaName.empty()) {
+        metaName = io::fs_path_to_string(modPath.stem());
+    }
+    if (metaVersion.empty()) {
+        metaVersion = "?"s;
+    }
+    if (metaAuthor.empty()) {
+        metaAuthor = "unknown"s;
+    }
+
+    return ModMetadata{
+        std::move(metaId),
+        std::move(metaName),
+        std::move(metaVersion),
+        std::move(metaAuthor),
+        std::move(metaDescription),
+    };
+}
+
+static bool checkDuplicateMod(const ModMetadata& metadata, const std::vector<LoadedMod>& mods) {
+    return std::ranges::any_of(mods, [&](const LoadedMod& mod) {
+        return mod.metadata.id == metadata.id;
+    });
+}
+
 void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) {
     namespace fs = std::filesystem;
 
@@ -426,19 +471,22 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
         return;
     }
 
-    std::string metaName, metaVersion, metaAuthor, metaDescription;
+    ModMetadata metadata;
     try
     {
-        const auto metaJson = bundle->readFile("mod.json");
-        auto j = nlohmann::json::parse(metaJson);
-        metaName = j.value("name", "");
-        metaVersion = j.value("version", "");
-        metaAuthor = j.value("author", "");
-        metaDescription = j.value("description", "");
+        metadata = loadMetadata(modPath, *bundle);
     }
     catch (const std::runtime_error& e) {
         Log.error(
             "ModLoader: bad mod.json in {}: {}", io::fs_path_to_string(modPath.filename()), e.what());
+        return;
+    }
+
+    if (checkDuplicateMod(metadata, m_mods)) {
+        Log.error(
+            "ModLoader: mod with id '{}' already exists, not loading {}",
+            metadata.id,
+            io::fs_path_to_string(modPath.filename()));
         return;
     }
 
@@ -509,16 +557,19 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
         return;
     }
 
-    mod.name = metaName.empty() ? io::fs_path_to_string(modPath.stem()) : metaName;
-    mod.version = metaVersion.empty() ? "?" : metaVersion;
-    mod.author = metaAuthor.empty() ? "unknown" : metaAuthor;
-    mod.description = metaDescription;
+    mod.metadata = std::move(metadata);
 
     mod.bundle = std::move(bundle);
-    m_mods.push_back(std::move(mod));
 
-    DuskLog.info("ModLoader: found '{}' v{} by {} ({})", m_mods.back().name, m_mods.back().version,
-        m_mods.back().author, io::fs_path_to_string(modPath.filename()));
+    const auto& inserted = m_mods.emplace_back(std::move(mod));
+
+    DuskLog.info(
+        "ModLoader: found '{}' ('{}') v{} by {} ({})",
+        inserted.metadata.name,
+        inserted.metadata.id,
+        inserted.metadata.version,
+        inserted.metadata.author,
+        io::fs_path_to_string(modPath.filename()));
 }
 
 void ModLoader::init() {
@@ -571,14 +622,14 @@ void ModLoader::init() {
             mod.fn_init(&mod.api);
             if (!mod.load_failed) {
                 mod.active = true;
-                DuskLog.info("ModLoader: '{}' initialized", mod.name);
+                DuskLog.info("ModLoader: '{}' initialized", mod.metadata.id);
             } else {
-                DuskLog.error("ModLoader: '{}' failed to load due to hook conflicts", mod.name);
+                DuskLog.error("ModLoader: '{}' failed to load due to hook conflicts", mod.metadata.id);
             }
         } catch (const std::exception& e) {
-            DuskLog.error("ModLoader: exception in {}.mod_init(): {}", mod.name, e.what());
+            DuskLog.error("ModLoader: exception in {}.mod_init(): {}", mod.metadata.id, e.what());
         } catch (...) {
-            DuskLog.error("ModLoader: unknown exception in {}.mod_init()", mod.name);
+            DuskLog.error("ModLoader: unknown exception in {}.mod_init()", mod.metadata.id);
         }
     }
 
@@ -597,10 +648,10 @@ void ModLoader::tick() {
             mod.fn_tick(&mod.api);
         } catch (const std::exception& e) {
             DuskLog.error(
-                "ModLoader: exception in {}.mod_tick(): {} — disabling", mod.name, e.what());
+                "ModLoader: exception in {}.mod_tick(): {} — disabling", mod.metadata.id, e.what());
             mod.active = false;
         } catch (...) {
-            DuskLog.error("ModLoader: unknown exception in {}.mod_tick() — disabling", mod.name);
+            DuskLog.error("ModLoader: unknown exception in {}.mod_tick() — disabling", mod.metadata.id);
             mod.active = false;
         }
     }

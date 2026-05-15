@@ -22,11 +22,16 @@ struct RmlTabUpdateCallback {
     void* userdata;
 };
 
-struct LoadedMod {
+struct ModMetadata {
+    std::string id;
     std::string name;
     std::string version;
     std::string author;
     std::string description;
+};
+
+struct LoadedMod {
+    ModMetadata metadata;
     std::string mod_path;
     std::string dir;
 
