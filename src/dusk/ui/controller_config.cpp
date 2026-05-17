@@ -1033,6 +1033,12 @@ void ControllerConfigWindow::poll_pending_binding() {
         const s32 nativeButton = PADGetNativeButtonPressed(mPendingPort);
         if (nativeButton != -1) {
             const int completedPort = mPendingPort;
+            if (mPendingButtonMapping->nativeButton == static_cast<u32>(nativeButton) &&
+                (mPendingButtonMapping->padButton != PAD_BUTTON_A &&
+                 mPendingButtonMapping->padButton != PAD_BUTTON_B)) {
+                unmap_pending_binding();
+                return;
+            }
             mPendingButtonMapping->nativeButton = static_cast<u32>(nativeButton);
             finish_pending_binding(completedPort);
         }
@@ -1043,6 +1049,10 @@ void ControllerConfigWindow::poll_pending_binding() {
         const PADSignedNativeAxis nativeAxis = PADGetNativeAxisPulled(mPendingPort);
         if (nativeAxis.nativeAxis != -1) {
             const int completedPort = mPendingPort;
+            if (mPendingAxisMapping->nativeAxis.nativeAxis == nativeAxis.nativeAxis) {
+                unmap_pending_binding();
+                return;
+            }
             mPendingAxisMapping->nativeAxis = nativeAxis;
             mPendingAxisMapping->nativeButton = -1;
             finish_pending_binding(completedPort);
@@ -1069,6 +1079,10 @@ void ControllerConfigWindow::poll_pending_binding() {
 
         if (button != -1) {
             const int completedPort = mPendingPort;
+            if (mPendingActionBinding->getValue() == button) {
+                unmap_pending_binding();
+                return;
+            }
             mPendingActionBinding->setValue(button);
             config::Save();
             finish_pending_binding(completedPort);
