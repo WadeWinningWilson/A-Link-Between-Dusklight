@@ -41,12 +41,11 @@ void daAlink_c::setOriginalHeap(JKRExpHeap** i_ppheap, u32 i_size) {
         u32 var_r28 = 0x10;
         u32 size = ROUND(i_size, 16);
 #if TARGET_PC
-        size *= 2;
+        size *= 20; // Increase Link's heap size to prevent mods from crashing with higher-quality models.
 #endif
         JKRHeap* parent = mDoExt_getGameHeap();
 
         JKRExpHeap* heap = JKRExpHeap::create(size + (var_r29 + var_r28), parent, true);
-        JKRHEAP_NAME(heap, "Alink original");
         *i_ppheap = heap;
     }
 }
@@ -78,7 +77,12 @@ int daAlink_c::loadModelDVD() {
             mpWlMidnaHairModel = NULL;
 
             if (!checkNoResetFlg2(FLG2_UNK_280000)) {
-                dComIfG_resDelete(&mPhaseReq, mArcName);
+                if (!dComIfG_resDelete(&mPhaseReq, mArcName)) {
+#if TARGET_PC
+                    // resDelete no-ops if load was in-progress; force-unregister before freeAll
+                    dComIfG_deleteObjectResMain(mArcName);
+#endif
+                }
                 cPhs_Reset(&mPhaseReq);
                 mpArcHeap->freeAll();
 

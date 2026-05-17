@@ -10,7 +10,9 @@
 #include "d/d_meter2_info.h"
 #include "d/d_s_name.h"
 #include "dusk/imgui/ImGuiConsole.hpp"
+#include "dusk/livesplit.h"
 #include "dusk/memory.h"
+#include "dusk/speedrun.h"
 #include "dusk/settings.h"
 #include "f_op/f_op_overlap_mng.h"
 #include "f_op/f_op_scene_mng.h"
@@ -19,6 +21,7 @@
 #include "m_Do/m_Do_machine.h"
 #include "m_Do/m_Do_main.h"
 #include "m_Do/m_Do_mtx.h"
+#include <dusk/autosave.h>
 
 #if TARGET_PC
 #define SHOW_TV_SETTINGS_SCREEN (this->mShowTvSettingsScreen)
@@ -418,10 +421,13 @@ void dScnName_c::changeGameScene() {
         if (dusk::getSettings().game.speedrunMode && dusk::getSettings().game.hideTvSettingsScreen) {
             // start a new run on file load if a run isn't already in progress
             if (!dusk::m_speedrunInfo.m_isRunStarted) {
-                dusk::ImGuiMenuGame::resetForSpeedrunMode();
+                dusk::resetForSpeedrunMode();
                 dusk::m_speedrunInfo.startRun();
+                dusk::speedrun::start();
             }
         }
+
+        toggleAutoSave(true);
 #endif
     }
 }

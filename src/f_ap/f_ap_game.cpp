@@ -14,6 +14,7 @@
 #include "d/actor/d_a_midna.h"
 #include "d/d_model.h"
 #include "d/d_tresure.h"
+#include "dusk/achievements.h"
 #include "dusk/frame_interpolation.h"
 #include "dusk/livesplit.h"
 #include "dusk/logging.h"
@@ -23,8 +24,12 @@
 #include "f_op/f_op_scene_mng.h"
 #include "m_Do/m_Do_graphic.h"
 #include "m_Do/m_Do_main.h"
+
+#if TARGET_PC
 #include "tracy/Tracy.hpp"
 #include <dusk/gamepad_color.h>
+#include <dusk/autosave.h>
+#endif
 
 fapGm_HIO_c::fapGm_HIO_c() {
     mUsingHostIO = true;
@@ -735,9 +740,22 @@ static void fapGm_AfterRecord() {
     fapGm_After();
 }
 
+BOOL isRecording = false;
+
 static void duskExecute() {
     handleGamepadColor();
-    
+    updateAutoSave();
+
+    if (dusk::getSettings().game.recordingMode) {
+        Z2GetSoundMgr()->getSeqMgr()->getParams()->moveVolume(0.0f, 0);
+        Z2GetSoundMgr()->getStreamMgr()->getParams()->moveVolume(0.0f, 0);
+        isRecording = true;
+    } else if (isRecording) {
+        Z2GetSoundMgr()->getSeqMgr()->getParams()->moveVolume(1.0f, 0);
+        Z2GetSoundMgr()->getStreamMgr()->getParams()->moveVolume(1.0f, 0);
+        isRecording = false;
+    }
+
     if (mDoCPd_c::getHoldR(PAD_1) && mDoCPd_c::getTrigX(PAD_1)) {
         if (const auto link = g_dComIfG_gameInfo.play.getPlayer(0)) {
             dynamic_cast<daAlink_c*>(link)->handleWolfHowl();
@@ -774,6 +792,10 @@ static void duskExecute() {
         dComIfGs_setArrowNum(dComIfGs_getArrowMax());
     }
 
+    if (dusk::getSettings().game.infiniteSeeds) {
+        dComIfGs_setPachinkoNum(dComIfGs_getPachinkoMax());
+    }
+
     if (dusk::getSettings().game.infiniteBombs) {
         dComIfGs_setBombNum(0, 99);
         dComIfGs_setBombNum(1, 99);
@@ -785,7 +807,7 @@ static void duskExecute() {
     }
 
     if (dusk::getSettings().game.infiniteRupees) {
-        dComIfGs_setRupee(9999);
+        dComIfGs_setRupee(dComIfGs_getRupeeMax());
     }
 
     if (dusk::getSettings().game.infiniteOxygen) {
@@ -815,9 +837,11 @@ void fapGm_Execute() {
 #else
     fpcM_ManagementFunc(NULL, fapGm_After);
 #endif
+
     cCt_Counter(0);
 #ifdef TARGET_PC
     dusk::speedrun::onGameFrame();
+    dusk::AchievementSystem::get().tick();
 #endif
 }
 

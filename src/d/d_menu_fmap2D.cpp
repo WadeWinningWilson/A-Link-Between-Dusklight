@@ -20,6 +20,15 @@
 #include "dusk/frame_interpolation.h"
 #include <cstring>
 
+#if TARGET_PC
+void dMenu_Fmap2DBack_c::fMapBackWide() {
+    mpBaseScreen->scale(mDoGph_gInf_c::hudAspectScaleUp, 1.0f);
+    mpBaseScreen->translate(mDoGph_gInf_c::getSafeMinXF(), 0.0f);
+    mpBackScreen->scale(mDoGph_gInf_c::hudAspectScaleUp, 1.0f);
+    mpBackScreen->translate(mDoGph_gInf_c::getSafeMinXF(), 0.0f);
+}
+#endif
+
 dMenu_Fmap2DBack_c::dMenu_Fmap2DBack_c() {
     dMeter2Info_setMapDrugFlag(0);
 
@@ -267,6 +276,10 @@ dMenu_Fmap2DBack_c::~dMenu_Fmap2DBack_c() {
 }
 
 void dMenu_Fmap2DBack_c::draw() {
+    #if TARGET_PC
+    fMapBackWide();
+    #endif
+
     calcBlink();
 
     J2DGrafContext* grafPort = dComIfGp_getCurrentGrafPort();
@@ -1030,6 +1043,12 @@ void dMenu_Fmap2DBack_c::allmap_move2(STControl* param_0) {
     calcAllMapPos2D((mArrowPos3DX + control_xpos) - mStageTransX,
                     (mArrowPos3DZ + control_ypos) - mStageTransZ, &sp14, &sp10);
 
+#if TARGET_PC
+    if (dusk::getSettings().game.enableMirrorMode) {
+        sp14 = getMirrorPosX(sp14, 0.0f);
+    }
+#endif
+
     mSelectRegion = 0xff;
     for (int i = 7; i >= 0; i--) {
         int val = field_0x1230[i];
@@ -1199,7 +1218,7 @@ f32 dMenu_Fmap2DBack_c::getMapScissorAreaSizeX() {
 }
 
 f32 dMenu_Fmap2DBack_c::getMapScissorAreaSizeRealX() {
-#if PLATFORM_GCN && !TARGET_PC
+#if PLATFORM_GCN
     return getMapScissorAreaSizeX();
 #else
     return getMapScissorAreaSizeX() * mDoGph_gInf_c::getScale();
@@ -1384,6 +1403,15 @@ void dMenu_Fmap2DBack_c::regionTextureDraw() {
             if (uVar10 != uVar9) {
                 bool b = 0;
                 f32 v = mTransX + (dVar14 + (mRegionMinMapX[uVar10] + field_0xf0c[uVar10]));
+
+                #if TARGET_PC
+                if (dusk::getSettings().game.enableMirrorMode) {
+                    b = true;
+                    v = getMirrorPosX(mTransX + (dVar14 + (mRegionMinMapX[uVar10] + field_0xf0c[uVar10])),
+                                      mRegionMapSizeX[uVar10] * mZoom * 0.5f);
+                }
+                #endif
+
                 mpAreaTex[uVar10]->draw(
                     v, mTransZ + (dVar13 + (mRegionMinMapY[uVar10] + field_0xf2c[uVar10])),
                     mRegionMapSizeX[uVar10] * mZoom, mRegionMapSizeY[uVar10] * mZoom, b, false,
@@ -1391,6 +1419,15 @@ void dMenu_Fmap2DBack_c::regionTextureDraw() {
             } else {
                 bool b = 0;
                 f32 v = mTransX + (dVar14 + (mRegionMinMapX[uVar9] + field_0xf0c[uVar9]));
+
+                #if TARGET_PC
+                if (dusk::getSettings().game.enableMirrorMode) {
+                    b = true;
+                    v = getMirrorPosX(mTransX + (dVar14 + (mRegionMinMapX[uVar9] + field_0xf0c[uVar9])),
+                                      mRegionMapSizeX[uVar9] * mZoom * 0.5f);
+                }
+                #endif
+
                 mpAreaTex[uVar9]->draw(
                     v, mTransZ + (dVar13 + (mRegionMinMapY[uVar9] + field_0xf2c[uVar9])),
                     mRegionMapSizeX[uVar9] * mZoom, mRegionMapSizeY[uVar9] * mZoom, b, false,
@@ -1406,6 +1443,11 @@ void dMenu_Fmap2DBack_c::stageTextureDraw() {
     } else {
         mpSpotTexture->setAlpha(mAlphaRate * 255.0f * field_0xfa8 * mSpotTextureFadeAlpha);
     }
+
+#if TARGET_PC
+    JUTPalette* pPalette = mpSpotTexture->getTexture(0)->getPalette();
+    pPalette->dataUploaded();
+#endif
 
     mpSpotTexture->draw(mTransX + getMapScissorAreaLX(), mTransZ + getMapScissorAreaLY(),
                         getMapScissorAreaSizeRealX(), getMapScissorAreaSizeRealY(), false, false,
@@ -2179,6 +2221,17 @@ void dMenu_Fmap2DBack_c::setArrowPosAxis(f32 i_posX, f32 i_posZ) {
     control_ypos = 0.0f;
 }
 
+#if TARGET_PC
+void dMenu_Fmap2DTop_c::fMapTopWide() {
+    mpTitleScreen->search(MULTI_CHAR('spot0_n'))->scale(mDoGph_gInf_c::hudAspectScaleUp, 1.0f);
+    mpTitleScreen->search(MULTI_CHAR('spot2_n'))->scale(mDoGph_gInf_c::hudAspectScaleUp, 1.0f);
+    mpTitleScreen->search(MULTI_CHAR('name_n'))->translate(mDoGph_gInf_c::ScaleHUDXLeft(-243.0f), -169.0f);
+    mpTitleScreen->search(MULTI_CHAR('sub_n_n'))->translate(mDoGph_gInf_c::ScaleHUDXLeft(-80.0f), -154.0f);
+    mpTitleScreen->search(MULTI_CHAR('btn_i_n'))->translate(mDoGph_gInf_c::ScaleHUDXLeft(-241.0f), 177.0f);
+    mpTitleScreen->search(MULTI_CHAR('cont_n'))->translate(mDoGph_gInf_c::ScaleHUDXRight(515.0f), 83.0f);
+}
+#endif
+
 dMenu_Fmap2DTop_c::dMenu_Fmap2DTop_c(JKRExpHeap* i_heap, STControl* i_stick) {
     mpHeap = i_heap;
     mTransX = 0.0f;
@@ -2572,6 +2625,10 @@ void dMenu_Fmap2DTop_c::setAllAlphaRate(f32 i_rate, bool i_init) {
 }
 
 void dMenu_Fmap2DTop_c::draw() {
+    #if TARGET_PC
+    fMapTopWide();
+    #endif
+
     u32 scissor_left, scissor_top, scissor_width, scissor_height;
     J2DOrthoGraph* ctx = static_cast<J2DOrthoGraph*>(dComIfGp_getCurrentGrafPort());
     ctx->setup2D();
