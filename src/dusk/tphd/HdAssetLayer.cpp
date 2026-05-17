@@ -316,7 +316,7 @@ void registerHdSurface(const Gx2FormatMapping& m, const GtxSurface& s,
     r.width    = s.width;
     r.height   = s.height;
     r.gxFormat = m.newGxFormat;
-    r.mipCount = 0; // r.mipCount = std::max(decoded.mipCount, 1u);
+    r.mipCount = std::max(decoded.mipCount, 1u);
     aurora::gfx::hd_register_replacement(pixelPtr, std::move(r));
 }
 
@@ -467,6 +467,9 @@ void registerHdTexturesForArc(std::vector<u8>& arcBytes,
 
             const u32 newImgOff = 0x20 + i * 0x20;
             timg->imageOffset = static_cast<s32>(newImgOff);
+            const u8 hdMips = static_cast<u8>(std::clamp<u32>(s.mipCount, 1u, 11u));
+            timg->mipmapCount = hdMips;
+            timg->maxLOD = static_cast<s8>((hdMips - 1) * 8);
             registerHdSurface(*m, s,
                               arcBytes.data() + f.dataOffset + btiAbs + newImgOff,
                               gtx->name, i);
@@ -498,6 +501,9 @@ void registerHdTexturesForArc(std::vector<u8>& arcBytes,
         // i_img + 0x20, matching where we register below.
         auto* timg = reinterpret_cast<ResTIMG*>(arcBytes.data() + f.dataOffset);
         timg->imageOffset = 0x20;
+        const u8 hdMips = static_cast<u8>(std::clamp<u32>(s.mipCount, 1u, 11u));
+        timg->mipmapCount = hdMips;
+        timg->maxLOD = static_cast<s8>((hdMips - 1) * 8);
         registerHdSurface(*m, s, arcBytes.data() + f.dataOffset + 0x20,
                           gtx->name, 0);
         ++btiReg;
