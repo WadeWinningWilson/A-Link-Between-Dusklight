@@ -793,6 +793,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .valueMin = 0,
                 .valueMax = 100,
                 .defaultValue = 100,
+                .step = 10,
             }, mPrelaunch);
 
         leftPane.add_section("Rendering");
