@@ -2937,12 +2937,13 @@ void dComIfGs_setupRandomizerSave() {
         dComIfGs_setAllLetterRead();
     }
 
+    // If MDH and the twilights are pre-completed
     if (dComIfGs_isEventBit(MIDNAS_DESPERATE_HOUR_COMPLETED))
     {
-        if (dComIfGs_getDarkClearLV() == 0x7)
+        if ((dComIfGs_getDarkClearLV() & 0x7) == 0x7)
         {
             dComIfGs_onDarkClearLV(3);
-            dComIfGs_onTransformLV(3);
+            dComIfGs_onTransformLV(3); // Puts Midna on players back
         }
     }
     
