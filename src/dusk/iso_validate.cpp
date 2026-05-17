@@ -60,18 +60,6 @@ const char* verification_state_name(dusk::DiscVerificationState state) noexcept 
 
 namespace dusk::iso {
 
-enum class Platform : u8 {
-    GameCube,
-    Wii,
-};
-
-enum class Region : u8 {
-    NorthAmerica,
-    Europe,
-    Japan,
-    Korea,
-};
-
 struct KnownDisc {
     std::string_view id;
     Platform platform;
@@ -216,7 +204,9 @@ ValidationError validate(const char* path, VerificationStatus& status, DiscInfo&
         return ValidationError::WrongGame;
     }
     status.knownDisc = knownDisc;
-    info.isPal = knownDisc->region == Region::Europe;
+
+    info.platform = knownDisc->platform;
+    info.region = knownDisc->region;
     if (!knownDisc->supported) {
         return ValidationError::WrongVersion;
     }
@@ -251,7 +241,9 @@ ValidationError inspect(const char* path, DiscInfo& info) {
     if (!knownDisc) {
         return ValidationError::WrongGame;
     }
-    info.isPal = knownDisc->region == Region::Europe;
+
+    info.platform = knownDisc->platform;
+    info.region = knownDisc->region;
     if (!knownDisc->supported) {
         return ValidationError::WrongVersion;
     }
@@ -260,7 +252,7 @@ ValidationError inspect(const char* path, DiscInfo& info) {
 
 bool isPal(const char* path) {
     DiscInfo info{};
-    return inspect(path, info) == ValidationError::Success && info.isPal;
+    return inspect(path, info) == ValidationError::Success && info.region == Region::Europe;
 }
 
 void log_verification_state(std::string_view path, DiscVerificationState state) {
