@@ -28,10 +28,6 @@
 #include "d/d_menu_collect.h"
 #include "d/d_meter2_info.h"
 #include "d/d_s_play.h"
-#include "dusk/endian.h"
-#include "dusk/frame_interpolation.h"
-#include "dusk/gx_helper.h"
-#include "dusk/logging.h"
 #include "f_ap/f_ap_game.h"
 #include "f_op/f_op_actor_mng.h"
 #include "f_op/f_op_camera_mng.h"
@@ -51,9 +47,16 @@
 #endif
 
 #if TARGET_PC
+#include <SDL3/SDL_video.h>
+#include "aurora/lib/window.hpp"
 #include "d/actor/d_a_horse.h"
-#include "dusk/imgui/ImGuiConsole.hpp"
 #include "dusk/dusk.h"
+#include "dusk/endian.h"
+#include "dusk/frame_interpolation.h"
+#include "dusk/gx_helper.h"
+#include "dusk/imgui/ImGuiConsole.hpp"
+#include "dusk/logging.h"
+#include "dusk/settings.h"
 #endif
 
 class mDoGph_HIO_c : public JORReflexible {
@@ -139,7 +142,7 @@ void dDlst_heapMap_c::draw() {
     f32 var_f29 = field_0x10 - field_0x8;
     f32 sp4C = field_0x14 - field_0xc;
     f32 sp48 = var_f29 * sp4C;
-    
+
     uintptr_t start_addr = (uintptr_t)m_heap->getStartAddr();
     uintptr_t end_addr = (uintptr_t)m_heap->getEndAddr();
     u32 sp40 = end_addr - start_addr;
@@ -154,7 +157,7 @@ void dDlst_heapMap_c::draw() {
         f32 var_f30 = (f32)sp38 * sp3C;
         uintptr_t sp34 = (uintptr_t)block - start_addr;
         f32 sp30 = (f32)sp34 * sp3C;
-        
+
         f32 var_f28 = std::floor(sp30 / var_f29);
 
         f32 sp2C = sp30 - (var_f29 * var_f28);
@@ -469,80 +472,47 @@ void darwFilter(GXColor matColor) {
     GXEnd();
 }
 
-#ifdef TARGET_PC
-static void mDoGph_AdvanceFadeState() {
-    if (mDoGph_gInf_c::isFade() != 0) {
-        f32 fade_rate = mDoGph_gInf_c::getFadeRate() + mDoGph_gInf_c::getFadeSpeed();
-
-        if (fade_rate < 0.0f) {
-            fade_rate = 0.0f;
-            mDoGph_gInf_c::offFade();
-        } else if (fade_rate > 1.0f) {
-            fade_rate = 1.0f;
-        }
-
-        mDoGph_gInf_c::setFadeRate(fade_rate);
-        mDoGph_gInf_c::getFadeColor().a = 255.0f * fade_rate;
-    } else {
-        GXColor& fade_color = mDoGph_gInf_c::getFadeColor();
-        if (dComIfG_getBrightness() != 255) {
-            fade_color.r = 0;
-            fade_color.g = 0;
-            fade_color.b = 0;
-            fade_color.a = 255 - dComIfG_getBrightness();
-        } else {
-            fade_color.a = 0;
-        }
-    }
-}
-
-static void mDoGph_AdvanceFadeState(u32 tick_count) {
-    for (u32 i = 0; i < tick_count; ++i) {
-        mDoGph_AdvanceFadeState();
-    }
-}
-
-static void mDoGph_DrawStoredFade() {
-    GXColor& fade_color = mDoGph_gInf_c::getFadeColor();
-    if (fade_color.a != 0) {
-        darwFilter(fade_color);
-    }
-}
-
 void mDoGph_gInf_c::calcFade() {
-    mDoGph_AdvanceFadeState();
-    mDoGph_DrawStoredFade();
-}
-#else
-void mDoGph_gInf_c::calcFade() {
-    if (mDoGph_gInf_c::mFade != 0) {
-        mFadeRate += mFadeSpeed;
+#if TARGET_PC
+    if (dusk::frame_interp::get_ui_tick_pending())
+#endif
+    {
+        if (mFade != 0) {
+            mFadeRate += mFadeSpeed;
 
-        if (mFadeRate < 0.0f) {
-            mFadeRate = 0.0f;
-            mDoGph_gInf_c::mFade = 0;
-        } else {
-            if (mFadeRate > 1.0f) {
-                mFadeRate = 1.0f;
+            if (mFadeRate < 0.0f) {
+                mFadeRate = 0.0f;
+                mFade = 0;
+            } else {
+                if (mFadeRate > 1.0f) {
+                    mFadeRate = 1.0f;
+                }
             }
-        }
-        mFadeColor.a = 255.0f * mFadeRate;
-    } else {
-        if (dComIfG_getBrightness() != 255) {
-            mFadeColor.r = 0;
-            mFadeColor.g = 0;
-            mFadeColor.b = 0;
-            mFadeColor.a = 255 - dComIfG_getBrightness();
+            mFadeColor.a = 255.0f * mFadeRate;
         } else {
-            mFadeColor.a = 0;
+            if (dComIfG_getBrightness() != 255) {
+                mFadeColor.r = 0;
+                mFadeColor.g = 0;
+                mFadeColor.b = 0;
+                mFadeColor.a = 255 - dComIfG_getBrightness();
+            } else {
+                mFadeColor.a = 0;
+            }
         }
     }
 
     if (mFadeColor.a != 0) {
+#ifdef TARGET_PC
+        if (dusk::frame_interp::is_enabled() && mFade != 0) {
+            const auto step = dusk::frame_interp::get_interpolation_step();
+            const auto progress = mFadeSpeed < 0.0f ? 1.0f - mFadeRate : mFadeRate;
+            const auto fade_amt = mFadeRate + mFadeSpeed * (step - 1.0f + progress);
+            mFadeColor.a = 255.0f * std::clamp(fade_amt, 0.0f, 1.0f);
+        }
+#endif
         darwFilter(mFadeColor);
     }
 }
-#endif
 
 #if PLATFORM_WII || PLATFORM_SHIELD
 u32 mDoGph_gInf_c::csr_c::m_blurID;
@@ -601,21 +571,16 @@ struct tvSize {
     u16 width;
     u16 height;
 };
-const tvSize l_tvSize[2] = {
+#ifndef TARGET_PC
+const
+#endif
+tvSize l_tvSize[2] = {
     {FB_WIDTH_BASE, FB_HEIGHT_BASE},
     {808, FB_HEIGHT_BASE},
 };
 
-#if TARGET_PC
-tvSize pc_tvSize = {608, 448};
-#endif
-
 void mDoGph_gInf_c::setTvSize() {
-#if TARGET_PC
-    const tvSize* tvsize = &pc_tvSize;
-#else
     const tvSize* tvsize = &l_tvSize[mWide];
-#endif
 
     m_width = tvsize->width;
     m_height = tvsize->height;
@@ -636,26 +601,17 @@ void mDoGph_gInf_c::setTvSize() {
     m_invScale = 1.0f / m_scale;
 
 #if TARGET_PC
-    hudAspectScaleDown = 1.3571428f / mDoGph_gInf_c::getAspect();
-    hudAspectScaleUp = 1.0f / hudAspectScaleDown;
+    updateSafeAreaBounds();
+    hudAspectScaleUp = getSafeWidthF() / FB_WIDTH_BASE;
+    hudAspectScaleDown = FB_WIDTH_BASE / getSafeWidthF();
 #endif
 }
 
-#if TARGET_PC
-void mDoGph_gInf_c::onWide(f32 width, f32 height) {
-    mWide = TRUE;
-    pc_tvSize.width = width;
-    pc_tvSize.height = height;
-    setTvSize();
-    dMeter2Info_onWide2D();
-}
-#else
 void mDoGph_gInf_c::onWide() {
     mWide = TRUE;
     setTvSize();
     dMeter2Info_onWide2D();
 }
-#endif
 
 void mDoGph_gInf_c::offWide() {
     mWide = FALSE;
@@ -680,7 +636,7 @@ u8 mDoGph_gInf_c::isWide() {
 }
 
 void mDoGph_gInf_c::setWideZoomProjection(Mtx44& m) {
-    if (!isWideZoom()) {
+    IF_NOT_DUSK(if (!isWideZoom())) {
         return;
     }
 
@@ -726,7 +682,7 @@ void mDoGph_gInf_c::setWideZoomProjection(Mtx44& m) {
 }
 
 void mDoGph_gInf_c::setWideZoomLightProjection(Mtx& m) {
-    if (!isWideZoom()) {
+    IF_NOT_DUSK(if (!isWideZoom())) {
         return;
     }
 
@@ -765,14 +721,101 @@ void mDoGph_gInf_c::setWideZoomLightProjection(Mtx& m) {
 #if TARGET_PC
 f32 mDoGph_gInf_c::hudAspectScaleDown = 1.0f;
 f32 mDoGph_gInf_c::hudAspectScaleUp = 1.0f;
+f32 mDoGph_gInf_c::m_safeMinXF = 0.0f;
+f32 mDoGph_gInf_c::m_safeMinYF = 0.0f;
+f32 mDoGph_gInf_c::m_safeMaxXF = FB_WIDTH_BASE;
+f32 mDoGph_gInf_c::m_safeMaxYF = FB_HEIGHT_BASE;
+f32 mDoGph_gInf_c::m_safeWidthF = FB_WIDTH_BASE;
+f32 mDoGph_gInf_c::m_safeHeightF = FB_HEIGHT_BASE;
 
-void mDoGph_gInf_c::setWindowSize(AuroraWindowSize const& size) {
-    JUTVideo::getManager()->setWindowSize(size);
-    dComIfGp_setWindow(0, 0.0f, 0.0f, getWidth(), getHeight(), 0.0f, 1.0f, 0, 2);
-    mFader->mBox.set(0, 0, getWidth(), getHeight());
+void mDoGph_gInf_c::updateSafeAreaBounds() {
+    m_safeMinXF = m_minXF;
+    m_safeMinYF = m_minYF;
+    m_safeMaxXF = m_maxXF;
+    m_safeMaxYF = m_maxYF;
+    m_safeWidthF = m_widthF;
+    m_safeHeightF = m_heightF;
 
-    f32 newWidth = (getWidth() / getHeight()) * 448.0f;
-    onWide(newWidth, 448.0f);
+    SDL_Window* window = aurora::window::get_sdl_window();
+    if (window == NULL) {
+        return;
+    }
+
+    const AuroraWindowSize windowSize = aurora::window::get_window_size();
+    const f32 windowWidth = static_cast<f32>(windowSize.width);
+    const f32 windowHeight = static_cast<f32>(windowSize.height);
+    if (windowWidth <= 0.0f || windowHeight <= 0.0f) {
+        return;
+    }
+
+    SDL_Rect safeRect{};
+    if (!SDL_GetWindowSafeArea(window, &safeRect)) {
+        return;
+    }
+
+    u32 renderWidth = 0;
+    u32 renderHeight = 0;
+    AuroraGetRenderSize(&renderWidth, &renderHeight);
+    if (windowSize.native_fb_width == 0 || windowSize.native_fb_height == 0 ||
+        renderWidth == 0 || renderHeight == 0)
+    {
+        return;
+    }
+
+    const f32 nativeScaleX = static_cast<f32>(windowSize.native_fb_width) / windowWidth;
+    const f32 nativeScaleY = static_cast<f32>(windowSize.native_fb_height) / windowHeight;
+
+    const f32 safeLeft = static_cast<f32>(safeRect.x) * nativeScaleX;
+    const f32 safeTop = static_cast<f32>(safeRect.y) * nativeScaleY;
+    const f32 safeRight = static_cast<f32>(safeRect.x + safeRect.w) * nativeScaleX;
+    const f32 safeBottom = static_cast<f32>(safeRect.y + safeRect.h) * nativeScaleY;
+
+    f32 viewportWidth = static_cast<f32>(windowSize.native_fb_width);
+    f32 viewportHeight = static_cast<f32>(windowSize.native_fb_height);
+    const f32 targetAspect = viewportWidth / viewportHeight;
+    const f32 contentAspect = static_cast<f32>(renderWidth) / static_cast<f32>(renderHeight);
+    if (targetAspect > contentAspect) {
+        viewportWidth = std::max(1.0f, std::round(viewportHeight * contentAspect));
+    } else if (targetAspect < contentAspect) {
+        viewportHeight = std::max(1.0f, std::round(viewportWidth / contentAspect));
+    }
+
+    const f32 viewportLeft = (static_cast<f32>(windowSize.native_fb_width) - viewportWidth) * 0.5f;
+    const f32 viewportTop = (static_cast<f32>(windowSize.native_fb_height) - viewportHeight) * 0.5f;
+    const f32 viewportRight = viewportLeft + viewportWidth;
+    const f32 viewportBottom = viewportTop + viewportHeight;
+
+    const f32 leftInset = std::max(0.0f, safeLeft - viewportLeft) * (m_widthF / viewportWidth);
+    const f32 topInset = std::max(0.0f, safeTop - viewportTop) * (m_heightF / viewportHeight);
+    const f32 rightInset = std::max(0.0f, viewportRight - safeRight) * (m_widthF / viewportWidth);
+    const f32 bottomInset = std::max(0.0f, viewportBottom - safeBottom) * (m_heightF / viewportHeight);
+
+    const f32 safeMinXF = m_minXF + leftInset;
+    const f32 safeMinYF = m_minYF + topInset;
+    const f32 safeMaxXF = m_maxXF - rightInset;
+    const f32 safeMaxYF = m_maxYF - bottomInset;
+    const f32 safeWidthF = safeMaxXF - safeMinXF;
+    const f32 safeHeightF = safeMaxYF - safeMinYF;
+
+    if (safeWidthF <= 0.0f || safeHeightF <= 0.0f) {
+        return;
+    }
+
+    m_safeMinXF = safeMinXF;
+    m_safeMinYF = safeMinYF;
+    m_safeMaxXF = safeMaxXF;
+    m_safeMaxYF = safeMaxYF;
+    m_safeWidthF = safeWidthF;
+    m_safeHeightF = safeHeightF;
+}
+
+void mDoGph_gInf_c::updateRenderSize() {
+    u32 width, height;
+    AuroraGetRenderSize(&width, &height);
+    JUTVideo::getManager()->setRenderSize(width, height);
+    l_tvSize[1].width = static_cast<u16>(static_cast<float>(width) / static_cast<float>(height) *
+                                         static_cast<float>(l_tvSize[1].height));
+    onWide();
 }
 #endif
 
@@ -869,9 +912,6 @@ int mDoGph_AfterOfDraw() {
 
     JUTVideo::getManager()->setRenderMode(mDoMch_render_c::getRenderModeObj());
     mDoGph_gInf_c::endFrame();
-#ifdef TARGET_PC
-    dusk::frame_interp::notify_sim_tick_complete();
-#endif
     return 1;
 }
 
@@ -911,7 +951,7 @@ static void drawDepth2(view_class* param_0, view_port_class* param_1, int param_
                 GXProject(param_0->lookat.center.x, param_0->lookat.center.y,
                         param_0->lookat.center.z, param_0->viewMtx, sp4C, sp34, &sp1C, &sp18,
                         &sp14);
-                
+
                 param_2 = (0xFF0000 - (int)(16777215.0f * sp14)) >> 8;
                 param_2 = cLib_minMaxLimit<int>(param_2, -0x400, 0);
             }
@@ -998,15 +1038,8 @@ static void drawDepth2(view_class* param_0, view_port_class* param_1, int param_
                                     GX_FALSE, 0);
             }
 
-            #if TARGET_PC
-            // use full size for pc for higher quality background elements
-            u16 halfWidth = width;
-            u16 halfHeight = height;
-            #else
             u16 halfWidth = width >> 1;
             u16 halfHeight = height >> 1;
-            #endif
-
             GXRenderModeObj* sp24 = JUTGetVideoManager()->getRenderMode();
             GXSetCopyFilter(GX_FALSE, NULL, GX_TRUE, sp24->vfilter);
             GXSetTexCopySrc(x_orig, y_orig_pos, width, height);
@@ -1124,6 +1157,9 @@ static void drawDepth2(view_class* param_0, view_port_class* param_1, int param_
             GXSetProjection(ortho, GX_ORTHOGRAPHIC);
             GXSetCurrentMtx(0);
 
+#ifdef TARGET_PC
+            if (dusk::getSettings().game.enableDepthOfField)
+#endif
             if (l_tevColor0.a > -255 && sp8 == 1) {
                 GXBegin(GX_QUADS, GX_VTXFMT0, 4);
                 GXPosition3s16(x_orig, y_orig_pos, -5);
@@ -1145,16 +1181,36 @@ static void drawDepth2(view_class* param_0, view_port_class* param_1, int param_
 }
 
 static void trimming(view_class* param_0, view_port_class* param_1) {
+#if TARGET_PC
+    if (dusk::getSettings().game.recordingMode) {
+        return;
+    }
+#endif
     ZoneScoped;
     UNUSED(param_0);
 
+    #if !TARGET_PC
     s16 y_orig = (int)param_1->y_orig & ~7;
     s16 y_orig_pos = y_orig < 0 ? 0 : y_orig;
     if ((y_orig_pos == 0) && (param_1->scissor.y_orig != param_1->y_orig ||
                               (param_1->scissor.height != param_1->height)))
+    #endif
     {
+        #if TARGET_PC
+        f32 sc_top = param_1->scissor.y_orig;
+        f32 sc_bottom = sc_top + param_1->scissor.height;
+        
+        f32 sc_left = 0.0f;
+        f32 sc_right = param_1->width;
+
+        if (!dusk::getSettings().game.disableCutscenePillarboxing) {
+            sc_left = param_1->scissor.x_orig;
+            sc_right = sc_left + param_1->scissor.width;
+        }
+        #else
         s32 sc_top = (int)param_1->scissor.y_orig;
         s32 sc_bottom = param_1->scissor.y_orig + param_1->scissor.height;
+        #endif
         GXSetNumChans(1);
         GXSetChanCtrl(GX_ALPHA0, GX_FALSE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
         GXSetNumTexGens(0);
@@ -1183,20 +1239,35 @@ static void trimming(view_class* param_0, view_port_class* param_1) {
         GXLoadPosMtxImm(cMtx_getIdentity(), 0);
         GXClearVtxDesc();
         GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
-        GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_CLR_RGBA, GX_RGBA4, 0);
+        GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_CLR_RGBA, DUSK_IF_ELSE(GX_F32, GX_RGBA4), 0);
         GXSetProjection(ortho, GX_ORTHOGRAPHIC);
         GXSetCurrentMtx(0);
-        GXBegin(GX_QUADS, GX_VTXFMT0, 8);
+        GXBegin(GX_QUADS, GX_VTXFMT0, DUSK_IF_ELSE(16, 8));
 
         #if TARGET_PC
-        GXPosition3s16(0, 0, -5);
-        GXPosition3s16(param_1->width, 0, -5);
-        GXPosition3s16(param_1->width, sc_top, -5);
-        GXPosition3s16(0, sc_top, -5);
-        GXPosition3s16(0, sc_bottom, -5);
-        GXPosition3s16(param_1->width, sc_bottom, -5);
-        GXPosition3s16(param_1->width, param_1->height, -5);
-        GXPosition3s16(0, param_1->height, -5);
+        // top trapezoid
+        GXPosition3f32(0, 0, -5);
+        GXPosition3f32(param_1->width, 0, -5);
+        GXPosition3f32(sc_right, sc_top, -5);
+        GXPosition3f32(sc_left, sc_top, -5);
+
+        // bottom trapezoid
+        GXPosition3f32(sc_left, sc_bottom, -5);
+        GXPosition3f32(sc_right, sc_bottom, -5);
+        GXPosition3f32(param_1->width, param_1->height, -5);
+        GXPosition3f32(0, param_1->height, -5);
+
+        // left trapezoid
+        GXPosition3f32(0, 0, -5);
+        GXPosition3f32(sc_left, sc_top, -5);
+        GXPosition3f32(sc_left, sc_bottom, -5);
+        GXPosition3f32(0, param_1->height, -5);
+
+        // right trapezoid
+        GXPosition3f32(sc_right, sc_top, -5);
+        GXPosition3f32(param_1->width, 0, -5);
+        GXPosition3f32(param_1->width, param_1->height, -5);
+        GXPosition3f32(sc_right, sc_bottom, -5);
         #else
         GXPosition3s16(0, 0, -5);
         GXPosition3s16(FB_WIDTH, 0, -5);
@@ -1210,8 +1281,12 @@ static void trimming(view_class* param_0, view_port_class* param_1) {
 
         GXEnd();
     }
+#ifndef TARGET_PC
+    // due to rounding, the scaled scissor region doesn't align with the untrimmed area
+    // this creates a gap when drawing the flipped image for mirror mode
     GXSetScissor(param_1->scissor.x_orig, param_1->scissor.y_orig, param_1->scissor.width,
                  param_1->scissor.height);
+#endif
 }
 
 #if !PLATFORM_WII && !TARGET_PC
@@ -1259,7 +1334,7 @@ void mDoGph_gInf_c::bloom_c::remove() {
 }
 
 #if TARGET_PC
-static void CopyToTexObj(GXTexObj* pDst, uintptr_t texID, int dstWidth, int dstHeight, GXTexFmt dstFmt = GX_TF_RGBA8) {
+static void CopyToTexObj(GXTexObj* pDst, uintptr_t texID, u16 dstWidth, u16 dstHeight, GXTexFmt dstFmt = GX_TF_RGBA8) {
     GXSetTexCopyDst(dstWidth, dstHeight, dstFmt, FALSE);
     GXCopyTex((void*)texID, false);
     GXInitTexObj(pDst, (void*)texID, dstWidth, dstHeight, dstFmt, GX_CLAMP, GX_CLAMP, GX_FALSE);
@@ -1276,8 +1351,8 @@ void mDoGph_gInf_c::bloom_c::draw2() {
     if (mMonoColor.a == 0 && !enabled)
         return;
 
-    f32 width = mDoGph_gInf_c::getWidth();
-    f32 height = mDoGph_gInf_c::getHeight();
+    f32 width = JUTVideo::getManager()->getRenderWidth();
+    f32 height = JUTVideo::getManager()->getRenderHeight();
 
     GXLoadTexObj(getFrameBufferTexObj(), GX_TEXMAP0);
     GXSetNumChans(0);
@@ -1311,35 +1386,63 @@ void mDoGph_gInf_c::bloom_c::draw2() {
         BlurPass0, BlurPassN = BlurPass0 + MaxDivNum,
         MaxTexNum,
     };
-    scissor_class divPorts[MaxDivNum];
-    divPorts[0] = {0.0f, 0.0f, 1.0f, 1.0f}; // full-size texture
-    divPorts[1] = {0.0f, 0.0f, 0.5f, 0.5f}; // bloom texture (wide enough, half-tall)
-    divPorts[2] = {0.5f, 0.0f, 0.25f, 0.25f};
-    for (int i = 3; i < ARRAY_SIZE(divPorts); i++) {
-        auto& port = divPorts[i];
-        auto const& prev = divPorts[i - 1];
-        port.x_orig = prev.x_orig;
-        port.y_orig = prev.y_orig + prev.height;
-        port.width = prev.width * 0.5f;
-        port.height = prev.height * 0.5f;
+    struct {
+        u16 x;
+        u16 y;
+        u16 w;
+        u16 h;
+    } divRects[MaxDivNum];
+    divRects[0] = {
+        0,
+        0,
+        static_cast<u16>(width),
+        static_cast<u16>(height),
+    };
+    divRects[1] = {
+        0,
+        0,
+        static_cast<u16>(divRects[0].w / 2),
+        static_cast<u16>(divRects[0].h / 2),
+    };
+    divRects[2] = {
+        divRects[1].w,
+        0,
+        static_cast<u16>(divRects[1].w / 2),
+        static_cast<u16>(divRects[1].h / 2),
+    };
+    for (int i = 3; i < ARRAY_SIZE(divRects); i++) {
+        const auto& prev = divRects[i - 1];
+        divRects[i] = {
+            prev.x,
+            static_cast<u16>(prev.y + prev.h),
+            static_cast<u16>(prev.w / 2),
+            static_cast<u16>(prev.h / 2),
+        };
+    }
+    for (int i = 0; i < ARRAY_SIZE(divRects); i++) {
+        auto & rect = divRects[i];
+        if (rect.w == 0) rect.w = 1;
+        if (rect.h == 0) rect.h = 1;
     }
 
     auto divCopySrc = [&](int divNo) {
-        auto const& port = divPorts[divNo];
-        GXSetTexCopySrc(port.x_orig * width, port.y_orig * height, port.width * width, port.height * height);
+        auto const& rect = divRects[divNo];
+        GXSetTexCopySrc(rect.x, rect.y, rect.w, rect.h);
     };
 
     TGXTexObj tmpTex[MaxTexNum];
     auto divCopyTex = [&](uintptr_t texNo, int divNo) -> GXTexObj * {
-        auto const& port = divPorts[divNo];
-        CopyToTexObj(&tmpTex[texNo], texNo, port.width * width, port.height * height);
+        auto const& rect = divRects[divNo];
+        CopyToTexObj(&tmpTex[texNo], texNo, rect.w, rect.h);
         return &tmpTex[texNo];
     };
-    
+
     auto divQuad = [&](int divNo) {
-        auto const& port = divPorts[divNo];
-        f32 x0 = port.x_orig, y0 = port.y_orig;
-        f32 x1 = x0 + port.width, y1 = y0 + port.height;
+        auto const& rect = divRects[divNo];
+        f32 x0 = rect.x / width;
+        f32 y0 = rect.y / height;
+        f32 x1 = (rect.x + rect.w) / width;
+        f32 y1 = (rect.y + rect.h) / height;
         GXBegin(GX_QUADS, GX_VTXFMT0, 4);
         GXPosition3f32(x0, y0, -5);
         GXTexCoord2s8(0, 0);
@@ -1366,8 +1469,8 @@ void mDoGph_gInf_c::bloom_c::draw2() {
     }
 
     if (enabled) {
-        GXCreateFrameBuffer(width * 0.75f, height * 0.5f);
-        GXSetViewport(0.0f, 0.0f, width, height, 0.1f, 1.0f); // use oversized viewport to make the math easier
+        GXCreateFrameBuffer(divRects[2].x + divRects[2].w, divRects[1].y + divRects[1].h);
+        GXSetViewportRender(0.0f, 0.0f, width, height, 0.0f, 1.0f); // use oversized viewport to make the math easier
 
         GXSetNumTevStages(3);
         GXSetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR_NULL);
@@ -1404,23 +1507,21 @@ void mDoGph_gInf_c::bloom_c::draw2() {
         GXTexObj* texPass0 = divCopyTex(Pass0, 2);
         GXLoadTexObj(texPass0, GX_TEXMAP0);
 
-        f32 blurScale = mBlureSize * ((448.0f / getHeight()) / 6400.0f);
+        f32 blurScale = mBlureSize * ((448.0f / height) / 6400.0f);
 
         // Setup blur filter TEV.
         GXSetNumTexGens(8);
 
-        auto SetupBlurMtx = [](float scale) {
-            u32 texMtxID = GX_TEXMTX0;
-            int angle = 0;
-            for (int texCoord = (int)GX_TEXCOORD0; texCoord < (int)GX_MAX_TEXCOORD; texCoord++) {
-                GXSetTexCoordGen((GXTexCoordID)texCoord, GX_TG_MTX2x4, GX_TG_TEX0, texMtxID);
-                mDoMtx_stack_c::transS((scale * cM_scos(angle)) * getInvScale(),
-                                       scale * cM_ssin(angle), 0.0f);
-                GXLoadTexMtxImm(mDoMtx_stack_c::get(), texMtxID, GX_MTX2x4);
-                texMtxID += 3;
-                angle += 0x2000;
-            }
-        };
+        u32 texMtxID = GX_TEXMTX0;
+        int angle = 0;
+        for (int texCoord = (int)GX_TEXCOORD0; texCoord < (int)GX_MAX_TEXCOORD; texCoord++) {
+            GXSetTexCoordGen((GXTexCoordID)texCoord, GX_TG_MTX2x4, GX_TG_TEX0, texMtxID);
+            mDoMtx_stack_c::transS((blurScale * cM_scos(angle)) * getInvScale(),
+                                   blurScale * cM_ssin(angle), 0.0f);
+            GXLoadTexMtxImm(mDoMtx_stack_c::get(), texMtxID, GX_MTX2x4);
+            texMtxID += 3;
+            angle += 0x2000;
+        }
 
         GXSetNumTevStages(8);
         for (int stage = 0; stage < 8; stage++) {
@@ -1433,19 +1534,20 @@ void mDoGph_gInf_c::bloom_c::draw2() {
         }
 
         // Successively downsample and apply blurs.
-        int divStart = 2;
-        int divNum = 6;
+        static int divStart = 2;
+        static int divNum = 6; // inclusive
 
-        // Distribute the brightness through each pass.
-        int totalNumPasses = (divNum - divStart) * 2; // down, up
-        float brightnessF32 = (mBlureRatio / 255.0f);
+        // The original mBlureRatio is multiplied into each sample, of which there are 8 samples originally.
+        // This is applied over two passes, the second one with an alpha of 25%; however, the clipping that this introduces is a bit integral to the look,
+        // so we do the same thing, letting it clip.
+        float brightnessF32 = (mBlureRatio * 16 / 255.0f);
+
+        // Distribute the brightness through the total number of passes.
+        f32 totalNumPasses = (divNum - divStart + 1);
         float brightnessPerPass = 255.0f * powf(brightnessF32, 1.0f / totalNumPasses);
         GXSetTevColorS10(GX_TEVREG1, {0, 0, 0, s16(brightnessPerPass / 8)});
 
         for (int i = divStart; i < divNum; i++) {
-            float blurStrength = 1.0f + (i - divStart) * 5.0f;
-            SetupBlurMtx(blurScale * blurStrength);
-
             // Apply blur filter.
             divQuad(i);
 
@@ -1457,16 +1559,18 @@ void mDoGph_gInf_c::bloom_c::draw2() {
             GXLoadTexObj(blurTex, GX_TEXMAP0);
         }
 
-        // All the way down at the bottom. Instead of blurring the bottom layer by itself, we blur when going up to the next layer.
-        // The remaining upscales are all just normal alpha blending.
+        // All the way down at the bottom.
         divQuad(divNum);
 
         // Now successively alpha blend back up, don't blur anymore.
         GXSetNumTevStages(1);
-        GXSetTevColorS10(GX_TEVREG1, {0, 0, 0, s16(brightnessPerPass)});
+        GXSetTevColorS10(GX_TEVREG1, {0, 0, 0, s16(255)});
         GXSetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
-        GXSetBlendMode(GX_BM_BLEND, GX_BL_ONE, GX_BL_ONE, GX_LO_OR);
+        GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_ONE, GX_LO_OR);
         for (int i = divNum; i > divStart; i--) {
+            float alpha = 255.0f * powf(0.25f * dusk::getSettings().game.bloomMultiplier.getValue(), 1.0f / (i - divStart + 1));
+            GXSetTevColorS10(GX_TEVREG0, {0, 0, 0, s16(alpha)});
+
             divCopySrc(i);
             GXTexObj* upTex = divCopyTex(BlurPass0 + i, i);
             GXLoadTexObj(upTex, GX_TEXMAP0);
@@ -1479,7 +1583,6 @@ void mDoGph_gInf_c::bloom_c::draw2() {
         GXLoadTexObj(texFinal, GX_TEXMAP0);
 
         GXRestoreFrameBuffer();
-        GXSetViewport(0.0f, 0.0f, width, height, 0.0f, 1.0f);
 
         // Now blend our bloom into the real FB.
         GXSetTevColor(GX_TEVREG0, mBlendColor);
@@ -1500,25 +1603,18 @@ void mDoGph_gInf_c::bloom_c::draw2() {
 
 void mDoGph_gInf_c::bloom_c::draw() {
     ZoneScoped;
-    if (!dusk::getSettings().game.enableBloom) {
+    if (dusk::getSettings().game.bloomMode.getValue() == dusk::BloomMode::Dusk) {
+        draw2();
         return;
     }
-
-    static bool s_bloom2 = false;
-    if (s_bloom2) {
-        draw2();
+    if (dusk::getSettings().game.bloomMode.getValue() != dusk::BloomMode::Classic) {
         return;
     }
 
     bool enabled = mEnable && m_buffer != NULL;
     if (mMonoColor.a != 0 || enabled) {
-#if TARGET_PC
-        f32 width = mDoGph_gInf_c::getWidth();
-        f32 height = mDoGph_gInf_c::getHeight();
-#else
         f32 width = FB_WIDTH;
         f32 height = FB_HEIGHT;
-#endif
         GXSetViewport(0.0f, 0.0f, width, height, 0.0f, 1.0f);
         GXSetScissor(0, 0, width, height);
 
@@ -1598,7 +1694,12 @@ void mDoGph_gInf_c::bloom_c::draw() {
             GXSetTevAlphaOp(GX_TEVSTAGE2, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE,
                             GX_TEVPREV);
             GXSetBlendMode(GX_BM_NONE, GX_BL_ZERO, GX_BL_ZERO, GX_LO_OR);
-            GXColorS10 tevColor0 = {(s16)-mPoint, (s16)-mPoint, (s16)-mPoint, 0x40};
+#if TARGET_PC
+            s16 bloomAlpha = s16(0x40 * dusk::getSettings().game.bloomMultiplier.getValue());
+#else
+            s16 bloomAlpha = 0x40;
+#endif
+            GXColorS10 tevColor0 = {(s16)-mPoint, (s16)-mPoint, (s16)-mPoint, bloomAlpha};
             GXSetTevColorS10(GX_TEVREG0, tevColor0);
             GXColor tevColor1 = {mBlureRatio, mBlureRatio, mBlureRatio, mBlureRatio};
             GXSetTevColor(GX_TEVREG1, tevColor1);
@@ -1628,7 +1729,7 @@ void mDoGph_gInf_c::bloom_c::draw() {
             GXSetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
             for (int texCoord = (int)GX_TEXCOORD1; texCoord < (int)GX_MAX_TEXCOORD; texCoord++) {
                 GXSetTexCoordGen((GXTexCoordID)texCoord, GX_TG_MTX2x4, GX_TG_TEX0, texMtxID);
-                
+
                 #if TARGET_PC
                 f32 dVar15 = mBlureSize * ((448.0f / height) / 6400.0f);
                 #else
@@ -1769,7 +1870,7 @@ static void retry_captue_frame(view_class* param_0, view_port_class* param_1, in
         var_r23 = height >> 1;
         GXSetTexCopySrc(x_orig, y_orig_pos, width, height);
 #ifdef TARGET_PC
-        GXSetTexCopyDst(width, height, (GXTexFmt)mDoGph_gInf_c::getFrameBufferTimg()->format, GX_TRUE);
+        GXSetTexCopyDst(width, height, (GXTexFmt)mDoGph_gInf_c::getFrameBufferTimg()->format, GX_FALSE);
 #else
         GXSetTexCopyDst(var_r24, var_r23, (GXTexFmt)mDoGph_gInf_c::getFrameBufferTimg()->format, GX_TRUE);
 #endif
@@ -1962,12 +2063,13 @@ static void captureScreenPerspDrawInfo(JPADrawInfo& info) {
 static void drawItem3D() {
     ZoneScoped;
 #ifdef TARGET_PC
-    // Frame interpolation: Title screen needs 0.0f while everything else that runs through this is -100.0f.
-    // Running presentation faster than logic revealed the problem. Thanks, Nintendo.
-    if (fopAcM_SearchByName(fpcNm_TITLE_e) != nullptr) {
-        dMenu_Collect3D_c::setViewPortOffsetY(0.0f);
-    } else {
-        dMenu_Collect3D_c::setViewPortOffsetY(-100.0f);
+    if (dusk::getSettings().game.enableFrameInterpolation) {
+        // FRAME INTERP NOTE: Title screen needs 0.0f while everything else that runs through this is -100.0f.
+        if (fopAcM_SearchByName(fpcNm_TITLE_e) != nullptr) {
+            dMenu_Collect3D_c::setViewPortOffsetY(0.0f);
+        } else {
+            dMenu_Collect3D_c::setViewPortOffsetY(-100.0f);
+        }
     }
 #endif
     Mtx item_mtx;
@@ -1987,18 +2089,17 @@ static void drawItem3D() {
 
 int mDoGph_Painter() {
     ZoneScoped;
+
     // Diagnostic: log windowNum to track game state machine progress
     static bool sDiagLoggedWindow = false;
     if (!sDiagLoggedWindow) {
         int wn = dComIfGp_getWindowNum();
-        DuskLog.debug("mDoGph_Painter: windowNum={}", wn);
+        // DuskLog.debug("mDoGph_Painter: windowNum={}", wn);
         if (wn != 0) sDiagLoggedWindow = true;
     }
 
 #if TARGET_PC
     dusk::g_imguiConsole.PreDraw();
-
-    const u32 pending_ui_ticks = dusk::frame_interp::begin_presentation_ui_pass();
 #endif
 
     #if DEBUG
@@ -2006,12 +2107,11 @@ int mDoGph_Painter() {
     #endif
 
 #ifdef TARGET_PC
-    for (u32 i = 0; i < pending_ui_ticks; ++i) {
+    if (dusk::frame_interp::get_ui_tick_pending())
 #endif
+    {
         dComIfGp_particle_calcMenu();
-#ifdef TARGET_PC
     }
-#endif
 
     JFWDisplay::getManager()->setFader(mDoGph_gInf_c::getFader());
     mDoGph_gInf_c::setClearColor(mDoGph_gInf_c::getBackColor());
@@ -2027,8 +2127,7 @@ int mDoGph_Painter() {
     j3dSys.drawInit();
     GXSetDither(GX_ENABLE);
 
-    J2DOrthoGraph ortho(0.0f, 0.0f, mDoGph_gInf_c::getWidth(), mDoGph_gInf_c::getHeight(), -1.0f,
-                        1.0f);
+    J2DOrthoGraph ortho(0.0f, 0.0f, FB_WIDTH, FB_HEIGHT, -1.0f, 1.0f);
     ortho.setOrtho(mDoGph_gInf_c::getMinXF(), mDoGph_gInf_c::getMinYF(),
                    mDoGph_gInf_c::getWidthF(), mDoGph_gInf_c::getHeightF(),
                    -1.0f, 1.0f);
@@ -2074,13 +2173,8 @@ int mDoGph_Painter() {
                 view_port_class new_port;
                 new_port.x_orig = 0.0f;
                 new_port.y_orig = 0.0f;
-            #if TARGET_PC
-                new_port.width = mDoGph_gInf_c::getWidth();
-                new_port.height = mDoGph_gInf_c::getHeight();
-            #else
                 new_port.width = FB_WIDTH;
                 new_port.height = FB_HEIGHT;
-            #endif
                 new_port.near_z = view_port->near_z;
                 new_port.far_z = view_port->far_z;
                 new_port.scissor = view_port->scissor;
@@ -2098,9 +2192,10 @@ int mDoGph_Painter() {
                          view_port->height);
 
 #ifdef TARGET_PC
-            // Frame interpolation: Call setViewMtx earlier so that it's interpolated in time for draw_info to use it
+            // FRAME INTERP NOTE: Call setViewMtx earlier so that it's interpolated in time for draw_info to use it
             j3dSys.setViewMtx(camera_p->view.viewMtx);
             JPADrawInfo draw_info(j3dSys.getViewMtx(), camera_p->view.fovy, camera_p->view.aspect);
+            mDoGph_gInf_c::setWideZoomLightProjection(draw_info.mPrjMtx);
 #else
             JPADrawInfo draw_info(camera_p->view.viewMtx, camera_p->view.fovy, camera_p->view.aspect);
 #endif
@@ -2134,7 +2229,7 @@ int mDoGph_Painter() {
             dComIfGp_setCurrentView(&camera_p->view);
             dComIfGp_setCurrentViewport(view_port);
             GXSetProjection(camera_p->view.projMtx, GX_PERSPECTIVE);
-            
+
             #if DEBUG
             captureScreenSetProjection(camera_p->view.projMtx);
             #endif
@@ -2202,18 +2297,16 @@ int mDoGph_Painter() {
 
 #if TARGET_PC
             if (dusk::getSettings().game.enableFrameInterpolation) {
-                cXyz pres_eye;
-                dusk::frame_interp::camera_eye_from_view_mtx(j3dSys.getViewMtx(), &pres_eye);
                 // FRAME INTERP NOTE: Currently only recalculating points for Epona's reins. Need a more global solution.
                 if (daHorse_c* horse = dComIfGp_getHorseActor()) {
                     horse->lerpControlPoints(dusk::frame_interp::get_interpolation_step());
                 }
-                g_dComIfG_gameInfo.drawlist.refresh3DlineMats(pres_eye);
+                g_dComIfG_gameInfo.drawlist.refresh3DlineMats(camera_p->view.lookat.eye);
             }
 #endif
 
             GX_DEBUG_GROUP(dComIfGd_drawOpaListPacket);
-            
+
             #if DEBUG
             // "drawing up to special-use drawing (Opaque) except J3D (Rendering)"
             fapGm_HIO_c::stopCpuTimer("Ｊ３Ｄ以外などの特殊用（不透明）描画まで（レンダリング）");
@@ -2295,7 +2388,7 @@ int mDoGph_Painter() {
                         GX_DEBUG_GROUP(dComIfGd_drawXluListInvisible);
                     }
                 }
-                
+
 
                 #if DEBUG
                 // "drawing up to projection (Translucent)"
@@ -2399,12 +2492,8 @@ int mDoGph_Painter() {
                     retry_captue_frame(&camera_p->view, view_port,
                                        dComIfGp_getCameraZoomForcus(camera_id));
                 }
-                
-                #if TARGET_PC
-                GXSetViewport(0.0f, 0.0f, mDoGph_gInf_c::getWidth(), mDoGph_gInf_c::getHeight(), 0.0f, 1.0f);
-                #else
+
                 GXSetViewport(0.0f, 0.0f, FB_WIDTH, FB_HEIGHT, 0.0f, 1.0f);
-                #endif
 
                 Mtx m2;
                 Mtx44 m;
@@ -2501,12 +2590,7 @@ int mDoGph_Painter() {
                 if (strcmp(dComIfGp_getStartStageName(), "F_SP127") != 0 &&
                     (mDoGph_gInf_c::isFade() & 0x80) == 0)
                 {
-#ifdef TARGET_PC
-                    mDoGph_AdvanceFadeState(pending_ui_ticks);
-                    mDoGph_DrawStoredFade();
-#else
                     mDoGph_gInf_c::calcFade();
-#endif
                 }
 
                 #if DEBUG
@@ -2571,13 +2655,12 @@ int mDoGph_Painter() {
     #endif
 
     GXSetClipMode(GX_CLIP_ENABLE);
-#ifdef TARGET_PC
-    for (u32 i = 0; i < pending_ui_ticks; ++i) {
+#if TARGET_PC
+    if (dusk::frame_interp::get_ui_tick_pending())
 #endif
+    {
         dDlst_list_c::calcWipe();
-#ifdef TARGET_PC
     }
-#endif
     j3dSys.reinitGX();
 
     ortho.setOrtho(mDoGph_gInf_c::getMinXF(), mDoGph_gInf_c::getMinYF(),
@@ -2627,12 +2710,7 @@ int mDoGph_Painter() {
 
         if (strcmp(dComIfGp_getStartStageName(), "F_SP127") == 0 || (mDoGph_gInf_c::isFade() & 0x80) != 0)
         {
-#ifdef TARGET_PC
-            mDoGph_AdvanceFadeState(pending_ui_ticks);
-            mDoGph_DrawStoredFade();
-#else
             mDoGph_gInf_c::calcFade();
-#endif
         }
 
         GX_DEBUG_GROUP(dComIfGp_particle_draw2DmenuFore, &draw_info3);
@@ -2665,17 +2743,9 @@ int mDoGph_Painter() {
 
 #if TARGET_PC
     dusk::g_imguiConsole.PostDraw();
-
-    if (dusk::getSettings().game.enableFrameInterpolation) {
-        JFWDisplay::getManager()->setFaderSimSteps(pending_ui_ticks);
-    }
 #endif
 
     mDoGph_gInf_c::endRender();
-
-#ifdef TARGET_PC
-    dusk::frame_interp::end_presentation_ui_pass();
-#endif
 
     #if WIDESCREEN_SUPPORT
     mDoGph_gInf_c::offWideZoom();

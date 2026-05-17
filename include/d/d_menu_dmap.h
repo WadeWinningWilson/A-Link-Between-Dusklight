@@ -91,6 +91,10 @@ public:
     void calcCursor();
     void drawCursor();
 
+    #if TARGET_PC
+    void dMapBgWide();
+    #endif
+
     void setDPDFloorSelCurPos(s8 i_pos) { field_0xdd6 = i_pos; }
 
     f32 getMapWidth() { return mMapWidth; }
@@ -102,6 +106,10 @@ public:
         field_0xd94 = param_0;
         field_0xd98 = param_1;
     }
+
+#if TARGET_PC
+    void resetScrollArrowMask() { field_0xdda = 0; }
+#endif
 
     /* 0xC98 */ JKRExpHeap* mpHeap;
     /* 0xC9C */ JKRExpHeap* mpTalkHeap;

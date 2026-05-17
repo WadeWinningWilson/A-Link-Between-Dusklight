@@ -5,11 +5,13 @@
 
 #include "aurora/lib/logging.hpp"
 #include "dusk/io.hpp"
+#include "dusk/settings.h"
 
 #include <limits>
 #include <string>
 
-#include "dusk/dusk.h"
+#include "dusk/main.h"
+#include "dusk/action_bindings.h"
 
 using namespace dusk::config;
 
@@ -22,8 +24,8 @@ aurora::Module DuskConfigLog("dusk::config");
 static absl::flat_hash_map<std::string_view, ConfigVarBase*> RegisteredConfigVars;
 static bool RegistrationDone = false;
 
-static std::string GetConfigJsonPath() {
-    return fmt::format("{}{}", configPath, ConfigFileName);
+static std::u8string GetConfigJsonPath() {
+    return (dusk::ConfigPath / ConfigFileName).u8string();
 }
 
 ConfigVarBase::ConfigVarBase(const char* name, const ConfigImplBase* impl) : name(name), registered(false), layer(ConfigVarLayer::Default), impl(impl) {
@@ -37,14 +39,29 @@ const ConfigImplBase* ConfigVarBase::getImpl() const noexcept {
     return impl;
 }
 
+template <typename T>
+static T sanitizeEnumValue(const ConfigVar<T>& cVar, T value) {
+    if constexpr (std::is_enum_v<T>) {
+        using Underlying = std::underlying_type_t<T>;
+        const Underlying raw = static_cast<Underlying>(value);
+        const Underlying min = static_cast<Underlying>(ConfigEnumRange<T>::min);
+        const Underlying max = static_cast<Underlying>(ConfigEnumRange<T>::max);
+        if (raw < min || raw > max) {
+            return cVar.getDefaultValue();
+        }
+    }
+
+    return value;
+}
+
 template<ConfigValue T>
 void ConfigImpl<T>::loadFromJson(ConfigVar<T>& cVar, const json& jsonValue) {
-    cVar.setValue(jsonValue.get<T>(), false);
+    cVar.setValue(sanitizeEnumValue(cVar, jsonValue.get<T>()), false);
 }
 
 template<ConfigValue T>
 nlohmann::json ConfigImpl<T>::dumpToJson(const ConfigVar<T>& cVar) {
-    return cVar.getValue();
+    return cVar.getValueForSave();
 }
 
 template<ConfigValue T> requires std::is_integral_v<T> && std::is_signed_v<T>
@@ -85,6 +102,28 @@ static void loadFromArgImpl(ConfigVar<std::string>& cVar, const std::string_view
     cVar.setOverrideValue(std::string(stringValue));
 }
 
+template<ConfigValue T> requires std::is_enum_v<T>
+static void loadFromArgImpl(ConfigVar<T>& cVar, const std::string_view stringValue) {
+    using Underlying = std::underlying_type_t<T>;
+    const std::string str(stringValue);
+
+    if constexpr (std::is_signed_v<Underlying>) {
+        const auto result = std::stoll(str);
+        if (result >= std::numeric_limits<Underlying>::min() && result <= std::numeric_limits<Underlying>::max()) {
+            cVar.setOverrideValue(sanitizeEnumValue(cVar, static_cast<T>(result)));
+        } else {
+            throw std::out_of_range("Value is too large");
+        }
+    } else {
+        const auto result = std::stoull(str);
+        if (result <= std::numeric_limits<Underlying>::max()) {
+            cVar.setOverrideValue(sanitizeEnumValue(cVar, static_cast<T>(result)));
+        } else {
+            throw std::out_of_range("Value is too large");
+        }
+    }
+}
+
 template<ConfigValue T>
 void ConfigImpl<T>::loadFromArg(ConfigVar<T>& cVar, const std::string_view stringValue) {
     loadFromArgImpl(cVar, stringValue);
@@ -115,6 +154,10 @@ namespace dusk::config {
     template class ConfigImpl<f32>;
     template class ConfigImpl<f64>;
     template class ConfigImpl<std::string>;
+    template class ConfigImpl<dusk::BloomMode>;
+    template class ConfigImpl<dusk::DiscVerificationState>;
+    template class ConfigImpl<dusk::GameLanguage>;
+    template class ConfigImpl<dusk::GyroMode>;
 }
 
 void dusk::config::Register(ConfigVarBase& configVar) {
@@ -147,7 +190,7 @@ void dusk::config::LoadFromUserPreferences() {
     if (configJsonPath.empty()) {
         return;
     }
-    LoadFromFileName(configJsonPath.c_str());
+    LoadFromFileName(reinterpret_cast<const char*>(configJsonPath.c_str()));
 }
 
 static void LoadFromPath(const char* path) {
@@ -199,17 +242,27 @@ void dusk::config::Save() {
         return;
     }
 
-    DuskConfigLog.info("Saving config to '{}'", configJsonPath);
+    DuskConfigLog.info(
+        "Saving config to '{}'",
+        reinterpret_cast<const char*>(configJsonPath.c_str()));
 
     json j;
 
     for (const auto& pair : RegisteredConfigVars) {
-        if (pair.second->getLayer() == ConfigVarLayer::Value) {
+        const auto layer = pair.second->getLayer();
+        if (layer == ConfigVarLayer::Value || layer == ConfigVarLayer::Speedrun) {
             j[pair.first] = pair.second->getImpl()->dumpToJson(*pair.second);
         }
     }
 
-    io::FileStream::WriteAllText(configJsonPath.c_str(), j.dump(4));
+    io::FileStream::WriteAllText(reinterpret_cast<const char*>(configJsonPath.c_str()), j.dump(4));
+}
+
+void dusk::config::ClearAllActionBindings(int port) {
+    for (auto& actionBinding : getActionBinds() | std::views::values) {
+        actionBinding.configVars->at(port).setValue(PAD_NATIVE_BUTTON_INVALID);
+    }
+    Save();
 }
 
 ConfigVarBase* dusk::config::GetConfigVar(std::string_view name) {
@@ -219,4 +272,10 @@ ConfigVarBase* dusk::config::GetConfigVar(std::string_view name) {
     }
 
     return nullptr;
+}
+
+void dusk::config::EnumerateRegistered(std::function<void(ConfigVarBase&)> callback) {
+    for (auto& pair : RegisteredConfigVars) {
+        callback(*pair.second);
+    }
 }

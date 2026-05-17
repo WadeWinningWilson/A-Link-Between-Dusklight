@@ -149,6 +149,23 @@ void daAlink_c::changeWolf() {
 
     mpLinkModel = initModel(static_cast<J3DModelData*>(dComIfG_getObjectRes(l_wArcName, 14)), 0x20200);
 
+#ifdef TARGET_PC
+    // Update Wolf Link's eye maxLOD to prevent the eyes from disappearing
+    {
+        J3DTexture* tex = mpLinkModel->getModelData()->getTexture();
+        JUTNameTab* nametable = mpLinkModel->getModelData()->getTextureName();
+        if (tex != nullptr && nametable != nullptr) {
+            for (u16 i = 0; i < tex->getNum(); i++) {
+                const char* tex_name = nametable->getName(i);
+                if (tex_name != NULL && strcmp(tex_name, "wl_eyeball") == 0) {
+                    ResTIMG* timg = tex->getResTIMG(i);
+                    timg->maxLOD = 0;
+                }
+            }
+        }
+    }
+#endif
+
     J3DModelData* chainModelData = static_cast<J3DModelData*>(dComIfG_getObjectRes(l_wArcName, 15));
     for (u16 i = 0; i < 4; i++) {
         mpWlChainModels[i] = initModel(chainModelData, 0);
@@ -161,6 +178,23 @@ void daAlink_c::changeWolf() {
         initModel(static_cast<J3DModelData*>(dComIfG_getObjectRes(l_wArcName, 6)), 0x1000000);
     mpWlMidnaHairModel =
         initModelEnv(static_cast<J3DModelData*>(dComIfG_getObjectRes(l_wArcName, 11)), 0x1000000);
+
+#ifdef TARGET_PC
+    // Update Midna's eye maxLOD to prevent the eyes from disappearing
+    {
+        J3DTexture* tex = mpWlMidnaModel->getModelData()->getTexture();
+        JUTNameTab* nametable = mpWlMidnaModel->getModelData()->getTextureName();
+        if (tex != nullptr && nametable != nullptr) {
+            for (u16 i = 0; i < tex->getNum(); i++) {
+                const char* tex_name = nametable->getName(i);
+                if (tex_name != NULL && strcmp(tex_name, "midona_eyeball") == 0) {
+                    ResTIMG* timg = tex->getResTIMG(i);
+                    timg->maxLOD = 0;
+                }
+            }
+        }
+    }
+#endif
 
     mpDMidnaBrk = static_cast<J3DAnmTevRegKey*>(dComIfG_getObjectRes(l_wArcName, 18));
     mpDMidnaBrk->searchUpdateMaterialID(mpWlMidnaModel->getModelData());
@@ -341,6 +375,26 @@ void daAlink_c::changeLink(int param_0) {
         mpLinkFaceModel =
             initModel(static_cast<J3DModelData*>(dComIfG_getObjectRes(mArcName, "zl_face.bmd")), 0x20200);
     }
+
+#ifdef TARGET_PC
+    // Update Adult Link's eye maxLOD to prevent the eyes from disappearing
+    {
+        J3DTexture* tex = mpLinkFaceModel->getModelData()->getTexture();
+        JUTNameTab* nametable = mpLinkFaceModel->getModelData()->getTextureName();
+        if (tex != nullptr && nametable != nullptr) {
+            for (u16 i = 0; i < tex->getNum(); i++) {
+                const char* tex_name = nametable->getName(i);
+                if (tex_name != nullptr &&
+                    (strcmp(tex_name, "al_eyeball") == 0 || strcmp(tex_name, "highlight02") == 0 ||
+                     strcmp(tex_name, "eye_kage01") == 0))
+                {
+                    ResTIMG* timg = tex->getResTIMG(i);
+                    timg->maxLOD = 0;
+                }
+            }
+        }
+    }
+#endif
 
     modelData = static_cast<J3DModelData*>(dComIfG_getObjectRes(mArcName, "al_bootsH.bmd"));
     u16 i;
@@ -3954,7 +4008,13 @@ int daAlink_c::procWolfHowlDemoInit() {
             mZ2WolfHowlMgr.setCorrectCurve(-1);
         }
     } else {
+        #if TARGET_PC
+        if (mZ2WolfHowlMgr.getCorrectCurveID() != 9) {
+            mZ2WolfHowlMgr.setCorrectCurve(-1);
+        }
+        #else
         mZ2WolfHowlMgr.setCorrectCurve(-1);
+        #endif
     }
 
     mNormalSpeed = 0.0f;
@@ -4095,6 +4155,19 @@ int daAlink_c::procWolfHowlDemo() {
                         dStage_changeScene(mProcVar0.mHowlExitID, 0.0f, 0, fopAcM_GetRoomNo(this),
                                            shape_angle.y, -1);
                     } else {
+                        #if TARGET_PC
+                        if (daAlink_getAlinkActorClass()->getCorrectCurveID() == 9) {
+                            if (dComIfGp_roomControl_getTimePass()) {
+                                g_env_light.time_change_rate = 1.0f;
+                                dComIfGp_event_reset();
+                                dCam_getBody()->EndEventCamera(fopAcM_GetID(this));
+                            } else {
+                                setWolfHowlNotHappen(isSkipEdge);
+                            }
+                            return 1;
+                        }
+                        #endif
+
                         fopAc_ac_c* actor_p = NULL;
                         if (gwolf_p == NULL) {
                             fopAcIt_Executor((fopAcIt_ExecutorFunc)daAlink_searchWolfHowl,
@@ -8649,6 +8722,12 @@ int daAlink_c::procWolfCargoCarry() {
         if (checkEndResetFlg1(ERFLG1_UNK_10000)) {
             return checkNextActionWolf(0);
         }
+
+#if TARGET_PC
+        if (field_0x280c.getActor() == NULL) {
+            return checkNextActionWolf(0);
+        }
+#endif
 
         mDoMtx_stack_c::copy(((e_yc_class*)field_0x280c.getActor())->getLegR3Mtx());
         mDoMtx_stack_c::transM(-9.0f, -7.0f, -30.0f);

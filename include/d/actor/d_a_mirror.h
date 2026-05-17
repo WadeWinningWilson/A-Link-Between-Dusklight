@@ -25,6 +25,10 @@ public:
     /* 0x164 */ cXyz mMinVal;
     /* 0x170 */ cXyz mMaxVal;
     /* 0x17C */ cXyz mViewScale;
+#if TARGET_PC
+    bool mbReset = false;
+    bool mbHadEntry = false;
+#endif
 };
 
 /**

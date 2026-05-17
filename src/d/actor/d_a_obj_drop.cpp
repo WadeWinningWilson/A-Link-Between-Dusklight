@@ -265,8 +265,8 @@ int daObjDrop_c::modeParentWait() {
         mModeAction = 1;
 
 #if TARGET_PC
-        mModeTimer = dusk::getSettings().game.fastTears && dComIfGp_event_getMode() == 0 ? 20 : 40;
-        if (dusk::getSettings().game.fastTears && dComIfGp_event_getMode() == 0) {
+        mModeTimer = dusk::getSettings().game.fastTears ? 0 : 40;
+        if (dusk::getSettings().game.fastTears) {
             current.pos.y += 100.0f;
         } else {
             current.pos.y += 300.0f;
@@ -285,7 +285,7 @@ int daObjDrop_c::modeParentWait() {
     case 2:
         createBodyEffect();
 #if TARGET_PC
-        mModeTimer = dusk::getSettings().game.fastTears && dComIfGp_event_getMode() == 0 ? 5 : 45;
+        mModeTimer = dusk::getSettings().game.fastTears ? 0 : 45;
 #else
         mModeTimer = 45;
 #endif
@@ -299,7 +299,8 @@ int daObjDrop_c::modeParentWait() {
 
 #if TARGET_PC
 static inline BOOL checkGetCargoRide() {
-    if ((daPy_getPlayerActorClass()->checkCargoCarry() && strcmp(dComIfGp_getStartStageName(), "F_SP112") == 0) ||
+    if (daPy_getPlayerActorClass()->checkCargoCarry() &&
+        strcmp(dComIfGp_getStartStageName(), "F_SP112") == 0 &&
         dComIfGs_isLightDropGetFlag(dComIfGp_getStartStageDarkArea()))
     {
         return true;
@@ -331,7 +332,7 @@ int daObjDrop_c::modeWait() {
     case 2:
     case 50:
         #if TARGET_PC
-        if (dusk::getSettings().game.fastTears && dComIfGp_event_getMode() == 0) {
+        if (dusk::getSettings().game.fastTears) {
             f32 player_dist = current.pos.abs(daPy_getPlayerActorClass()->current.pos);
             f32 home_dist = current.pos.abs(home.pos);
 

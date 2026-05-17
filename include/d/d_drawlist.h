@@ -209,6 +209,10 @@ public:
     /* 0x04 */ TGXTexObj* mpTexObj;
     /* 0x08 */ Mtx mVolumeMtx;
     /* 0x38 */ Mtx mMtx;
+#if TARGET_PC
+    const void* mVolumeMtxKey;
+    const void* mMtxKey;
+#endif
 };  // Size: 0x68
 
 struct cBgD_Vtx_t;
@@ -308,8 +312,11 @@ private:
     /* 0x0000C */ dDlst_shadowSimple_c mSimple[128];
     /* 0x0340C */ int mNextID;
     /* 0x03410 */ dDlst_shadowReal_c mReal[8];
-    /* 0x15EB0 */ TGXTexObj field_0x15eb0[2];
-    /* 0x15EF0 */ void* field_0x15ef0[2];
+    /* 0x15EB0 */ TGXTexObj mShadowTexObj[2];
+    /* 0x15EF0 */ void* mShadowTexData[2];
+    #if TARGET_PC
+    int mTexResScale;
+    #endif
 };
 
 class dDlst_window_c {

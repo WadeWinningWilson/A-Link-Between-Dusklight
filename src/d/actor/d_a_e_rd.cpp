@@ -6601,13 +6601,14 @@ static int daE_RD_Execute(e_rd_class* i_this) {
                 1.2f,
             };
 
+            #if AVOID_UB
+            s16 x = 0;
+            s16 y = 0;
+            #endif
             for (int i = 0; i < 2; i++) {
                 MtxPush();
+                #if !AVOID_UB
                 s16 x, y;
-
-                #if AVOID_UB
-                x = 0;
-                y = 0;
                 #endif
 
                 if (i == 0) {
@@ -7052,6 +7053,12 @@ static int daE_RD_IsDelete(e_rd_class*) {
 }
 
 static int daE_RD_Delete(e_rd_class* i_this) {
+#if TARGET_PC
+    if (boss == i_this) {
+        boss = NULL;
+    }
+#endif
+
     fopEn_enemy_c* enemy = (fopEn_enemy_c*)&i_this->enemy;
     fopAcM_RegisterDeleteID(i_this, "E_RD");
 

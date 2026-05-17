@@ -4549,8 +4549,21 @@ public:
     /* 0x03850 */ daAlink_procFunc mpProcFunc;
 
 #if TARGET_PC
+    void handleWolfHowl();
     void handleQuickTransform();
-    bool checkGyroAimItemContext();
+    bool checkGyroAimContext();
+
+    void onIronBallChainInterpCallback();
+
+    static const int IRON_BALL_CHAIN_COUNT = 102;
+    cXyz mIBChainInterpPrevPos[IRON_BALL_CHAIN_COUNT];
+    cXyz mIBChainInterpCurrPos[IRON_BALL_CHAIN_COUNT];
+    csXyz mIBChainInterpPrevAngle[IRON_BALL_CHAIN_COUNT];
+    csXyz mIBChainInterpCurrAngle[IRON_BALL_CHAIN_COUNT];
+    cXyz mIBChainInterpPrevHandRoot;
+    cXyz mIBChainInterpCurrHandRoot;
+    bool mIBChainInterpPrevValid;
+    bool mIBChainInterpCurrValid;
 #endif
 };  // Size: 0x385C
 

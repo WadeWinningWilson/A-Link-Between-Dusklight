@@ -13,6 +13,9 @@
 #include "SSystem/SComponent/c_math.h"
 #include "d/actor/d_a_player.h"
 #include "d/d_com_inf_game.h"
+#if TARGET_PC
+#include <dolphin/gx/GXExtra.h>
+#endif
 #include <cstring>
 
 #if DEBUG
@@ -539,17 +542,14 @@ void renderingAmap_c::rendering(dDrawPath_c::poly_class const* i_poly) {
     }
 }
 
-/* Enabling the following definition will modify the following function to
- * make the map look worse for extra speed in the emulator, especially in large
- * areas such as hyrule field.
- */
-#define HYRULE_FIELD_SPEEDHACK
 
 bool renderingAmap_c::isDrawOutSideTrim() {
     bool rt = false;
 
-    #ifdef HYRULE_FIELD_SPEEDHACK
-    return 0;
+    #if TARGET_PC
+    if (!dusk::getSettings().game.enableMapBackground) {
+        return 0;
+    }
     #endif
 
     if (getDispType() == 0 || getDispType() == 4 || getDispType() == 3 || getDispType() == 2 ||
@@ -1141,6 +1141,9 @@ dMap_c::dMap_c(int width, int height, int param_2, int param_3) {
     field_0x91 = 0;
     m_mySelfPointer = this;
 #endif
+#if TARGET_PC
+    previousMirror = dusk::getSettings().game.enableMirrorMode;
+#endif
 
     m_res = JKR_NEW_ARGS (0x20) dMap_prm_res_s;
     JUT_ASSERT(2559, m_res != NULL);
@@ -1218,6 +1221,9 @@ void dMap_c::changeTextureSize(int param_1, int param_2, int param_3) {
 
 void dMap_c::_remove() {
     if (mImage_p != NULL) {
+#if TARGET_PC
+        GXDestroyCopyTex(mImage_p);
+#endif
         JKR_DELETE_ARRAY(mImage_p);
         mImage_p = NULL;
     }
@@ -1576,6 +1582,17 @@ bool dMap_c::isDrawRoomIcon(int param_0, int param_1) const {
 }
 
 void dMap_c::_move(f32 i_centerX, f32 i_centerZ, int i_roomNo, f32 param_3) {
+#if TARGET_PC
+    bool currentMirror = dusk::getSettings().game.enableMirrorMode;
+    if (currentMirror != previousMirror) {
+        previousMirror = currentMirror;
+        if (currentMirror) {
+            mCenterX -= 2.0f * mPackX;
+        } else {
+            mCenterX += 2.0f * mPackX;
+        }
+    }
+#endif
     if (mStayRoomNo == -1) {
         mStayRoomNo = i_roomNo;
         field_0x80 = mStayRoomNo;
@@ -1592,7 +1609,7 @@ void dMap_c::_move(f32 i_centerX, f32 i_centerZ, int i_roomNo, f32 param_3) {
         calcMapCmPerTexel(field_0x80, &field_0x58);
         getPack(field_0x80, &mPackX, &mPackZ);
 
-        mCenterX += mPackX;
+        mCenterX += IF_DUSK(dusk::getSettings().game.enableMirrorMode ? -mPackX :) mPackX;
         mCenterZ -= mPackZ;
         mCenterX += field_0x64;
         mCenterZ += mPackPlusZ;
@@ -1654,7 +1671,7 @@ void dMap_c::_move(f32 i_centerX, f32 i_centerZ, int i_roomNo, f32 param_3) {
             calcMapCmPerTexel(field_0x80, &field_0x58);
             getPack(field_0x80, &mPackX, &mPackZ);
 
-            mCenterX += mPackX;
+            mCenterX += IF_DUSK(dusk::getSettings().game.enableMirrorMode ? -mPackX :) mPackX;
             mCenterZ -= mPackZ;
         }
         break;
@@ -1734,7 +1751,7 @@ void dMap_c::_move(f32 i_centerX, f32 i_centerZ, int i_roomNo, f32 param_3) {
                 calcMapCmPerTexel(field_0x80, &field_0x58);
                 getPack(field_0x80, &mPackX, &mPackZ);
 
-                mCenterX += mPackX;
+                mCenterX += IF_DUSK(dusk::getSettings().game.enableMirrorMode ? -mPackX :) mPackX;
                 mCenterZ -= mPackZ;
                 field_0x8f = 4;
 #if DEBUG
@@ -1826,7 +1843,7 @@ void dMap_c::_move(f32 i_centerX, f32 i_centerZ, int i_roomNo, f32 param_3) {
 
             sp14 += temp_f31_2 * (spC - sp14);
             sp10 += temp_f31_2 * (sp8 - sp10);
-            mCenterX += sp14;
+            mCenterX += IF_DUSK(dusk::getSettings().game.enableMirrorMode ? -sp14 :) sp14;
             mCenterZ -= sp10;
             break;
         }

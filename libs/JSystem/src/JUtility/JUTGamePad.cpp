@@ -4,6 +4,10 @@
 #include <cmath>
 #include "os_report.h"
 
+#if TARGET_PC
+#include "dusk/action_bindings.h"
+#endif
+
 u32 JUTGamePad::CRumble::sChannelMask[4] = {
     PAD_CHAN0_BIT,
     PAD_CHAN1_BIT,
@@ -64,6 +68,9 @@ BOOL JUTGamePad::init() {
 void JUTGamePad::clear() {
     mButtonReset.mReset = false;
     field_0xa8 = 1;
+#if TARGET_PC
+    mResetHoldFrameCount = 0;
+#endif
 }
 
 PADStatus JUTGamePad::mPadStatus[4];
@@ -82,6 +89,9 @@ u32 JUTGamePad::sRumbleSupported;
 
 u32 JUTGamePad::read() {
     sRumbleSupported = PADRead(mPadStatus);
+#if TARGET_PC
+   dusk::updateActionBindings();
+#endif
 
     switch (sClampMode) {
     case EClampStick:
@@ -219,11 +229,19 @@ void JUTGamePad::update() {
             mButtonReset.mReset = false;
         } else if (!JUTGamePad::C3ButtonReset::sResetOccurred) {
             if (mButtonReset.mReset == true) {
+#if TARGET_PC
+                checkResetCallback(++mResetHoldFrameCount * (OS_TIMER_CLOCK / 30));
+#else
                 OSTime hold_time = OSGetTime() - mResetHoldStartTime;
                 checkResetCallback(hold_time);
+#endif
             } else {
                 mButtonReset.mReset = true;
+#if TARGET_PC
+                mResetHoldFrameCount = 0;
+#else
                 mResetHoldStartTime = OSGetTime();
+#endif
             }
         }
 

@@ -1845,6 +1845,12 @@ inline void dComIfGs_addDeathCount() {
     g_dComIfG_gameInfo.info.getPlayer().getPlayerInfo().addDeathCount();
 }
 
+#if TARGET_PC
+inline u16 dComIfGs_getDeathCount() {
+    return g_dComIfG_gameInfo.info.getPlayer().getPlayerInfo().getDeathCount();
+}
+#endif
+
 inline char* dComIfGs_getPlayerName() {
     return g_dComIfG_gameInfo.info.getPlayer().getPlayerInfo().getPlayerName();
 }
@@ -4834,8 +4840,7 @@ inline void dComIfGd_drawXluListDark() {
 inline void dComIfGd_drawXluListInvisible() {
     ZoneScoped;
 #ifdef TARGET_PC
-    if (dusk::getSettings().game.enableWaterRefraction &&
-        !dusk::getSettings().game.enableFrameInterpolation) {
+    if (!dusk::getSettings().game.disableWaterRefraction) {
 #endif
         g_dComIfG_gameInfo.drawlist.drawXluListInvisible();
 #ifdef TARGET_PC
@@ -4846,8 +4851,7 @@ inline void dComIfGd_drawXluListInvisible() {
 inline void dComIfGd_drawOpaListInvisible() {
     ZoneScoped;
 #ifdef TARGET_PC
-    if (dusk::getSettings().game.enableWaterRefraction &&
-        !dusk::getSettings().game.enableFrameInterpolation) {
+    if (!dusk::getSettings().game.disableWaterRefraction) {
 #endif
         g_dComIfG_gameInfo.drawlist.drawOpaListInvisible();
 #ifdef TARGET_PC

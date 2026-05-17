@@ -1,27 +1,32 @@
 #include "d/dolzel.h" // IWYU pragma: keep
 
-#include <cstdio>
 #include "JSystem/J2DGraph/J2DAnimation.h"
 #include "JSystem/J2DGraph/J2DGrafContext.h"
 #include "JSystem/J2DGraph/J2DScreen.h"
 #include "JSystem/J3DGraphBase/J3DDrawBuffer.h"
-#include "JSystem/JKernel/JKRHeap.h"
 #include "SSystem/SComponent/c_bg_s_shdw_draw.h"
 #include "SSystem/SComponent/c_math.h"
 #include "d/d_com_inf_game.h"
 #include "d/d_drawlist.h"
-
-#include <typeindex>
-
-#include "absl/container/flat_hash_map.h"
-#include "client/TracyScoped.hpp"
 #include "d/d_s_play.h"
-#include "dusk/frame_interpolation.h"
-#include "dusk/gx_helper.h"
-#include "dusk/logging.h"
 #include "m_Do/m_Do_graphic.h"
 #include "m_Do/m_Do_lib.h"
 #include "m_Do/m_Do_mtx.h"
+
+#if TARGET_PC
+#include <cstdio>
+#include <typeindex>
+#include "JSystem/JKernel/JKRHeap.h"
+#include "absl/container/flat_hash_map.h"
+#include "client/TracyScoped.hpp"
+#include "dusk/frame_interpolation.h"
+#include "dusk/gx_helper.h"
+#include "dusk/logging.h"
+
+static const void* getInterpKey(const void* base, int idx) {
+    return reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(base) ^ idx);
+}
+#endif
 
 class dDlst_2Dm_c {
 public:
@@ -1061,7 +1066,15 @@ void dDlst_shadowReal_c::reset() {
 }
 
 void dDlst_shadowReal_c::imageDraw(Mtx param_0) {
-    GXSetProjection(mRenderProjMtx, GX_ORTHOGRAPHIC);
+#ifdef TARGET_PC
+    Mtx render_proj_mtx;
+    if (dusk::frame_interp::lookup_replacement(getInterpKey(mpModels[0], 2), render_proj_mtx)) {
+        GXSetProjection(render_proj_mtx, GX_ORTHOGRAPHIC);
+    } else
+#endif
+    {
+        GXSetProjection(mRenderProjMtx, GX_ORTHOGRAPHIC);
+    }
     JUT_ASSERT(1916, mModelNum);
     J3DModelData* model_data;
     J3DModel** models = mpModels;
@@ -1074,7 +1087,15 @@ void dDlst_shadowReal_c::imageDraw(Mtx param_0) {
         for (u16 j = 0; j < model_data->getShapeNum(); j++) {
             if (!model_data->getShapeNodePointer(j)->checkFlag(1)) {
                 shape_pkt = (*models)->getShapePacket(j);
-                shape_pkt->setBaseMtxPtr(&mViewMtx);
+#ifdef TARGET_PC
+                Mtx view_mtx;
+                if (dusk::frame_interp::lookup_replacement(getInterpKey(mpModels[0], 1), view_mtx)) {
+                    shape_pkt->setBaseMtxPtr(&view_mtx);
+                } else
+#endif
+                {
+                    shape_pkt->setBaseMtxPtr(&mViewMtx);
+                }
                 shape_pkt->drawFast();
                 shape_pkt->setBaseMtxPtr((Mtx*)param_0);
             }
@@ -1096,15 +1117,17 @@ void dDlst_shadowReal_c::draw() {
     GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
     GXSetCurrentMtx(GX_PNMTX0);
 #ifdef TARGET_PC
-    Mtx receiver_proj_mtx;
-    if (dusk::frame_interp::lookup_replacement(&mReceiverProjMtx, receiver_proj_mtx)) {
-        GXLoadTexMtxImm(receiver_proj_mtx, GX_TEXMTX0, GX_MTX3x4);
-    } else {
+    Mtx view_mtx, recv_proj_mtx;
+    const auto have_view_mtx = dusk::frame_interp::lookup_replacement(getInterpKey(mpModels[0], 1), view_mtx);
+    const auto have_recv_proj_mtx = dusk::frame_interp::lookup_replacement(getInterpKey(mpModels[0], 3), recv_proj_mtx);
+    if (have_view_mtx && have_recv_proj_mtx) {
+        cMtx_concat(recv_proj_mtx, view_mtx, recv_proj_mtx);
+        GXLoadTexMtxImm(recv_proj_mtx, GX_TEXMTX0, GX_MTX3x4);
+    } else
 #endif
+    {
         GXLoadTexMtxImm(mReceiverProjMtx, GX_TEXMTX0, GX_MTX3x4);
-#ifdef TARGET_PC
     }
-#endif
     mShadowRealPoly.draw();
 }
 
@@ -1261,14 +1284,16 @@ u8 dDlst_shadowReal_c::setShadowRealMtx(cXyz* param_0, cXyz* param_1, f32 param_
     cMtx_lookAt(mViewMtx, &local_64, param_1, 0);
     C_MTXOrtho(mRenderProjMtx, param_2, -param_2, -param_2, param_2, 1.0f, 10000.0f);
     C_MTXLightOrtho(mReceiverProjMtx, param_2, -param_2, -param_2, param_2, 0.5f, -0.5f, 0.5f, 0.5f);
-    cMtx_concat(mReceiverProjMtx, mViewMtx, mReceiverProjMtx);
+    
 #ifdef TARGET_PC
-    dusk::frame_interp::record_final_mtx_raw(&mViewMtx, mViewMtx);
-    dusk::frame_interp::record_final_mtx_raw(&mReceiverProjMtx, mReceiverProjMtx);
+    const auto keybase = mpModels[0];
+    dusk::frame_interp::record_final_mtx(mViewMtx, getInterpKey(keybase, 1));
+    dusk::frame_interp::record_final_mtx(mRenderProjMtx, getInterpKey(keybase, 2));
+    dusk::frame_interp::record_final_mtx(mReceiverProjMtx, getInterpKey(keybase, 3));
 #endif
+    cMtx_concat(mReceiverProjMtx, mViewMtx, mReceiverProjMtx);
     return r29;
 }
-
 
 u32 dDlst_shadowReal_c::set(u32 i_key, J3DModel* i_model, cXyz* param_2, f32 param_3, f32 param_4,
                             dKy_tevstr_c* param_5, f32 i_cameraZ, f32 param_7) {
@@ -1290,7 +1315,12 @@ u32 dDlst_shadowReal_c::set(u32 i_key, J3DModel* i_model, cXyz* param_2, f32 par
             }
         }
 
+#ifdef TARGET_PC
+        // provide a stable key for interpolation
+        mpModels[0] = i_model;
+#endif
         field_0x1 = setShadowRealMtx(&sp60, param_2, param_3, param_4, param_7, param_5);
+
         if (!field_0x1) {
             return 0;
         }
@@ -1330,14 +1360,14 @@ void dDlst_shadowSimple_c::draw() {
     GXSetVtxDesc(GX_VA_POS, GX_INDEX8);
 #ifdef TARGET_PC
     Mtx volume_mtx;
-    if (dusk::frame_interp::lookup_replacement(&mVolumeMtx, volume_mtx)) {
+    if (dusk::frame_interp::lookup_replacement(mVolumeMtxKey, volume_mtx)) {
+        cMtx_concat(j3dSys.getViewMtx(), volume_mtx, volume_mtx);
         GXLoadPosMtxImm(volume_mtx, GX_PNMTX0);
-    } else {
+    } else
 #endif
+    {
         GXLoadPosMtxImm(mVolumeMtx, GX_PNMTX0);
-#ifdef TARGET_PC
     }
-#endif
     GXSetCurrentMtx(GX_PNMTX0);
     GXCallDisplayList(l_frontMat, 0x40);
     GXCallDisplayList(l_shadowVolumeDL, 0x40);
@@ -1345,14 +1375,14 @@ void dDlst_shadowSimple_c::draw() {
     GXCallDisplayList(l_shadowVolumeDL, 0x40);
 #ifdef TARGET_PC
     Mtx shadow_mtx;
-    if (dusk::frame_interp::lookup_replacement(&mMtx, shadow_mtx)) {
+    if (dusk::frame_interp::lookup_replacement(mMtxKey, shadow_mtx)) {
+        cMtx_concat(j3dSys.getViewMtx(), shadow_mtx, shadow_mtx);
         GXLoadPosMtxImm(shadow_mtx, GX_PNMTX1);
-    } else {
+    } else
 #endif
+    {
         GXLoadPosMtxImm(mMtx, GX_PNMTX1);
-#ifdef TARGET_PC
     }
-#endif
     GXSetCurrentMtx(GX_PNMTX1);
 
     if (mpTexObj != NULL) {
@@ -1405,6 +1435,10 @@ void dDlst_shadowSimple_c::set(cXyz* param_0, f32 param_1, f32 param_2, cXyz* pa
     mDoMtx_stack_c::transS(param_0->x, param_1 + f30, param_0->z);
     mDoMtx_stack_c::YrotM(param_4);
     mDoMtx_stack_c::scaleM(param_2, f30 + f30 + 16.0f, param_2 * param_5);
+#if TARGET_PC
+    mVolumeMtxKey = getInterpKey(param_0, 0x1);
+    dusk::frame_interp::record_final_mtx(mDoMtx_stack_c::get(), mVolumeMtxKey);
+#endif
     cMtx_concat(j3dSys.getViewMtx(), mDoMtx_stack_c::get(), mVolumeMtx);
     f32 f31 = JMAFastSqrt(1.0f - param_3->x * param_3->x);
     f32 f29;
@@ -1430,26 +1464,27 @@ void dDlst_shadowSimple_c::set(cXyz* param_0, f32 param_1, f32 param_2, cXyz* pa
     mDoMtx_stack_c::get()[2][3] = param_0->z;
     mDoMtx_stack_c::YrotM(param_4);
     mDoMtx_stack_c::scaleM(param_2, 1.0f, param_2 * param_5);
-    cMtx_concat(j3dSys.getViewMtx(), mDoMtx_stack_c::get(), mMtx);
 #ifdef TARGET_PC
-    dusk::frame_interp::record_final_mtx_raw(&mVolumeMtx, mVolumeMtx);
-    dusk::frame_interp::record_final_mtx_raw(&mMtx, mMtx);
+    mMtxKey = getInterpKey(param_0, 0x2);
+    dusk::frame_interp::record_final_mtx(mDoMtx_stack_c::get(), mMtxKey);
 #endif
+    cMtx_concat(j3dSys.getViewMtx(), mDoMtx_stack_c::get(), mMtx);
     mpTexObj = param_6;
 }
 
 void dDlst_shadowControl_c::init() {
 #if TARGET_PC
-    u16 resMult = dusk::getSettings().game.shadowResolutionMultiplier;
+    mTexResScale = dusk::getSettings().game.shadowResolutionMultiplier;
     // Increase shadow map resolution
     u16 l_realImageSize[2] =
     {
-        static_cast<u16>(192 * resMult),
-        static_cast<u16>(64 * resMult)
+        static_cast<u16>(192 * mTexResScale),
+        static_cast<u16>(64 * mTexResScale)
     };
 #else
     static u16 l_realImageSize[2] = {192, 64};
 #endif
+
     for (int i = 0; i < 2; i++) {
         u16 size = l_realImageSize[i];
 
@@ -1458,10 +1493,13 @@ void dDlst_shadowControl_c::init() {
 #else
         u32 buffer_size = GXGetTexBufferSize(size, size, 5, GX_DISABLE, 0);
 #endif
-        field_0x15ef0[i] = JKR_NEW_ARRAY_ARGS(u8, buffer_size, 0x20);
-        GXInitTexObj(&field_0x15eb0[i], field_0x15ef0[i], size, size, GX_TF_RGB5A3, GX_CLAMP,
+        JKR_DELETE_ARRAY(mShadowTexData[i]);
+        mShadowTexData[i] = JKR_NEW_ARRAY_ARGS(u8, buffer_size, 0x20);
+
+        mShadowTexObj[i].reset();
+        GXInitTexObj(&mShadowTexObj[i], mShadowTexData[i], size, size, GX_TF_RGB5A3, GX_CLAMP,
                      GX_CLAMP, GX_DISABLE);
-        GXInitTexObjLOD(&field_0x15eb0[i], GX_LINEAR, GX_LINEAR, 0.0f, 0.0f, 0.0f, GX_FALSE,
+        GXInitTexObjLOD(&mShadowTexObj[i], GX_LINEAR, GX_LINEAR, 0.0f, 0.0f, 0.0f, GX_FALSE,
                         GX_FALSE, GX_ANISO_1);
     }
 }
@@ -1479,25 +1517,13 @@ void dDlst_shadowControl_c::reset() {
     mRealNum = 0;
     field_0x4 = NULL;
 
-#ifdef TARGET_PC
-    field_0x15eb0[0].reset();
-    field_0x15eb0[1].reset();
+#if TARGET_PC
+    if (mTexResScale != dusk::getSettings().game.shadowResolutionMultiplier)
+        init();
 #endif
 }
 
-#if TARGET_PC
-int lastShadowValue = 0;
-#endif
-
 void dDlst_shadowControl_c::imageDraw(Mtx param_0) {
-    #if TARGET_PC
-    if (lastShadowValue != dusk::getSettings().game.shadowResolutionMultiplier) {
-        reset();
-        init();
-        lastShadowValue = dusk::getSettings().game.shadowResolutionMultiplier;
-    }
-    #endif
-
     static u8 l_matDL[] ATTRIBUTE_ALIGN(32) = {
         0x10, 0x00, 0x00, 0x10, 0x0E, 0x00, 0x00, 0x04, 0x00, 0x10, 0x00, 0x00, 0x10, 0x10,
         0x00, 0x00, 0x04, 0x00, 0x61, 0x28, 0x38, 0x00, 0x00, 0x61, 0xC0, 0x08, 0xFF, 0xF2,
@@ -1530,7 +1556,7 @@ void dDlst_shadowControl_c::imageDraw(Mtx param_0) {
     j3dSys.setDrawModeOpaTexEdge();
     J3DShape::resetVcdVatCache();
     dDlst_shadowReal_c* shadowReal = field_0x4;
-    int r29 = 0;
+    int chan = 0;
     int tex = 0;
     u16 r27;
     u16 r26;
@@ -1539,37 +1565,38 @@ void dDlst_shadowControl_c::imageDraw(Mtx param_0) {
 #endif
     for (; shadowReal; shadowReal = shadowReal->getZsortNext()) {
         if (shadowReal->isUse()) {
-            if (r29 == 0) {
-                r27 = GXGetTexObjWidth(field_0x15eb0 + tex);
+            if (chan == 0) {
+                r27 = GXGetTexObjWidth(&mShadowTexObj[tex]);
                 r26 = r27 * 2;
 #ifdef TARGET_PC
                 GXCreateFrameBuffer(r26, r26);
                 needsRestore = true;
-#endif
+#else
                 GXSetViewport(0.0f, 0.0f, r26, r26, 0.0f, 1.0f);
                 GXSetScissor(0, 0, r26, r26);
+#endif
             }
-            GXSetTevColor(GX_TEVREG0, l_imageDrawColor[r29]);
-            if (r29 == 3) {
+            GXSetTevColor(GX_TEVREG0, l_imageDrawColor[chan]);
+            if (chan == 3) {
                 GXSetColorUpdate(GX_DISABLE);
                 GXSetAlphaUpdate(GX_ENABLE);
             }
             shadowReal->imageDraw(param_0);
-            r29 = (r29 + 1) % 4;
-            if (r29 == 0) {
+            chan = (chan + 1) % 4;
+            if (chan == 0) {
                 GXSetTexCopySrc(0, 0, r26, r26);
                 GXSetTexCopyDst(r27, r27, GX_TF_RGB5A3, GX_TRUE);
                 GXSetColorUpdate(GX_ENABLE);
-                GXCopyTex(field_0x15ef0[tex++], GX_TRUE);
+                GXCopyTex(mShadowTexData[tex++], GX_TRUE);
                 GXPixModeSync();
                 GXSetAlphaUpdate(GX_DISABLE);
             }
         }
     }
-    if (r29) {
+    if (chan) {
         GXSetTexCopySrc(0, 0, r26, r26);
         GXSetTexCopyDst(r27, r27, GX_TF_RGB5A3, GX_TRUE);
-        GXCopyTex(field_0x15ef0[tex], GX_TRUE);
+        GXCopyTex(mShadowTexData[tex], GX_TRUE);
         GXPixModeSync();
         GXSetAlphaUpdate(GX_DISABLE);
     }
@@ -1621,7 +1648,7 @@ void dDlst_shadowControl_c::draw(Mtx param_0) {
     for (int i2 = 0, i3 = 0; real != NULL; real = real->getZsortNext()) {
         if (real->isUse()) {
             if (i2 == 0) {
-                TGXTexObj* obj = &field_0x15eb0[i3];
+                TGXTexObj* obj = &mShadowTexObj[i3];
                 i3++;
 
                 GXLoadTexObj(obj, GX_TEXMAP0);

@@ -51,9 +51,13 @@
 #include "d/actor/d_a_ni.h"
 #include "d/d_s_play.h"
 
+#if TARGET_PC
+#include "dusk/action_bindings.h"
+#include "dusk/frame_interpolation.h"
 #include "dusk/settings.h"
 #include "res/Object/Alink.h"
 #include <cstring>
+#endif
 
 static int daAlink_Create(fopAc_ac_c* i_this);
 static int daAlink_Delete(daAlink_c* i_this);
@@ -4258,6 +4262,12 @@ int daAlink_c::createHeap() {
         return 0;
     }
 
+#if TARGET_PC
+    // lets try to zero-initialize the arrays instead of having garbage values
+    std::memset(sp1C, 0, sizeof(J3DTransformInfo) * sp38);
+    std::memset(sp30, 0, sizeof(Quaternion) * sp38);
+#endif
+
     field_0x2060 = JKR_NEW mDoExt_MtxCalcOldFrame(sp1C, sp30);
     if (field_0x2060 == NULL) {
         return 0;
@@ -4394,13 +4404,34 @@ void daAlink_c::setSelectEquipItem(BOOL param_0) {
     if (mClothesChangeWaitTimer == 0) {
         if (checkZoraWearAbility()) {
             if (checkZoraWearMaskDraw()) {
-                field_0x06f0->show();
+#if TARGET_PC
+                if (field_0x06f0 != NULL)
+#endif
+                {
+                    field_0x06f0->show();
+                }
+
                 if (!checkEquipHeavyBoots()) {
-                    field_0x06e4->show();
+#if TARGET_PC
+                    if (field_0x06e4 != NULL)
+#endif
+                    {
+                        field_0x06e4->show();
+                    }
                 }
             } else {
-                field_0x06f0->hide();
-                field_0x06e4->hide();
+#if TARGET_PC
+                if (field_0x06f0 != NULL)
+#endif
+                {
+                    field_0x06f0->hide();
+                }
+#if TARGET_PC
+                if (field_0x06e4 != NULL)
+#endif
+                {
+                    field_0x06e4->hide();
+                }
             }
         }
 
@@ -4935,13 +4966,16 @@ int daAlink_c::create() {
 
         setArcName(checkWolf());
         setOriginalHeap(&mpArcHeap, 0xA2800);
+        JKRHEAP_NAME(mpArcHeap, "Alink ArcHeap");
         if (dComIfG_resLoad(&mPhaseReq, mArcName, mpArcHeap) != cPhs_COMPLEATE_e) {
             return cPhs_INIT_e;
         }
 
         setShieldArcName();
         setOriginalHeap(&mpShieldArcHeap, 0x7000);
-        if (dComIfG_resLoad(&mShieldPhaseReq, mShieldArcName, mpShieldArcHeap) != cPhs_COMPLEATE_e) {
+        JKRHEAP_NAME(mpShieldArcHeap, "Alink ShieldArcHeap");
+        if (dComIfG_resLoad(&mShieldPhaseReq, mShieldArcName, mpShieldArcHeap) != cPhs_COMPLEATE_e)
+        {
             return cPhs_INIT_e;
         }
 
@@ -5850,6 +5884,11 @@ void daAlink_c::setItemMatrix(int param_0) {
     modelCalc(mSheathModel);
 
     int var_r26;
+
+    #if AVOID_UB
+    var_r26 = 0;
+    #endif
+
     if (!checkNoResetFlg3(FLG3_UNK_4000000)) {
         if (mEquipItem == 0x103 || param_0 != 0) {
             mSwordModel->setBaseTRMtx(mpLinkModel->getAnmMtx(mLeftItemJntNo));
@@ -7523,12 +7562,7 @@ void daAlink_c::setBlendMoveAnime(f32 i_morf) {
     f32 sp2C;
     f32 sp28 = mpHIO->mMove.m.mFootPositionRatio;
     BOOL sp24 = checkEventRun();
-    BOOL sp20 = checkBootsMoveAnime(1);
-#if TARGET_PC
-    if (dusk::getSettings().game.enableFastIronBoots) {
-        sp20 = FALSE;
-    }
-#endif
+    BOOL sp20 = checkBootsMoveAnime(1) IF_DUSK(&& !dusk::getSettings().game.enableFastIronBoots);
 
     f32 var_f29;
 
@@ -8041,7 +8075,7 @@ void daAlink_c::setBlendAtnBackMoveAnime(f32 i_morf) {
     daAlink_ANM var_r27;
     daAlink_ANM var_r29;
 
-    if (checkBootsMoveAnime(1)) {
+    if (checkBootsMoveAnime(1) IF_DUSK(&& !dusk::getSettings().game.enableFastIronBoots)) {
         mMaxSpeed = mpHIO->mAtnMove.m.mMaxBackwardsSpeed;
         var_f27 = mpHIO->mAtnMove.m.mMinBackWalkFrame;
         var_f31 = mpHIO->mAtnMove.m.mBackWalkChangeRate;
@@ -9327,6 +9361,12 @@ BOOL daAlink_c::spActionTrigger() {
 }
 
 BOOL daAlink_c::midnaTalkTrigger() const {
+#if TARGET_PC
+    // If we have a custom bind for Midna, check that instead
+    if (dusk::isActionBound(dusk::ActionBinds::CALL_MIDNA, 0)) {
+        return dusk::getActionBindTrig(dusk::ActionBinds::CALL_MIDNA, 0);
+    }
+#endif
     return mItemTrigger & BTN_Z;
 }
 
@@ -14752,6 +14792,10 @@ void daAlink_c::deleteEquipItem(BOOL i_isPlaySound, BOOL i_isDeleteKantera) {
     mIronBallChainPos = NULL;
     mIronBallChainAngle = NULL;
     field_0x3848 = NULL;
+#if TARGET_PC
+    mIBChainInterpPrevValid = false;
+    mIBChainInterpCurrValid = false;
+#endif
     field_0x0774 = NULL;
     field_0x0778 = NULL;
     mpHookshotLinChk = NULL;
@@ -16074,6 +16118,9 @@ int daAlink_c::procSlideLand() {
 
 int daAlink_c::procFrontRollInit() {
     BOOL is_guard_anime = checkUpperGuardAnime();
+#ifdef TARGET_PC    
+    const f32 fastRollMultiplier = dusk::getSettings().game.fastRoll ? 2.0f : 1.0f;
+#endif
 
     if (mProcID == PROC_FRONT_ROLL && mDemo.getDemoMode() == daPy_demo_c::DEMO_FRONT_ROLL_e) {
         return 0;
@@ -16089,10 +16136,16 @@ int daAlink_c::procFrontRollInit() {
         roll_anm_speed = mpHIO->mFrontRoll.m.mRollAnm.mStartFrame;
     }
 
-    setSingleAnime(ANM_FRONT_ROLL, mpHIO->mFrontRoll.m.mRollAnm.mSpeed, roll_anm_speed,
+    setSingleAnime(ANM_FRONT_ROLL,
+#ifdef TARGET_PC        
+                   mpHIO->mFrontRoll.m.mRollAnm.mSpeed * fastRollMultiplier, 
+#else
+                   mpHIO->mFrontRoll.m.mRollAnm.mSpeed,
+#endif
+                   roll_anm_speed,
                    mpHIO->mFrontRoll.m.mRollAnm.mEndFrame,
                    mpHIO->mFrontRoll.m.mRollAnm.mInterpolation);
-
+                   
     mNormalSpeed = speedF * mpHIO->mFrontRoll.m.mSpeedRate + mpHIO->mFrontRoll.m.mInitSpeed;
 
     f32 max_speed = mpHIO->mFrontRoll.m.mInitSpeed + mpHIO->mMove.m.mMaxSpeed * mpHIO->mFrontRoll.m.mSpeedRate;
@@ -16105,10 +16158,19 @@ int daAlink_c::procFrontRollInit() {
     }
 
     if (checkNoResetFlg0(FLG0_WATER_IN_MOVE)) {
-        mNormalSpeed *= mpHIO->mItem.mIronBoots.m.mWaterVelocityX;
+#if TARGET_PC
+        if (!(dusk::getSettings().game.enableFastIronBoots))
+#endif
+        {
+            mNormalSpeed *= mpHIO->mItem.mIronBoots.m.mWaterVelocityX;
+        }
     } else if (checkHeavyStateOn(TRUE, TRUE)) {
         mNormalSpeed *= mHeavySpeedMultiplier;
     }
+
+#ifdef TARGET_PC        
+    mNormalSpeed *= fastRollMultiplier;
+#endif
 
     current.angle.y = shape_angle.y;
     voiceStart(Z2SE_AL_V_BACKTEN);
@@ -16240,8 +16302,13 @@ int daAlink_c::procFrontRollCrashInit() {
     speed.y = mpHIO->mFrontRoll.m.mCrashSpeedV;
 
     if (checkNoResetFlg0(FLG0_WATER_IN_MOVE)) {
-        mNormalSpeed *= mpHIO->mItem.mIronBoots.m.mWaterVelocityX;
-        speed.y *= mpHIO->mItem.mIronBoots.m.mWaterVelocityY;
+#if TARGET_PC
+        if (!(dusk::getSettings().game.enableFastIronBoots))
+#endif
+        {
+            mNormalSpeed *= mpHIO->mItem.mIronBoots.m.mWaterVelocityX;
+            speed.y *= mpHIO->mItem.mIronBoots.m.mWaterVelocityY;
+        }
     }
 
     ANGLE_ADD_2(current.angle.y, 0x8000);
@@ -16335,6 +16402,9 @@ int daAlink_c::procFrontRollSuccess() {
 
 int daAlink_c::procSideRollInit(int param_0) {
     BOOL is_prev_guardAnm = checkUpperGuardAnime();
+#ifdef TARGET_PC            
+    const f32 fastRollMultiplier = dusk::getSettings().game.fastRoll ? 2.0f : 1.0f;
+#endif
 
     if (!commonProcInitNotSameProc(PROC_SIDE_ROLL)) {
         return 0;
@@ -16351,17 +16421,30 @@ int daAlink_c::procSideRollInit(int param_0) {
         current.angle.y = shape_angle.y + -0x4000;
     }
 
-    setSingleAnime(anmID, mpHIO->mGuard.mTurnMove.m.mSideRollAnmSpeed,
+    setSingleAnime(anmID, 
+#ifdef TARGET_PC        
+                   mpHIO->mGuard.mTurnMove.m.mSideRollAnmSpeed * fastRollMultiplier,
+#else
+                   mpHIO->mGuard.mTurnMove.m.mSideRollAnmSpeed,
+#endif
                    mpHIO->mGuard.mTurnMove.m.mTurnAnm.mStartFrame,
                    mpHIO->mGuard.mTurnMove.m.mTurnAnm.mEndFrame,
                    mpHIO->mGuard.mTurnMove.m.mTurnAnm.mInterpolation);
     mNormalSpeed = mpHIO->mGuard.mTurnMove.m.mSideRollSpeed;
 
     if (checkNoResetFlg0(FLG0_WATER_IN_MOVE)) {
-        mNormalSpeed *= mpHIO->mItem.mIronBoots.m.mWaterVelocityX;
+#if TARGET_PC
+        if (!(dusk::getSettings().game.enableFastIronBoots))
+#endif
+        {
+            mNormalSpeed *= mpHIO->mItem.mIronBoots.m.mWaterVelocityX;
+        }
     } else if (checkHeavyStateOn(TRUE, TRUE)) {
         mNormalSpeed *= mHeavySpeedMultiplier;
     }
+#ifdef TARGET_PC        
+    mNormalSpeed *= fastRollMultiplier;
+#endif
 
     setFootEffectProcType(0);
     field_0x2f9d = 4;
@@ -18909,11 +18992,20 @@ void daAlink_c::setDrawHand() {
     mpLinkHandModel->setBaseTRMtx(mpLinkModel->getBaseTRMtx());
     mpLinkHandModel->calc();
 
+#if TARGET_PC
+    // FRAME INTERP NOTE: Always set these, otherwise the hands occasionally zip to origin.
+    // Doing it regardless of interpolation being active seems harmless.
+    mpLinkHandModel->setAnmMtx(1, mpLinkModel->getAnmMtx(9));
+    mpLinkHandModel->setAnmMtx(2, mpLinkModel->getAnmMtx(0xE));
+#endif
+
     if (var_r30 == 0xFE || var_r30 == 0xFB) {
         field_0x06d0 = field_0x06d8;
     } else {
         field_0x06d0 = mpLinkHandModel->getModelData()->getMaterialNodePointer(var_r30)->getShape();
+#if !TARGET_PC
         mpLinkHandModel->setAnmMtx(1, mpLinkModel->getAnmMtx(9));
+#endif
     }
 
     if (var_r30 == 0xFB) {
@@ -18932,7 +19024,9 @@ void daAlink_c::setDrawHand() {
         field_0x06d4 = field_0x06dc;
     } else {
         field_0x06d4 = mpLinkHandModel->getModelData()->getMaterialNodePointer(var_r29)->getShape();
+#if !TARGET_PC
         mpLinkHandModel->setAnmMtx(2, mpLinkModel->getAnmMtx(0xE));
+#endif
     }
 
     if (var_r29 == 0xFB) {
@@ -19295,11 +19389,20 @@ void daAlink_c::setWaterDropColor(const J3DGXColorS10* i_color) {
 
     if (!checkNoResetFlg2(FLG2_UNK_80000)) {
         if (checkZoraWearAbility()) {
+#if TARGET_PC
+            if (field_0x064C->getMaterialNum() >= 14)
+#endif
+            {
             field_0x064C->getMaterialNodePointer(13)->setTevColor(1, i_color);
             field_0x064C->getMaterialNodePointer(0)->setTevColor(1, i_color);
             field_0x064C->getMaterialNodePointer(1)->setTevColor(1, i_color);
             mpLinkHatModel->getModelData()->getMaterialNodePointer(1)->setTevColor(1, i_color);
+            }
         } else if (checkMagicArmorWearAbility()) {
+#if TARGET_PC
+            if (field_0x064C->getMaterialNum() >= 12)
+#endif
+            {
             field_0x064C->getMaterialNodePointer(11)->setTevColor(1, i_color);
             field_0x064C->getMaterialNodePointer(10)->setTevColor(1, i_color);
             field_0x064C->getMaterialNodePointer(9)->setTevColor(1, i_color);
@@ -19307,11 +19410,21 @@ void daAlink_c::setWaterDropColor(const J3DGXColorS10* i_color) {
             field_0x064C->getMaterialNodePointer(6)->setTevColor(1, i_color);
             mpLinkHatModel->getModelData()->getMaterialNodePointer(2)->setTevColor(1, i_color);
             mpLinkHatModel->getModelData()->getMaterialNodePointer(1)->setTevColor(1, i_color);
+            }
         } else if (checkCasualWearFlg()) {
+#if TARGET_PC
+            if (field_0x064C->getMaterialNum() >= 8)
+#endif
+            {
             field_0x064C->getMaterialNodePointer(7)->setTevColor(1, i_color);
             mpLinkHatModel->getModelData()->getMaterialNodePointer(0)->setTevColor(1, i_color);
             field_0x064C->getMaterialNodePointer(5)->setTevColor(1, var_r31);
+            }
         } else {
+#if TARGET_PC
+            if (field_0x064C->getMaterialNum() >= 18)
+#endif
+            {
             field_0x064C->getMaterialNodePointer(17)->setTevColor(1, i_color);
             field_0x064C->getMaterialNodePointer(9)->setTevColor(1, i_color);
             field_0x064C->getMaterialNodePointer(0)->setTevColor(1, i_color);
@@ -19321,6 +19434,7 @@ void daAlink_c::setWaterDropColor(const J3DGXColorS10* i_color) {
             field_0x064C->getMaterialNodePointer(16)->setTevColor(1, var_r31);
             field_0x064C->getMaterialNodePointer(15)->setTevColor(1, var_r31);
             field_0x064C->getMaterialNodePointer(14)->setTevColor(1, var_r31);
+            }
         }
     }
 }
@@ -19506,7 +19620,12 @@ int daAlink_c::draw() {
                 field_0x06e8->hide();
             }
 
-            field_0x06f0->hide();
+#if TARGET_PC
+            if (field_0x06f0 != NULL)
+#endif
+            {
+                field_0x06f0->hide();
+            }
 
 #if PLATFORM_SHIELD
             if (mProcID == PROC_HOOKSHOT_WALL_SHOOT || mProcID == PROC_HOOKSHOT_SUBJECT) {
@@ -19536,7 +19655,12 @@ int daAlink_c::draw() {
                 }
 
                 if (!checkZoraWearMaskDraw() && checkZoraWearAbility()) {
-                    field_0x06f0->hide();
+#if TARGET_PC
+                    if (field_0x06f0 != NULL)
+#endif
+                    {
+                        field_0x06f0->hide();
+                    }
                 }
             }
 
@@ -19545,7 +19669,12 @@ int daAlink_c::draw() {
             }
 
             if (checkZoraWearMaskDraw() || !checkZoraWearAbility()) {
-                field_0x06f0->show();
+#if TARGET_PC
+                if (field_0x06f0 != NULL)
+#endif
+                {
+                    field_0x06f0->show();
+                }
             }
         }
 
@@ -19636,6 +19765,27 @@ int daAlink_c::draw() {
                 )
             {
                 dComIfGd_getOpaListDark()->entryImm(mpHookChain, 0);
+
+#if TARGET_PC
+                if (dusk::getSettings().game.enableFrameInterpolation &&
+                    mEquipItem == dItemNo_IRONBALL_e &&
+                    mIronBallChainPos != NULL && mIronBallChainAngle != NULL)
+                {
+                    if (mIBChainInterpCurrValid) {
+                        memcpy(mIBChainInterpPrevPos, mIBChainInterpCurrPos, IRON_BALL_CHAIN_COUNT * sizeof(cXyz));
+                        memcpy(mIBChainInterpPrevAngle, mIBChainInterpCurrAngle, IRON_BALL_CHAIN_COUNT * sizeof(csXyz));
+                        mIBChainInterpPrevHandRoot = mIBChainInterpCurrHandRoot;
+                        mIBChainInterpPrevValid = true;
+                    }
+
+                    memcpy(mIBChainInterpCurrPos, mIronBallChainPos, IRON_BALL_CHAIN_COUNT * sizeof(cXyz));
+                    memcpy(mIBChainInterpCurrAngle, mIronBallChainAngle, IRON_BALL_CHAIN_COUNT * sizeof(csXyz));
+                    mIBChainInterpCurrHandRoot = mHookshotTopPos;
+                    mIBChainInterpCurrValid = true;
+
+                    dusk::frame_interp::add_interpolation_callback(&ironBallChainInterpCallback, this);
+                }
+#endif
             }
         }
 

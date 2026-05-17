@@ -1,7 +1,7 @@
 
 set(DOLZEL_FILES
         src/m_Do/m_Do_main.cpp
-        src/m_Do/m_Do_printf.cpp
+        #src/m_Do/m_Do_printf.cpp
         src/m_Do/m_Do_audio.cpp
         src/m_Do/m_Do_controller_pad.cpp
         #src/m_Do/m_Re_controller_pad.cpp
@@ -15,7 +15,6 @@ set(DOLZEL_FILES
         src/m_Do/m_Do_DVDError.cpp
         src/m_Do/m_Do_MemCard.cpp
         src/m_Do/m_Do_MemCardRWmng.cpp
-        src/m_Do/m_Do_machine_exception.cpp
         src/m_Do/m_Do_hostIO.cpp
         src/c/c_damagereaction.cpp
         src/c/c_dylink.cpp
@@ -315,7 +314,7 @@ set(SSYSTEM_FILES
         src/SSystem/SStandard/s_basic.cpp
 )
 
-set(JSYSTEM_DEBUG_FILES
+add_library(JSystem_JParticle STATIC
         libs/JSystem/src/JParticle/JPAResourceManager.cpp
         libs/JSystem/src/JParticle/JPAResource.cpp
         libs/JSystem/src/JParticle/JPABaseShape.cpp
@@ -331,10 +330,19 @@ set(JSYSTEM_DEBUG_FILES
         libs/JSystem/src/JParticle/JPAEmitter.cpp
         libs/JSystem/src/JParticle/JPAParticle.cpp
         libs/JSystem/src/JParticle/JPAMath.cpp
+)
+
+add_library(JSystem_JFramework STATIC
         libs/JSystem/src/JFramework/JFWSystem.cpp
         libs/JSystem/src/JFramework/JFWDisplay.cpp
+)
+
+add_library(JSystem_J3DU STATIC
         libs/JSystem/src/J3DU/J3DUClipper.cpp
         libs/JSystem/src/J3DU/J3DUDL.cpp
+)
+
+add_library(JSystem_JKernel STATIC
         libs/JSystem/src/JKernel/JKRHeap.cpp
         libs/JSystem/src/JKernel/JKRExpHeap.cpp
         libs/JSystem/src/JKernel/JKRSolidHeap.cpp
@@ -360,14 +368,23 @@ set(JSYSTEM_DEBUG_FILES
         libs/JSystem/src/JKernel/JKRDvdRipper.cpp
         libs/JSystem/src/JKernel/JKRDvdAramRipper.cpp
         libs/JSystem/src/JKernel/JKRDecomp.cpp
+)
+
+add_library(JSystem_JMath STATIC
         libs/JSystem/src/JMath/JMath.cpp
         libs/JSystem/src/JMath/random.cpp
         libs/JSystem/src/JMath/JMATrigonometric.cpp
+)
+
+add_library(JSystem_JSupport STATIC
         libs/JSystem/src/JSupport/JSUList.cpp
         libs/JSystem/src/JSupport/JSUInputStream.cpp
         libs/JSystem/src/JSupport/JSUOutputStream.cpp
         libs/JSystem/src/JSupport/JSUMemoryStream.cpp
         libs/JSystem/src/JSupport/JSUFileStream.cpp
+)
+
+add_library(JSystem_JUtility STATIC
         libs/JSystem/src/JUtility/JUTCacheFont.cpp
         libs/JSystem/src/JUtility/JUTResource.cpp
         libs/JSystem/src/JUtility/JUTTexture.cpp
@@ -388,6 +405,9 @@ set(JSYSTEM_DEBUG_FILES
         libs/JSystem/src/JUtility/JUTConsole.cpp
         libs/JSystem/src/JUtility/JUTDirectFile.cpp
         libs/JSystem/src/JUtility/JUTFontData_Ascfont_fix12.cpp
+)
+
+add_library(JSystem_JStage STATIC
         libs/JSystem/src/JStage/JSGActor.cpp
         libs/JSystem/src/JStage/JSGAmbientLight.cpp
         libs/JSystem/src/JStage/JSGCamera.cpp
@@ -395,6 +415,9 @@ set(JSYSTEM_DEBUG_FILES
         libs/JSystem/src/JStage/JSGLight.cpp
         libs/JSystem/src/JStage/JSGObject.cpp
         libs/JSystem/src/JStage/JSGSystem.cpp
+)
+
+add_library(JSystem_J2DGraph STATIC
         libs/JSystem/src/J2DGraph/J2DGrafContext.cpp
         libs/JSystem/src/J2DGraph/J2DOrthoGraph.cpp
         libs/JSystem/src/J2DGraph/J2DTevs.cpp
@@ -413,6 +436,9 @@ set(JSYSTEM_DEBUG_FILES
         libs/JSystem/src/J2DGraph/J2DAnmLoader.cpp
         libs/JSystem/src/J2DGraph/J2DAnimation.cpp
         libs/JSystem/src/J2DGraph/J2DManage.cpp
+)
+
+add_library(JSystem_J3DGraphBase STATIC
         libs/JSystem/src/J3DGraphBase/J3DGD.cpp
         libs/JSystem/src/J3DGraphBase/J3DSys.cpp
         libs/JSystem/src/J3DGraphBase/J3DVertex.cpp
@@ -427,6 +453,9 @@ set(JSYSTEM_DEBUG_FILES
         libs/JSystem/src/J3DGraphBase/J3DTevs.cpp
         libs/JSystem/src/J3DGraphBase/J3DDrawBuffer.cpp
         libs/JSystem/src/J3DGraphBase/J3DStruct.cpp
+)
+
+add_library(JSystem_J3DGraphAnimator STATIC
         libs/JSystem/src/J3DGraphAnimator/J3DShapeTable.cpp
         libs/JSystem/src/J3DGraphAnimator/J3DJointTree.cpp
         libs/JSystem/src/J3DGraphAnimator/J3DModelData.cpp
@@ -438,6 +467,9 @@ set(JSYSTEM_DEBUG_FILES
         libs/JSystem/src/J3DGraphAnimator/J3DCluster.cpp
         libs/JSystem/src/J3DGraphAnimator/J3DJoint.cpp
         libs/JSystem/src/J3DGraphAnimator/J3DMaterialAttach.cpp
+)
+
+add_library(JSystem_J3DGraphLoader STATIC
         libs/JSystem/src/J3DGraphLoader/J3DMaterialFactory.cpp
         libs/JSystem/src/J3DGraphLoader/J3DMaterialFactory_v21.cpp
         libs/JSystem/src/J3DGraphLoader/J3DClusterLoader.cpp
@@ -446,6 +478,9 @@ set(JSYSTEM_DEBUG_FILES
         libs/JSystem/src/J3DGraphLoader/J3DJointFactory.cpp
         libs/JSystem/src/J3DGraphLoader/J3DShapeFactory.cpp
         libs/JSystem/src/J3DGraphLoader/J3DAnmLoader.cpp
+)
+
+add_library(JSystem_JStudio STATIC
         libs/JSystem/src/JStudio/JStudio/ctb.cpp
         libs/JSystem/src/JStudio/JStudio/ctb-data.cpp
         libs/JSystem/src/JStudio/JStudio/functionvalue.cpp
@@ -460,6 +495,9 @@ set(JSYSTEM_DEBUG_FILES
         libs/JSystem/src/JStudio/JStudio/stb.cpp
         libs/JSystem/src/JStudio/JStudio/stb-data-parse.cpp
         libs/JSystem/src/JStudio/JStudio/stb-data.cpp
+)
+
+add_library(JSystem_JStudio_JStage STATIC
         libs/JSystem/src/JStudio/JStudio_JStage/control.cpp
         libs/JSystem/src/JStudio/JStudio_JStage/object.cpp
         libs/JSystem/src/JStudio/JStudio_JStage/object-actor.cpp
@@ -467,10 +505,19 @@ set(JSYSTEM_DEBUG_FILES
         libs/JSystem/src/JStudio/JStudio_JStage/object-camera.cpp
         libs/JSystem/src/JStudio/JStudio_JStage/object-fog.cpp
         libs/JSystem/src/JStudio/JStudio_JStage/object-light.cpp
+)
+
+add_library(JSystem_JStudio_JAudio2 STATIC
         libs/JSystem/src/JStudio/JStudio_JAudio2/control.cpp
         libs/JSystem/src/JStudio/JStudio_JAudio2/object-sound.cpp
+)
+
+add_library(JSystem_JStudio_JParticle STATIC
         libs/JSystem/src/JStudio/JStudio_JParticle/control.cpp
         libs/JSystem/src/JStudio/JStudio_JParticle/object-particle.cpp
+)
+
+add_library(JSystem_JAudio2 STATIC
         libs/JSystem/src/JAudio2/JASCalc.cpp
         libs/JSystem/src/JAudio2/JASTaskThread.cpp
         libs/JSystem/src/JAudio2/JASDvdThread.cpp
@@ -535,22 +582,34 @@ set(JSYSTEM_DEBUG_FILES
         libs/JSystem/src/JAudio2/JAUSoundAnimator.cpp
         libs/JSystem/src/JAudio2/JAUSoundTable.cpp
         libs/JSystem/src/JAudio2/JAUStreamFileTable.cpp
+)
+
+add_library(JSystem_JMessage STATIC
         libs/JSystem/src/JMessage/control.cpp
         libs/JSystem/src/JMessage/data.cpp
         libs/JSystem/src/JMessage/processor.cpp
         libs/JSystem/src/JMessage/resource.cpp
         libs/JSystem/src/JMessage/locale.cpp
+)
+
+add_library(JSystem_JGadget STATIC
         libs/JSystem/src/JGadget/binary.cpp
         libs/JSystem/src/JGadget/define.cpp
         libs/JSystem/src/JGadget/linklist.cpp
         libs/JSystem/src/JGadget/search.cpp
         libs/JSystem/src/JGadget/std-vector.cpp
+)
+
+add_library(JSystem_JAHostIO STATIC
         libs/JSystem/src/JAHostIO/JAHFrameNode.cpp
         libs/JSystem/src/JAHostIO/JAHioMessage.cpp
         libs/JSystem/src/JAHostIO/JAHioMgr.cpp
         libs/JSystem/src/JAHostIO/JAHioNode.cpp
         libs/JSystem/src/JAHostIO/JAHioUtil.cpp
         libs/JSystem/src/JAHostIO/JAHVirtualNode.cpp
+)
+
+add_library(JSystem_JHostIO STATIC
         libs/JSystem/src/JHostIO/JORFile.cpp
         libs/JSystem/src/JHostIO/JORHostInfo.cpp
         libs/JSystem/src/JHostIO/JORMessageBox.cpp
@@ -560,7 +619,28 @@ set(JSYSTEM_DEBUG_FILES
         libs/JSystem/src/JHostIO/JHIMccBuf.cpp
 )
 
-set(JSYSTEM_FILES
+set(JSYSTEM_LIBRARIES
+        JSystem_JParticle
+        JSystem_JFramework
+        JSystem_J3DU
+        JSystem_JKernel
+        JSystem_JMath
+        JSystem_JSupport
+        JSystem_JUtility
+        JSystem_JStage
+        JSystem_J2DGraph
+        JSystem_J3DGraphBase
+        JSystem_J3DGraphAnimator
+        JSystem_J3DGraphLoader
+        JSystem_JStudio
+        JSystem_JStudio_JStage
+        JSystem_JStudio_JAudio2
+        JSystem_JStudio_JParticle
+        JSystem_JAudio2
+        JSystem_JMessage
+        JSystem_JGadget
+        JSystem_JAHostIO
+        JSystem_JHostIO
 )
 
 set(REL_FILES
@@ -1331,50 +1411,125 @@ set(DOLPHIN_FILES
 )
 
 set(DUSK_FILES
+        include/dusk/action_bindings.h
         include/dusk/endian_gx.hpp
         include/dusk/config.hpp
         include/dusk/dvd_asset.hpp
+        include/dusk/scope_guard.hpp
         src/dusk/dvd_asset.cpp
         src/d/actor/d_a_alink_dusk.cpp
         src/dusk/asserts.cpp
         src/dusk/config.cpp
+        src/dusk/crash_reporting.cpp
+        src/dusk/data.cpp
+        src/dusk/data.hpp
         src/dusk/endian.cpp
         src/dusk/extras.c
-        src/dusk/extras.cpp
+        src/dusk/file_select.cpp
+        src/dusk/file_select.hpp
         src/dusk/frame_interpolation.cpp
+        src/dusk/game_clock.cpp
         src/dusk/globals.cpp
-        src/dusk/gyro_aim.cpp
+        src/dusk/gyro.cpp
+		src/dusk/gamepad_color.cpp
+		src/dusk/autosave.cpp
+        src/dusk/http/http.hpp
         src/dusk/io.cpp
         src/dusk/layout.cpp
         src/dusk/logging.cpp
         src/dusk/settings.cpp
+        src/dusk/speedrun.cpp
         src/dusk/stubs.cpp
+        src/dusk/update_check.cpp
+        src/dusk/update_check.hpp
         #src/dusk/m_Do_ext_dusk.cpp
         src/dusk/imgui/ImGuiConfig.hpp
         src/dusk/imgui/ImGuiConsole.hpp
         src/dusk/imgui/ImGuiConsole.cpp
         src/dusk/imgui/ImGuiEngine.cpp
         src/dusk/imgui/ImGuiEngine.hpp
-        src/dusk/imgui/ImGuiMenuGame.cpp
-        src/dusk/imgui/ImGuiMenuGame.hpp
+        src/dusk/imgui/ImGuiBloomWindow.cpp
+        src/dusk/imgui/ImGuiBloomWindow.hpp
         src/dusk/imgui/ImGuiMenuTools.cpp
         src/dusk/imgui/ImGuiMenuTools.hpp
-        src/dusk/imgui/ImGuiMenuEnhancements.cpp
-        src/dusk/imgui/ImGuiMenuEnhancements.hpp
-        src/dusk/imgui/ImGuiPreLaunchWindow.cpp
-        src/dusk/imgui/ImGuiPreLaunchWindow.hpp
-        src/dusk/imgui/ImGuiFirstRunPreset.hpp
-        src/dusk/imgui/ImGuiFirstRunPreset.cpp
+        src/dusk/imgui/ImGuiActorSpawner.cpp
         src/dusk/imgui/ImGuiProcessOverlay.cpp
         src/dusk/imgui/ImGuiCameraOverlay.cpp
         src/dusk/imgui/ImGuiHeapOverlay.cpp
-        src/dusk/imgui/ImGuiDebugPad.cpp
         src/dusk/imgui/ImGuiControllerOverlay.cpp
         src/dusk/imgui/ImGuiStubLog.cpp
-        src/dusk/imgui/ImGuiMapLoader.cpp
         src/dusk/imgui/ImGuiSaveEditor.cpp
+        src/dusk/imgui/ImGuiStateShare.hpp
+        src/dusk/imgui/ImGuiStateShare.cpp
+        src/dusk/ui/achievements.cpp
+        src/dusk/ui/achievements.hpp
+        src/dusk/ui/bool_button.cpp
+        src/dusk/ui/bool_button.hpp
+        src/dusk/ui/button.cpp
+        src/dusk/ui/button.hpp
+        src/dusk/ui/component.cpp
+        src/dusk/ui/component.hpp
+        src/dusk/ui/controller_config.cpp
+        src/dusk/ui/controller_config.hpp
+        src/dusk/ui/document.cpp
+        src/dusk/ui/document.hpp
+        src/dusk/ui/editor.cpp
+        src/dusk/ui/editor.hpp
+        src/dusk/ui/event.cpp
+        src/dusk/ui/event.hpp
+        src/dusk/ui/graphics_tuner.cpp
+        src/dusk/ui/graphics_tuner.hpp
+        src/dusk/ui/input.cpp
+        src/dusk/ui/input.hpp
+        src/dusk/ui/modal.cpp
+        src/dusk/ui/modal.hpp
+        src/dusk/ui/nav_types.hpp
+        src/dusk/ui/number_button.cpp
+        src/dusk/ui/number_button.hpp
+        src/dusk/ui/overlay.cpp
+        src/dusk/ui/overlay.hpp
+        src/dusk/ui/pane.cpp
+        src/dusk/ui/pane.hpp
+        src/dusk/ui/menu_bar.cpp
+        src/dusk/ui/menu_bar.hpp
+        src/dusk/ui/prelaunch.cpp
+        src/dusk/ui/prelaunch.hpp
+        src/dusk/ui/preset.cpp
+        src/dusk/ui/preset.hpp
+        src/dusk/ui/reporting.cpp
+        src/dusk/ui/reporting.hpp
+        src/dusk/ui/select_button.cpp
+        src/dusk/ui/select_button.hpp
+        src/dusk/ui/settings.cpp
+        src/dusk/ui/settings.hpp
+        src/dusk/ui/string_button.cpp
+        src/dusk/ui/string_button.hpp
+        src/dusk/ui/tab_bar.cpp
+        src/dusk/ui/tab_bar.hpp
+        src/dusk/ui/ui.cpp
+        src/dusk/ui/ui.hpp
+        src/dusk/ui/warp.cpp
+        src/dusk/ui/warp.hpp
+        src/dusk/ui/window.cpp
+        src/dusk/ui/window.hpp
+        src/dusk/achievements.cpp
+        src/dusk/iso_validate.cpp
+        src/dusk/livesplit.cpp
         src/dusk/offset_ptr.cpp
         src/dusk/OSContext.cpp
+        src/dusk/OSReport.cpp
         src/dusk/OSThread.cpp
         src/dusk/OSMutex.cpp
+        src/dusk/discord.cpp
+        src/dusk/discord.hpp
+        src/dusk/discord_presence.cpp
+        src/dusk/version.cpp
+        src/dusk/action_bindings.cpp
+)
+
+set(DUSK_HTTP_BACKEND_FILES
+        src/dusk/http/no_backend.cpp
+        src/dusk/http/curl.cpp
+        src/dusk/http/winhttp.cpp
+        src/dusk/http/url_session.mm
 )

@@ -17,10 +17,14 @@ namespace dusk {
 		void drawInventoryTab();
 		void drawCollectionTab();
 		void drawFlagsTab();
+        void drawMinigameTab();
 		void drawConfigTab();
 
 	private:
-		int m_selectedRegion = 0;
+        struct {
+            uint8_t id;
+            const char* name;
+        } m_selectedRegion = {0, nullptr};
 	};
 }
 

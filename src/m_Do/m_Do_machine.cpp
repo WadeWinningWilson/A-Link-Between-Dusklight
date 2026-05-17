@@ -31,6 +31,7 @@
 
 #if TARGET_PC
 #include <assert.h>
+#include "dusk/ui/ui.hpp"
 #endif
 
 #if !PLATFORM_GCN
@@ -753,9 +754,11 @@ void myGXVerifyCallback(GXWarningLevel param_1, u32 param_2, const char* param_3
 #endif
 
 int mDoMch_Create() {
+#if !TARGET_PC // We want crash logs.
     if (mDoMain::developmentMode == 0 || !(OSGetConsoleType() & 0x10000000)) {
         OSReportDisable();
     }
+#endif
 
     JKRHeap::setDefaultDebugFill(mDoMch::mDebugFill);
     #if DEBUG
@@ -859,7 +862,7 @@ int mDoMch_Create() {
 #endif
     archiveHeapSize *= 2;
     j2dHeapSize *= 2;
-    gameHeapSize *= 2;
+    gameHeapSize *= 20; // NOTE: increased from 2 to 20 to try to solve heap alloc crashes. maybe do a better fix later
 #endif
 
     JFWSystem::setSysHeapSize(arenaSize);
@@ -999,6 +1002,7 @@ int mDoMch_Create() {
     JKRDvdRipper::setSZSBufferSize(0x4000);
 #if TARGET_PC
     JKRHeap* dvdHeap = JKRCreateExpHeap(0x10000, NULL, false);
+    JKRHEAP_NAME(dvdHeap, "dvdHeap");
     assert(dvdHeap != NULL);
     JKRDvdRipper::setHeap(dvdHeap);
 #endif
@@ -1006,7 +1010,14 @@ int mDoMch_Create() {
     JKRAram::setSZSBufferSize(0x2000);
     mDoDvdThd::create(OSGetThreadPriority(OSGetCurrentThread()) - 2);
     mDoDvdErr_ThdInit();
+
+#if TARGET_PC
+    if (!dusk::ui::is_prelaunch_open()) {
+        mDoMemCd_ThdInit();
+    }
+#else
     mDoMemCd_ThdInit();
+#endif
 
     return 1;
 }

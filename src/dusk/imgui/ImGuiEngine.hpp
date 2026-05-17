@@ -11,7 +11,8 @@ public:
     static ImFont* fontLarge;
     static ImFont* fontExtraLarge;
     static ImFont* fontMono;
-    static ImTextureID duskIcon;
+    static ImTextureID orgIcon;
+    static ImTextureID duskLogo;
 };
 
 void ImGuiEngine_Initialize(float scale);
@@ -23,5 +24,11 @@ struct Image {
     uint32_t width;
     uint32_t height;
 };
-Image GetImage(std::string_view path);
+Image GetImage(const std::string& path);
+
+#if (defined(__APPLE__) && TARGET_OS_IOS && !TARGET_OS_MACCATALYST) || defined(__ANDROID__)
+inline constexpr bool IsMobile = true;
+#else
+inline constexpr bool IsMobile = false;
+#endif
 }  // namespace dusk

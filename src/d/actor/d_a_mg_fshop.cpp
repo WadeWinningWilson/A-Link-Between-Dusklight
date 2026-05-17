@@ -5,14 +5,19 @@
 
 #include "d/dolzel_rel.h" // IWYU pragma: keep
 
+#include "Z2AudioLib/Z2Instances.h"
+#include "d/actor/d_a_mg_fish.h"
 #include "d/actor/d_a_mg_fshop.h"
 #include "d/actor/d_a_npc_henna.h"
-#include "d/actor/d_a_mg_fish.h"
 #include "d/actor/d_a_player.h"
-#include "f_op/f_op_camera_mng.h"
-#include "d/d_timer.h"
 #include "d/d_s_play.h"
-#include "Z2AudioLib/Z2Instances.h"
+#include "d/d_timer.h"
+#include "dusk/version.hpp"
+#include "f_op/f_op_camera_mng.h"
+
+#if TARGET_PC
+#include "dusk/gyro.h"
+#endif
 
 enum koro2_parts {
     KORO2_PART_BOX = 1,
@@ -723,6 +728,16 @@ static void koro2_game(fshop_class* i_this) {
         cLib_addCalcAngleS2(&i_this->field_0x4020.x, 0, 2, 0x200);
         cLib_addCalcAngleS2(&i_this->field_0x4020.z, 0, 2, 0x200);
     case 2:
+#if TARGET_PC
+        if (dusk::gyro::rollgoal_gyro_enabled()) {
+            if (!dusk::gyro::get_sensor_keep_alive()) {
+                dusk::gyro::set_sensor_keep_alive(true);
+            }
+        } else if (dusk::gyro::get_sensor_keep_alive()) {
+            dusk::gyro::set_sensor_keep_alive(false);
+        }
+#endif
+
         actor->scale.x = 10.0f;
         if (i_this->field_0x4010 == 2) {
             static f32 old_stick_x = 0.0f;
@@ -739,11 +754,21 @@ static void koro2_game(fshop_class* i_this) {
 
             old_stick_x = mDoCPd_c::getSubStickX(PAD_1);
             cLib_addCalcAngleS2(&i_this->field_0x4060, i_this->field_0x4062, 4, 0x1000);
+#if TARGET_PC
+            if (dusk::gyro::rollgoal_gyro_enabled()) {
+                dusk::gyro::rollgoalTick(true, i_this->field_0x4060);
+            }
+#endif
             cMtx_YrotS(*calc_mtx, -i_this->field_0x4060);
 
             sp5C.x = mDoCPd_c::getStickX3D(PAD_1);
             sp5C.y = 0.0f;
             sp5C.z = mDoCPd_c::getStickY(PAD_1);
+#if TARGET_PC
+            if (dusk::getSettings().game.enableMirrorMode) {
+                sp5C.x = -sp5C.x;
+            }
+#endif
             MtxPosition(&sp5C, &sp68);
 
             f32 reg_f31 = sp68.x;
@@ -765,9 +790,21 @@ static void koro2_game(fshop_class* i_this) {
                 reg_f30 = 0.0f;
             }
 
-            cLib_addCalcAngleS2(&i_this->field_0x4020.x, reg_f30 * (-6000.0f + JREG_F(7)), 4, 0x200);
-            cLib_addCalcAngleS2(&i_this->field_0x4020.z, reg_f31 * (-6000.0f + JREG_F(8)), 4, 0x200);
+            s16 gyro_ax = 0;
+            s16 gyro_az = 0;
+#if TARGET_PC
+            if (dusk::gyro::rollgoal_gyro_enabled()) {
+                dusk::gyro::rollgoalTableOffset(gyro_ax, gyro_az);
+            }
+#endif
+            cLib_addCalcAngleS2(&i_this->field_0x4020.x, reg_f30 * (-6000.0f + JREG_F(7)) + gyro_ax, 4, 0x200);
+            cLib_addCalcAngleS2(&i_this->field_0x4020.z, reg_f31 * (-6000.0f + JREG_F(8)) + gyro_az, 4, 0x200);
         }
+#if TARGET_PC
+        if (i_this->field_0x4010 != 2) {
+            dusk::gyro::rollgoalTick(false, i_this->field_0x4060);
+        }
+#endif
         break;
     }
 
@@ -1144,6 +1181,12 @@ static int daFshop_Delete(fshop_class* i_this) {
             }
         }
     }
+
+#if TARGET_PC
+    if (dusk::getSettings().game.enableGyroRollgoal) {
+        dusk::gyro::set_sensor_keep_alive(false);
+    }
+#endif
 
     return 1;
 }
@@ -1702,7 +1745,18 @@ static int daFshop_Create(fopAc_ac_c* actor) {
         fopAcM_createChild(fpcNm_FSHOP_e, fopAcM_GetID(actor), 0xFFFFFF23, &actor->current.pos, fopAcM_GetRoomNo(actor), NULL, NULL, -1, NULL);
 
         u8 sp10;
-#if VERSION == VERSION_GCN_PAL || VERSION == VERSION_WII_PAL
+#if TARGET_PC
+        if (dusk::version::isRegionPal()) {
+            if (dComIfGs_getPalLanguage() == dSv_player_config_c::LANGUAGE_ENGLISH) {
+                sp10 = 2;
+            } else {
+                sp10 = 0;
+            }
+        } else {
+            sp10 = 1;
+        }
+
+#elif VERSION == VERSION_GCN_PAL || VERSION == VERSION_WII_PAL
         if (dComIfGs_getPalLanguage() == dSv_player_config_c::LANGUAGE_ENGLISH) {
             sp10 = 2;
         } else {

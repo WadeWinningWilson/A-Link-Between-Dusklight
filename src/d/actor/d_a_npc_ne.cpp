@@ -18,6 +18,7 @@
 #include "f_op/f_op_kankyo_mng.h"
 #include "c/c_damagereaction.h"
 #include "Z2AudioLib/Z2Instances.h"
+#include "dusk/frame_interpolation.h"
 #include <cstring>
 
 static home_path_pnt home_path[38] = {
@@ -955,7 +956,7 @@ static void npc_ne_tame(npc_ne_class* i_this) {
         i_this->mpMorf->setPlaySpeed(i_this->mAnmSpeed);
 
             /* dSv_event_flag_c::F_0470 - Fishing Pond - Reserved for fishing */
-        if (dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[470])) {
+        if (IF_DUSK(dusk::getSettings().game.no2ndFishForCat) || dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[470])) {
             if (fpcEx_Search(s_fish_sub, _this) != NULL) {
                 i_this->mAction = npc_ne_class::ACT_HOME;
                 i_this->mMode = 10;
@@ -2655,6 +2656,9 @@ static void demo_camera(npc_ne_class* i_this) {
         i_this->mCameraFovY = 55.0f;
         camera->mCamera.SetTrimSize(3);
         daPy_getPlayerActorClass()->changeOriginalDemo();
+#ifdef TARGET_PC
+        dusk::frame_interp::request_presentation_sync();
+#endif
         // fallthrough
 
     case 2:
@@ -2683,6 +2687,9 @@ static void demo_camera(npc_ne_class* i_this) {
         if (i_this->mDemoCounter == 0) {
             i_this->mCameraCenter1.set(387.0f, 133.0f, -866.0f);
             i_this->mCameraEye1.set(284.0f, 208.0f, -585.0f);
+#ifdef TARGET_PC
+            dusk::frame_interp::request_presentation_sync();
+#endif
         }
 
         if (i_this->mDemoCounter == 12) {
@@ -2719,6 +2726,9 @@ static void demo_camera(npc_ne_class* i_this) {
         i_this->mCameraFovY = 45.0f;
         camera->mCamera.SetTrimSize(3);
         daPy_getPlayerActorClass()->changeOriginalDemo();
+#ifdef TARGET_PC
+        dusk::frame_interp::request_presentation_sync();
+#endif
         // fallthrough
 
     case 11:
@@ -2799,8 +2809,14 @@ static void demo_camera(npc_ne_class* i_this) {
                     MtxPosition(&vec, &i_this->mCameraEye2);
                     i_this->mCameraEye2 += player->current.pos;
                     player->changeDemoParam2(2);
+#ifdef TARGET_PC
+                    dusk::frame_interp::request_presentation_sync();
+#endif
                 } else if (i_this->mDemoCounter == 120) {
                     player->changeDemoParam2(0);
+#ifdef TARGET_PC
+                    dusk::frame_interp::request_presentation_sync();
+#endif
                 }
             }
         }
@@ -2853,6 +2869,9 @@ static void demo_camera(npc_ne_class* i_this) {
                 i_this->mCameraCenter1 = _this->current.pos;
                 i_this->mCameraCenter1.y += 20.0f;
                 i_this->mCameraFovY = 55.0f;
+#ifdef TARGET_PC
+                dusk::frame_interp::request_presentation_sync();
+#endif
             }
 
             camera->mCamera.Set(i_this->mCameraCenter1, i_this->mCameraEye1,
@@ -2929,8 +2948,7 @@ static int daNpc_Ne_Execute(npc_ne_class* i_this) {
 
     if (i_this->mWantsFish && (i_this->mCounter & 0xf) == 0) {
             /* dSv_event_flag_c::F_0470 - Fishing Pond - Reserved for fishing */
-        if (dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[470])
-                                    && i_this->mDistToTarget < 1500.0f) {
+        if ((IF_DUSK(dusk::getSettings().game.no2ndFishForCat) || dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[470])) && i_this->mDistToTarget < 1500.0f) {
             if (fopAcM_SearchByName(fpcNm_MG_ROD_e) != NULL) {
                 i_this->mNoFollow = false;
             } else {

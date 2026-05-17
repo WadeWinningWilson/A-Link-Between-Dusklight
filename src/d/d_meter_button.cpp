@@ -16,7 +16,11 @@
 #include "d/d_msg_out_font.h"
 #include "d/d_msg_string.h"
 #include "d/d_pane_class.h"
+#include "dusk/frame_interpolation.h"
 #include <cstring>
+#if TARGET_PC
+#include "dusk/string.hpp"
+#endif
 
 #if VERSION == VERSION_GCN_JPN
 #define STR_BUF_LEN 528
@@ -280,15 +284,20 @@ void dMeterButton_c::draw() {
 
             s16 temp_r6 = g_drawHIO.mEmpButton.mRepeatHitFrameNum;
             s16 temp_r6_2 = g_drawHIO.mEmpButton.mRepeatHitFrameNum / 2;
-            field_0x4b8[i]++;
+#ifdef TARGET_PC
+            if (dusk::frame_interp::get_ui_tick_pending())
+#endif
+            {
+                field_0x4b8[i]++;
 
-            if (field_0x4b8[i] >= temp_r6) {
-                field_0x4b8[i] = 0;
+                if (field_0x4b8[i] >= temp_r6) {
+                    field_0x4b8[i] = 0;
 
-                if (field_0x4bc[i] == 0) {
-                    field_0x4bc[i] = 1;
-                } else {
-                    field_0x4bc[i] = 0;
+                    if (field_0x4bc[i] == 0) {
+                        field_0x4bc[i] = 1;
+                    } else {
+                        field_0x4bc[i] = 0;
+                    }
                 }
             }
 
@@ -362,8 +371,22 @@ void dMeterButton_c::draw() {
             }
 
             if (var_r3) {
+#ifdef TARGET_PC
+                if (dusk::frame_interp::get_ui_tick_pending()) {
+                    mWasListen[i] = var_r22;
+                    mWasRepeat[i] = var_r23;
+                } else {
+                    var_r22 = mWasListen[i];
+                    var_r23 = mWasRepeat[i];
+                }
+#endif
                 if (var_r22) {
-                    if (field_0x2e8[i] == 18.0f) {
+#ifdef TARGET_PC
+                    if (field_0x2e8[i] == 18.0f && dusk::frame_interp::get_ui_tick_pending())
+#else
+                    if (field_0x2e8[i] == 18.0f)
+#endif
+                    {
                         mDoAud_seStart(Z2SE_SY_HINT_BUTTON_BLINK, NULL, 0, 0);
                     }
 
@@ -2907,6 +2930,12 @@ bool dMeterButton_c::isClose() {
 }
 
 void dMeterButton_c::setString(char* i_string, u8 i_button, u8 param_2, u8 param_3) {
+#if TARGET_PC
+    char* i_string_full = i_string;
+    char i_string_buf[sizeof(mButtonText[0])];
+    dusk::SafeStringCopyTruncate(i_string_buf, i_string);
+    i_string = i_string_buf;
+#endif
     if (strcmp(mButtonText[param_2], i_string) != 0 || field_0x4be[param_2] != i_button) {
         if (param_2 == 0 && strcmp(mButtonText[1], i_string) == 0 &&
             ((i_button == BUTTON_A_e && field_0x4be[1] == BUTTON_A_e) ||
@@ -3001,6 +3030,10 @@ void dMeterButton_c::setString(char* i_string, u8 i_button, u8 param_2, u8 param
     }
 
     strcpy(mButtonText[param_2], i_string);
+
+#if TARGET_PC
+    i_string = i_string_full;
+#endif
 
     if (param_2 == 0) {
         if (param_3 != 0) {

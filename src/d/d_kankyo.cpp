@@ -33,7 +33,10 @@
 #include <cstdlib>
 #include <cstring>
 #if TARGET_PC
+#include "dusk/imgui/ImGuiBloomWindow.hpp"
 #include "dusk/settings.h"
+#include "dusk/frame_interpolation.h"
+#include "dusk/game_clock.h"
 #endif
 
 static void GxXFog_set();
@@ -1540,7 +1543,20 @@ void dScnKy_env_light_c::setDaytime() {
                     }
 
                     if (dComIfGp_roomControl_getTimePass() && !field_0x130a && temp_r29) {
+                        #if TARGET_PC
+                        f32 prev = daytime;
+                        #endif
+
                         daytime += time_change_rate;
+
+                        #if TARGET_PC
+                        if (time_change_rate == 1.0f &&
+                            (std::fmod(daytime - 90.0f + 360.0f, 360.0f) < std::fmod(prev - 90.0f + 360.0f, 360.0f) ||
+                             std::fmod(daytime - 285.0f + 360.0f, 360.0f) < std::fmod(prev - 285.0f + 360.0f, 360.0f)))
+                        {
+                            g_env_light.time_change_rate = 0.012f;
+                        }
+                        #endif
 
                         // Stage is Fishing Pond or Hena's Hut
                         if (!strcmp(dComIfGp_getStartStageName(), "F_SP127") ||
@@ -2253,6 +2269,7 @@ void dKy_calc_color_set(GXColorS10* out_color_p, color_RGB_class* color_a_start_
                                color_b_start_p->b, color_b_end_p->b, blend_ratio, add_col.b, scale);
 }
 
+
 void dScnKy_env_light_c::setLight() {
     f32 color_ratio;
 
@@ -2498,7 +2515,14 @@ void dScnKy_env_light_c::setLight() {
                 static s16 S_fuwan_sin;
 
                 f32 sin = cM_ssin(S_fuwan_sin);
-                S_fuwan_sin += (s16)cM_rndF(2000.0f) + 500;
+
+                #if TARGET_PC
+                    const f32 deltaTime = dusk::game_clock::consume_interval(this);
+                    const f32 timeScale = deltaTime / dusk::game_clock::period_for_original_frames(1.0f);
+                    S_fuwan_sin += (s16)((cM_rndF(2000.0f) + 500) * timeScale);
+                #else
+                    S_fuwan_sin += (s16)cM_rndF(2000.0f) + 500;
+                #endif
 
                 blure_size += (u8)(sin * (0.2f * blure_size));
             }
@@ -2564,6 +2588,10 @@ void dScnKy_env_light_c::setLight() {
 
                 mDoGph_gInf_c::getBloom()->setMode(mode);
             }
+
+#if TARGET_PC
+            dusk::ApplyBloomOverride();
+#endif
 
             f32 var_f30;
             if (dKy_Outdoor_check() == true) {
@@ -8233,6 +8261,10 @@ static int dKy_Create(void* i_this) {
     kankyo_class* kankyo = (kankyo_class*)i_this;
     BOOL next_time_set = false;
 
+#if TARGET_PC
+    kankyo->base.draw_interp_frame = true;
+#endif
+
     stage_envr_info_class* stage_envr_p = dComIfGp_getStageEnvrInfo();
     if (stage_envr_p != NULL && dComIfGp_getStartStageRoomNo() != -1) {
         stage_envr_p += dComIfGp_getStartStageRoomNo();
@@ -10986,11 +11018,7 @@ void dKy_depth_dist_set(void* process_p) {
 
         f32 var_f31 = sp24.abs(camera_p->view.lookat.eye);
         if (var_f31 < 2000.0f && var_f31 < kankyo->field_0x1268) {
-            #if TARGET_PC
-            mDoLib_project(&actor_p->eyePos, &sp30, {0, 0, FB_WIDTH, FB_HEIGHT});
-            #else
             mDoLib_project(&actor_p->eyePos, &sp30);
-            #endif
 
             if ((sp30.x >= 0.0f && sp30.x < FB_WIDTH) && (sp30.y >= 0.0f &&
                 #if DEBUG

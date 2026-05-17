@@ -53,6 +53,9 @@ namespace dusk::audio {
         // last consumed sample from decodeBuf
         s16 resamplePrev;
 
+        // phase of oscillator channels
+        u16 oscPhase;
+
         // low pass previous state
         f32 prev_lp_out;  // out[n-1]
         f32 prev_lp_in;   // in[n-1]
@@ -130,4 +133,6 @@ namespace dusk::audio {
     extern f32 PrevMasterVolume;
     extern bool EnableReverb;
     extern bool DumpAudio;
+    extern bool EnableHrtf;
+    extern f32 HrtfGain;
 }

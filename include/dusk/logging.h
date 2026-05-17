@@ -4,9 +4,14 @@
 #include <aurora/aurora.h>
 #include <aurora/lib/logging.hpp>
 
+#include <filesystem>
+
 void aurora_log_callback(AuroraLogLevel level, const char* module, const char* message, unsigned int len);
 
 namespace dusk {
+    void InitializeFileLogging(const std::filesystem::path& configDir, AuroraLogLevel logLevel);
+    void ShutdownFileLogging();
+    const char* GetLogFilePath();
     void SendToStubLog(AuroraLogLevel level, const char* module, const char* message);
 }
 

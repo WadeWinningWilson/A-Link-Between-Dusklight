@@ -3,12 +3,14 @@
 #include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_pixels.h>
 #include <SDL3/SDL_surface.h>
+#include <SDL3/SDL_video.h>
 #include <aurora/imgui.h>
 #include <cmath>
 #include <cstring>
 #include <fmt/format.h>
 #include <string>
 
+#include "aurora/lib/window.hpp"
 #include "dusk/logging.h"
 
 #ifdef IMGUI_ENABLE_FREETYPE
@@ -29,13 +31,36 @@ bool AssetExists(const std::string& path) {
     SDL_PathInfo pathInfo{};
     return SDL_GetPathInfo(path.c_str(), &pathInfo) && pathInfo.type == SDL_PATHTYPE_FILE;
 }
+
+ImTextureID AddTexture(const char* assetName) {
+    auto image = GetImage(GetAssetPath(assetName));
+    if (image.data == nullptr || image.width == 0 || image.height == 0) {
+        return 0;
+    }
+    return aurora_imgui_add_texture(image.width, image.height, image.data.get());
+}
+
+ImVec2 GetDisplaySafeAreaPadding() {
+    SDL_Window* window = aurora::window::get_sdl_window();
+    if (window == nullptr) {
+        return ImVec2(0.0f, 0.0f);
+    }
+
+    SDL_Rect safeRect{};
+    if (!SDL_GetWindowSafeArea(window, &safeRect)) {
+        return ImVec2(0.0f, 0.0f);
+    }
+
+    return ImVec2(static_cast<float>(safeRect.x), static_cast<float>(safeRect.y));
+}
 }  // namespace
 
 ImFont* ImGuiEngine::fontNormal;
 ImFont* ImGuiEngine::fontLarge;
 ImFont* ImGuiEngine::fontExtraLarge;
 ImFont* ImGuiEngine::fontMono;
-ImTextureID ImGuiEngine::duskIcon = 0;
+ImTextureID ImGuiEngine::orgIcon = 0;
+ImTextureID ImGuiEngine::duskLogo = 0;
 
 inline ImFont* CreateFont(float size, const std::string& fontPath, std::string_view fontName) {
     bool fontFileExists = !fontPath.empty() && AssetExists(fontPath);
@@ -60,12 +85,13 @@ inline ImFont* CreateFont(float size, const std::string& fontPath, std::string_v
 
 void ImGuiEngine_Initialize(float scale) {
     // Round font scale to nearest integer
-    scale = std::ceilf(scale);
+    scale = std::ceil(scale);
 
     ImGui::GetCurrentContext();
     ImGuiIO& io = ImGui::GetIO();
     io.Fonts->Clear();
     io.FontGlobalScale = scale > 0.0f ? 1.0f / scale : 1.0f;
+    io.ConfigWindowsMoveFromTitleBarOnly = IsMobile;
 
     ImGuiEngine::fontNormal =
         CreateFont(std::floor(18.f * scale), GetAssetPath("Inter-Regular.ttf"), "Inter Regular");
@@ -95,11 +121,12 @@ void ImGuiEngine_Initialize(float scale) {
     style.PopupRounding = 7.0;
     style.TabBorderSize = 1.f;
     style.TabRounding = 3.f;
+    style.DisplaySafeAreaPadding = GetDisplaySafeAreaPadding();
 
     auto* colors = style.Colors;
     colors[ImGuiCol_Text] = ImVec4(0.95f, 0.96f, 0.98f, 1.00f);
     colors[ImGuiCol_TextDisabled] = ImVec4(0.36f, 0.42f, 0.47f, 1.00f);
-    colors[ImGuiCol_WindowBg] = ImVec4(0.11f, 0.15f, 0.17f, 1.00f);
+    colors[ImGuiCol_WindowBg] = ImVec4(0.11f, 0.15f, 0.17f, 0.98f);
     colors[ImGuiCol_ChildBg] = ImVec4(0.15f, 0.18f, 0.22f, 1.00f);
     colors[ImGuiCol_PopupBg] = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
     colors[ImGuiCol_Border] = ImVec4(0.08f, 0.10f, 0.12f, 1.00f);
@@ -110,7 +137,7 @@ void ImGuiEngine_Initialize(float scale) {
     colors[ImGuiCol_TitleBg] = ImVec4(0.09f, 0.12f, 0.14f, 0.65f);
     colors[ImGuiCol_TitleBgActive] = ImVec4(0.08f, 0.10f, 0.12f, 1.00f);
     colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
-    colors[ImGuiCol_MenuBarBg] = ImVec4(0.15f, 0.18f, 0.22f, 1.00f);
+    colors[ImGuiCol_MenuBarBg] = ImVec4(0.15f, 0.18f, 0.22f, 0.80f);
     colors[ImGuiCol_ScrollbarBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.39f);
     colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.20f, 0.25f, 0.29f, 1.00f);
     colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.18f, 0.22f, 0.25f, 1.00f);
@@ -149,6 +176,7 @@ void ImGuiEngine_Initialize(float scale) {
 
 Image GetImage(const std::string& path) {
     if (!AssetExists(path)) {
+        DuskLog.warn("Image '{}' does not exist", path);
         return {};
     }
 
@@ -187,13 +215,11 @@ Image GetImage(const std::string& path) {
 }
 
 void ImGuiEngine_AddTextures() {
-    if (ImGuiEngine::duskIcon == 0) {
-        auto icon = GetImage(GetAssetPath("icon.png"));
-        if (icon.data == nullptr || icon.width == 0 || icon.height == 0) {
-            ImGuiEngine::duskIcon = 0;
-            return;
-        }
-        ImGuiEngine::duskIcon = aurora_imgui_add_texture(icon.width, icon.height, icon.data.get());
+    if (ImGuiEngine::orgIcon == 0) {
+        ImGuiEngine::orgIcon = AddTexture("org-icon.png");
+    }
+    if (ImGuiEngine::duskLogo == 0) {
+        ImGuiEngine::duskLogo = AddTexture("logo.png");
     }
 }
 }  // namespace dusk

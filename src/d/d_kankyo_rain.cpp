@@ -116,12 +116,7 @@ void dKyr_lenzflare_move() {
     cXyz vect;
     cXyz proj;
     cXyz center;
-
-    #if TARGET_PC
-    mDoLib_project(lenz_packet->mPositions, &proj, {0, 0, FB_WIDTH, FB_HEIGHT});
-    #else
     mDoLib_project(lenz_packet->mPositions, &proj);
-    #endif
 
     center.x = FB_WIDTH / 2;
     center.y = FB_HEIGHT / 2;
@@ -221,12 +216,7 @@ void dKyr_sun_move() {
         }
 
         cXyz proj;
-
-        #if TARGET_PC
-        mDoLib_project(sun_packet->mPos, &proj, {0, 0, FB_WIDTH, FB_HEIGHT});
-        #else
         mDoLib_project(sun_packet->mPos, &proj);
-        #endif
 
         for (int i = 0; i < 5; i++) {
             cXyz chkpnt = proj;
@@ -4110,62 +4100,24 @@ void dKyr_drawStar(Mtx drawMtx, u8** tex) {
         color_reg0.b = 0xFF;
         color_reg0.a = 0xFF;
 
-#if TARGET_PC
-        Mtx star_gx_view;
-        cXyz anchor_eye;
-        f32 star_fovy = 45.0f;
-        MtxP gx_load_view = drawMtx;
-        bool star_use_present_view = false;
-
-        if (dusk::getSettings().game.enableFrameInterpolation) {
-            star_use_present_view = dusk::frame_interp::build_star_view(star_gx_view, camMtx, &anchor_eye, &star_fovy);
-        }
-
-        if (star_use_present_view) {
-            gx_load_view = star_gx_view;
-        } else {
-            if (dComIfGd_getView() != NULL) {
-                MTXInverse(dComIfGd_getView()->viewMtxNoTrans, camMtx);
-                anchor_eye = camera->view.lookat.eye;
-                star_fovy = dComIfGd_getView()->fovy;
-            } else {
-                return;
-            }
-        }
-#else
         if (dComIfGd_getView() != NULL) {
             MTXInverse(dComIfGd_getView()->viewMtxNoTrans, camMtx);
         } else {
             return;
         }
-#endif
 
         if (strcmp(dComIfGp_getStartStageName(), "F_SP200") == 0 && dComIfG_play_c::getLayerNo(0) == 0) {
             moon_pos = envlight->moon_pos;
         } else {
-#if TARGET_PC
-            moon_pos = anchor_eye + envlight->moon_pos;
-#else
             moon_pos = camera->view.lookat.eye + envlight->moon_pos;
-#endif
             if (sp38) {
-#if TARGET_PC
-                moon_pos.x = 3900.0f + anchor_eye.x;
-                moon_pos.y = 8052.0f + anchor_eye.y;
-                moon_pos.z = -9072.0f + anchor_eye.z;
-#else
                 moon_pos.x = 3900.0f + camera->view.lookat.eye.x;
                 moon_pos.y = 8052.0f + camera->view.lookat.eye.y;
                 moon_pos.z = -9072.0f + camera->view.lookat.eye.z;
-#endif
             }
         }
 
-#if TARGET_PC
-        mDoLib_project(&moon_pos, &moon_proj, {0, 0, FB_WIDTH, FB_HEIGHT});
-#else
         mDoLib_project(&moon_pos, &moon_proj);
-#endif
 
         // Dusk optimization: we use vertex color rather than GX_TEVREG0 to set star color.
         // This allows us to merge all the stars into a single draw.
@@ -4193,11 +4145,7 @@ void dKyr_drawStar(Mtx drawMtx, u8** tex) {
         MTXRotRad(rotMtx, 'Z', DEG_TO_RAD(rot));
         MTXConcat(camMtx, rotMtx, camMtx);
 
-#if TARGET_PC
-        GXLoadPosMtxImm(gx_load_view, GX_PNMTX0);
-#else
         GXLoadPosMtxImm(drawMtx, GX_PNMTX0);
-#endif
         GXSetCurrentMtx(GX_PNMTX0);
 
         rot += 0.65f;
@@ -4205,23 +4153,12 @@ void dKyr_drawStar(Mtx drawMtx, u8** tex) {
             rot = 0.0f;
         }
 
-#if TARGET_PC
-        spBC = anchor_eye;
-#else
         spBC.x = camera->view.lookat.eye.x;
         spBC.y = camera->view.lookat.eye.y;
         spBC.z = camera->view.lookat.eye.z;
-#endif
 
         f32 sp34 = -1.0f;
         int sp30 = 0;
-#if TARGET_PC
-        f32 var_f30 = star_fovy / 45.0f;
-        if (var_f30 >= 1.0f) {
-            var_f30 = 1.0f;
-        }
-        var_f30 = 1.0f - var_f30;
-#else
         f32 var_f30 = 0.0f;
 
         if (dComIfGd_getView() != NULL) {
@@ -4231,7 +4168,6 @@ void dKyr_drawStar(Mtx drawMtx, u8** tex) {
             }
             var_f30 = 1.0f - var_f30;
         }
-#endif
         f32 temp_f27 = 0.28f * (1.0f - var_f30);
 
         sp98.x = 0.0f;
@@ -4330,11 +4266,7 @@ void dKyr_drawStar(Mtx drawMtx, u8** tex) {
             sp68.y = spBC.y + star_pos.y;
             sp68.z = spBC.z + star_pos.z;
 
-            #if TARGET_PC
-            mDoLib_project(&sp68, &star_proj, {0, 0, FB_WIDTH, FB_HEIGHT});
-            #else
             mDoLib_project(&sp68, &star_proj);
-            #endif
 
             moon_proj.z = 0.0f;
             star_proj.z = 0.0f;
@@ -4749,11 +4681,7 @@ void drawVrkumo(Mtx drawMtx, GXColor& color, u8** tex) {
     }
 
     if (g_env_light.daytime > 105.0f && g_env_light.daytime < 240.0f && !dComIfGp_event_runCheck() && sun_packet != NULL && sun_packet->mSunAlpha > 0.0f) {
-        #if TARGET_PC
-        mDoLib_project(&sun_packet->mPos[0], &proj, {0, 0, FB_WIDTH, FB_HEIGHT});
-        #else
         mDoLib_project(&sun_packet->mPos[0], &proj);
-        #endif
         if (proj.x > 0.0f && proj.x < FB_WIDTH && proj.y > spC4 && proj.y < (458.0f - spC4)) {
             pass = 0;
         }
@@ -5018,12 +4946,7 @@ void drawVrkumo(Mtx drawMtx, GXColor& color, u8** tex) {
                                 x = 100.0f;
                                 y = 100.0f;
                                 z = 100.0f;
-
-                                #if TARGET_PC
-                                mDoLib_project(&spF0, &proj, {0, 0, FB_WIDTH, FB_HEIGHT});
-                                #else
                                 mDoLib_project(&spF0, &proj);
-                                #endif
 
                                 if (proj.x > -x && proj.x < (FB_WIDTH + x) && proj.y > -y && proj.y < (458.0f + z)) {
                                     break;
@@ -5073,12 +4996,7 @@ void drawVrkumo(Mtx drawMtx, GXColor& color, u8** tex) {
                                     x = 100.0f;
                                     y = 100.0f;
                                     z = 100.0f;
-
-                                    #if TARGET_PC
-                                    mDoLib_project(&spE4, &proj, {0, 0, FB_WIDTH, FB_HEIGHT});
-                                    #else
                                     mDoLib_project(&spE4, &proj);
-                                    #endif
 
                                     if (proj.x > -x && proj.x < (FB_WIDTH + x) && proj.y > -y && proj.y < (458.0f + z)) {
                                         break;
@@ -6044,6 +5962,8 @@ static void dKyr_evil_draw2(Mtx drawMtx, u8** tex) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 
     if (evil_packet != NULL) {
+        IF_DUSK(GXPushDebugGroup("dKyr_evil_draw2"));
+
         j3dSys.reinitGX();
         if (dComIfGd_getView() != NULL) {
             MTXInverse(dComIfGd_getView()->viewMtxNoTrans, camMtx);
@@ -6068,7 +5988,12 @@ static void dKyr_evil_draw2(Mtx drawMtx, u8** tex) {
         TGXTexObj texobj;
         dKyr_set_btitex(&texobj, (ResTIMG*)tex[1]);
 
-        rot += 0.7f;
+#if TARGET_PC
+        if (dusk::frame_interp::get_ui_tick_pending())
+#endif
+        {
+            rot += 0.7f;
+        }
         MTXRotRad(rotMtx, 'Z', DEG_TO_RAD(rot));
         MTXConcat(camMtx, rotMtx, camMtx);
 
@@ -6118,14 +6043,15 @@ static void dKyr_evil_draw2(Mtx drawMtx, u8** tex) {
                         sp34.x = 80.0f;
                         sp34.y = 80.0f;
                         sp34.z = 80.0f;
-
-                        #if TARGET_PC
-                        mDoLib_project(&sp7C, &proj, {0, 0, FB_WIDTH, FB_HEIGHT});
-                        #else
                         mDoLib_project(&sp7C, &proj);
-                        #endif
-
-                        if (!(proj.x > -sp34.x) || !(proj.x < (FB_WIDTH + sp34.x)) ||
+#if TARGET_PC
+                        f32 cullMinX = mDoGph_gInf_c::getSafeMinXF() - sp34.x;
+                        f32 cullMaxX = mDoGph_gInf_c::getSafeMinXF() + mDoGph_gInf_c::getSafeWidthF() + sp34.x;
+#else
+                        f32 cullMinX = -sp34.x;
+                        f32 cullMaxX = FB_WIDTH + sp34.x;
+#endif
+                        if (!(proj.x > cullMinX) || !(proj.x < cullMaxX) ||
                             !(proj.y > -sp34.y) || !(proj.y < (458.0f + sp34.z)))
                         {
                             continue;
@@ -6238,6 +6164,8 @@ static void dKyr_evil_draw2(Mtx drawMtx, u8** tex) {
             }
         }
 
+        IF_DUSK(GXPopDebugGroup());
+
         GXSetClipMode(GX_CLIP_ENABLE);
         J3DShape::resetVcdVatCache();
     }
@@ -6275,6 +6203,8 @@ void dKyr_evil_draw(Mtx drawMtx, u8** tex) {
     f32 sp60 = fabsf(cM_ssin(g_Counter.mCounter0 * 215));
 
     if (evil_packet != NULL) {
+        IF_DUSK(GXPushDebugGroup("dKyr_evil_draw"));
+
         j3dSys.reinitGX();
         if (dComIfGd_getView() != NULL) {
             MTXInverse(dComIfGd_getView()->viewMtxNoTrans, camMtx);
@@ -6296,14 +6226,19 @@ void dKyr_evil_draw(Mtx drawMtx, u8** tex) {
         TGXTexObj texobj;
         dKyr_set_btitex(&texobj, (ResTIMG*)tex[0]);
 
-        rot += 1.0f;
+#if TARGET_PC
+        if (dusk::frame_interp::get_ui_tick_pending())
+#endif
+        {
+            rot += 1.0f;
+        }
         MTXRotRad(rotMtx, 'Z', DEG_TO_RAD(rot));
         MTXConcat(camMtx, rotMtx, camMtx);
 
         GXLoadPosMtxImm(drawMtx, GX_PNMTX0);
         GXSetCurrentMtx(GX_PNMTX0);
-        GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_CLR_RGBA, GX_F32, 0);
-        GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_CLR_RGBA, GX_RGBA4, 8);
+        GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+        GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_RGBA4, 8);
         GXClearVtxDesc();
         GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
         GXSetVtxDesc(GX_VA_TEX0, GX_DIRECT);
@@ -6325,6 +6260,19 @@ void dKyr_evil_draw(Mtx drawMtx, u8** tex) {
         GXSetCullMode(GX_CULL_NONE);
         GXSetClipMode(GX_CLIP_DISABLE);
         GXSetNumIndStages(0);
+
+#if TARGET_PC
+        // move color_reg0 to vtx for perf
+        GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+        GXSetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+        GXSetNumChans(1);
+        GXSetChanCtrl(GX_COLOR0A0, GX_FALSE, GX_SRC_REG, GX_SRC_VTX, 0, GX_DF_NONE, GX_AF_NONE);
+        GXSetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+        GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_C1, GX_CC_RASC, GX_CC_TEXC, GX_CC_ZERO);
+        GXSetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+        GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_TEXA, GX_CA_RASA, GX_CA_ZERO);
+        GXSetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+#endif
 
         dComIfG_Ccsp()->PrepareMass();
 
@@ -6349,13 +6297,15 @@ void dKyr_evil_draw(Mtx drawMtx, u8** tex) {
                         sp44.y = 80.0f;
                         sp44.z = 80.0f;
 
-                        #if TARGET_PC
-                        mDoLib_project(&spA4, &proj, {0, 0, FB_WIDTH, FB_HEIGHT});
-                        #else
                         mDoLib_project(&spA4, &proj);
-                        #endif
-
-                        if (!(proj.x > -sp44.x) || !(proj.x < (FB_WIDTH + sp44.x)) ||
+#if TARGET_PC
+                        f32 cullMinX = mDoGph_gInf_c::getSafeMinXF() - sp44.x;
+                        f32 cullMaxX = mDoGph_gInf_c::getSafeMinXF() + mDoGph_gInf_c::getSafeWidthF() + sp44.x;
+#else
+                        f32 cullMinX = -sp44.x;
+                        f32 cullMaxX = FB_WIDTH + sp44.x;
+#endif
+                        if (!(proj.x > cullMinX) || !(proj.x < cullMaxX) ||
                             !(proj.y > -sp44.y) || !(proj.y < (458.0f + sp44.z)))
                         {
                             continue;
@@ -6442,7 +6392,7 @@ void dKyr_evil_draw(Mtx drawMtx, u8** tex) {
                             color_reg0.b = (115.0f * sp28) + (15.0f * fabsf(sp2C - sp64));
                         }
 
-                        GXSetTevColor(GX_TEVREG0, color_reg0);
+                        IF_NOT_DUSK(GXSetTevColor(GX_TEVREG0, color_reg0));
                         GXSetTevColor(GX_TEVREG1, color_reg1);
 
                         spC8 = spA4;
@@ -6481,18 +6431,24 @@ void dKyr_evil_draw(Mtx drawMtx, u8** tex) {
 
                         GXBegin(GX_QUADS, GX_VTXFMT0, 4);
                         GXPosition3f32(pos[0].x, pos[0].y, pos[0].z);
+                        IF_DUSK(GXColor4u8(color_reg0.r, color_reg0.g, color_reg0.b, color_reg0.a));
                         GXTexCoord2s16(0, 0);
                         GXPosition3f32(pos[1].x, pos[1].y, pos[1].z);
+                        IF_DUSK(GXColor4u8(color_reg0.r, color_reg0.g, color_reg0.b, color_reg0.a));
                         GXTexCoord2s16(0xFF, 0);
                         GXPosition3f32(pos[2].x, pos[2].y, pos[2].z);
+                        IF_DUSK(GXColor4u8(color_reg0.r, color_reg0.g, color_reg0.b, color_reg0.a));
                         GXTexCoord2s16(0xFF, 0xFF);
                         GXPosition3f32(pos[3].x, pos[3].y, pos[3].z);
+                        IF_DUSK(GXColor4u8(color_reg0.r, color_reg0.g, color_reg0.b, color_reg0.a));
                         GXTexCoord2s16(0, 0xFF);
                         GXEnd();
                     }
                 }
             }
         }
+
+        IF_DUSK(GXPopDebugGroup());
 
         J3DShape::resetVcdVatCache();
         GXSetClipMode(GX_CLIP_ENABLE);

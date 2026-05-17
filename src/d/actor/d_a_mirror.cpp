@@ -13,6 +13,9 @@
 #include <gf/GFGeometry.h>
 #include <gf/GFLight.h>
 #include "m_Do/m_Do_lib.h"
+#if TARGET_PC
+#include "dusk/frame_interpolation.h"
+#endif
 
 #ifndef __MWERKS__
 #include "dusk/math.h"
@@ -27,11 +30,20 @@ static char* l_arcName = "Mirror";
 static char* l_arcName2 = "MR-Table";
 
 dMirror_packet_c::dMirror_packet_c() {
+#ifdef TARGET_PC
+    GXInitTexObj(&mTexObj, nullptr, 0, 0, static_cast<GXTexFmt>(-1), GX_MAX_TEXWRAPMODE,
+                 GX_MAX_TEXWRAPMODE, GX_FALSE);
+#endif
     reset();
 }
 
 void dMirror_packet_c::reset() {
+#if TARGET_PC
+    mbReset = true;
+    mbHadEntry = false;
+#else
     mModelCount = 0;
+#endif
 }
 
 void dMirror_packet_c::calcMinMax() {
@@ -73,11 +85,21 @@ void dMirror_packet_c::calcMinMax() {
 }
 
 int dMirror_packet_c::entryModel(J3DModel* i_model) {
+#if TARGET_PC
+    if (mbReset) {
+        mModelCount = 0;
+        mbReset = false;
+    }
+#endif
+
     if (mModelCount >= 0x40) {
         return 0;
     }
 
     mModels[mModelCount++] = i_model;
+#if TARGET_PC
+    mbHadEntry = true;
+#endif
     return 1;
 }
 
@@ -606,6 +628,12 @@ int daMirror_c::draw() {
         mDoExt_modelUpdateDL(mpModel);
     }
 
+#if TARGET_PC
+    if (mPacket.mbReset && !mPacket.mbHadEntry) {
+        mPacket.mModelCount = 0;
+    }
+    mPacket.mbHadEntry = true;
+#endif
     dComIfGd_getOpaListBG()->entryImm(&mPacket, 0);
     return 1;
 }

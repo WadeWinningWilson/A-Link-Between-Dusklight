@@ -2,6 +2,7 @@
 #include "imgui.h"
 #include "aurora/gfx.h"
 
+#include "ImGuiConfig.hpp"
 #include "dusk/hotkeys.h"
 #include "dusk/settings.h"
 #include "ImGuiConsole.hpp"
@@ -11,15 +12,55 @@
 #include "d/actor/d_a_alink.h"
 #include "d/actor/d_a_horse.h"
 #include "d/d_com_inf_game.h"
+#include "dusk/data.hpp"
 #include "dusk/dusk.h"
 #include "dusk/main.h"
 #include "m_Do/m_Do_main.h"
+
+#include <aurora/lib/internal.hpp>
+#include <SDL3/SDL_misc.h>
+
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+
+namespace aurora::gx {
+extern bool enableLodBias;
+}
 
 namespace dusk {
     ImGuiMenuTools::ImGuiMenuTools() {}
 
     void ImGuiMenuTools::draw() {
+        if (ImGui::BeginMenu("Tools")) {
+            if (!dusk::IsGameLaunched) {
+                ImGui::BeginDisabled();
+            }
+
+            ImGui::BeginDisabled(getSettings().game.speedrunMode);
+
+            ImGui::MenuItem("Save Editor", hotkeys::SHOW_SAVE_EDITOR, &m_showSaveEditor);
+            ImGui::MenuItem("State Share", hotkeys::SHOW_STATE_SHARE, &m_showStateShare);
+
+            ImGui::EndDisabled();
+
+            if (!dusk::IsGameLaunched) {
+                ImGui::EndDisabled();
+            }
+
+#if DUSK_CAN_OPEN_DATA_FOLDER
+            ImGui::Separator();
+            if (ImGui::MenuItem("Open Data Folder")) {
+                data::open_data_path();
+            }
+#endif
+
+            ImGui::EndMenu();
+        }
+
         if (ImGui::BeginMenu("Debug")) {
+            ImGui::BeginDisabled(getSettings().game.speedrunMode);
+
             bool developmentMode = mDoMain::developmentMode == 1;
             if (ImGui::Checkbox("Development Mode", &developmentMode)) {
                 mDoMain::developmentMode = developmentMode ? 1 : -1;
@@ -28,6 +69,16 @@ namespace dusk {
             ImGui::Separator();
 
             auto& collisionView = getTransientSettings().collisionView;
+            if (ImGui::BeginMenu("Graphics Settings")) {
+                bool disableWaterRefraction = getSettings().game.disableWaterRefraction;
+                if (ImGui::Checkbox("Disable Water Refraction", &disableWaterRefraction)) {
+                    getSettings().game.disableWaterRefraction.setValue(disableWaterRefraction);
+                    config::Save();
+                }
+                ImGui::Checkbox("Enable LOD Bias", &aurora::gx::enableLodBias);
+                ImGui::EndMenu();
+            }
+
             if (ImGui::BeginMenu("Collision View")) {
                 ImGui::Checkbox("Enable Terrain view", &collisionView.enableTerrainView);
                 ImGui::Checkbox("Enable wireframe view", &collisionView.enableWireframe);
@@ -48,24 +99,29 @@ namespace dusk {
             ImGui::MenuItem("Process Management", hotkeys::SHOW_PROCESS_MANAGEMENT, &m_showProcessManagement);
             ImGui::MenuItem("Debug Overlay", hotkeys::SHOW_DEBUG_OVERLAY, &m_showDebugOverlay);
             ImGui::MenuItem("Heap Viewer", hotkeys::SHOW_HEAP_VIEWER, &m_showHeapOverlay);
-            ImGui::MenuItem("Stub Log", hotkeys::SHOW_STUB_LOG, &m_showStubLog);
-            ImGui::MenuItem("Debug Camera", hotkeys::SHOW_CAMERA_DEBUG, &m_showCameraOverlay);
-            ImGui::MenuItem("Map Loader", nullptr, &m_showMapLoader);
-            ImGui::MenuItem("Player Info", nullptr, &m_showPlayerInfo);
-            ImGui::MenuItem("Save Editor", nullptr, &m_showSaveEditor);
+            ImGui::MenuItem("Player Info", hotkeys::SHOW_PLAYER_INFO, &m_showPlayerInfo);
+            ImGui::MenuItem("Debug Camera", hotkeys::SHOW_DEBUG_CAMERA, &m_showCameraOverlay);
             ImGui::MenuItem("Audio Debug", hotkeys::SHOW_AUDIO_DEBUG, &m_showAudioDebug);
+            ImGui::MenuItem("Bloom", nullptr, &m_showBloomWindow);
+            ImGui::MenuItem("Stub Log", nullptr, &m_showStubLog);
+            ImGui::MenuItem("Actor Spawner", nullptr, &m_showActorSpawner);
 
             if (!dusk::IsGameLaunched) {
                 ImGui::EndDisabled();
             }
 
             ImGui::MenuItem("OSReport Force", nullptr, &OSReportReallyForceEnable);
+
+            ImGui::EndDisabled();
+
             ImGui::EndMenu();
         }
     }
 
     void ImGuiMenuTools::ShowDebugOverlay() {
-        if (!ImGuiConsole::CheckMenuViewToggle(ImGuiKey_F3, m_showDebugOverlay)) {
+        if (!getSettings().backend.enableAdvancedSettings ||
+            !ImGuiConsole::CheckMenuViewToggle(ImGuiKey_F3, m_showDebugOverlay))
+        {
             return;
         }
 
@@ -84,7 +140,9 @@ namespace dusk {
         ImGui::SetNextWindowBgAlpha(0.65f);
         if (ImGui::Begin("Debug Overlay", nullptr, windowFlags)) {
             ImGuiStringViewText(fmt::format(FMT_STRING("FPS: {:.2f}\n"), io.Framerate));
-            ImGuiStringViewText(fmt::format(FMT_STRING("Frame usage: {:.1f}%\n"), frameUsagePct));
+            if (frameUsagePct > 0.f) {
+                ImGuiStringViewText(fmt::format(FMT_STRING("Frame usage: {:.1f}%\n"), frameUsagePct));
+            }
 
             ImGui::Separator();
 
@@ -127,7 +185,9 @@ namespace dusk {
     }
 
     void ImGuiMenuTools::ShowPlayerInfo() {
-        if (!m_showPlayerInfo) {
+        if (!getSettings().backend.enableAdvancedSettings ||
+            !ImGuiConsole::CheckMenuViewToggle(ImGuiKey_F5, m_showPlayerInfo))
+        {
             return;
         }
 
@@ -151,7 +211,7 @@ namespace dusk {
             ImGui::Text("Link");
             ImGuiStringViewText(
                 player != nullptr
-                ? fmt::format("Position: {: .2f}, {: .2f}, {: .2f}\n", player->current.pos.x, player->current.pos.y, player->current.pos.z)
+                ? fmt::format("Position: {: .4f}, {: .4f}, {: .4f}\n", player->current.pos.x, player->current.pos.y, player->current.pos.z)
                 : "Position: ?, ?, ?\n"
             );
 
@@ -163,7 +223,7 @@ namespace dusk {
 
             ImGuiStringViewText(
                 player != nullptr
-                ? fmt::format("Speed: {0}\n", player->speedF)
+                ? fmt::format("Speed: {: .4f}\n", player->speedF)
                 : "Speed: ?\n"
             );
 
@@ -171,7 +231,7 @@ namespace dusk {
             ImGui::Text("Epona");
             ImGuiStringViewText(
                 horse != nullptr
-                ? fmt::format("Position: {: .2f}, {: .2f}, {: .2f}\n", horse->current.pos.x, horse->current.pos.y, horse->current.pos.z)
+                ? fmt::format("Position: {: .4f}, {: .4f}, {: .4f}\n", horse->current.pos.x, horse->current.pos.y, horse->current.pos.z)
                 : "Position: ?, ?, ?\n"
             );
 
@@ -183,7 +243,7 @@ namespace dusk {
 
             ImGuiStringViewText(
                 horse != nullptr
-                ? fmt::format("Speed: {0}\n", horse->speedF)
+                ? fmt::format("Speed: {: .4f}\n", horse->speedF)
                 : "Speed: ?\n"
             );
 

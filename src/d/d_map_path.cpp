@@ -15,16 +15,47 @@
 #include <cstring>
 
 #ifdef TARGET_PC
+#include <span>
+#include <numbers>
+#include <array>
+
 constexpr u16 kMapResolutionMultiplier = 4;
-// Line widths are relative to the framebuffer size. Since we're rendering to a separate
-// framebuffer, we have to scale them accordingly. The original game used about half of the
-// EFB for the map rendering, so this is a reasonable approximation.
-constexpr u8 kMapLineWidthMultiplier = 2;
+constexpr u16 kMapImageSide = 16 * kMapResolutionMultiplier;
+constexpr u32 kMapImageTotalPixels = kMapImageSide * kMapImageSide;
+
+typedef std::function<u8(size_t, size_t)> PaintI8Fn;
+
+void paint_i8(std::span<u8> dst, size_t width, PaintI8Fn paint) {
+    const auto blocksAcross = width >> 3;
+
+    for (size_t i = 0; i < dst.size(); i++) {
+        // 8x4 block swizzling for I8
+        const auto blockIdx = i >> 5;
+        const auto localIdx = i & 31;
+
+        const auto blockY = blockIdx / blocksAcross;
+        const auto blockX = blockIdx % blocksAcross;
+
+        const auto localY = localIdx >> 3;
+        const auto localX = localIdx & 7;
+
+        const auto x = (blockX << 3) + localX;
+        const auto y = (blockY << 2) + localY;
+
+        dst[i] = paint(x, y);
+    }
+}
 #endif
 
 void dMpath_n::dTexObjAggregate_c::create() {
     static int const data[7] = {
-        79, 80, 77, 78, 76, 81, 82,
+        79, // 0: im_map_icon_square_4i.bti
+        80, // 1: im_map_icon_tresurebox_4i.bti
+        77, // 2: im_map_icon_enter_4i.bti
+        78, // 3: im_map_icon_nijumaru_4i.bti
+        76, // 4: im_map_icon_circle_4i.bti
+        81, // 5: im_map_icon_try_force_4i.bti
+        82, // 6: map_icon_circle16x16_4i.bti
     };
 
     for (int lp1 = 0; lp1 < 7; lp1++) {
@@ -36,6 +67,104 @@ void dMpath_n::dTexObjAggregate_c::create() {
         JUT_ASSERT(74, image->magFilter == GX_NEAR);
         mDoLib_setResTimgObj(image, mp_texObj[lp1], 0, NULL);
     }
+
+#if TARGET_PC
+    static bool hqTexsDrawn = false;
+
+    static u8 hqCircleData[kMapImageTotalPixels];
+    static u8 hqCircleAltData[kMapImageTotalPixels];
+    static u8 hqNijumaruData[kMapImageTotalPixels];
+    static u8 hqEnterData[kMapImageTotalPixels];
+    static u8 hqTryForceData[kMapImageTotalPixels];
+
+    if (!hqTexsDrawn) {
+        constexpr auto center = kMapImageSide / 2.0f;
+        constexpr auto radiusSq = center * center;
+
+        // 6: map_icon_circle16x16_4i.bti - simple circle
+        paint_i8(std::span{hqCircleData}, kMapImageSide, [=](auto x, auto y) {
+            const auto dx = (x + 0.5f) - center;
+            const auto dy = (y + 0.5f) - center;
+            return (dx * dx + dy * dy < radiusSq) ? 0x11 : 0;
+        });
+
+        // 4: im_map_icon_circle_4i.bti - outlined circle
+        paint_i8(std::span{hqCircleAltData}, kMapImageSide, [=](auto x, auto y) {
+            constexpr auto innerRadius = kMapImageSide * 3.0f / 8.0f;
+            constexpr auto innerRadiusSq = innerRadius * innerRadius;
+
+            const auto dx = (x + 0.5f) - center;
+            const auto dy = (y + 0.5f) - center;
+            const auto dSq = dx * dx + dy * dy;
+
+            return dSq < radiusSq ? (dSq < innerRadiusSq ? 0x22 : 0x11) : 0;
+        });
+
+        // 3: im_map_icon_nijumaru_4i.bti - concentric rings
+        paint_i8(std::span{hqNijumaruData}, kMapImageSide, [=](auto x, auto y) {
+            constexpr u8 nijumaruRings[] = {0x11, 0x22, 0x11, 0x11, 0x22, 0x22};
+
+            const auto dx = (x + 0.5f) - center;
+            const auto dy = (y + 0.5f) - center;
+            const auto dSq = dx * dx + dy * dy;
+
+            if (dSq < radiusSq) {
+                const auto ringIndex =
+                    static_cast<size_t>(std::trunc(std::sqrt(dSq) / kMapImageSide * 12));
+                return nijumaruRings[ringIndex];
+            }
+            return u8{0};
+        });
+
+        // 2: im_map_icon_enter_4i.bti - outlined octagram
+        paint_i8(std::span{hqEnterData}, kMapImageSide, [=](auto x, auto y) {
+            constexpr auto outlineWidth = kMapImageSide / 6.0f;
+
+            const auto adx = std::abs((x + 0.5f) - center);
+            const auto ady = std::abs((y + 0.5f) - center);
+            const auto dist =
+                std::min(adx + ady, std::max(adx, ady) * std::numbers::sqrt2_v<float>) -
+                kMapImageSide / 2.0f;
+
+            return dist > 0.0f ? 0 : (dist > -outlineWidth ? 0x22 : 0x33);
+        });
+
+        // 5: im_map_icon_try_force_4i.bti - outlined circle with triangle
+        paint_i8(std::span{hqTryForceData}, kMapImageSide, [=](auto x, auto y) {
+            constexpr auto innerRadiusNorm = 5.0f / 12.0f;
+            constexpr auto innerRadius = kMapImageSide * innerRadiusNorm;
+            constexpr auto innerRadiusSq = innerRadius * innerRadius;
+            constexpr auto triRadius = kMapImageSide * innerRadiusNorm / 2.0f;
+
+            const auto dx = (x + 0.5f) - center;
+            const auto dy = (y + 0.5f) - center;
+            const auto dSq = dx * dx + dy * dy;
+            const auto triSideDist = (std::numbers::sqrt3_v<float> * std::abs(dx) - dy) * 0.5f;
+            const auto insideTri = std::max(dy, triSideDist) < triRadius;
+
+            return insideTri ? 0x22 : (dSq < radiusSq ? (dSq < innerRadiusSq ? 0x33 : 0x22) : 0);
+        });
+
+        hqTexsDrawn = true;
+    }
+
+    constexpr auto replacements = std::to_array<std::pair<size_t, const u8*> >({
+        {2, hqEnterData},
+        {3, hqNijumaruData},
+        {4, hqCircleAltData},
+        {5, hqTryForceData},
+        {6, hqCircleData},
+    });
+
+    for (const auto& [idx, data] : replacements) {
+        JKR_DELETE(mp_texObj[idx]);
+        const auto texobj = JKR_NEW TGXTexObj();
+        GXInitTexObj(
+            texobj, data, kMapImageSide, kMapImageSide, GX_TF_I8, GX_CLAMP, GX_CLAMP, GX_FALSE);
+        GXInitTexObjLOD(texobj, GX_NEAR, GX_NEAR, 0.0f, 0.0f, 0.0f, GX_FALSE, GX_FALSE, GX_ANISO_1);
+        mp_texObj[idx] = texobj;
+    }
+#endif
 }
 
 void dMpath_n::dTexObjAggregate_c::remove() {
@@ -241,12 +370,15 @@ void dDrawPath_c::rendering(dDrawPath_c::line_class const* p_line) {
     if (isDrawType(p_line->field_0x0)) {
         int width = getLineWidth(p_line->field_0x1);
 
+        #if TARGET_PC
+        f32 height = JUTVideo::getManager()->getRenderHeight() / 448.0f;
+        if (height > 1.0f) {
+            width /= 2;
+        }
+        #endif
+
         if (width > 0 && p_line->mDataNum >= 2) {
-#ifdef TARGET_PC
-            GXSetLineWidth(width * kMapLineWidthMultiplier, GX_TO_ZERO);
-#else
-            GXSetLineWidth(width * 2, GX_TO_ZERO);
-#endif
+            GXSetLineWidth(width, GX_TO_ZERO);
             GXSetTevColor(GX_TEVREG0, *getLineColor(p_line->field_0x0 & 0x3F, p_line->field_0x1));
             GXBegin(GX_LINESTRIP, GX_VTXFMT0, p_line->mDataNum);
 
@@ -435,8 +567,12 @@ void dRenderingFDAmap_c::preRenderingMap() {
     const u16 w = mTexWidth * kMapResolutionMultiplier;
     const u16 h = mTexHeight * kMapResolutionMultiplier;
     GXCreateFrameBuffer(w, h);
-    GXSetViewport(0.0f, 0.0f, w, h, 0.0f, 1.0f);
-    GXSetScissor(0, 0, w, h);
+    // Set logical viewport dimensions
+    GXSetViewport(0.0f, 0.0f, mTexWidth, mTexHeight, 0.0f, 1.0f);
+    GXSetScissor(0, 0, mTexWidth, mTexHeight);
+    // Set render viewport dimensions
+    GXSetViewportRender(0.0f, 0.0f, w, h, 0.0f, 1.0f);
+    GXSetScissorRender(0, 0, w, h);
 #else
     GXSetViewport(0.0f, 0.0f, mTexWidth, mTexHeight, 0.0f, 1.0f);
     GXSetScissor(0, 0, mTexWidth, mTexHeight);
@@ -456,6 +592,12 @@ void dRenderingFDAmap_c::preRenderingMap() {
     GXSetClipMode(GX_CLIP_ENABLE);
     setTevSettingNonTextureDirectColor();
     f32 right = field_0x8 * 0.5f;
+#if TARGET_PC
+    if (dusk::getSettings().game.enableMirrorMode) {
+        right = field_0x8 * -0.5f;
+    }
+#endif
+
     f32 top = field_0xc * 0.5f;
     Mtx44 matrix;
     C_MTXOrtho(matrix, top, -top, -right, right, 0.0f, 10000.0f);
@@ -488,12 +630,6 @@ void dRenderingFDAmap_c::postRenderingMap() {
 
 dMpath_n::dTexObjAggregate_c dMpath_n::m_texObjAgg;
 
-/* Enabling the following definition will modify the following function to
- * make the map look worse for extra speed in the emulator, especially in large
- * areas such as hyrule field.
- */
-#define HYRULE_FIELD_SPEEDHACK
-
 void dRenderingFDAmap_c::renderingDecoration(dDrawPath_c::line_class const* p_line) {
     s32 width = getDecorationLineWidth(p_line->field_0x1);
     if (width <= 0) {
@@ -511,20 +647,39 @@ void dRenderingFDAmap_c::renderingDecoration(dDrawPath_c::line_class const* p_li
 
     BE(u16)* data_p = p_line->mpData;
     s32 data_num = p_line->mDataNum;
-#ifdef TARGET_PC
-    GXSetLineWidth(width * kMapLineWidthMultiplier, GX_TO_ZERO);
-    GXSetPointSize(width * kMapLineWidthMultiplier, GX_TO_ONE);
-#else
     GXSetLineWidth(width, GX_TO_ONE);
     GXSetPointSize(width, GX_TO_ONE);
-#endif
     GXColor lineColor = *getDecoLineColor(p_line->field_0x0 & 0x3f, p_line->field_0x1);
     GXSetTevColor(GX_TEVREG0, lineColor);
     lineColor.r = lineColor.r - 4;
     GXSetTevColor(GX_TEVREG1, lineColor);
 
+#if TARGET_PC
+    GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_C0);
+    GXSetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+    GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_KONST);
+    GXSetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+    GXBegin(GX_LINESTRIP, GX_VTXFMT0, 2 * (data_num - 1));
+    for (int i = 0; i < data_num - 1; i++) {
+        GXPosition1x16(data_p[i]);
+        GXTexCoord2f32(0, 0);
+        GXPosition1x16(data_p[i + 1]);
+        GXTexCoord2f32(0, 0);
+    }
+    GXEnd();
+
+    GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_KONST, GX_CC_TEXC, GX_CC_C1);
+    GXSetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+    GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_TEXA);
+    GXSetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+    GXBegin(GX_POINTS, GX_VTXFMT0, data_num);
     for (int i = 0; i < data_num; i++) {
-#ifndef HYRULE_FIELD_SPEEDHACK
+        GXPosition1x16(data_p[i]);
+        GXTexCoord2f32(0, 0);
+    }
+    GXEnd();
+#else
+    for (int i = 0; i < data_num; i++) {
         if (i < data_num - 1) {
             GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_C0);
             GXSetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE,
@@ -543,7 +698,6 @@ void dRenderingFDAmap_c::renderingDecoration(dDrawPath_c::line_class const* p_li
         GXSetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
         GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_TEXA);
         GXSetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
-#endif
 
         GXBegin(GX_POINTS, GX_VTXFMT0, 1);
         GXPosition1x16(data_p[0]);
@@ -551,6 +705,7 @@ void dRenderingFDAmap_c::renderingDecoration(dDrawPath_c::line_class const* p_li
         GXEnd();
         data_p++;
     }
+#endif
 
     setTevSettingNonTextureDirectColor();
     GXClearVtxDesc();

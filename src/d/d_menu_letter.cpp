@@ -17,6 +17,10 @@
 #include "d/d_msg_scrn_arrow.h"
 #include "d/d_lib.h"
 
+#ifdef TARGET_PC
+#include "dusk/achievements.h"
+#endif
+
 #if VERSION == VERSION_GCN_JPN
 #define D_MENU_LETTER_LINE_MAX 9
 #else
@@ -223,13 +227,8 @@ void dMenu_Letter_c::_draw() {
     f32 y1 = local_178.y;
     Vec local_184;
     local_184 = afStack_138.getGlobalVtx(field_0x1ec, &mtx, 3, false, 0);
-#if TARGET_PC
-    f32 dVar17 = mDoGph_gInf_c::getWidthF() / mDoGph_gInf_c::getWidth();
-    f32 dVar16 = mDoGph_gInf_c::getHeightF() / mDoGph_gInf_c::getHeight();
-#else
     f32 dVar17 = mDoGph_gInf_c::getWidthF() / FB_WIDTH;
     f32 dVar16 = mDoGph_gInf_c::getHeightF() / FB_HEIGHT;
-#endif
     f32 fVar1 = (x1 - mDoGph_gInf_c::getMinXF()) / dVar17;
     f32 fVar2 = y1 / dVar16;
     grafContext->scissor(fVar1, fVar2,
@@ -519,6 +518,10 @@ void dMenu_Letter_c::read_open_init() {
     setAButtonString(0);
     setBButtonString(0);
     mpBlackTex->setAlpha(0);
+
+    #ifdef TARGET_PC
+        dusk::AchievementSystem::get().signal("open_letter");
+    #endif
 }
 
 void dMenu_Letter_c::read_open_move() {
@@ -962,7 +965,8 @@ void dMenu_Letter_c::screenSetBase() {
     }
     if (field_0x374 > 1) {
         J2DPane* pJVar6 = mpBaseScreen->search('pi_n');
-        f32 dVar18 = field_0x1f0[1]->getBounds().i.x - field_0x1f0[0]->getBounds().i.x;
+        f32 x1 = field_0x1f0[1]->getBounds().i.x;
+        f32 dVar18 = x1 - field_0x1f0[0]->getBounds().i.x;
         f32 dVar17 = dVar18 * (field_0x374 - 1);
         f32 dVar16 = (pJVar6->getWidth() / 2) - (dVar17 / 2);
         for (int i = 0; i < 9; i++) {
