@@ -157,8 +157,8 @@ std::vector<AuroraBackend> available_backends() {
     size_t backendCount = 0;
     const AuroraBackend* raw = aurora_get_available_backends(&backendCount);
     for (size_t i = 0; i < backendCount; ++i) {
-        // Do not expose NULL or D3D11
-        if (raw[i] != BACKEND_NULL && raw[i] != BACKEND_D3D11) {
+        // Do not expose NULL
+        if (raw[i] != BACKEND_NULL) {
             backends.emplace_back(raw[i]);
         }
     }
