@@ -16,7 +16,7 @@
 ## 2. Enable Developer Mode (iOS 16+)
 
 - On your iPhone, go to **Settings > Privacy & Security > Developer Mode**
-- Toggle it on, put in your password and restart when prompted
+- Toggle it on, put in your device passcode, and restart when prompted
 
 ## 3. Install Dusklight on Your iPhone
 
@@ -38,11 +38,11 @@ When installing sideloaded iOS applications, at first you will need to manually 
 
 ## 4. Copy Files to Your iPhone
 
-Transfer the game disc (and optionally, the Dusklight app) to your iPhone so they are accessible in the Files app. A few ways to do this:
+Transfer the game disc (and optionally, the Dusklight IPA) to your iPhone so they are accessible in the Files app. A few ways to do this:
 
 - **AirDrop** - Right-click the files on your Mac and choose Share > AirDrop
 - **iCloud Drive** - Place files in iCloud Drive on your Mac and they'll sync to Files on your iPhone
 - **USB transfer** - Connect your iPhone and drag files via Finder's sidebar
 - **Cloud storage** - Upload to Google Drive, Dropbox, etc. and download on your iPhone
 
-You may now use Dusklight on iOS, iPadOS, and even tvOS!
+You may now use Dusklight on iOS and iPadOS!
