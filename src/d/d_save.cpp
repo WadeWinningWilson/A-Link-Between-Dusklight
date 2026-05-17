@@ -1213,7 +1213,7 @@ void dSv_memBit_c::onSwitch(int i_no) {
                     }
                 }
             }
-            else if (getStageID() == Kakariko_Village_Interiors) {
+            else if (getStageID() == Kakariko_Village) {
                 // Hawkeye is for sale.
                 if (i_no == 0x3E) {
                     // Remove the coming soon sign so the hawkeye can be bought.
