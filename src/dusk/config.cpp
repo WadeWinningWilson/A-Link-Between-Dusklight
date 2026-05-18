@@ -58,6 +58,8 @@ template<ConfigValue T>
 void ConfigImpl<T>::loadFromJson(ConfigVar<T>& cVar, const json& jsonValue) {
     if constexpr (std::is_enum_v<T>) {
         if (jsonValue.is_boolean()) {
+            DuskConfigLog.error("Doing default migration of CVar {} from bool, enum values may not be what is expected!", cVar.getName());
+
             using Underlying = std::underlying_type_t<T>;
             const bool b = jsonValue.get<bool>();
 
