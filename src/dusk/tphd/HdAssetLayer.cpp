@@ -22,6 +22,7 @@
 #include "AddrLib.hpp"
 #include "GtxParser.hpp"
 #include "TphdPack.hpp"
+#include "tracy/Tracy.hpp"
 
 static aurora::Module HdLog("dusk::tphd::hd");
 
@@ -62,6 +63,7 @@ std::optional<std::vector<u8>> tryDecodeYaz0(std::span<const u8> bytes) {
         std::memcmp(bytes.data(), "Yaz0", 4) != 0) {
         return std::nullopt;
     }
+    ZoneScoped;
     const auto* hdr = reinterpret_cast<const Yaz0Header*>(bytes.data());
     const u32 expandedSize = hdr->decompressedSize;
     std::vector<u8> decoded(expandedSize);
@@ -274,6 +276,7 @@ struct DeswizzleResult {
 };
 
 DeswizzleResult deswizzleAllMips(const Gx2FormatMapping& m, const GtxSurface& s) {
+    ZoneScoped;
     DeswizzleResult out{};
     const u32 maxLevels = std::min(s.mipCount, 13u);
     for (u32 level = 0; level < maxLevels; ++level) {
@@ -304,6 +307,7 @@ DeswizzleResult deswizzleAllMips(const Gx2FormatMapping& m, const GtxSurface& s)
 void registerHdSurface(const Gx2FormatMapping& m, const GtxSurface& s,
                        const void* pixelPtr, std::string_view gtxName,
                        u32 surfaceIdx) {
+    ZoneScoped;
     auto decoded = deswizzleAllMips(m, s);
 
     HdLog.info("HD reg: ptr={} fmt=0x{:02X} {}x{} mips={}/{} bytes={} gtx={}[{}]",
@@ -430,6 +434,8 @@ void registerHdTexturesForArc(std::vector<u8>& arcBytes,
                               const std::vector<ArcFileInfo>& files,
                               const TphdPack& pack,
                               std::string_view arcLabel) {
+    ZoneScoped;
+    ZoneText(arcLabel.data(), arcLabel.size());
     size_t bmdReg = 0;
     size_t btiReg = 0;
 
@@ -556,6 +562,13 @@ std::optional<std::vector<u8>*> tryLoadHdArchive(std::string_view gcPath) {
     if (!std::filesystem::exists(hdArcPath)) {
         return std::nullopt;  // no HD override — vanilla GC path
     }
+    ZoneScoped;
+#ifdef TRACY_ENABLE
+    {
+        auto fn = hdArcPath.filename().string();
+        ZoneText(fn.c_str(), fn.size());
+    }
+#endif
 
     auto hdBytesOpt = readWholeFile(hdArcPath);
     if (!hdBytesOpt) {
