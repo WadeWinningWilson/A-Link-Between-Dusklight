@@ -218,6 +218,7 @@ private:
     bool mCursorInterpPrevAngular;
     bool mCursorInterpCurrAngular;
     bool mCursorInterpInit;
+    J2DPicture* mDpadIcon;
 #endif
 };
 

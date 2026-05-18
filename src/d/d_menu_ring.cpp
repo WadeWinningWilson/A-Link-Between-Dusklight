@@ -29,6 +29,7 @@
 
 #include <cstdio>
 #if TARGET_PC
+#include "dusk/randomizer/game/verify_item_functions.h"
 #include "dusk/randomizer/game/tools.h"
 #endif
 
@@ -198,6 +199,7 @@ dMenu_Ring_c::dMenu_Ring_c(JKRExpHeap* i_heap, STControl* i_stick, CSTControl* i
     mCursorInterpPrevAngular = false;
     mCursorInterpCurrAngular = false;
     mCursorInterpInit = false;
+    mDpadIcon = JKR_NEW J2DPicture((ResTIMG*)dComIfGp_getMain2DArchive()->getResource('TIMG', "font_51.bti"));
 #endif
     for (int i = 0; i < 4; i++) {
         field_0x674[i] = 0;
@@ -549,6 +551,11 @@ dMenu_Ring_c::~dMenu_Ring_c() {
 
     JKR_DELETE(mpItemExplain);
     mpItemExplain = NULL;
+
+#if TARGET_PC
+    JKR_DELETE(mDpadIcon);
+    mDpadIcon = NULL;
+#endif
 
     dComIfGp_getRingResArchive()->removeResourceAll();
 }
@@ -1252,9 +1259,16 @@ void dMenu_Ring_c::setActiveCursor() {
             Z2GetAudioMgr()->seStart(Z2SE_SYS_ERROR, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
         }
 #if TARGET_PC
-        else if (randomizer_IsActive() && mItemSlots[mCurrentSlot] == 0x15 && mDoCPd_c::getTrigRight(PAD_1)) {
-            setNextWarashibeItem();
-            updateSlotImage(0x15);
+        else if (randomizer_IsActive() && mItemSlots[mCurrentSlot] == 0x15) {
+            // Draw d-pad icon to indicate switching between items
+            if (getWarashibeItemCount() >= 2) {
+                mDpadIcon->draw(mCenterPosX + 330.f, mCenterPosY + 194.f, 30.f, 30.f, false, false, false);
+            }
+
+            if (mDoCPd_c::getTrigRight(PAD_1)) {
+                setNextWarashibeItem();
+                updateSlotImage(0x15);
+            }
         }
 #endif
     }
