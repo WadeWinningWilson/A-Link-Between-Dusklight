@@ -61,12 +61,7 @@ void ConfigImpl<T>::loadFromJson(ConfigVar<T>& cVar, const json& jsonValue) {
             using Underlying = std::underlying_type_t<T>;
             const bool b = jsonValue.get<bool>();
 
-            Underlying raw;
-            if constexpr (std::is_same_v<T, dusk::FrameInterpMode>) {
-                raw = b ? static_cast<Underlying>(2) : static_cast<Underlying>(0);
-            } else {
-                raw = b ? static_cast<Underlying>(1) : static_cast<Underlying>(0);
-            }
+            const Underlying raw = b ? static_cast<Underlying>(1) : static_cast<Underlying>(0);
 
             cVar.setValue(sanitizeEnumValue(cVar, static_cast<T>(raw)), false);
             return;
@@ -175,6 +170,19 @@ namespace dusk::config {
     template class ConfigImpl<dusk::DiscVerificationState>;
     template class ConfigImpl<dusk::GameLanguage>;
     template class ConfigImpl<dusk::GyroMode>;
+
+    template<> void ConfigImpl<FrameInterpMode>::loadFromJson(ConfigVar<FrameInterpMode>& cVar, const json& jsonValue) {
+        if (jsonValue.is_boolean()) {
+            const bool b = jsonValue.get<bool>();
+
+            const FrameInterpMode mode = b ? FrameInterpMode::Unlimited : FrameInterpMode::Off;
+
+            cVar.setValue(sanitizeEnumValue(cVar, mode), false);
+            return;
+        }
+
+        cVar.setValue(sanitizeEnumValue(cVar, jsonValue.get<FrameInterpMode>()), false);
+    }
     template class ConfigImpl<dusk::FrameInterpMode>;
 }
 
