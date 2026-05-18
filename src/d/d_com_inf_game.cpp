@@ -3316,6 +3316,20 @@ void dComIfGs_setSelectEquipShield(u8 i_itemNo) {
     g_dComIfG_gameInfo.info.getPlayer().getPlayerStatusA().setSelectEquip(COLLECT_SHIELD, i_itemNo);
 }
 
+#if TARGET_PC
+u8 dComIfGs_getKeyNum(int i_stageNo) {
+    // If we're on the current stage for this key, take the current stage info
+    if (dComIfGp_getStageStagInfo()) {
+        if (i_stageNo == dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo())) {
+            return dComIfGs_getKeyNum();
+        }
+    }
+
+    // Otherwise take info from the save
+    return g_dComIfG_gameInfo.info.getSavedata().getSave(i_stageNo).getBit().getKeyNum();
+}
+#endif
+
 void dComIfGs_setKeyNum(int i_stageNo, u8 i_keyNum) {
     if (dComIfGp_getStageStagInfo()) {
         if (i_stageNo == dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo())) {
