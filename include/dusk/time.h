@@ -19,6 +19,9 @@
 #endif
 #ifdef __APPLE__
 #include <mach/mach_time.h>
+#if defined(__x86_64__) || defined(__i386__)
+#include <immintrin.h>
+#endif
 #endif
 
 class Limiter {
