@@ -2818,8 +2818,10 @@ int daAlink_c::procCoGetItem() {
                     } else if (mProcVar2.field_0x300c == 0x23 && checkStageName("D_MN11")) {
                         field_0x32cc = 0x5C0;
                     } else if (mProcVar2.field_0x300c == 0xE0) {
-                        if (dComIfGs_getPohSpiritNum() == 20) {
+                        // Don't show special text in rando
+                        if (dComIfGs_getPohSpiritNum() == 20 IF_DUSK(&& !randomizer_IsActive())) {
                             field_0x32cc = 0x4CF;
+                            // Rando gives poe soul after the text, so it'll never hit this
                         } else if (dComIfGs_getPohSpiritNum() == 60) {
                             field_0x32cc = 0x4D0;
                         } else {
