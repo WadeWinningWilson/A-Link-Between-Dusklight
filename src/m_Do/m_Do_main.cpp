@@ -28,6 +28,7 @@
 #include "d/d_s_logo.h"
 #include "d/d_s_menu.h"
 #include "d/d_s_play.h"
+#include "dusk/time.h"
 #include "f_ap/f_ap_game.h"
 #include "f_op/f_op_msg.h"
 #include "m_Do/m_Do_MemCard.h"
@@ -71,6 +72,7 @@
 #include <aurora/dvd.h>
 #include <dolphin/dvd.h>
 
+#include "SDL3/SDL_init.h"
 #include "SDL3/SDL_filesystem.h"
 #include "SDL3/SDL_iostream.h"
 #include "SDL3/SDL_misc.h"
@@ -79,6 +81,7 @@
 #include "dusk/audio/DuskAudioSystem.h"
 #include "dusk/audio/DuskDsp.hpp"
 #include "dusk/config.hpp"
+#include "dusk/speedrun.h"
 #include "dusk/settings.h"
 #include "dusk/io.hpp"
 #include "dusk/version.hpp"
@@ -118,6 +121,7 @@ bool dusk::IsShuttingDown = false;
 bool dusk::IsGameLaunched = false;
 bool dusk::RestartRequested = false;
 std::filesystem::path dusk::ConfigPath;
+std::filesystem::path dusk::CachePath;
 #endif
 
 void dusk::RequestRestart() noexcept {
@@ -276,8 +280,9 @@ void main01(void) {
         const auto pacing = dusk::game_clock::advance_main_loop();
         if (pacing.is_interpolating) {
             if (pacing.sim_ticks_to_run > 0) {
-                dusk::frame_interp::begin_frame(true, true, 0.0f);
+                dusk::frame_interp::begin_frame(dusk::getSettings().game.enableFrameInterpolation, true, 0.0f);
                 dusk::frame_interp::set_ui_tick_pending(true);
+
                 for (int sim_tick = 0; sim_tick < pacing.sim_ticks_to_run; ++sim_tick) {
                     dusk::frame_interp::begin_sim_tick();
                     mDoCPd_c::read();
@@ -288,7 +293,7 @@ void main01(void) {
                 }
             }
 
-            dusk::frame_interp::begin_frame(true, false,
+            dusk::frame_interp::begin_frame(dusk::getSettings().game.enableFrameInterpolation, false,
                                             dusk::game_clock::sample_interpolation_step());
             dusk::frame_interp::interpolate();
             dusk::frame_interp::begin_presentation_camera();
@@ -298,7 +303,7 @@ void main01(void) {
             dusk::frame_interp::end_presentation_camera();
             dusk::frame_interp::set_ui_tick_pending(false);
         } else {
-            dusk::frame_interp::begin_frame(false, true, 0.0f);
+            dusk::frame_interp::begin_frame(dusk::FrameInterpMode::Off, true, 0.0f);
             dusk::frame_interp::set_ui_tick_pending(true);
 
             // Game Inputs
@@ -312,7 +317,25 @@ void main01(void) {
             mDoAud_Execute();
         }
 
+        static Limiter main_loop_limiter;
+        static double last_fps_setting = 0.0;
+        static Limiter::duration_t target_ns = 0;
+
+        if (dusk::getSettings().game.enableFrameInterpolation.getValue() == dusk::FrameInterpMode::Capped && !dusk::getTransientSettings().skipFrameRateLimit) {
+            double current_fps = dusk::getSettings().video.maxFrameRate.getValue();
+            if (current_fps != last_fps_setting) {
+                last_fps_setting = current_fps;
+                target_ns = static_cast<Limiter::duration_t>(1'000'000'000.0 / current_fps);
+            }
+
+            Limiter::duration_t sleepTime = main_loop_limiter.Sleep(target_ns);
+            dusk::frameUsagePct = 100.0f * (1.0f - static_cast<float>(sleepTime) / static_cast<float>(target_ns));
+        } else {
+            main_loop_limiter.Reset();
+        }
+
         aurora_end_frame();
+
 
         FrameMark;
 
@@ -461,6 +484,11 @@ static std::string asset_path(const char* assetName) {
     return std::string("res/") + assetName;
 }
 
+static void log_build_info() {
+    DuskLog.info("Build: {} (rev {}, built {}, type {})", DUSK_WC_DESCRIBE, DUSK_WC_REVISION, DUSK_WC_DATE, DUSK_BUILD_TYPE);
+    DuskLog.info("Platform: {}", DUSK_PLATFORM_NAME);
+}
+
 // =========================================================================
 // PC ENTRY POINT
 // =========================================================================
@@ -485,7 +513,7 @@ int game_main(int argc, char* argv[]) {
             ("h,help", "Print usage")
             ("console", "Show the Windows console window for logs", cxxopts::value<bool>()->default_value("false")->implicit_value("true"))
             ("dvd", "Path to DVD image file", cxxopts::value<std::string>())
-            ("backend", "Graphics API backend to use (auto, d3d12, metal, vulkan, null)", cxxopts::value<std::string>())
+            ("backend", "Graphics API backend to use (auto, d3d12, d3d11, metal, vulkan, null)", cxxopts::value<std::string>())
             ("cvar", "Override configuration variables without modifying config", cxxopts::value<std::vector<std::string>>());
 
         arg_options.parse_positional({"dvd"});
@@ -507,10 +535,17 @@ int game_main(int argc, char* argv[]) {
 
     const auto startupLogLevel =
         static_cast<AuroraLogLevel>(parsed_arg_options["log-level"].as<uint8_t>());
-    dusk::ConfigPath = dusk::data::initialize_data();
-    dusk::InitializeFileLogging(dusk::ConfigPath, startupLogLevel);
+    const auto dataPaths = dusk::data::initialize_data();
+    dusk::ConfigPath = dataPaths.userPath;
+    dusk::CachePath = dataPaths.cachePath;
+    dusk::InitializeFileLogging(dusk::CachePath, startupLogLevel);
+
+    log_build_info();
 
     dusk::config::LoadFromUserPreferences();
+    if (dusk::getSettings().game.speedrunMode) {
+        dusk::resetForSpeedrunMode();
+    }
     ApplyCVarOverrides(parsed_arg_options["cvar"]);
     dusk::crash_reporting::initialize();
     // TODO: How to handle this?
@@ -524,11 +559,16 @@ int game_main(int argc, char* argv[]) {
         }
     }
 
+    // Set SDL metadata for audio mixers and macOS "About" menu
+    SDL_SetAppMetadata("Dusklight", DUSK_VERSION_STRING, "dev.twilitrealm.dusk");
+
     {
-        const auto configPathString = dusk::ConfigPath.u8string();
+        const auto userPathString = dusk::ConfigPath.u8string();
+        const auto cachePathString = dusk::CachePath.u8string();
         AuroraConfig config{};
         config.appName = dusk::AppName;
-        config.configPath = reinterpret_cast<const char*>(configPathString.c_str());
+        config.userPath = reinterpret_cast<const char*>(userPathString.c_str());
+        config.cachePath = reinterpret_cast<const char*>(cachePathString.c_str());
         config.vsync = dusk::getSettings().video.enableVsync;
         config.startFullscreen = dusk::getSettings().video.enableFullscreen;
         config.windowPosX = -1;
@@ -543,13 +583,15 @@ int game_main(int argc, char* argv[]) {
         config.allowJoystickBackgroundEvents = dusk::getSettings().game.allowBackgroundInput;
         config.pauseOnFocusLost = dusk::getSettings().game.pauseOnFocusLost;
         config.imGuiInitCallback = &aurora_imgui_init_callback;
-        config.allowTextureReplacements = true;
+        config.allowTextureReplacements = dusk::getSettings().game.enableTextureReplacements;
         config.allowTextureDumps = false;
         auroraInfo = aurora_initialize(argc, argv, &config);
     }
 
 #ifdef DUSK_DISCORD
-    dusk::discord::initialize();
+    if (dusk::getSettings().game.enableDiscordPresence) {
+        dusk::discord::initialize();
+    }
 #endif
 
     VISetWindowTitle(
@@ -562,8 +604,17 @@ int game_main(int argc, char* argv[]) {
         AuroraSetViewportPolicy(AURORA_VIEWPORT_STRETCH);
     }
     VISetFrameBufferScale(dusk::getSettings().game.internalResolutionScale.getValue());
+    switch (dusk::getSettings().game.resampler.getValue()) {
+    case dusk::Resampler::Area:
+        aurora_set_resampler(SAMPLER_AREA);
+        break;
+    case dusk::Resampler::Bilinear:
+    default:
+        aurora_set_resampler(SAMPLER_BILINEAR);
+        break;
+    }
 
-    dusk::audio::SetMasterVolume(dusk::getSettings().audio.masterVolume / 100.0f);
+    dusk::audio::SetMasterVolume(dusk::audio::MasterVolumeToLinear(dusk::getSettings().audio.masterVolume / 100.0f));
     dusk::audio::SetEnableReverb(dusk::getSettings().audio.enableReverb);
     dusk::audio::EnableHrtf = dusk::getSettings().audio.enableHrtf;
 

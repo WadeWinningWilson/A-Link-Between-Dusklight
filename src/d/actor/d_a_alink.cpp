@@ -51,10 +51,13 @@
 #include "d/actor/d_a_ni.h"
 #include "d/d_s_play.h"
 
+#if TARGET_PC
+#include "dusk/action_bindings.h"
 #include "dusk/frame_interpolation.h"
 #include "dusk/settings.h"
 #include "res/Object/Alink.h"
 #include <cstring>
+#endif
 
 static int daAlink_Create(fopAc_ac_c* i_this);
 static int daAlink_Delete(daAlink_c* i_this);
@@ -5987,7 +5990,7 @@ void daAlink_c::setItemMatrix(int param_0) {
 
         mDoMtx_stack_c::XrotS(-0x8000);
 #ifdef TARGET_PC
-        if (dusk::getSettings().game.enableFrameInterpolation) {
+        if (dusk::frame_interp::is_enabled()) {
             Mtx boot_mtx;
             mDoMtx_concat(mpLinkModel->getAnmMtx(0x18), mDoMtx_stack_c::get(), boot_mtx);
             mpLinkBootModels[1]->setAnmMtx(1, boot_mtx);
@@ -7559,12 +7562,7 @@ void daAlink_c::setBlendMoveAnime(f32 i_morf) {
     f32 sp2C;
     f32 sp28 = mpHIO->mMove.m.mFootPositionRatio;
     BOOL sp24 = checkEventRun();
-    BOOL sp20 = checkBootsMoveAnime(1);
-#if TARGET_PC
-    if (dusk::getSettings().game.enableFastIronBoots) {
-        sp20 = FALSE;
-    }
-#endif
+    BOOL sp20 = checkBootsMoveAnime(1) IF_DUSK(&& !dusk::getSettings().game.enableFastIronBoots);
 
     f32 var_f29;
 
@@ -8077,7 +8075,7 @@ void daAlink_c::setBlendAtnBackMoveAnime(f32 i_morf) {
     daAlink_ANM var_r27;
     daAlink_ANM var_r29;
 
-    if (checkBootsMoveAnime(1)) {
+    if (checkBootsMoveAnime(1) IF_DUSK(&& !dusk::getSettings().game.enableFastIronBoots)) {
         mMaxSpeed = mpHIO->mAtnMove.m.mMaxBackwardsSpeed;
         var_f27 = mpHIO->mAtnMove.m.mMinBackWalkFrame;
         var_f31 = mpHIO->mAtnMove.m.mBackWalkChangeRate;
@@ -9363,6 +9361,12 @@ BOOL daAlink_c::spActionTrigger() {
 }
 
 BOOL daAlink_c::midnaTalkTrigger() const {
+#if TARGET_PC
+    // If we have a custom bind for Midna, check that instead
+    if (dusk::isActionBound(dusk::ActionBinds::CALL_MIDNA, 0)) {
+        return dusk::getActionBindTrig(dusk::ActionBinds::CALL_MIDNA, 0);
+    }
+#endif
     return mItemTrigger & BTN_Z;
 }
 
@@ -19763,7 +19767,7 @@ int daAlink_c::draw() {
                 dComIfGd_getOpaListDark()->entryImm(mpHookChain, 0);
 
 #if TARGET_PC
-                if (dusk::getSettings().game.enableFrameInterpolation &&
+                if (dusk::frame_interp::is_enabled() &&
                     mEquipItem == dItemNo_IRONBALL_e &&
                     mIronBallChainPos != NULL && mIronBallChainAngle != NULL)
                 {

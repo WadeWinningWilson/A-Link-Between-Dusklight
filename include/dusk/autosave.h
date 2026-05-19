@@ -5,6 +5,7 @@
 
 #include <m_Do/m_Do_MemCardRWmng.h>
 #include <m_Do/m_Do_MemCard.h>
+#include <d/actor/d_a_alink.h>
 
 void noAutoSave();
 void triggerAutoSave();
@@ -13,5 +14,6 @@ void enterAutoSave();
 void autoSaving();
 void waitingForWrite();
 void endAutoSave();
+void toggleAutoSave(bool enabled);
 
 #endif

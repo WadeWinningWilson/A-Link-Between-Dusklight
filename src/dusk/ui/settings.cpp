@@ -3,18 +3,22 @@
 #include "aurora/gfx.h"
 #include "bool_button.hpp"
 #include "controller_config.hpp"
+#include "dusk/app_info.hpp"
 #include "dusk/audio/DuskAudioSystem.h"
 #include "dusk/audio/DuskDsp.hpp"
 #include "dusk/config.hpp"
+#include "dusk/hotkeys.h"
 #include "dusk/data.hpp"
 #include "dusk/file_select.hpp"
 #include "dusk/imgui/ImGuiEngine.hpp"
 #include "dusk/io.hpp"
 #include "dusk/livesplit.h"
 #include "dusk/main.h"
+#include "dusk/discord_presence.hpp"
 #include "graphics_tuner.hpp"
 #include "m_Do/m_Do_main.h"
 #include "menu_bar.hpp"
+#include "modal.hpp"
 #include "number_button.hpp"
 #include "menu_bar.hpp"
 #include "pane.hpp"
@@ -23,6 +27,7 @@
 
 #include <aurora/lib/window.hpp>
 #include <SDL3/SDL_filesystem.h>
+#include <fmt/format.h>
 
 #if DUSK_ENABLE_SENTRY_NATIVE
 #include "dusk/crash_reporting.h"
@@ -52,6 +57,12 @@ constexpr std::array kFpsOverlayCornerNames = {
     "Top Right",
     "Bottom Left",
     "Bottom Right",
+};
+
+constexpr std::array kInterpolationModes = {
+    "Off",
+    "Capped",
+    "Unlimited",
 };
 
 constexpr std::array kGyroInputModeLabels = {
@@ -152,8 +163,8 @@ std::vector<AuroraBackend> available_backends() {
     size_t backendCount = 0;
     const AuroraBackend* raw = aurora_get_available_backends(&backendCount);
     for (size_t i = 0; i < backendCount; ++i) {
-        // Do not expose NULL or D3D11
-        if (raw[i] != BACKEND_NULL && raw[i] != BACKEND_D3D11) {
+        // Do not expose NULL
+        if (raw[i] != BACKEND_NULL) {
             backends.emplace_back(raw[i]);
         }
     }
@@ -182,6 +193,7 @@ void reset_for_speedrun_mode() {
 
     getSettings().game.infiniteHearts.setSpeedrunValue(false);
     getSettings().game.infiniteArrows.setSpeedrunValue(false);
+    getSettings().game.infiniteSeeds.setSpeedrunValue(false);
     getSettings().game.infiniteBombs.setSpeedrunValue(false);
     getSettings().game.infiniteOil.setSpeedrunValue(false);
     getSettings().game.infiniteOxygen.setSpeedrunValue(false);
@@ -195,6 +207,7 @@ void reset_for_speedrun_mode() {
     getSettings().game.fastRoll.setSpeedrunValue(false);
     getSettings().game.fastSpinner.setSpeedrunValue(false);
     getSettings().game.freeMagicArmor.setSpeedrunValue(false);
+    getSettings().game.invincibleEnemies.setSpeedrunValue(false);
 
     getSettings().game.pauseOnFocusLost.setSpeedrunValue(false);
     aurora_set_pause_on_focus_lost(false);
@@ -293,13 +306,49 @@ private:
     Rml::String mCurrentRml;
 };
 
+void show_data_folder_error_modal(std::string_view message) {
+    auto dismiss = [](Modal& modal) {
+        mDoAud_seStartMenu(kSoundWindowClose);
+        modal.pop();
+    };
+    push_document(std::make_unique<Modal>(Modal::Props{
+        .title = "Data Folder Not Changed",
+        .bodyRml = escape(message),
+        .actions =
+            {
+                ModalAction{
+                    .label = "OK",
+                    .onPressed = dismiss,
+                },
+            },
+        .onDismiss = dismiss,
+        .icon = "warning",
+    }));
+    if (auto* doc = top_document()) {
+        doc->focus();
+    }
+}
+
 void data_folder_dialog_callback(void*, const char* path, const char* error) {
-    if (error != nullptr || path == nullptr) {
+    if (error != nullptr) {
+        show_data_folder_error_modal(error);
         return;
     }
-    if (data::set_custom_data_path(path)) {
-        mDoAud_seStartMenu(kSoundItemChange);
+    if (path == nullptr) {
+        return;
     }
+
+    std::string dataPathError;
+    if (data::set_custom_data_path(path, &dataPathError)) {
+        mDoAud_seStartMenu(kSoundItemChange);
+        return;
+    }
+
+    if (dataPathError.empty()) {
+        dataPathError =
+            fmt::format("{} could not use the selected folder as its data folder.", AppName);
+    }
+    show_data_folder_error_modal(dataPathError);
 }
 
 const Rml::String kInternalResolutionHelpText =
@@ -308,13 +357,15 @@ const Rml::String kInternalResolutionHelpText =
 const Rml::String kShadowResolutionHelpText =
     "Configure the shadow-map resolution. Higher values improve shadow quality but increase GPU "
     "and memory usage.";
+const Rml::String kResamplerHelpText =
+    "Configure the sampling method used when scaling the internal resolution for final presentation.";
 const Rml::String kBloomHelpText =
     "Configure the post-processing bloom effect. Classic uses the original bloom pass; Dusklight uses "
     "a higher-quality bloom pass.";
 const Rml::String kBloomBrightnessHelpText =
     "Configure bloom intensity. Higher values make bright areas glow more strongly.";
 const Rml::String kUnlockFramerateHelpText =
-    "Uses inter-frame interpolation to enable higher frame rates.<br/><br/>May introduce minor "
+    "<br/>Uses inter-frame interpolation to enable higher frame rates.<br/><br/>May introduce minor "
     "visual artifacts or animation glitches.";
 
 int float_setting_percent(ConfigVar<float>& var) {
@@ -389,6 +440,31 @@ SelectButton& config_percent_select(Pane& leftPane, Pane& rightPane, ConfigVar<f
         .max = max,
         .step = step,
         .suffix = "%",
+    });
+    leftPane.register_control(button, rightPane, [helpText = std::move(helpText)](Pane& pane) {
+        pane.clear();
+        pane.add_text(helpText);
+    });
+    return button;
+}
+
+SelectButton& config_int_select(Pane& leftPane, Pane& rightPane, ConfigVar<int>& var,
+    Rml::String key, Rml::String helpText, int min, int max, int step = 5,
+    std::function<bool()> isDisabled = {}, std::string suffix = "") {
+    auto& button = leftPane.add_child<NumberButton>(NumberButton::Props{
+        .key = std::move(key),
+        .getValue = [&var] { return var; },
+        .setValue =
+            [&var, min, max](int value) {
+                var.setValue(std::clamp(value, min, max));
+                config::Save();
+            },
+        .isDisabled = std::move(isDisabled),
+        .isModified = [&var] { return var.getValue() != var.getDefaultValue(); },
+        .min = min,
+        .max = max,
+        .step = step,
+        .suffix = suffix,
     });
     leftPane.register_control(button, rightPane, [helpText = std::move(helpText)](Pane& pane) {
         pane.clear();
@@ -710,7 +786,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 pane.add_rml(
                     "<br/>Display the current framerate in a corner of the screen while playing.");
             });
-
         leftPane.add_section("Resolution");
         graphics_tuner_control(*this, leftPane, rightPane,
             getSettings().game.internalResolutionScale,
@@ -732,6 +807,15 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .valueMax = 8,
                 .defaultValue = 1,
             }, mPrelaunch);
+        graphics_tuner_control(*this, leftPane, rightPane, getSettings().game.resampler,
+            GraphicsTunerProps{
+                .option = GraphicsOption::Resampler,
+                .title = "Output Resampling",
+                .helpText = kResamplerHelpText,
+                .valueMin = static_cast<int>(Resampler::Bilinear),
+                .valueMax = static_cast<int>(Resampler::Area),
+                .defaultValue = static_cast<int>(Resampler::Bilinear),
+            }, mPrelaunch);
 
         leftPane.add_section("Post-Processing");
         graphics_tuner_control(*this, leftPane, rightPane, getSettings().game.bloomMode,
@@ -751,14 +835,49 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .valueMin = 0,
                 .valueMax = 100,
                 .defaultValue = 100,
+                .step = 10,
             }, mPrelaunch);
 
         leftPane.add_section("Rendering");
-        config_bool_select(leftPane, rightPane, getSettings().game.enableFrameInterpolation,
+        config_bool_select(leftPane, rightPane, getSettings().game.enableTextureReplacements,
             {
-                .key = "Unlock Framerate",
-                .helpText = kUnlockFramerateHelpText,
+                .key = "Use Texture Pack",
+                .helpText = "Enable installed texture replacements.",
+                .onChange = [](bool value) { aurora_set_texture_replacements_enabled(value); },
             });
+        leftPane.register_control(
+            leftPane.add_select_button({
+                .key = "Unlock Framerate",
+                .getValue =
+                    [] {
+                        return kInterpolationModes[static_cast<u8>(getSettings().game.enableFrameInterpolation.getValue())];
+                    },
+                .isModified =
+                    [] {
+                        return getSettings().game.enableFrameInterpolation.getValue() !=
+                               getSettings().game.enableFrameInterpolation.getDefaultValue();
+                    },
+            }),
+            rightPane, [](Pane& pane) {
+                for (int i = 0; i < kInterpolationModes.size(); i++) {
+                    pane.add_button({
+                            .text = kInterpolationModes[i],
+                            .isSelected =
+                                [i] {
+                                    return getSettings().game.enableFrameInterpolation.getValue() == static_cast<FrameInterpMode>(i);
+                                },
+                        })
+                        .on_pressed([i] {
+                            mDoAud_seStartMenu(kSoundItemChange);
+                            getSettings().game.enableFrameInterpolation.setValue(static_cast<FrameInterpMode>(i));
+                            config::Save();
+                        });
+                }
+                pane.add_rml(kUnlockFramerateHelpText);
+            });
+        config_int_select(leftPane, rightPane, getSettings().video.maxFrameRate,
+            "Framerate Cap", "Limit the framerate to the specified value.", 30, 540, 1,
+            [] { return getSettings().game.enableFrameInterpolation.getValue() != FrameInterpMode::Capped; });
         config_bool_select(leftPane, rightPane, getSettings().game.enableDepthOfField,
             {
                 .key = "Enable Depth of Field",
@@ -787,18 +906,18 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 });
         };
 
-        leftPane.add_section("Controller");
-        leftPane.register_control(leftPane.add_button("Configure Controller").on_pressed([this] {
+        leftPane.add_section("Inputs");
+        leftPane.register_control(leftPane.add_button("Configure Inputs").on_pressed([this] {
             push(std::make_unique<ControllerConfigWindow>(mPrelaunch));
         }),
             rightPane, [](Pane& pane) {
                 pane.clear();
-                pane.add_text("Open controller binding configuration.");
+                pane.add_text("Open input binding configuration.");
             });
         config_bool_select(leftPane, rightPane, getSettings().game.allowBackgroundInput,
             {
-                .key = "Allow Background Input",
-                .helpText = "Allow controller input even when the game window is not focused.",
+                .key = "Allow Background Inputs",
+                .helpText = "Allow inputs even when the game window is not focused.",
                 .onChange = [](bool value) { aurora_set_background_input(value); },
             });
 
@@ -815,9 +934,9 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Free Camera Sensitivity", "Adjusts twin-stick camera sensitivity.", 50, 200, 5,
             [] { return !getSettings().game.freeCamera; });
         addOption("Invert First Person X Axis", getSettings().game.invertFirstPersonXAxis,
-            "Invert horizontal movement while aiming with items or first person camera. Applies to both stick and gyro aiming.");
+            "Invert horizontal movement while aiming with items or first person camera. Applies only to the control stick (the gyroscope can be inverted in Input settings).");
         addOption("Invert First Person Y Axis", getSettings().game.invertFirstPersonYAxis,
-            "Invert vertical movement while aiming with items or first person camera. Applies to both stick and gyro aiming.");
+            "Invert vertical movement while aiming with items or first person camera. Applies only to the control stick (the gyroscope can be inverted in Input settings).");
 
         leftPane.add_section("Gyro");
         leftPane.register_control(
@@ -892,6 +1011,9 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Turbo Key", getSettings().game.enableTurboKeybind,
             "Hold Tab to increase game speed by up to 4x.",
             [] { return getSettings().game.speedrunMode; });
+        addOption("Reset Key (" + Rml::String{hotkeys::DO_RESET} + ")",
+            getSettings().game.enableResetKeybind,
+            "Press " + Rml::String{hotkeys::DO_RESET} + " to reset the game.");
     });
 
     add_tab("Audio", [this](Rml::Element* content) {
@@ -908,7 +1030,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                     [](int value) {
                         getSettings().audio.masterVolume.setValue(value);
                         config::Save();
-                        audio::SetMasterVolume(value / 100.f);
+                        audio::SetMasterVolume(audio::MasterVolumeToLinear(value / 100.0f));
                     },
                 .isModified =
                     [] {
@@ -1025,8 +1147,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Faster Tears of Light", getSettings().game.fastTears,
             "Tears of Light dropped by Shadow Insects pop out faster like the HD version.");
         addSpeedrunDisabledOption("Autosave", getSettings().game.autoSave,
-            "Autosaves the game when going to a new area, opening a dungeon door, "
-            "or getting a new item.");
+            "Autosaves the game when going to a new area or opening a dungeon door.");
         addOption("Instant Saves", getSettings().game.instantSaves,
             "Skips the delay when writing to the Memory Card.");
         addOption("Hold B for Instant Text", getSettings().game.instantText,
@@ -1105,6 +1226,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addCheat("Infinite Hearts", getSettings().game.infiniteHearts, "Keeps your health full.");
         addCheat(
             "Infinite Arrows", getSettings().game.infiniteArrows, "Keeps your arrow count full.");
+        addCheat("Infinite Seeds", getSettings().game.infiniteSeeds, "Keeps your slingshot pellets (seeds) full.");
         addCheat("Infinite Bombs", getSettings().game.infiniteBombs, "Keeps all bomb bags full.");
         addCheat("Infinite Oil", getSettings().game.infiniteOil, "Keeps your lantern oil full.");
         addCheat("Infinite Oxygen", getSettings().game.infiniteOxygen,
@@ -1122,7 +1244,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addCheat("Always Greatspin", getSettings().game.alwaysGreatspin,
             "Allows the Great Spin attack without requiring full health.");
         addCheat("Fast Iron Boots", getSettings().game.enableFastIronBoots,
-            "Speeds up movement while wearing the Iron Boots.");
+            "Speeds up movement while heavy, including wearing the Iron Boots, holding the Ball and Chain, wearing Magic Armor without rupees, etc.");
         addCheat("Can Transform Anywhere", getSettings().game.canTransformAnywhere,
             "Allows transforming even if NPCs are looking.");
         addCheat("Fast Roll", getSettings().game.fastRoll,
@@ -1131,6 +1253,8 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Speeds up Spinner movement while holding R.");
         addCheat("Free Magic Armor", getSettings().game.freeMagicArmor,
             "Lets the magic armor work without consuming rupees.");
+        addCheat("Invincible Enemies", getSettings().game.invincibleEnemies,
+            "Prevents enemies from taking damage.");
     });
 
     add_tab("Interface", [this](Rml::Element* content) {
@@ -1202,7 +1326,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                     });
                 pane.add_button(
                     {
-                        .text = "Controller",
+                        .text = "Missing Device",
                         .isSelected =
                             [] { return getSettings().game.enableControllerToasts.getValue(); },
                     })
@@ -1251,6 +1375,20 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .helpText = "Checks GitHub releases for a new Dusklight version on startup.<br/><br/>"
                             "No personal information is transmitted or collected.",
             });
+#ifdef DUSK_DISCORD
+        config_bool_select(leftPane, rightPane, getSettings().game.enableDiscordPresence,
+            {
+                .key = "Enable Discord Rich Presence",
+                .helpText = "Enable Dusklight to integrate with Discord Rich Presence. This allows Discord to show your status in-game.",
+                .onChange = [](bool enabled) {
+                    if (enabled) {
+                        dusk::discord::initialize();
+                    } else {
+                        dusk::discord::shutdown();
+                    }
+                },
+            });
+#endif
         config_bool_select(leftPane, rightPane, getSettings().backend.enableAdvancedSettings,
             {
                 .key = "Enable Advanced Settings",
@@ -1268,6 +1406,17 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                         }
                     },
                 .isDisabled = [] { return getSettings().game.speedrunMode; },
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.showInputViewer,
+            {
+                .key = "Show Input Viewer",
+                .helpText = "Display a controller input overlay while playing.",
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.showInputViewerGyro,
+            {
+                .key = "Show Gyro Input Viewer",
+                .helpText = "Show gyro sensor values in the input viewer.",
+                .isDisabled = [] { return !getSettings().game.showInputViewer; },
             });
 
         leftPane.add_section("Game");

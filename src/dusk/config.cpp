@@ -11,6 +11,7 @@
 #include <string>
 
 #include "dusk/main.h"
+#include "dusk/action_bindings.h"
 
 using namespace dusk::config;
 
@@ -55,12 +56,29 @@ static T sanitizeEnumValue(const ConfigVar<T>& cVar, T value) {
 
 template<ConfigValue T>
 void ConfigImpl<T>::loadFromJson(ConfigVar<T>& cVar, const json& jsonValue) {
+    if constexpr (std::is_enum_v<T>) {
+        if (jsonValue.is_boolean()) {
+            using Underlying = std::underlying_type_t<T>;
+            const bool b = jsonValue.get<bool>();
+
+            Underlying raw;
+            if constexpr (std::is_same_v<T, dusk::FrameInterpMode>) {
+                raw = b ? static_cast<Underlying>(2) : static_cast<Underlying>(0);
+            } else {
+                raw = b ? static_cast<Underlying>(1) : static_cast<Underlying>(0);
+            }
+
+            cVar.setValue(sanitizeEnumValue(cVar, static_cast<T>(raw)), false);
+            return;
+        }
+    }
+
     cVar.setValue(sanitizeEnumValue(cVar, jsonValue.get<T>()), false);
 }
 
 template<ConfigValue T>
 nlohmann::json ConfigImpl<T>::dumpToJson(const ConfigVar<T>& cVar) {
-    return cVar.getValue();
+    return cVar.getValueForSave();
 }
 
 template<ConfigValue T> requires std::is_integral_v<T> && std::is_signed_v<T>
@@ -157,6 +175,8 @@ namespace dusk::config {
     template class ConfigImpl<dusk::DiscVerificationState>;
     template class ConfigImpl<dusk::GameLanguage>;
     template class ConfigImpl<dusk::GyroMode>;
+    template class ConfigImpl<dusk::FrameInterpMode>;
+    template class ConfigImpl<dusk::Resampler>;
 }
 
 void dusk::config::Register(ConfigVarBase& configVar) {
@@ -248,12 +268,20 @@ void dusk::config::Save() {
     json j;
 
     for (const auto& pair : RegisteredConfigVars) {
-        if (pair.second->getLayer() == ConfigVarLayer::Value) {
+        const auto layer = pair.second->getLayer();
+        if (layer == ConfigVarLayer::Value || layer == ConfigVarLayer::Speedrun) {
             j[pair.first] = pair.second->getImpl()->dumpToJson(*pair.second);
         }
     }
 
     io::FileStream::WriteAllText(reinterpret_cast<const char*>(configJsonPath.c_str()), j.dump(4));
+}
+
+void dusk::config::ClearAllActionBindings(int port) {
+    for (auto& actionBinding : getActionBinds() | std::views::values) {
+        actionBinding.configVars->at(port).setValue(PAD_NATIVE_BUTTON_INVALID);
+    }
+    Save();
 }
 
 ConfigVarBase* dusk::config::GetConfigVar(std::string_view name) {
