@@ -503,7 +503,7 @@ int game_main(int argc, char* argv[]) {
     #ifdef LOGIC_TESTS
     randomizer::test::test::RunTests();
     #else
-    randomizer::Randomizer rando{};
+    randomizer::Randomizer rando{dusk::data::configured_data_path()};
     rando.Generate();
     #endif
     exit(0);
@@ -633,9 +633,6 @@ int game_main(int argc, char* argv[]) {
     dusk::audio::SetMasterVolume(dusk::audio::MasterVolumeToLinear(dusk::getSettings().audio.masterVolume / 100.0f));
     dusk::audio::SetEnableReverb(dusk::getSettings().audio.enableReverb);
     dusk::audio::EnableHrtf = dusk::getSettings().audio.enableHrtf;
-
-    // load rando generator configuration data
-    LoadRandomizerConfig();
 
     // Run ImGui UI loop if Aurora couldn't initialize a backend
     if (auroraInfo.backend == BACKEND_NULL) {
