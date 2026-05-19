@@ -213,7 +213,7 @@ int daObjLife_c::create() {
                 if ((goldenWolfFlags.howledAtStoneFlag != 0xFFFF && !dComIfGs_isEventBit(goldenWolfFlags.howledAtStoneFlag)) ||
                     dComIfGs_isEventBit(goldenWolfFlags.obtainedItemFlag)) {
                     return cPhs_ERROR_e;
-                }
+                    }
                 // Store the map marker flag and obtained item flags to turn off/on later if
                 // the player collects the item
                 home.angle.z = goldenWolfFlags.mapMarkerFlag;
@@ -221,6 +221,9 @@ int daObjLife_c::create() {
                 // Set the overriden item id
                 auto& goldenWolfOverrides = randomizer_GetContext().mGoldenWolfOverrides;
                 itemId = verifyProgressiveItem(goldenWolfOverrides[goldenWolfFlags.obtainedItemFlag]);
+            } else if (getStageID() == Ook) {
+                // Special case for Gale Boomerang check
+                itemId = verifyProgressiveItem(randomizer_getItemAtLocation("Forest Temple Gale Boomerang"));
             } else {
                 u8 flag = getSaveBitNo();
                 u8 stageIdx = getStageID();
@@ -484,12 +487,6 @@ int daObjLife_c::initActionOrderGetDemo() {
     fopAcM_orderItemEvent(this, 0, 0);
     eventInfo.onCondition(dEvtCnd_CANGETITEM_e);
 
-#if TARGET_PC
-    // Special case for Gale Boomerang check
-    if (randomizer_IsActive() && getStageID() == Ook) {
-        m_itemNo = verifyProgressiveItem(randomizer_getItemAtLocation("Forest Temple Gale Boomerang"));
-    }
-#endif
     mItemId = fopAcM_createItemForTrBoxDemo(&current.pos, m_itemNo, -1, fopAcM_GetRoomNo(this), NULL, NULL);
     JUT_ASSERT(699, mItemId != fpcM_ERROR_PROCESS_ID_e);
 
