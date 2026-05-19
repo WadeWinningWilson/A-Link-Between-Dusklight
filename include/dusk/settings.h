@@ -214,7 +214,6 @@ struct UserSettings {
         ConfigVar<bool> recordingMode;
 
         // Misc
-        ConfigVar<bool> randomizerEnabled;
         ConfigVar<bool> showInputViewer;
         ConfigVar<bool> showInputViewerGyro;
     } game;
