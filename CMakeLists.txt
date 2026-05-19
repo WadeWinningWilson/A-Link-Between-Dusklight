@@ -456,6 +456,22 @@ else ()
     add_executable(dusklight ${DUSK_FILES})
 endif ()
 
+# Add embedded data to target
+
+file(GLOB_RECURSE RANDOMIZER_DATA "src/dusk/randomizer/generator/data/*")
+set(RANDO_ROOT_DATA_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
+foreach (RANDOMIZER_FILE IN LISTS RANDOMIZER_DATA)
+    file(RELATIVE_PATH REL_PATH ${RANDO_ROOT_DATA_DIR} ${RANDOMIZER_FILE})
+    if(REL_PATH MATCHES "^src/dusk/randomizer/generator/data/tests")
+        message(STATUS "Skipping Embed: ${REL_PATH}")
+        continue()
+    endif ()
+
+    message(STATUS "Embedding File: ${REL_PATH}")
+    b_embed(dusklight ${REL_PATH})
+endforeach ()
+
 target_compile_definitions(dusklight PRIVATE ${GAME_COMPILE_DEFS})
 target_include_directories(dusklight PRIVATE ${GAME_INCLUDE_DIRS})
 target_link_libraries(dusklight PRIVATE aurora::main ${GAME_LIBS} ${JSYSTEM_LINK_LIBRARIES})
