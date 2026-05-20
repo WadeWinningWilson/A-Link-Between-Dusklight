@@ -828,7 +828,11 @@ void dMenuMapCommon_c::getDmapPoeCount(const std::string& stageName, int& nowCou
 
     for (const auto& i : l_poeInfo) {
         if (stageName == i.stagename) {
-            nowCount += dComIfGs_isSaveSwitch(i.save_id, i.switch_no);
+            if (dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo()) == i.save_id) {
+                nowCount += dComIfGs_isSwitch(i.switch_no, -1);
+            } else {
+                nowCount += dComIfGs_isSaveSwitch(i.save_id, i.switch_no);
+            }
             totalCount++;
         }
     }
