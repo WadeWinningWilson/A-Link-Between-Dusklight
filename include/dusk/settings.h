@@ -57,7 +57,7 @@ enum class MagicArmorMode : u8 {
     DOUBLE_DEFENSE = 2,
     INVINCIBLE = 3,
     COSMETIC = 4,
-}
+};
 
 namespace config {
 template <>
@@ -102,6 +102,7 @@ struct ConfigEnumRange<MenuScaling> {
     static constexpr auto max = MenuScaling::Dusklight;
 };
 
+template <>
 struct ConfigEnumRange<MagicArmorMode> {
     static constexpr auto min = MagicArmorMode::NORMAL;
     static constexpr auto max = MagicArmorMode::COSMETIC;
