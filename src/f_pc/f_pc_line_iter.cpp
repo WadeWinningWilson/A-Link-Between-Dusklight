@@ -12,6 +12,12 @@
 
 
 static int fpcLnIt_MethodCall(create_tag_class* i_createTag, method_filter* i_filter) {
+#ifdef TARGET_PC
+    // on init_state==3 fpcEx_ExecuteQTo already ran (layer_tag.layer is NULL)
+    if (static_cast<base_process_class*>(i_createTag->mpTagData)->state.init_state == 3) {
+        return 0;
+    }
+#endif
     layer_class* layer = static_cast<base_process_class*>(i_createTag->mpTagData)->layer_tag.layer;
     layer_class* save_layer = fpcLy_CurrentLayer();
     int ret;
