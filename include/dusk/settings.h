@@ -133,6 +133,7 @@ struct UserSettings {
         ConfigVar<bool> instantText;
         ConfigVar<bool> sunsSong;
         ConfigVar<bool> autoSave;
+        ConfigVar<bool> showMapPoeCounter;
 
         // Preferences
         ConfigVar<bool> enableMirrorMode;
