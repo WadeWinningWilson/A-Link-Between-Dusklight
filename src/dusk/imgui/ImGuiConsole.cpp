@@ -378,6 +378,7 @@ namespace dusk {
         }
         m_menuRandomizer.windowRandoStats();
         m_menuRandomizer.windowRandoGeneration();
+        m_menuRandomizer.windowRandoTracker();
 
         // Hide mouse cursor if the F1 menu is not open and the cursor is idle for 3 seconds.
         if (dusk::getSettings().game.gyroMode.getValue() != GyroMode::Mouse)
