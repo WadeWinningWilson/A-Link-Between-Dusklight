@@ -2658,7 +2658,7 @@ void dMenu_Fmap2DTop_c::draw() {
     mpTitleScreen->draw(mTransX, mTransY, ctx);
 
 #if TARGET_PC
-    if (dusk::getSettings().game.showMapPoeCounter) {
+    if (dusk::getSettings().game.enhancedMapMenus) {
         int nowPoeCount = 0;
         int totalPoeCount = 0;
         dMenuMapCommon_c::getFmapPoeCount(mSelectRegionNo, nowPoeCount, totalPoeCount);

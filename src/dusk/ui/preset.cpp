@@ -47,7 +47,7 @@ void applyPresetDusk() {
     s.game.shadowResolutionMultiplier.setValue(4);
     s.game.enableGyroAim.setValue(true);
     s.game.autoSave.setValue(true);
-    s.game.showMapPoeCounter.setValue(true);
+    s.game.enhancedMapMenus.setValue(true);
 }
 
 }  // namespace

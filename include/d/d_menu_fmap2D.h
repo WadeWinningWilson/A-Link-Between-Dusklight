@@ -424,7 +424,6 @@ public:
 
 #if TARGET_PC
     J2DTextBox* mpPoeCountPane;
-    ResTIMG* mpPoeCountIconTex;
     J2DPicture* mpPoeCountIcon;
     u8 mSelectRegionNo;
 #endif
