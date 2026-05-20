@@ -15,6 +15,11 @@ enum class BloomMode : int {
     Dusk = 2,
 };
 
+enum class Resampler : int {
+    Bilinear = 0,
+    Area = 1,
+};
+
 enum class GameLanguage : u8 {
     English = OS_LANGUAGE_ENGLISH,
     German = OS_LANGUAGE_GERMAN,
@@ -34,19 +39,37 @@ enum class GyroMode : u8 {
     Mouse = 1,
 };
 
+enum class FrameInterpMode : u8 {
+    Off = 0,
+    Capped = 1,
+    Unlimited = 2,
+};
+
+enum class MenuScaling : u8 {
+    GameCube = 0,
+    Wii = 1,
+    Dusklight = 2,
+};
+
 enum class MagicArmorMode : u8 {
     NORMAL = 0,
     ON_DAMAGE = 1,
     DOUBLE_DEFENSE = 2,
     INVINCIBLE = 3,
     COSMETIC = 4,
-};
+}
 
 namespace config {
 template <>
 struct ConfigEnumRange<BloomMode> {
     static constexpr auto min = BloomMode::Off;
     static constexpr auto max = BloomMode::Dusk;
+};
+
+template <>
+struct ConfigEnumRange<Resampler> {
+    static constexpr auto min = Resampler::Bilinear;
+    static constexpr auto max = Resampler::Area;
 };
 
 template <>
@@ -68,11 +91,22 @@ struct ConfigEnumRange<GyroMode> {
 };
 
 template <>
+struct ConfigEnumRange<FrameInterpMode> {
+    static constexpr auto min = FrameInterpMode::Off;
+    static constexpr auto max = FrameInterpMode::Unlimited;
+};
+
+template <>
+struct ConfigEnumRange<MenuScaling> {
+    static constexpr auto min = MenuScaling::GameCube;
+    static constexpr auto max = MenuScaling::Dusklight;
+};
+
 struct ConfigEnumRange<MagicArmorMode> {
     static constexpr auto min = MagicArmorMode::NORMAL;
     static constexpr auto max = MagicArmorMode::COSMETIC;
 };
-}
+}  // namespace config
 
 // Persistent user settings
 
@@ -86,6 +120,7 @@ struct UserSettings {
         ConfigVar<bool> lockAspectRatio;
         ConfigVar<bool> enableFpsOverlay;
         ConfigVar<int> fpsOverlayCorner;
+        ConfigVar<int> maxFrameRate;
     } video;
 
     struct {
@@ -132,14 +167,17 @@ struct UserSettings {
         ConfigVar<bool> enableAchievementToasts;
         ConfigVar<bool> enableControllerToasts;
         ConfigVar<bool> enableDiscordPresence;
+        ConfigVar<MenuScaling> menuScalingMode;
 
         // Graphics
         ConfigVar<BloomMode> bloomMode;
         ConfigVar<float> bloomMultiplier;
         ConfigVar<bool> disableWaterRefraction;
-        ConfigVar<bool> enableFrameInterpolation;
+        ConfigVar<bool> enableTextureReplacements;
+        ConfigVar<FrameInterpMode> enableFrameInterpolation;
         ConfigVar<int> internalResolutionScale;
         ConfigVar<int> shadowResolutionMultiplier;
+        ConfigVar<Resampler> resampler;
         ConfigVar<bool> enableDepthOfField;
         ConfigVar<bool> enableMapBackground;
         ConfigVar<bool> disableCutscenePillarboxing;
@@ -200,6 +238,7 @@ struct UserSettings {
         ConfigVar<bool> liveSplitEnabled;
         ConfigVar<bool> showSpeedrunRTATimer;
         ConfigVar<bool> recordingMode;
+        ConfigVar<bool> removeQuestMapMarkers;
         ConfigVar<bool> showInputViewer;
         ConfigVar<bool> showInputViewerGyro;
     } game;
