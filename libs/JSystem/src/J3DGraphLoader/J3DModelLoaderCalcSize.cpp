@@ -16,7 +16,6 @@ u16 J3DModelLoader::countMaterialNum(const void* stream) {
     const J3DModelBlock* block = header->mBlocks;
     for (int i = 0; i < header->mBlockNum; i++)
     {
-        // TODO: Real MAT4 support
         if (block->mBlockType == 'MAT3' || block->mBlockType == 'MAT4') {
             const J3DMaterialBlock* materialBlock = (const J3DMaterialBlock*)block;
             return materialBlock->mMaterialNum;
@@ -47,7 +46,6 @@ u32 J3DModelLoader::calcLoadSize(void const* stream, u32 flags_) {
             break;
         case 'MAT3':
         case 'MAT4':
-            // TODO: Real MAT4 support
             size += calcSizeMaterial((const J3DMaterialBlock*)nextBlock, flags);
             break;
         case 'SHP1':
@@ -90,7 +88,6 @@ u32 J3DModelLoader::calcLoadMaterialTableSize(const void* stream) {
         switch (nextBlock->mBlockType) {
         case 'MAT3':
         case 'MAT4':
-            // TODO: Real MAT4 support
             size += calcSizeMaterialTable((const J3DMaterialBlock*)nextBlock, flags);
             break;
         case 'TEX1':
@@ -142,7 +139,6 @@ u32 J3DModelLoader::calcLoadBinaryDisplayListSize(const void* stream, u32 flags)
 			break;
         case 'MAT3':
         case 'MAT4': {
-            // TODO: Real MAT4 support
 			u32 flags2 = (J3DMLF_21 | J3DMLF_Material_PE_Full | J3DMLF_Material_Color_LightOn);
             flags2 |= (u32)flags & (J3DMLF_Material_UseIndirect | J3DMLF_26);
 			mpMaterialBlock = (const J3DMaterialBlock*)nextBlock;

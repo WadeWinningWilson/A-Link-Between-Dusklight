@@ -1755,6 +1755,16 @@ public:
     virtual ~J3DIndBlockNull() {}
 };
 
+#ifdef DUSK_TPHD
+struct PolygonOffset {
+    f32 mFrontOffset;
+    f32 mFrontScale;
+    f32 mBackOffset;
+    f32 mBackScale;
+    f32 mClamp;
+};
+#endif
+
 /**
  * @ingroup jsystem-j3d
  *
@@ -1787,6 +1797,10 @@ public:
     virtual void setDither(u8 const*) {}
     virtual void setDither(u8) {}
     virtual u8 getDither() const { return 0; }
+#ifdef DUSK_TPHD
+    virtual void setPolygonOffset(const PolygonOffset&) {}
+    virtual PolygonOffset* getPolygonOffset() { return NULL; }
+#endif
     virtual u32 getFogOffset() const { return 0; }
     virtual void setFogOffset(u32) {}
     virtual ~J3DPEBlock() {}
@@ -1950,12 +1964,25 @@ public:
     virtual void setFogOffset(u32 fogOffset) { mFogOffset = fogOffset; }
     virtual ~J3DPEBlockFull() {}
 
+#ifdef DUSK_TPHD
+    virtual void setPolygonOffset(const PolygonOffset& offset) {
+        mPolygonOffset = offset;
+    }
+
+    virtual PolygonOffset* getPolygonOffset() {
+        return &mPolygonOffset;
+    }
+#endif
+
     /* 0x04 */ J3DFog mFog;
     /* 0x30 */ J3DAlphaComp mAlphaComp;
     /* 0x34 */ J3DBlend mBlend;
     /* 0x38 */ J3DZMode mZMode;
     /* 0x3A */ u8 mZCompLoc;
     /* 0x3B */ u8 mDither;
+#ifdef DUSK_TPHD
+    PolygonOffset mPolygonOffset;
+#endif
     /* 0x3C */ u32 mFogOffset;
 };  // Size: 0x40
 

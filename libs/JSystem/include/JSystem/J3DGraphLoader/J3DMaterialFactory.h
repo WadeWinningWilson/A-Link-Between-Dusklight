@@ -46,6 +46,13 @@ struct J3DMaterialInitData {
     /* 0x14A */ BE(u16) mNBTScaleIdx;
 }; // size 0x14C
 
+
+#ifdef DUSK_TPHD
+struct J3DMaterialInitData_MAT4 : public J3DMaterialInitData {
+    /* 0x14C */ BE(u16) mPolygonOffsetIdx;
+}; // size 0x14E
+#endif
+
 /**
  * @ingroup jsystem-j3d
  * 
@@ -84,33 +91,6 @@ struct J3DDisplayListInit {
     /* 0x0 */ BE(u32) mOffset;
     /* 0x4 */ BE(u32) field_0x4;
 }; // size 8
-
-#if DUSK_TPHD
-// MAT4 material-entry blocks have 2 trailing bytes per entry compared to MAT3.
-// This strided view skips over the extras at indexing time, leaving the
-// in-memory data untouched.
-class J3DMaterialInitDataView {
-public:
-    J3DMaterialInitDataView() : mpData(NULL), mStride(sizeof(J3DMaterialInitData)) {}
-
-    void set(const void* data, u32 stride) {
-        mpData = (u8*)data;
-        mStride = stride;
-    }
-
-    J3DMaterialInitData& operator[](int idx) {
-        return *(J3DMaterialInitData*)(mpData + (idx * mStride));
-    }
-
-    J3DMaterialInitData& operator[](int idx) const {
-        return *(J3DMaterialInitData*)(mpData + (idx * mStride));
-    }
-
-private:
-    u8* mpData;
-    u32 mStride;
-};
-#endif
 
 struct J3DTexCoord2Info;
 class J3DCurrentMtxInfo;
@@ -170,11 +150,26 @@ public:
     J3DNBTScale newNBTScale(int) const;
 
     u16 getMaterialID(int idx) const { return mpMaterialID[idx]; }
+#ifdef DUSK_TPHD
+    u8 getMaterialMode(int idx) const { return getMatInitData(idx)->mMaterialMode; }
+#else
     u8 getMaterialMode(int idx) const { return mpMaterialInitData[mpMaterialID[idx]].mMaterialMode; }
+#endif
     
+#if DUSK_TPHD
+    const PolygonOffset newPolygonOffset(int) const;
+
+    J3DMaterialInitData* getMatInitData(int idx) const {
+        static const u32 sInitDataSizes[] = {0, 0, 0x138, 0x14C, 0x14E};
+
+        return (J3DMaterialInitData*)((u8*)mpMaterialInitData + sInitDataSizes[mBlockType] * getMaterialID(idx));
+    }
+
+    u16 mBlockType;
+#endif
     /* 0x00 */ u16 mMaterialNum;
 #if DUSK_TPHD
-    /* 0x04 */ J3DMaterialInitDataView mpMaterialInitData;
+    /* 0x04 */ void* mpMaterialInitData;
 #else
     /* 0x04 */ J3DMaterialInitData* mpMaterialInitData;
 #endif
@@ -206,6 +201,9 @@ public:
     /* 0x6C */ u8* mpZCompLoc;
     /* 0x70 */ u8* mpDither;
     /* 0x74 */ J3DNBTScaleInfo* mpNBTScaleInfo;
+#ifdef DUSK_TPHD
+    PolygonOffset* mpPolygonOffsets;
+#endif
     /* 0x78 */ J3DDisplayListInit* mpDisplayListInit;
     /* 0x7C */ J3DPatchingInfo* mpPatchingInfo;
     /* 0x80 */ J3DCurrentMtxInfo* mpCurrentMtxInfo;

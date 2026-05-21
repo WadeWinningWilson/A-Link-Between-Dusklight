@@ -104,7 +104,7 @@ J3DModelData* J3DModelLoader::load(void const* i_data, u32 i_flags) {
                 break;
             case 'MAT3':
 #if DUSK_TPHD
-            case 'MAT4':  // TODO: Real MAT4 support
+            case 'MAT4':
 #endif
                 readMaterial((J3DMaterialBlock*)block, (s32)i_flags);
                 break;
@@ -151,7 +151,7 @@ J3DMaterialTable* J3DModelLoader::loadMaterialTable(void const* i_data) {
         switch (block->mBlockType) {
             case 'MAT3':
 #if DUSK_TPHD
-            case 'MAT4':  // TODO: Real MAT4 support
+            case 'MAT4':
 #endif
                 readMaterialTable((J3DMaterialBlock*)block, flags);
                 break;
@@ -219,7 +219,7 @@ J3DModelData* J3DModelLoader::loadBinaryDisplayList(void const* i_data, u32 i_fl
                 break;
             case 'MAT3':
 #if DUSK_TPHD
-            case 'MAT4':  // TODO: Real MAT4 support
+            case 'MAT4':
 #endif
                 flags = 0x50100000;
                 flags |= (i_flags & 0x3000000);
