@@ -1757,11 +1757,11 @@ public:
 
 #ifdef DUSK_TPHD
 struct PolygonOffset {
-    f32 mFrontOffset;
-    f32 mFrontScale;
-    f32 mBackOffset;
-    f32 mBackScale;
-    f32 mClamp;
+    BE(f32) mFrontOffset;
+    BE(f32) mFrontScale;
+    BE(f32) mBackOffset;
+    BE(f32) mBackScale;
+    BE(f32) mClamp;
 };
 #endif
 
