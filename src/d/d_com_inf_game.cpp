@@ -2082,7 +2082,12 @@ static void dummy1() {
 }
 
 BOOL dComIfGs_isStageTbox(int i_stageNo, int i_no) {
+#if TARGET_PC
+    // Avoid trying to get the save table if stag info is NULL
+    if (dComIfGp_getStageStagInfo() && i_stageNo == dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo())) {
+#else
     if (i_stageNo == dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo())) {
+#endif
         return dComIfGs_isTbox(i_no);
     } else {
         return dComIfGs_isSaveTbox(i_stageNo, i_no);
@@ -2111,7 +2116,12 @@ void dComIfGs_offStageSwitch(int i_stageNo, int i_no) {
 }
 
 BOOL dComIfGs_isStageSwitch(int i_stageNo, int i_no) {
+#if TARGET_PC
+    // Avoid trying to get the save table if stag info is NULL
+    if (dComIfGp_getStageStagInfo() && i_stageNo == dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo())) {
+#else
     if (i_stageNo == dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo())) {
+#endif
         return dComIfGs_isSwitch(i_no, -1);
     } else {
         return dComIfGs_isSaveSwitch(i_stageNo, i_no);
@@ -2140,7 +2150,12 @@ void dComIfGs_offDungeonItemMap(int i_stageNo) {
 }
 
 s32 dComIfGs_isDungeonItemMap(int i_stageNo) {
+#if TARGET_PC
+    // Avoid trying to get the save table if stag info is NULL
+    if (dComIfGp_getStageStagInfo() && i_stageNo == dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo())) {
+#else
     if (i_stageNo == dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo())) {
+#endif
         return dComIfGs_isDungeonItemMap();
     }
 
@@ -2169,7 +2184,12 @@ void dComIfGs_offDungeonItemCompass(int i_stageNo) {
 }
 
 s32 dComIfGs_isDungeonItemCompass(int i_stageNo) {
+#if TARGET_PC
+    // Avoid trying to get the save table if stag info is NULL
+    if (dComIfGp_getStageStagInfo() && i_stageNo == dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo())) {
+#else
     if (i_stageNo == dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo())) {
+#endif
         return dComIfGs_isDungeonItemCompass();
     }
 
@@ -2198,7 +2218,12 @@ void dComIfGs_offDungeonItemBossKey(int i_stageNo) {
 }
 
 s32 dComIfGs_isDungeonItemBossKey(int i_stageNo) {
+#if TARGET_PC
+    // Avoid trying to get the save table if stag info is NULL
+    if (dComIfGp_getStageStagInfo() && i_stageNo == dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo())) {
+#else
     if (i_stageNo == dStage_stagInfo_GetSaveTbl(dComIfGp_getStageStagInfo())) {
+#endif
         return dComIfGs_isDungeonItemBossKey();
     }
 
