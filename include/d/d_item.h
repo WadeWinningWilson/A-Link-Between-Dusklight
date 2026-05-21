@@ -305,6 +305,10 @@ int item_getcheck_func_ARROW_20();
 int item_getcheck_func_ARROW_30();
 int item_getcheck_func_ARROW_1();
 int item_getcheck_func_PACHINKO_SHOT();
+#if TARGET_PC
+int item_getcheck_func_ORDON_PORTAL();
+int item_getcheck_func_SOUTH_FARON_PORTAL();
+#endif
 int item_getcheck_func_WATER_BOMB_5();
 int item_getcheck_func_WATER_BOMB_10();
 int item_getcheck_func_WATER_BOMB_20();
@@ -338,6 +342,12 @@ int item_getcheck_func_DUNGEON_EXIT_2();
 int item_getcheck_func_WALLET_LV1();
 int item_getcheck_func_WALLET_LV2();
 int item_getcheck_func_WALLET_LV3();
+#if TARGET_PC
+int item_getcheck_func_UPPER_ZORAS_RIVER_PORTAL();
+int item_getcheck_func_CASTLE_TOWN_PORTAL();
+int item_getcheck_func_GERUDO_DESERT_PORTAL();
+int item_getcheck_func_NORTH_FARON_PORTAL();
+#endif
 int item_getcheck_func_ZORAS_JEWEL();
 int item_getcheck_func_HAWK_EYE();
 int item_getcheck_func_WOOD_STICK();
@@ -354,13 +364,23 @@ int item_getcheck_func_LIGHT_SWORD();
 int item_getcheck_func_FISHING_ROD_1();
 int item_getcheck_func_PACHINKO();
 int item_getcheck_func_COPY_ROD_2();
+#if TARGET_PC
+int item_getcheck_func_KAKARIKO_GORGE_PORTAL();
+int item_getcheck_func_KAKARIKO_VILLAGE_PORTAL();
+#endif
 int item_getcheck_func_BOMB_BAG_LV2();
 int item_getcheck_func_BOMB_BAG_LV1();
 int item_getcheck_func_BOMB_IN_BAG();
+#if TARGET_PC
+int item_getcheck_func_DEATH_MOUNTAIN_PORTAL();
+#endif
 int item_getcheck_func_LIGHT_ARROW();
 int item_getcheck_func_ARROW_LV1();
 int item_getcheck_func_ARROW_LV2();
 int item_getcheck_func_ARROW_LV3();
+#if TARGET_PC
+int item_getcheck_func_ZORAS_DOMAIN_PORTAL();
+#endif
 int item_getcheck_func_LURE_ROD();
 int item_getcheck_func_BOMB_ARROW();
 int item_getcheck_func_HAWK_ARROW();
@@ -406,6 +426,10 @@ int item_getcheck_func_BILL();
 int item_getcheck_func_WOOD_STATUE();
 int item_getcheck_func_IRIAS_PENDANT();
 int item_getcheck_func_HORSE_FLUTE();
+#if TARGET_PC
+int item_getcheck_func_CAMP_SMALL_KEY();
+int item_getcheck_func_LAKE_HYLIA_PORTAL();
+#endif
 int item_getcheck_func_RAFRELS_MEMO();
 int item_getcheck_func_ASHS_SCRIBBLING();
 int item_getcheck_func_CHUCHU_YELLOW2();
@@ -420,12 +444,19 @@ int item_getcheck_func_FILLED_CONTAINER();
 int item_getcheck_func_MIRROR_PIECE_2();
 int item_getcheck_func_MIRROR_PIECE_3();
 int item_getcheck_func_MIRROR_PIECE_4();
+#if TARGET_PC
+int item_getcheck_func_MIRROR_CHAMBER_PORTAL();
+int item_getcheck_func_SNOWPEAK_PORTAL();
+#endif
 int item_getcheck_func_SMELL_YELIA_POUCH();
 int item_getcheck_func_SMELL_PUMPKIN();
 int item_getcheck_func_SMELL_POH();
 int item_getcheck_func_SMELL_FISH();
 int item_getcheck_func_SMELL_CHILDREN();
 int item_getcheck_func_SMELL_MEDICINE();
+#if TARGET_PC
+int item_getcheck_func_SACRED_GROVE_PORTAL();
+#endif
 int item_getcheck_func_M_BEETLE();
 int item_getcheck_func_F_BEETLE();
 int item_getcheck_func_M_BUTTERFLY();
@@ -465,6 +496,7 @@ int item_getcheck_func_HELM_SPLITTER();
 int item_getcheck_func_MORTAL_DRAW();
 int item_getcheck_func_JUMP_STRIKE();
 int item_getcheck_func_GREAT_SPIN();
+int item_getcheck_func_ELDIN_BRIDGE_PORTAL();
 #endif
 int item_getcheck_func_ANCIENT_DOCUMENT();
 int item_getcheck_func_AIR_LETTER();
