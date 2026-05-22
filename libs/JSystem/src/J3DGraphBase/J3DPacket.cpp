@@ -222,6 +222,9 @@ void J3DMatPacket::draw() {
     }
 #endif
 
+    PolygonOffset* temp = mpMaterial->getPEBlock()->getPolygonOffset();
+    GX2SetPolygonOffset(temp->mFrontOffset, temp->mFrontScale, temp->mBackOffset, temp->mBackScale, temp->mClamp);
+
     callDL();
 
     J3DShapePacket* packet = getShapePacket();
@@ -229,6 +232,8 @@ void J3DMatPacket::draw() {
     packet->mpModel->getVertexBuffer()->setArray();
 #endif
     packet->getShape()->loadPreDrawSetting();
+
+        // TODO: MAT4 sets polygon offset here in HD
 
     while (packet != NULL) {
         if (packet->getDisplayListObj() != NULL) {
