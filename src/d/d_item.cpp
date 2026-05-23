@@ -550,9 +550,7 @@ void execItemGet(u8 i_itemNo) {
 #if TARGET_PC
     if (randomizer_IsActive()) {
         i_itemNo = verifyProgressiveItem(i_itemNo);
-        // Basic checking to not update if we pickup hearts or rupees
-        if (i_itemNo > 0x13)
-            g_randomizerState.mUpdateTracker = true;
+        g_randomizerState.mUpdateTracker = true;
     }
 
 #endif
