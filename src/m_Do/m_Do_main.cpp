@@ -64,6 +64,7 @@
 #include "dusk/ui/prelaunch.hpp"
 #include "dusk/ui/preset.hpp"
 #include "dusk/ui/ui.hpp"
+#include "dusk/ui/rando_config.hpp"
 #include "version.h"
 
 #include <aurora/aurora.h>
@@ -503,7 +504,7 @@ int game_main(int argc, char* argv[]) {
     #ifdef LOGIC_TESTS
     randomizer::test::test::RunTests();
     #else
-    randomizer::Randomizer rando{dusk::data::configured_data_path()};
+    randomizer::Randomizer rando{dusk::ui::GetRandomizerPath()};
     rando.Generate();
     #endif
     exit(0);
