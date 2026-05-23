@@ -1345,6 +1345,7 @@ int daNpc_grR_c::talk(void* param_1) {
 #if TARGET_PC
                         if (randomizer_IsActive()) {
                             i_itemNo = verifyProgressiveItem(randomizer_getItemAtLocation("Goron Mines Gor Liggs Key Shard"));
+                            randomizer_setTempFlagForLocation("Goron Mines Gor Liggs Key Shard");
                         }
 #endif
                         mItemID = fopAcM_createItemForPresentDemo(&current.pos, i_itemNo, 0, -1, -1, NULL, NULL);

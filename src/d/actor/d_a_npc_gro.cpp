@@ -1688,6 +1688,7 @@ int daNpc_grO_c::talk(void* param_1) {
 #if TARGET_PC
                         if (randomizer_IsActive()) {
                             itemId = verifyProgressiveItem(randomizer_getItemAtLocation("Goron Mines Gor Ebizo Key Shard"));
+                            randomizer_setTempFlagForLocation("Goron Mines Gor Ebizo Key Shard");
                         }
 #endif
                         mItemID = fopAcM_createItemForPresentDemo(&current.pos, itemId, 0, -1, -1, NULL, NULL);

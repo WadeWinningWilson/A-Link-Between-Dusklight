@@ -2924,6 +2924,7 @@ int daNpc_ykW_c::talk(void* param_0) {
 #if TARGET_PC
                             if (randomizer_IsActive()) {
                                 itemNo = verifyProgressiveItem(randomizer_getItemAtLocation("Snowpeak Ruins Mansion Map"));
+                                randomizer_setTempFlagForLocation("Snowpeak Ruins Mansion Map");
                             }
 #endif
                             mItemPartnerId =

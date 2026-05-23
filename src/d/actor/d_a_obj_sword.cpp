@@ -82,6 +82,11 @@ int daObjSword_c::initActionOrderGetDemo() {
     hide();
     fopAcM_orderItemEvent(this, 0, 0);
     eventInfo.onCondition(8);
+#if TARGET_PC
+    if (randomizer_IsActive()) {
+        randomizer_setTempFlagForLocation("Ordon Sword");
+    }
+#endif
     mProcID = fopAcM_createItemForTrBoxDemo(&current.pos, m_itemNo, -1, fopAcM_GetRoomNo(this),
                                             NULL, NULL);
     setStatus(1);

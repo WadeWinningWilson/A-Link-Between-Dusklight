@@ -1691,6 +1691,7 @@ BOOL daNpc_zrC_c::ECut_earringGet(int i_staffID) {
 #if TARGET_PC
                 if (randomizer_IsActive()) {
                     item_no = verifyProgressiveItem(randomizer_getItemAtLocation("Gift From Ralis"));
+                    randomizer_setTempFlagForLocation("Gift From Ralis");
                 }
 #endif
                 mItemID = fopAcM_createItemForPresentDemo(&current.pos, item_no,

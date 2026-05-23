@@ -1008,6 +1008,7 @@ BOOL daNpcAshB_c::EvCut_Appear(int i_staffID) {
 #if TARGET_PC
                 if (randomizer_IsActive()) {
                     local_30[0] = verifyProgressiveItem(randomizer_getItemAtLocation("Ashei Sketch"));
+                    randomizer_setTempFlagForLocation("Ashei Sketch");
                 }
 #endif
                 mItemPartnerId =

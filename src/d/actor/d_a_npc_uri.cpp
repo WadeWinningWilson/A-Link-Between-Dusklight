@@ -1168,6 +1168,7 @@ int daNpc_Uri_c::cutEndCarryTutorial(int param_1) {
 #if TARGET_PC
                 if (randomizer_IsActive()) {
                     local_48 = randomizer_getItemAtLocation("Uli Cradle Delivery");
+                    randomizer_setTempFlagForLocation("Uli Cradle Delivery");
                 }
 #endif
                 mItemPartnerId =

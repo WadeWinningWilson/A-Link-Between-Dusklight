@@ -1742,6 +1742,7 @@ BOOL daNpc_zrZ_c::ECut_clothesGet(int i_staffID) {
 #if TARGET_PC
                 if (randomizer_IsActive()) {
                     item_no = verifyProgressiveItem(randomizer_getItemAtLocation("Rutelas Blessing"));
+                    randomizer_setTempFlagForLocation("Rutelas Blessing");
                 }
 #endif
                 mItemID = fopAcM_createItemForPresentDemo(&current.pos, item_no,

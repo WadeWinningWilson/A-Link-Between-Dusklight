@@ -978,6 +978,7 @@ BOOL daNpcImpal_c::EvCut_ImpalAppear1(int i_cut_index) {
 #if TARGET_PC
                 if (randomizer_IsActive()) {
                     evt_id = verifyProgressiveItem(randomizer_getItemAtLocation("Ilia Charm"));
+                    randomizer_setTempFlagForLocation("Ilia Charm");
                 }
 #endif
                 mItemPartnerId =
@@ -1072,6 +1073,7 @@ BOOL daNpcImpal_c::EvCut_CopyRod(int i_cut_index) {
 #if TARGET_PC
                 if (randomizer_IsActive()) {
                     evt_id = verifyProgressiveItem(randomizer_getItemAtLocation("Skybook From Impaz"));
+                    randomizer_setTempFlagForLocation("Skybook From Impaz");
                 }
 #endif
                 mItemPartnerId =

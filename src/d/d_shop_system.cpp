@@ -911,13 +911,9 @@ int dShopSystem_c::seq_start(fopAc_ac_c* actor, dMsgFlow_c* i_flow) {
                 if (mFlow.getEventId(&itemNo) == 1) {
                     if (mItemPartnerId == fpcM_ERROR_PROCESS_ID_e) {
 #if TARGET_PC
-                        // In rando, override the item if it's one of our unique shop checks
-                        if (randomizer_IsActive()) {
-                            switch (itemNo) {
-                            case dItemNo_Randomizer_HALF_MILK_BOTTLE_e:
-                                itemNo = randomizer_getItemAtLocation("Ordon Cat Rescue");
-                                break;
-                            }
+                        // In rando, override the cat rescue item
+                        if (randomizer_IsActive() && itemNo == dItemNo_Randomizer_HALF_MILK_BOTTLE_e) {
+                            itemNo = randomizer_getItemAtLocation("Ordon Cat Rescue");
                         }
 #endif
                         mItemPartnerId = fopAcM_createItemForPresentDemo(&current.pos, itemNo, 0, -1,

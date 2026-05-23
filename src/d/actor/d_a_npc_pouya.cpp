@@ -967,10 +967,13 @@ int daNpc_Pouya_c::cutHaveFavorToAsk(int param_0) {
                     if (mItemPartnerId == fpcM_ERROR_PROCESS_ID_e) {
 #if TARGET_PC
                         if (randomizer_IsActive()) {
-                            if (local_64 == dItemNo_Randomizer_DROP_BOTTLE_e)
+                            if (local_64 == dItemNo_Randomizer_DROP_BOTTLE_e) {
                                 local_64 = verifyProgressiveItem(randomizer_getItemAtLocation("Jovani 20 Poe Soul Reward"));
-                            else if (local_64 == dItemNo_Randomizer_SILVER_RUPEE_e)
+                                randomizer_setTempFlagForLocation("Jovani 20 Poe Soul Reward");
+                            } else if (local_64 == dItemNo_Randomizer_SILVER_RUPEE_e) {
                                 local_64 = verifyProgressiveItem(randomizer_getItemAtLocation("Jovani 60 Poe Soul Reward"));
+                                randomizer_setTempFlagForLocation("Jovani 60 Poe Soul Reward");
+                            }
                         }
 #endif
                         mItemPartnerId = fopAcM_createItemForPresentDemo(&current.pos, local_64, 0,

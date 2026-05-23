@@ -1341,6 +1341,7 @@ void daNpc_Fairy_c::PresentDemoCall() {
     // If we haven't visted this great fairy before, give the random item
     if (randomizer_IsActive() && !daNpcT_chkEvtBit(505)) {
         item_no = verifyProgressiveItem(randomizer_getItemAtLocation("Cave of Ordeals Great Fairy Reward"));
+        randomizer_setTempFlagForLocation("Cave of Ordeals Great Fairy Reward");
     }
 #endif
 

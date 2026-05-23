@@ -711,21 +711,25 @@ u32 dMsgObject_c::getRevoMessageIndex(u32 param_1) {
     if (randomizer_IsActive()) {
         // Special case for Ilia Memory Reward Text (param_1 is msgId)
         // If we're in the sanctuary cutscene where we get the reward, override the text.
-        // Otherwise the regular item text for the horse call would be overriden if we find it
+        // Otherwise, the regular item text for the horse call would be overridden if we find it
         if (param_1 == 233 && playerIsInRoomStage(0, "R_SP109") && dComIfGp_getLayerNo() == 9) {
             u8 itemId = verifyProgressiveItem(randomizer_getItemAtLocation("Ilia Memory Reward"));
             param_1 = getItemMessageID(itemId);
             // Store this itemId so that we can give the item when the textbox closes
             g_randomizerState.mFlowMessageItemId = itemId;
+            // Set flag for tracker/AP
+            randomizer_setTempFlagForLocation("Ilia Memory Reward");
         } else {
             // Else override the text if we have an override
             u32 key = (dMsgObject_getGroupID() << 16) | param_1;
             auto& flowItemOverrides = randomizer_GetContext().mFlowItemMessageOverrides;
             if (flowItemOverrides.contains(key)) {
-                u8 itemId = verifyProgressiveItem(flowItemOverrides[key]);
+                u8 itemId = verifyProgressiveItem(flowItemOverrides[key].itemId);
                 param_1 = getItemMessageID(itemId);
                 // Store this itemId so that we can give the item when the textbox closes
                 g_randomizerState.mFlowMessageItemId = itemId;
+                // Set flag for tracker/AP
+                randomizer_setTempFlagForFLWOverride(key);
             }
         }
     }

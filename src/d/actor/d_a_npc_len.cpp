@@ -1243,6 +1243,7 @@ int daNpc_Len_c::talk(void* param_0) {
 #if TARGET_PC
                             if (randomizer_IsActive()) {
                                 local_18 = verifyProgressiveItem(randomizer_getItemAtLocation("Renados Letter"));
+                                randomizer_setTempFlagForLocation("Renados Letter");
                             }
 #endif
                             mItemPartnerId = fopAcM_createItemForPresentDemo(&current.pos, local_18,

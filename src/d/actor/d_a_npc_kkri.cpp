@@ -1187,6 +1187,7 @@ int daNpc_Kkri_c::talk(void*) {
                             if (randomizer_IsActive()) {
                                 if (item_no == dItemNo_OIL_BOTTLE3_e) {
                                     item_no = verifyProgressiveItem(randomizer_getItemAtLocation("Coro Bottle"));
+                                    randomizer_setTempFlagForLocation("Coro Bottle");
                                 } /*else if (item_no == dItemNo_SMALL_KEY_e) { // Might be Small Key 2
                                     item_no = verifyProgressiveItem(randomizer_getItemAtLocation("Coro Gate Key"));
                                 }*/

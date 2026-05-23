@@ -1322,8 +1322,8 @@ bool daNpcRafrel_c::talk(void* param_0) {
                 if (eventId == 1) {
 #if TARGET_PC
                     if (randomizer_IsActive()) {
-                        u8 itemId = randomizer_getItemAtLocation("Auru Gift To Fyer");
-                        itemNo = verifyProgressiveItem(itemId);
+                        itemNo = verifyProgressiveItem(randomizer_getItemAtLocation("Auru Gift To Fyer"));
+                        randomizer_setTempFlagForLocation("Auru Gift To Fyer");
                     }
 #endif
                     field_0xe00 = fopAcM_createItemForPresentDemo(&current.pos, itemNo, 0, -1, -1, NULL, NULL);
@@ -1580,8 +1580,8 @@ int daNpcRafrel_c::EvCut_Appear(int i_staffId) {
             if (eventId == 1) {
 #if TARGET_PC
                 if (randomizer_IsActive()) {
-                    u8 itemId = randomizer_getItemAtLocation("Auru Gift To Fyer");
-                    itemNo = verifyProgressiveItem(itemId);
+                    itemNo = verifyProgressiveItem(randomizer_getItemAtLocation("Auru Gift To Fyer"));
+                    randomizer_setTempFlagForLocation("Auru Gift To Fyer");
                 }
 #endif
                 field_0xe00 = fopAcM_createItemForPresentDemo(&current.pos, itemNo, 0, -1, -1, NULL, NULL);

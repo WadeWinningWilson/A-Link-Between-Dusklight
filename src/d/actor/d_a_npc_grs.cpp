@@ -1191,6 +1191,7 @@ int daNpc_grS_c::talk(void* param_0) {
 #if TARGET_PC
                     if (randomizer_IsActive()) {
                         unkInt2 = verifyProgressiveItem(randomizer_getItemAtLocation("Goron Mines Gor Amato Key Shard"));
+                        randomizer_setTempFlagForLocation("Goron Mines Gor Amato Key Shard");
                     }
 #endif
                     mPresentItemId =
