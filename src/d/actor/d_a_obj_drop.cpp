@@ -26,6 +26,8 @@
 daObjDrop_HIO_c l_HIO;
 #endif
 
+#include <dusk/ui/settings.hpp>
+
 static void* searchParentSub(void* pproc, void* pdata) {
     daObjDrop_c* pdrop = (daObjDrop_c*)pdata;
     fopAc_ac_c* pym = (fopAc_ac_c*)pproc;
@@ -103,8 +105,12 @@ void daObjDrop_c::dropGet() {
         dComIfGs_setLightDropNum(dComIfGp_getStartStageDarkArea(), num + 1);
 
         if (dComIfGp_getStartStageDarkArea() == 2 &&
-            #if DUSK_TPHD
-            dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea()) == 11)
+            #if TARGET_PC
+            ((dusk::tphd_active() &&
+                 dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea()) == 11) ||
+                !dusk::tphd_active() &&
+                    dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea()) == 15
+            ))
             #else
             dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea()) == 15)
             #endif

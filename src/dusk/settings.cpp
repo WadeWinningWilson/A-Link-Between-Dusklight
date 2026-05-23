@@ -176,6 +176,11 @@ UserSettings& getSettings() {
     return g_userSettings;
 }
 
+bool tphd_active() {
+    const std::string& hdPath = g_userSettings.backend.hdContentPath;
+    return !hdPath.empty();
+}
+
 void registerSettings() {
     // Video
     Register(g_userSettings.video.enableFullscreen);

@@ -242,6 +242,8 @@ struct UserSettings {
 
 UserSettings& getSettings();
 
+bool tphd_active();
+
 void registerSettings();
 
 // Transient settings

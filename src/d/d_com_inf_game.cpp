@@ -25,6 +25,7 @@
 #include "m_Do/m_Do_graphic.h"
 #include <cstdio>
 #include <cstring>
+#include <dusk/ui/settings.hpp>
 
 void dComIfG_play_c::ct() {
     mWindowNum = 0;
@@ -2571,8 +2572,11 @@ u8 dComIfG_getNowCalcRegion() {
 
 bool dComIfGp_isLightDropMapVisible() {
     for (int i = 0; i < 3; i++) {
-        #if DUSK_TPHD
-        if (dComIfGs_isLightDropGetFlag(i) != FALSE && dComIfGs_getLightDropNum(i) < 12) {
+        #if TARGET_PC
+        if (dComIfGs_isLightDropGetFlag(i) != FALSE && 
+            ((dusk::tphd_active() && dComIfGs_getLightDropNum(i) < 12) ||
+            (!dusk::tphd_active() && dComIfGs_getLightDropNum(i) < 16)))
+        {
         #else
         if (dComIfGs_isLightDropGetFlag(i) != FALSE && dComIfGs_getLightDropNum(i) < 16) {
         #endif
