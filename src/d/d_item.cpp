@@ -1818,7 +1818,7 @@ void item_func_IRIAS_PENDANT() {
 void item_func_HORSE_FLUTE() {
 #if TARGET_PC
     if (randomizer_IsActive()) {
-        if (dComIfGs_getItem(SLOT_21, true) != dItemNo_Randomizer_NONE_e)
+        if (dComIfGs_getItem(SLOT_21, true) == dItemNo_Randomizer_NONE_e)
             dComIfGs_setItem(SLOT_21, dItemNo_Randomizer_HORSE_FLUTE_e);
     } else
 #endif
