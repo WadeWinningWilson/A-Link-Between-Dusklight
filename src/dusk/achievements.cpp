@@ -1161,7 +1161,7 @@ std::vector<AchievementSystem::Entry> AchievementSystem::makeEntries() {
                 false, 0, 0, false
             },
             [](Achievement& a, json&) {
-                if (dComIfGs_isEventBit(dSv_event_flag_c::M_018)) {
+                if (dComIfGs_isEventBit(dSv_event_flag_c::M_018) || dComIfGp_getStageStagInfo() == nullptr) {
                     return;
                 }
                 const bool savedPortal = g_dComIfG_gameInfo.info.getSavedata().getSave(dStage_SaveTbl_ELDIN).getBit().isSwitch(31);
