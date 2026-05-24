@@ -18,6 +18,8 @@
 #include "dusk/randomizer/game/verify_item_functions.h"
 #endif
 
+#include "dusk/string.hpp"
+
 #if DEBUG
 static dEvM_HIO_c l_HIO;
 #endif
@@ -397,7 +399,7 @@ void dEvent_manager_c::roomInit(int roomNo) {
     }
 
     char arcname[8];
-    strcpy(arcname, dComIfG_getRoomArcName(roomNo));
+    SAFE_STRCPY(arcname, dComIfG_getRoomArcName(roomNo));
     char* res = (char*)dComIfG_getStageRes(arcname, DataFileName);
 
     int i;
@@ -845,7 +847,7 @@ s16 dEvent_manager_c::getEventIdx(const char* eventName, u8 mapToolID, s32 roomN
             case dStage_MapEvent_dt_TYPE_STB:
                 return getEventIdx(mapdata->data.event_name, 0xFF, roomNo);
             case dStage_MapEvent_dt_TYPE_MAPTOOLCAMERA:
-                sprintf(map_tool_name, "MapToolCamera%d", mapToolID);
+                SAFE_SPRINTF(map_tool_name, "MapToolCamera%d", mapToolID);
                 return getEventIdx(map_tool_name, 0xFF, roomNo);
             default:
                 JUT_ASSERT(1278, FALSE);
@@ -885,7 +887,7 @@ s16 dEvent_manager_c::getEventIdx(fopAc_ac_c* actor, u8 mapToolID) {
         case dStage_MapEvent_dt_TYPE_STB:
             return getEventIdx(actor, mapdata->data.event_name, 0xFF);
         case dStage_MapEvent_dt_TYPE_MAPTOOLCAMERA:
-            sprintf(map_tool_name, "MapToolCamera%d", mapToolID);
+            SAFE_SPRINTF(map_tool_name, "MapToolCamera%d", mapToolID);
             return getEventIdx(actor, map_tool_name, 0xFF);
         default:
             JUT_ASSERT(1341, FALSE);
@@ -910,7 +912,7 @@ s16 dEvent_manager_c::getEventIdx(fopAc_ac_c* actor, const char* eventName, u8 m
             case dStage_MapEvent_dt_TYPE_STB:
                 return getEventIdx(actor, mapdata->data.event_name, 0xFF);
             case dStage_MapEvent_dt_TYPE_MAPTOOLCAMERA:
-                sprintf(map_tool_name, "MapToolCamera%d", mapToolID);
+                SAFE_SPRINTF(map_tool_name, "MapToolCamera%d", mapToolID);
                 return getEventIdx(actor, map_tool_name, 0xFF);
             default:
                 JUT_ASSERT(1376, FALSE);
@@ -1049,7 +1051,7 @@ int dEvent_manager_c::getMyStaffId(const char* staffName, fopAc_ac_c* actor, int
             dEvDtStaff_c* staff = getBase().getStaffP(staff_id);
             if (staff->getType() != dEvDtStaff_c::TYPE_ALL) {
                 char buf[20];
-                strcpy(buf, staff->getName());
+                SAFE_STRCPY(buf, staff->getName());
 
                 char* ptr = NULL;
                 if (!hasDp) {
@@ -1319,7 +1321,7 @@ void dEvent_manager_c::issueStaff(const char* staffname) {
         fopAcM_Search((fopAcIt_JudgeFunc)extraOnObjectCallBack, NULL);
     } else {
         char nameBuf[32];
-        strcpy(nameBuf, staffname);
+        SAFE_STRCPY(nameBuf, staffname);
         fopAc_ac_c* actor = fopAcM_searchFromName4Event(nameBuf, -1);
         fopAcM_OnStatus(actor, fopAcStts_STAFF_EXTRA_e);
     }
@@ -1330,7 +1332,7 @@ void dEvent_manager_c::cancelStaff(const char* staffname) {
         fopAcM_Search((fopAcIt_JudgeFunc)extraOffObjectCallBack, NULL);
     } else {
         char nameBuf[32];
-        strcpy(nameBuf, staffname);
+        SAFE_STRCPY(nameBuf, staffname);
         fopAc_ac_c* actor = fopAcM_searchFromName4Event(nameBuf, -1);
         fopAcM_OffStatus(actor, fopAcStts_STAFF_EXTRA_e);
     }

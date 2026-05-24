@@ -21,6 +21,7 @@
 #include <cstring>
 
 #if TARGET_PC
+#include "dusk/string.hpp"
 #include "dusk/randomizer/game/verify_item_functions.h"
 #endif
 
@@ -1418,11 +1419,11 @@ int daNpc_ykW_c::cutGoIntoBossRoom(int param_0) {
 
         if (skip != 0 && (prm == 0 || prm == 4)) {
             if (prm == 0) {
-                strcpy(unkStrBuf1, l_evtList[4].eventName);
+                SAFE_STRCPY(unkStrBuf1, l_evtList[4].eventName);
             } else {
-                strcpy(unkStrBuf1, l_evtList[5].eventName);
+                SAFE_STRCPY(unkStrBuf1, l_evtList[5].eventName);
             }
-            strcat(unkStrBuf1, "@");
+            SAFE_STRCAT(unkStrBuf1, "@");
             dComIfGp_getEvent()->setSkipZev(this, unkStrBuf1);
         }
     }

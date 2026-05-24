@@ -10,6 +10,7 @@
 #include <cstring>
 
 #if TARGET_PC
+#include "dusk/string.hpp"
 #include "dusk/randomizer/game/tools.h"
 #endif
 
@@ -1146,8 +1147,8 @@ BOOL daNpc_Yelia_c::cutTakeWoodStatue(int i_staffId) {
             mItemId = fpcM_ERROR_PROCESS_ID_e;
             mEventTimer = timer;
             Z2GetAudioMgr()->muteSceneBgm(90, 0.0f);
-            strcpy(name, l_evtList[EVENT_TAKE_WOODSTATUE].eventName);
-            strcat(name, "@");
+            SAFE_STRCPY(name, l_evtList[EVENT_TAKE_WOODSTATUE].eventName);
+            SAFE_STRCAT(name, "@");
             dComIfGp_getEvent()->setSkipZev(this, name);
             dComIfGp_getEvent()->onSkipFade();
             break;

@@ -57,6 +57,7 @@
 #include "dusk/settings.h"
 #include "res/Object/Alink.h"
 #include <cstring>
+#include <dusk/string.hpp>
 #endif
 
 #include "dusk/randomizer/game/flags.h"
