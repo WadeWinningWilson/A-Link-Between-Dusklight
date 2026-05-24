@@ -466,8 +466,9 @@ void dSv_player_item_c::setLineUpItem() {
     }
 
 #if TARGET_PC
-    // Allow rando to use all item slots
-    if (randomizer_IsActive()) {
+    // Allow rando to use all item slots. Need to check for active randomizer hash instead of
+    // randomizer being active because this gets run on file select
+    if (!randomizer_GetContext().mHash.empty()) {
         if (mItems[7] != dItemNo_NONE_e) {
             mItemSlots[slot_idx] = 7;
         }
