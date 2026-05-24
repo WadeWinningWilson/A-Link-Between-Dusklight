@@ -243,9 +243,11 @@ MipLevelDesc mipLevelDesc(const GtxSurface& s, u32 level, bool isBcn, u32 bpp) {
     const bool is1D = (d.tileMode == addrlib::TileMode::Tiled1DThin1 ||
                        d.tileMode == addrlib::TileMode::Tiled1DThick);
     const u32 alignment = is1D ? 8u : 32u;
-    u32 levelPitch = std::max(1u, s.pitch >> level);
-    levelPitch = ((levelPitch + alignment - 1) / alignment) * alignment;
-    d.pitch = levelPitch;
+
+    const u32 pixelsPerBlock = isBcn ? 4u : 1u;
+    const u32 widthInBlock  = (d.width + pixelsPerBlock - 1) / pixelsPerBlock;
+    u32 levelPitch = ((widthInBlock + alignment - 1) / alignment) * alignment;
+    d.pitch = std::max(1u, levelPitch);
     return d;
 }
 
