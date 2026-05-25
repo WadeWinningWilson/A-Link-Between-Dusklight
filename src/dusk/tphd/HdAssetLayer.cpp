@@ -546,6 +546,7 @@ static constexpr std::string_view kHdSkipList[] = {
     "res/Layout/dmapres.arc",
     "res/Layout/fmapres.arc",
     "res/Layout/saveres.arc",
+    "res/Layout/fishres.arc",
     "res/FieldMap/res-f.arc",
     "res/FieldMap/res-d.arc",
 };
