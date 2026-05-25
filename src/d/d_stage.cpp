@@ -1678,7 +1678,6 @@ static void dStage_createObjectAdditions(dStage_dt_c* i_stage) {
         if (objectAdditions.contains(stageRoomLayer)) {
             for (const auto& actorData : objectAdditions.at(stageRoomLayer)) {
                 stage_tgsc_data_class object{};
-                object.scale = fopAcM_prmScale_class{0, 0, 0};
                 std::memcpy(&object, actorData.data(), actorData.size());
                 // Code below copied from base game
                 fopAcM_prm_class* appen = fopAcM_CreateAppend();
@@ -1686,7 +1685,10 @@ static void dStage_createObjectAdditions(dStage_dt_c* i_stage) {
                 if (appen != NULL) {
                     appen->base = object.base;
                     appen->room_no = (int)i_stage->getRoomNo();
-                    appen->scale = object.scale;
+                    // Only set scale for objects which have it
+                    if (actorData.size() > RandomizerContext::ACTR_CRC_SIZE) {
+                        appen->scale = object.scale;
+                    }
                     dStage_actorCreate(reinterpret_cast<stage_actor_data_class*>(&object), appen);
                 }
             }
