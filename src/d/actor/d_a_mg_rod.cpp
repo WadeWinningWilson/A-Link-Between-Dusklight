@@ -26,6 +26,7 @@
 #include <cstring>
 
 #if TARGET_PC
+#include "dusk/settings.h"
 #include "dusk/version.hpp"
 #include "dusk/randomizer/game/randomizer_context.hpp"
 #endif
@@ -1140,8 +1141,14 @@ static int lure_standby(dmg_rod_class* i_this) {
         dComIfGp_setDoStatusForce(42, 0);
     }
 
-    i_this->rod_stick_x = mDoCPd_c::getStickX3D(PAD_1) * mDoCPd_c::getStickX3D(PAD_1);
-    if (mDoCPd_c::getStickX3D(PAD_1) < 0.0f) {
+    f32 stick_x = mDoCPd_c::getStickX3D(PAD_1);
+#if TARGET_PC
+    if (dusk::getSettings().game.enableMirrorMode) {
+        stick_x = -stick_x;
+    }
+#endif
+    i_this->rod_stick_x = stick_x * stick_x;
+    if (stick_x < 0.0f) {
         i_this->rod_stick_x *= -1.0f;
     }
 
@@ -3678,7 +3685,13 @@ static void uki_standby(dmg_rod_class* i_this) {
     cLib_addCalc2(&i_this->field_0x150c, substickX, 0.5f, 0.2f);
 
     if (i_this->field_0x1508 > 0.3f && i_this->play_cam_mode < 5) {
-        ANGLE_ADD(i_this->field_0x1418, (-500.0f + VREG_F(3)) * mDoCPd_c::getStickX3D(PAD_1));
+        f32 stick_x = mDoCPd_c::getStickX3D(PAD_1);
+#if TARGET_PC
+        if (dusk::getSettings().game.enableMirrorMode) {
+            stick_x = -stick_x;
+        }
+#endif
+        ANGLE_ADD(i_this->field_0x1418, (-500.0f + VREG_F(3)) * stick_x);
     }
 
     cMtx_YrotS(*calc_mtx, i_this->field_0x1418);
@@ -5055,8 +5068,15 @@ static void play_camera(dmg_rod_class* i_this) {
             static f32 old_stick_x = 0.0f;
             static f32 old_stick_sx = 0.0f;
 
+            f32 stick_x = mDoCPd_c::getStickX3D(PAD_1);
+#if TARGET_PC
+            if (dusk::getSettings().game.enableMirrorMode) {
+                stick_x = -stick_x;
+            }
+#endif
+
             if (
-                (mDoCPd_c::getStickX3D(PAD_1) >= 0.8f && old_stick_x < 0.8f) || (mDoCPd_c::getStickX3D(PAD_1) <= -0.8f && old_stick_x > -0.8f)
+                (stick_x >= 0.8f && old_stick_x < 0.8f) || (stick_x <= -0.8f && old_stick_x > -0.8f)
                 #if VERSION != VERSION_SHIELD_DEBUG
                 || (mDoCPd_c::getSubStickX3D(PAD_1) >= 0.8f && old_stick_sx < 0.8f) || (mDoCPd_c::getSubStickX3D(PAD_1) <= -0.8f && old_stick_sx > -0.8f)
                 #endif
@@ -5072,7 +5092,7 @@ static void play_camera(dmg_rod_class* i_this) {
                 }
 
                 if (i_this->play_cam_timer >= 15) {
-                    if (mDoCPd_c::getStickX3D(PAD_1) >= 0.5f
+                    if (stick_x >= 0.5f
                         #if VERSION != VERSION_SHIELD_DEBUG
                         || mDoCPd_c::getSubStickX3D(PAD_1) >= 0.5f
                         #endif
@@ -5094,8 +5114,8 @@ static void play_camera(dmg_rod_class* i_this) {
                 }
             }
 
-            old_stick_x = mDoCPd_c::getStickX3D(PAD_1);
-            old_stick_sx = mDoCPd_c::getSubStickX(PAD_1);
+            old_stick_x = stick_x;
+            old_stick_sx = mDoCPd_c::getSubStickX3D(PAD_1);
 
             if (i_this->play_cam_timer == 1) {
                 if (i_this->field_0xf81 == 0) {
@@ -5800,7 +5820,14 @@ static int dmg_rod_Execute(dmg_rod_class* i_this) {
 
     i_this->rod_stick_x = mDoCPd_c::getStickX3D(PAD_1);
     i_this->rod_stick_y = mDoCPd_c::getStickY(PAD_1);
+#if TARGET_PC
+    if (dusk::getSettings().game.enableMirrorMode) {
+        i_this->rod_stick_x = -i_this->rod_stick_x;
+    }
+    i_this->rod_substick_x = mDoCPd_c::getSubStickX3D(PAD_1);
+#else
     i_this->rod_substick_x = mDoCPd_c::getSubStickX(PAD_1);
+#endif
     i_this->prev_rod_substick_y = i_this->rod_substick_y;
     i_this->rod_substick_y = mDoCPd_c::getSubStickY(PAD_1);
 
