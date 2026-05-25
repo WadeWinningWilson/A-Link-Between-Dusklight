@@ -224,6 +224,8 @@ int daObjLife_c::create() {
             } else if (getStageID() == Ook) {
                 // Special case for Gale Boomerang check
                 itemId = verifyProgressiveItem(randomizer_getItemAtLocation("Forest Temple Gale Boomerang"));
+                // Set rando custom collection flag
+                dComIfGs_onItem(0x9D, -1);
             } else {
                 u8 flag = getSaveBitNo();
                 u8 stageIdx = getStageID();
