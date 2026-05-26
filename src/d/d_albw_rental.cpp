@@ -210,6 +210,15 @@ static bool sJustEnteredGreeting  = false;  // → MOT_HELLO + Z2SE_POST_V_APPEA
 static bool sJustEnteredShop      = false;  // → MOT_WAIT_A (explicit idle lock-in)
 static bool sJustEnteredFarewell  = false;  // → MOT_BYE   + Z2SE_POST_V_FANFARE
 // ============================================
+// NEW CODE — ALBW Port (Purchase Sound)
+// Set true by tryPurchase() on a successful rental; consumed once by
+// dALBWRental_justPurchased() so the postman can play a congratulatory
+// voice squeak without the caller needing to know what sound to play.
+// To remove purchase sounds entirely: delete this flag, the sJustPurchased
+// assignment in tryPurchase(), and dALBWRental_justPurchased() below.
+// ============================================
+static bool sJustPurchased        = false;  // → Z2SE_POST_V_SMILING congratulatory squeak
+// ============================================
 // NEW CODE ENDS HERE
 // ============================================
 
@@ -285,6 +294,7 @@ static void tryPurchase(int visIdx) {
         dComIfGs_setItem(e.slotNo, e.itemNo);
     }
     sPurchasedThisSession = true;
+    sJustPurchased        = true;   // triggers Z2SE_POST_V_SMILING in d_a_npc_post.cpp
     sStatusMsg    = "One step closer to becoming a Senior Postman.\nI can smell the fields now, thank you for your patronage!";
     sStatusExpiry = clock::now() + std::chrono::seconds(6);
     rebuildVisibleList();
@@ -349,6 +359,22 @@ bool dALBWRental_justEnteredShop() {
 bool dALBWRental_justEnteredFarewell() {
     if (sJustEnteredFarewell) {
         sJustEnteredFarewell = false;
+        return true;
+    }
+    return false;
+}
+
+// ============================================
+// NEW CODE — ALBW Port (Purchase Sound)
+// dALBWRental_justPurchased()
+// Returns true exactly once after a successful rental purchase, then resets.
+// Consumed by daNpc_Post_c::Execute() to play a congratulatory voice squeak.
+// Deleting this function (and sJustPurchased) removes purchase sounds with
+// zero impact on shop logic, animations, or dialogue interactions.
+// ============================================
+bool dALBWRental_justPurchased() {
+    if (sJustPurchased) {
+        sJustPurchased = false;
         return true;
     }
     return false;

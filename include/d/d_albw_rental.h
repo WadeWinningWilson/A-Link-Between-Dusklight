@@ -36,6 +36,13 @@ bool dALBWRental_justEnteredGreeting(); // Execute() — play MOT_HELLO + FACE_M
 bool dALBWRental_justEnteredShop();     // Execute() — play MOT_WAIT_A + FACE_MOT_NONE_2
 bool dALBWRental_justEnteredFarewell(); // Execute() — play MOT_BYE   + FACE_MOT_BYE  + Z2SE_POST_V_FANFARE
 // ============================================
+// NEW CODE — ALBW Port (Purchase Sound)
+// One-shot flag consumed by Execute() to play Z2SE_POST_V_SMILING.
+// Delete this + sJustPurchased in d_albw_rental.cpp to remove purchase
+// sounds with zero impact on shop logic, animations, or dialogue.
+// ============================================
+bool dALBWRental_justPurchased();       // Execute() — play Z2SE_POST_V_SMILING congratulatory squeak
+// ============================================
 // NEW CODE ENDS HERE
 // ============================================
 #endif
