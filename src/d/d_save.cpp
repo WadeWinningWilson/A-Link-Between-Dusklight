@@ -118,7 +118,11 @@ u8 dSv_player_status_a_c::getMixItemIndex(int i_no) const {
 }
 
 u16 dSv_player_status_a_c::getRupeeMax() const {
-    if (mWalletSize < 3) {  // if you make this a default, it wont match. Compiler, pls.
+    // ============================================
+    // MODIFIED CODE — ALBW Port
+    // Extended from < 3 to < 4 to handle COLOSSAL_WALLET (size 3).
+    // ============================================
+    if (mWalletSize < 4) {  // if you make this a default, it wont match. Compiler, pls.
         switch (mWalletSize) {
         case WALLET:
             #if TARGET_PC
@@ -138,11 +142,23 @@ u16 dSv_player_status_a_c::getRupeeMax() const {
             #else
             return 1000;
             #endif
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Colossal Wallet: always 9999; unaffected by biggerWallets setting.
+        // ============================================
+        case COLOSSAL_WALLET:
+            return COLOSSAL_WALLET_MAX;
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
         }
     }
 
     return 0;
 }
+// ============================================
+// MODIFIED CODE ENDS HERE
+// ============================================
 
 void dSv_player_status_a_c::onMagicFlag(u8 i_magic) {
     JUT_ASSERT(203, 0 <= i_magic && i_magic < 8);

@@ -280,8 +280,8 @@ std::map<int, itemInfo> itemMap = {
     {dItemNo_WALLET_LV1_e, {"Wallet"}},
     {dItemNo_WALLET_LV2_e, {"Big Wallet"}},
     {dItemNo_WALLET_LV3_e, {"Giant Wallet"}},
-    {dItemNo_NOENTRY_55_e, {"Reserved"}},
-    {dItemNo_NOENTRY_56_e, {"Reserved"}},
+    {dItemNo_WALLET_LV4_e, {"Colossal Wallet"}},    // ALBW Port
+    {dItemNo_DEITY_ARMOR_e, {"Deity Armor (flag)"}},  // ALBW Port
     {dItemNo_NOENTRY_57_e, {"Reserved"}},
     {dItemNo_NOENTRY_58_e, {"Reserved"}},
     {dItemNo_NOENTRY_59_e, {"Reserved"}},
@@ -1005,11 +1005,19 @@ void populate_select_equip_picker(Pane& pane, u8& equip, const std::array<u8, Si
     }
 }
 
-static const std::array<Rml::String, 3> walletSizeNames = {
+// ============================================
+// MODIFIED CODE — ALBW Port
+// Added "Colossal" (size 3, 9999 rupees) to the wallet size picker.
+// ============================================
+static const std::array<Rml::String, 4> walletSizeNames = {
     "Normal",
     "Big",
     "Giant",
+    "Colossal",  // ALBW Port — Cave of Ordeals reward
 };
+// ============================================
+// MODIFIED CODE ENDS HERE
+// ============================================
 
 void populate_wallet_picker(Pane& pane) {
     pane.clear();

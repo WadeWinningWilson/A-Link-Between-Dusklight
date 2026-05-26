@@ -15,6 +15,10 @@
 #include <cstring>
 
 #include "dusk/gx_helper.h"
+#if TARGET_PC
+#include "d/d_item_data.h"
+#include "dusk/ui/ui.hpp"
+#endif
 
 class dGov_HIO_c : public mDoHIO_entry_c {
 public:
@@ -99,6 +103,15 @@ static initFunc init_process[] = {
     &dGameover_c::playerAnmWait_init, &dGameover_c::dispFadeOut_init, &dGameover_c::dispWait_init,
     &dGameover_c::demoFadeIn_init,    &dGameover_c::demoFadeOut_init, &dGameover_c::saveOpen_init,
     &dGameover_c::saveMove_init,      &dGameover_c::saveClose_init,   &dGameover_c::deleteWait_init,
+// ============================================
+// NEW CODE — ALBW Port
+// ============================================
+#if TARGET_PC
+    &dGameover_c::warpChoice_init,
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 };
 
 typedef void (dGameover_c::*moveFunc)();
@@ -106,7 +119,30 @@ static moveFunc move_process[] = {
     &dGameover_c::playerAnmWait_proc, &dGameover_c::dispFadeOut_proc, &dGameover_c::dispWait_proc,
     &dGameover_c::demoFadeIn_proc,    &dGameover_c::demoFadeOut_proc, &dGameover_c::saveOpen_proc,
     &dGameover_c::saveMove_proc,      &dGameover_c::saveClose_proc,   &dGameover_c::deleteWait_proc,
+// ============================================
+// NEW CODE — ALBW Port
+// ============================================
+#if TARGET_PC
+    &dGameover_c::warpChoice_proc,
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 };
+
+// ============================================
+// NEW CODE — ALBW Port
+// File-scope statics for the warp-destination choice state.
+// Declared here so saveClose_proc() and warpChoice_proc() can both see them.
+// ============================================
+#if TARGET_PC
+static int  sALBWWarpChoice    = -1;
+static bool sALBWWarpInDungeon = false;
+static int  sALBWWarpDelay     = 0;
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
 dGov_HIO_c::dGov_HIO_c() {
     mScale = 2.7f;
@@ -138,6 +174,95 @@ int dGameover_c::_create() {
         if (dMeter2Info_getGameOverType() == 0) {
             mDoGph_gInf_c::setFadeColor(*(JUtility::TColor*)&g_blackColor);
             dComIfGs_addDeathCount();
+#if TARGET_PC
+            // ============================================
+            // NEW CODE — ALBW Port
+            // Strip all ALBW items from inventory on real player death,
+            // BUT only once Talo has been rescued (event bit F_0625).
+            // Before that point the rental Postman does not exist, so
+            // there is no way to recover stripped items — leave them alone.
+            // For each item: record rental eligibility BEFORE clearing
+            // the possession bit so the rental shop can later offer it.
+            // Inventory slot is set to NONE — any button binding that
+            // pointed to that slot naturally shows empty after respawn.
+            // Magic Armor is a clothing equip rather than an inventory
+            // slot; reset clothing to Kokiri tunic if it was equipped.
+            // Finally, fill the ALBW meter to full max so Link respawns
+            // with full stamina regardless of how far it had drained.
+            // Meter capacity upgrades (sOilMaxVar) are intentionally
+            // preserved — only the current value is restored.
+            // ============================================
+            if (dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625])) {
+                struct ALBWItem { u8 itemNo; int slotNo; };
+                static const ALBWItem kALBWItems[] = {
+                    { (u8)dItemNo_BOOMERANG_e,    SLOT_0  },
+                    { (u8)dItemNo_SPINNER_e,      SLOT_2  },
+                    { (u8)dItemNo_BOW_e,          SLOT_4  },
+                    { (u8)dItemNo_IRONBALL_e,     SLOT_6  },
+                    { (u8)dItemNo_COPY_ROD_e,     SLOT_8  },
+                    { (u8)dItemNo_HOOKSHOT_e,     SLOT_9  },
+                    { (u8)dItemNo_W_HOOKSHOT_e,   SLOT_10 },
+                    { (u8)dItemNo_BOMB_BAG_LV1_e, SLOT_15 },
+                    { (u8)dItemNo_BOMB_BAG_LV2_e, SLOT_16 },
+                    { (u8)dItemNo_POKE_BOMB_e,    SLOT_17 },
+                    { (u8)dItemNo_PACHINKO_e,     SLOT_23 },
+                };
+                for (int i = 0; i < 11; i++) {
+                    u8  itemNo = kALBWItems[i].itemNo;
+                    int slotNo = kALBWItems[i].slotNo;
+                    // ============================================
+                    // MODIFIED CODE — ALBW Port
+                    // Also check the inventory slot directly, not just isItemFirstBit.
+                    // The save editor (and similar tools) restore items into the slot
+                    // without setting the ownership bit, so the old bit-only check
+                    // silently skipped those items on death. Checking both ensures
+                    // save-editor-restored items are stripped and their eligibility
+                    // bits written correctly on the next death.
+                    // ============================================
+                    bool inBit  = dComIfGs_isItemFirstBit(itemNo);
+                    // Use i_checkCombo=false to read mItems[slotNo] directly.
+                    // Passing true can return a remapped combo-item ID instead
+                    // of the raw slot value, causing the comparison to miss
+                    // items that were restored via the save editor (which only
+                    // calls dComIfGs_setItem and never sets the ownership bit).
+                    bool inSlot = (dComIfGs_getItem(slotNo, false) == itemNo);
+                    if (inBit || inSlot) {
+                        dMeter2_onALBWRentalEligible(itemNo);
+                        dComIfGs_offItemFirstBit(itemNo);
+                        dComIfGs_setItem(slotNo, dItemNo_NONE_e);
+                    }
+                    // ============================================
+                    // MODIFIED CODE ENDS HERE
+                    // ============================================
+                }
+                // Magic Armor: clothing equip, not an inventory slot
+                if (dComIfGs_isItemFirstBit((u8)dItemNo_ARMOR_e)) {
+                    dMeter2_onALBWRentalEligible((u8)dItemNo_ARMOR_e);
+                    dComIfGs_offItemFirstBit((u8)dItemNo_ARMOR_e);
+                    if (dComIfGs_getSelectEquipClothes() == (u8)dItemNo_ARMOR_e) {
+                        dComIfGs_setSelectEquipClothes((u8)dItemNo_WEAR_KOKIRI_e);
+                    }
+                }
+                // ============================================
+                // NEW CODE — ALBW Port
+                // Deity Armor: ability flag only (no inventory slot, no
+                // eligibility save bit — its re-display in the shop is gated
+                // by Magic Armor eligibility + Colossal Wallet, not its own
+                // save bit).  Just clear the ownership bit on death so the
+                // ability deactivates and the shop can re-list it.
+                // ============================================
+                if (dComIfGs_isItemFirstBit((u8)dItemNo_DEITY_ARMOR_e)) {
+                    dComIfGs_offItemFirstBit((u8)dItemNo_DEITY_ARMOR_e);
+                }
+                // ============================================
+                // NEW CODE ENDS HERE
+                // ============================================
+                dMeter2_fillALBWMeter();
+            }
+            // ============================================
+            // NEW CODE ENDS HERE
+            // ============================================
+#endif
         }
 
         dRes_info_c* resInfo = dComIfG_getObjectResInfo("Gover");
@@ -270,7 +395,29 @@ void dGameover_c::demoFadeOut_proc() {
     }
 }
 
-void dGameover_c::saveOpen_init() {}
+void dGameover_c::saveOpen_init() {
+// ============================================
+// NEW CODE — ALBW Port
+// Show the item-delivery notification now that the game-over Continue
+// menu is fully on screen. Fired only for real player deaths (type 0);
+// cutscene deaths (types 1/2) never strip items and skip this branch.
+// Duration is 75 % of the original 6 s for a less intrusive display.
+// ============================================
+#if TARGET_PC
+    if (dMeter2Info_getGameOverType() == 0 &&
+        dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625])) {
+        dusk::ui::push_toast({
+            .title   = "Items Delivered",
+            .content = "~Greetings! A helpful friend has delivered your lost"
+                       " items back to Ordon. Pick up at your leisure~",
+            .duration = std::chrono::milliseconds(4500),
+        });
+    }
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+}
 
 void dGameover_c::saveOpen_proc() {
     if (dMs_c->_open()) {
@@ -284,7 +431,36 @@ void dGameover_c::saveMove_proc() {
     dMs_c->_move();
 
     if (dMs_c->getSaveStatus() == 3) {
+// ============================================
+// NEW CODE — ALBW Port
+// Route real-player-death Continue selections through the warp choice
+// dialog before applying the gameover status and stage reload.
+// Cutscene deaths (types 1 and 2) bypass this dialog — they already
+// have their own custom handling in saveClose_proc.
+//
+// Three-condition gate:
+//   1. Normal death (type 0) — not a cutscene kill
+//   2. Talo rescue event (F_0625) — used as the general "early game done"
+//      unlock; also gates the postman route and rental shop
+//   3. Wolf Link form adds a further gate: warp is hidden until Link
+//      obtains the Master Sword, since Ordon is irrelevant as a wolf
+//      destination before that story milestone.
+//      Human Link deaths respect only condition 2 (Talo flag).
+// ============================================
+#if TARGET_PC
+        if (dMeter2Info_getGameOverType() == 0 &&
+            dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625]) &&
+            (!dMeter2_isWolfForm() || dComIfGs_isItemFirstBit(dItemNo_MASTER_SWORD_e))) {
+            mProc = PROC_ALBW_WARP_CHOICE;
+        } else {
+            mProc = PROC_SAVE_CLOSE;
+        }
+#else
         mProc = PROC_SAVE_CLOSE;
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
     }
 }
 
@@ -298,11 +474,36 @@ void dGameover_c::saveClose_proc() {
     } else if (dMs_c->getEndStatus() == 1) {
         if (dMeter2Info_getGameOverType() == 1 || dMeter2Info_getGameOverType() == 2) {
             dComIfGp_setGameoverStatus(1);
-        } else {
-            dComIfGp_setGameoverStatus(2);
+            dComIfGp_offPauseFlag();
         }
-
-        dComIfGp_offPauseFlag();
+// ============================================
+// NEW CODE — ALBW Port
+// If the player chose "Ordon Village" in the warp dialog, trigger a
+// direct stage transition to F_SP103 (Ordon Village) room 0 spawn 0
+// instead of the normal continue-from-current-position reload.
+// setNextStage queues the transition; offPauseFlag lets the game run so
+// the queued change is processed in the next frame.
+// setGameoverStatus(2) is intentionally skipped so roomControl_initZone
+// does NOT fire — the stage change handles the reload instead.
+// ============================================
+#if TARGET_PC
+        else if (dMeter2Info_getGameOverType() == 0 && sALBWWarpChoice == 1) {
+            // setNextStage bypasses the normal continue path that restores HP,
+            // so Link would arrive in Ordon at 0 HP and immediately die again.
+            // Restore to full health here before the stage transition fires.
+            dComIfGs_setLife(dComIfGs_getMaxLife());
+            // Warp to Outside Link's House (F_SP103 room 1, spawn 0)
+            dComIfGp_setNextStage("F_SP103", 0, 1, -1);
+            dComIfGp_offPauseFlag();
+        }
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+        else {
+            dComIfGp_setGameoverStatus(2);
+            dComIfGp_offPauseFlag();
+        }
 
         // Reset Monkey lantern steal sequence flags if player hasn't regained lantern
         if (!dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[226])) {
@@ -331,6 +532,66 @@ void dGameover_c::saveClose_proc() {
 void dGameover_c::deleteWait_init() {}
 
 void dGameover_c::deleteWait_proc() {}
+
+// ============================================
+// NEW CODE — ALBW Port
+// Post-death warp destination choice.
+// sALBWWarpChoice: -1 = awaiting input, 0 = Dungeon Entrance / normal
+//   respawn, 1 = Ordon Village.
+// sALBWWarpInDungeon: true when the current stage name starts with "D_MN",
+//   i.e. the player died inside a dungeon. Drives the dialog label and
+//   whether "Dungeon Entrance" or "Continue Here" is offered.
+// Flow: saveMove_proc() routes type-0 game-overs to this state after
+// the player confirms Continue.  warpChoice_proc() polls A/B input with
+// a 60-frame debounce delay, then when a button is pressed either:
+//   - Dungeon Entrance / Continue: proceeds to PROC_SAVE_CLOSE normally.
+//   - Ordon Village: calls setNextStage("F_SP103") directly and skips
+//     to PROC_SAVE_CLOSE so cleanup still runs, but the gameover status
+//     branch in saveClose_proc will see sALBWWarpChoice == 1 and skip
+//     setGameoverStatus(2) in favour of the already-queued stage change.
+// ============================================
+#if TARGET_PC
+void dGameover_c::warpChoice_init() {
+    sALBWWarpChoice    = -1;
+    sALBWWarpDelay     = 60;  // ~1 second buffer so the save-screen A press doesn't instantly fire
+    const char* stage  = dComIfGp_getLastPlayStageName();
+    // All main dungeon stages begin with "D_MN"
+    sALBWWarpInDungeon = (stage[0] == 'D' && stage[1] == '_' &&
+                          stage[2] == 'M' && stage[3] == 'N');
+
+    const char* content = sALBWWarpInDungeon
+        ? "A: Dungeon Entrance\nB: Ordon Village"
+        : "A: Continue Here\nB: Ordon Village";
+
+    dusk::ui::push_toast({
+        .title    = "Choose Warp Destination",
+        .content  = content,
+        .duration = std::chrono::seconds(8),
+    });
+}
+
+void dGameover_c::warpChoice_proc() {
+    // 60-frame debounce — prevents the A that confirmed "Continue" on the
+    // save menu from immediately resolving the warp choice as well.
+    // The toast from warpChoice_init() explains A/B to the player.
+    if (sALBWWarpDelay > 0) {
+        sALBWWarpDelay--;
+    } else {
+        if (dComIfG_getTrigA(PAD_1)) {
+            sALBWWarpChoice = 0;  // Dungeon Entrance / Continue Here
+        } else if (dComIfG_getTrigB(PAD_1)) {
+            sALBWWarpChoice = 1;  // Ordon Village
+        }
+    }
+
+    if (sALBWWarpChoice >= 0) {
+        mProc = PROC_SAVE_CLOSE;
+    }
+}
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
 int dGameover_c::_draw() {
     if (dgo_capture_c != NULL && dComIfGp_isPauseFlag()) {

@@ -66,8 +66,8 @@ static void (*item_func_ptr[256])() = {
     item_func_WALLET_LV1,
     item_func_WALLET_LV2,
     item_func_WALLET_LV3,
-    item_func_noentry,
-    item_func_noentry,
+    item_func_WALLET_LV4,  // 0x37 = dItemNo_WALLET_LV4_e (NEW — ALBW Port)
+    item_func_noentry,     // 0x38 = dItemNo_DEITY_ARMOR_e (ability flag, no pickup func)
     item_func_noentry,
     item_func_noentry,
     item_func_noentry,
@@ -334,8 +334,8 @@ static int (*item_getcheck_func_ptr[256])() = {
     item_getcheck_func_WALLET_LV1,
     item_getcheck_func_WALLET_LV2,
     item_getcheck_func_WALLET_LV3,
-    item_getcheck_func_noentry,
-    item_getcheck_func_noentry,
+    item_getcheck_func_WALLET_LV4,   // 0x37 (NEW — ALBW Port)
+    item_getcheck_func_noentry,      // 0x38 = dItemNo_DEITY_ARMOR_e
     item_getcheck_func_noentry,
     item_getcheck_func_noentry,
     item_getcheck_func_noentry,
@@ -811,6 +811,25 @@ void item_func_WALLET_LV2() {
 void item_func_WALLET_LV3() {
     dComIfGs_setWalletSize(GIANT_WALLET);
 }
+
+// ============================================
+// NEW CODE — ALBW Port
+// item_func_WALLET_LV4 / item_getcheck_func_WALLET_LV4
+// Colossal Wallet (dItemNo_WALLET_LV4_e = 0x37).
+// Normally granted automatically on Cave of Ordeals completion via
+// f_ap_game.cpp, not via a chest pickup — these functions exist for
+// completeness and save-editor compatibility.
+// ============================================
+void item_func_WALLET_LV4() {
+    dComIfGs_setWalletSize(COLOSSAL_WALLET);
+}
+
+int item_getcheck_func_WALLET_LV4() {
+    return -1;
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
 void item_func_ZORAS_JEWEL() {
     if (item_getcheck_func_FISHING_ROD_1()) {

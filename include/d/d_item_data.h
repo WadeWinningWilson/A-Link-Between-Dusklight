@@ -147,8 +147,17 @@ enum {
     /* 0x34 */ dItemNo_WALLET_LV1_e,
     /* 0x35 */ dItemNo_WALLET_LV2_e,
     /* 0x36 */ dItemNo_WALLET_LV3_e,
-    /* 0x37 */ dItemNo_NOENTRY_55_e,
-    /* 0x38 */ dItemNo_NOENTRY_56_e,
+    // ============================================
+    // NEW CODE — ALBW Port
+    // 0x37: Colossal Wallet item (auto-granted; no chest pickup in normal play).
+    // 0x38: Deity Armor ability flag (not a physical item; used as an ownership
+    //        bit tracked by dComIfGs_onItemFirstBit / offItemFirstBit).
+    // ============================================
+    /* 0x37 */ dItemNo_WALLET_LV4_e,
+    /* 0x38 */ dItemNo_DEITY_ARMOR_e,
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     /* 0x39 */ dItemNo_NOENTRY_57_e,
     /* 0x3A */ dItemNo_NOENTRY_58_e,
     /* 0x3B */ dItemNo_NOENTRY_59_e,
