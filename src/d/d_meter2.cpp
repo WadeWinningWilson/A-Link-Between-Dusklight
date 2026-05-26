@@ -27,7 +27,405 @@
 #if TARGET_PC
 #include "dusk/memory.h"
 #include "dusk/settings.h"
+#include <chrono>
+#include <unordered_set>
+#include <vector>
+#include "f_op/f_op_actor_mng.h"
 #endif
+// ============================================
+// MODIFIED CODE — ALBW Port
+// Source: global variables in ALBW main.cpp
+// Using independent sALBWMeter variable instead
+// of the game's oil system to avoid conflicts
+// with lantern, save system, and other oil writers
+// ============================================
+#if TARGET_PC
+static bool sArrowMade    = false;
+static bool sBombAmmo     = false;
+static bool sBoomThrow    = false;
+static bool sSlingMade    = false;
+static bool sIronballThrow = false;
+// sOilMaxVar is the current meter ceiling — grows when the meter expands.
+// sOilBaseMax is the fixed original meter size used for per-target cost
+// calculations (e.g. boomerang: each lock-on costs sOilBaseMax/5 = 2180).
+// Keeping them separate ensures per-target costs stay constant even after
+// meter expansion (5 lock-ons always costs one full base meter, not one
+// full expanded meter).
+static int sOilBaseMax = 10900;
+static int sOilMaxVar  = 10900;
+static bool sMeterinc = false;
+static int sALBWMeter = 10900;
+// ============================================
+// MODIFIED CODE — ALBW Port (fix: framerate-dependent recovery)
+// sRecoveryTimer counted frames, making recovery scale with FPS.
+// Replaced with wall-clock time so recovery is framerate-independent.
+// Rate: 36 units per 100ms ≈ 15s from half, 30s from empty (testing values).
+// ============================================
+static std::chrono::steady_clock::time_point sLastRecoveryTime = std::chrono::steady_clock::now();
+// ============================================
+// NEW CODE — ALBW Port
+// Continuous-drain items (spinner, dominion rod) use independent
+// 100ms timers so their drain ticks don't interfere with each other
+// or with recovery timing.
+// sSpinnerActive / sDomRodActive: set each frame by the item proc,
+//   consumed in moveKantera(). Reset to false after each drain check.
+// Meter expansion:
+//   sInitialized    — set on first frame; silently sizes sOilMaxVar
+//                     with no sound or animation.
+//   sALBWExpanding  — true while filling toward a new (larger) ceiling
+//                     after a mid-session unlock.
+//   sPrevUnlockCount — number of unlocks detected so far; used to
+//                      detect when a new one is earned.
+// ============================================
+static std::chrono::steady_clock::time_point sLastSpinnerDrainTime = std::chrono::steady_clock::now();
+static std::chrono::steady_clock::time_point sLastDomRodDrainTime  = std::chrono::steady_clock::now();
+static bool sSpinnerActive        = false;
+static bool sDomRodActive         = false;
+static bool sHookshotFire         = false;
+static bool sDoubleHookshotFire   = false;
+static bool sALBWArmorDepleted    = false;
+// ============================================
+// NEW CODE — ALBW Port
+// Drain flags for sword attacks and agility moves.
+// Set by the corresponding procInit gate at the start of each action;
+// consumed once per moveKantera() tick then cleared.
+// sSwordSwing:  normal cuts + non-hidden finishers   (1/6 base = 1817 units)
+// sSidestep:    sidestep left/right                  (1/5 base = 2180 units)
+// sBackJump:    backward sidestep / back jump        (1/3 base = 3633 units)
+// sRollJump:    roll/spin jump                       (1/3 base = 3633 units)
+// sHiddenSkill: Mortal Draw, Jump Strike, Helm Splitter, Great Spin
+//                                                    (1/2 base = 5450 units)
+// ============================================
+static bool sSwordSwing    = false;
+static bool sSidestep      = false;
+static bool sBackJump      = false;
+static bool sRollJump      = false;
+static bool sHiddenSkill   = false;
+// ============================================
+// NEW CODE — ALBW Port
+// Idle recovery flag.
+// Set each frame by procWait() in d_a_alink.cpp while Link is standing
+// still (wolf excluded). Cleared by the 100ms recovery tick after it is
+// read, so procWait() must re-assert it on subsequent frames if Link is
+// still idle. Used to apply a small recovery boost during the exhausted
+// lockout state, rewarding the player for resting rather than moving.
+// ============================================
+static bool sALBWPlayerIdle = false;
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+// ============================================
+// NEW CODE — ALBW Port
+// Meter lockout latch.
+// Set when sALBWMeter clamps to 0; cleared when sALBWMeter recovers
+// back to sOilBaseMax (the base meter size, regardless of expansion).
+// All canALBW* gates check !sALBWLocked so every item is blocked
+// during recovery even if the meter partially refills above an
+// individual item's cost threshold.
+// sALBWArmorDepleted shares the same clear threshold (sOilBaseMax)
+// so the armor hue and item availability restore simultaneously.
+// ============================================
+static bool sALBWLocked = false;
+// ============================================
+// NEW CODE — ALBW Port
+// Prevents MAGIC_METER_RECOVER from retriggering every 100ms tick.
+// Set true on the first recovery tick; cleared when MAGIC_METER_FINISH
+// plays (full) or when MAGIC_METER_DEC plays (new depletion event),
+// so each depletion→recovery cycle gets exactly one RECOVER sound.
+// ============================================
+static bool sALBWRecoverSoundActive = false;
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+// ============================================
+// NEW CODE — ALBW Port
+// Clean-encounter reward tracking.
+// sArmorEncounterIDs: actor IDs that have attacked Link while armor is
+//   equipped — they stay tracked until killed (or room changes).
+// sArmorTaintedIDs: subset of encounter IDs that dealt real HP damage.
+//   If ANY tainted actor is killed in the encounter, no reward.
+// sArmorRewardBlocked: latched true the moment a taint is registered
+//   so the block survives even if the tainted actor is killed before
+//   all encounter actors are dead.
+// sArmorEncounterKillCount: ensures at least one kill happened before
+//   the reward fires (prevents triggering on a bare room-change flush).
+// sArmorLastRoomNo: current room number; changes mean stale actor IDs —
+//   flush tracking without rewarding on mismatch.
+// ============================================
+static std::unordered_set<fpc_ProcID> sArmorEncounterIDs;
+static std::unordered_set<fpc_ProcID> sArmorTaintedIDs;
+static bool sArmorRewardBlocked    = false;
+static int  sArmorEncounterKillCount = 0;
+static s16  sArmorLastRoomNo       = -1;
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+static bool sInitialized     = false;
+static bool sALBWExpanding   = false;
+static int  sPrevUnlockCount = 0;
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+// ============================================
+// MODIFIED CODE ENDS HERE
+// ============================================
+#endif
+// ============================================
+// MODIFIED CODE ENDS HERE
+// ============================================
+
+// ============================================
+// NEW CODE — ALBW Port
+// Source: global drain flag setters, ALBW main.cpp
+// Free functions called from d_a_alink_bow.inc (and
+// future item files) to signal a drain event this frame.
+// Kept as non-inline definitions so the static flags
+// stay private to this translation unit.
+// ============================================
+#if TARGET_PC
+void dMeter2_onALBWSling()    { sSlingMade    = true; }
+void dMeter2_onALBWBoom()     { sBoomThrow    = true; }
+void dMeter2_onALBWArrow()    { sArrowMade    = true; }
+void dMeter2_onALBWBomb()     { sBombAmmo     = true; }
+void dMeter2_onALBWIronball() { sIronballThrow = true; }
+// ============================================
+// NEW CODE — ALBW Port
+// Pre-fire affordability checks for ranged/item actions.
+// Returns true if sALBWMeter has enough for one use AND
+// the lockout latch is clear.  Thresholds must stay in
+// sync with the drain values in the moveKantera() block.
+// ============================================
+bool dMeter2_isALBWLocked()    { return sALBWLocked; }
+// ============================================
+// NEW CODE — ALBW Port
+// Continuous-drain items (spinner, dominion rod) have a lower re-entry
+// threshold after a full lockout: sOilBaseMax / 2 = 5450 units.
+// When NOT in lockout, no additional gate applies — the player can
+// freely mount and dismount until the meter hits 0 again.
+// When IN lockout (meter hit 0), they are blocked until 5450 is reached.
+// ============================================
+bool dMeter2_canALBWSpinner() { return !sALBWLocked || sALBWMeter >= sOilBaseMax / 2; }
+bool dMeter2_canALBWDomRod()  { return !sALBWLocked || sALBWMeter >= sOilBaseMax / 2; }
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+bool dMeter2_canALBWSling()    { return !sALBWLocked && sALBWMeter >= 3633; }
+bool dMeter2_canALBWBoom()     { return !sALBWLocked && sALBWMeter >= 2725; }
+bool dMeter2_canALBWArrow()    { return !sALBWLocked && sALBWMeter >= 5450; }
+bool dMeter2_canALBWBomb()     { return !sALBWLocked && sALBWMeter >= 5450; }
+// Ball and chain scales with sOilMaxVar so the cost
+// grows proportionally if the meter ever expands.
+bool dMeter2_canALBWIronball() { return !sALBWLocked && sALBWMeter >= sOilMaxVar / 2; }
+// ============================================
+// NEW CODE — ALBW Port
+// Continuous-drain item signals.
+// Called every frame from the item proc while the item is active;
+// moveKantera() processes the 100ms tick and resets the flag.
+// dMeter2_isALBWDepleted(): queried by item procs to force-eject
+// the player from the item when the meter reaches zero.
+// ============================================
+void dMeter2_onALBWSpinner()  { sSpinnerActive = true; }
+void dMeter2_onALBWDomRod()   { sDomRodActive  = true; }
+bool dMeter2_isALBWDepleted() { return sALBWMeter <= 0; }
+// ============================================
+// NEW CODE — ALBW Port
+// Clawshot drain signals and pre-fire gates.
+// Single clawshot: 4 shots = one full base meter (2725 each).
+// Double clawshot: 8 shots = one full base meter (1362 each).
+// Costs are fixed to sOilBaseMax so shot count is constant
+// regardless of meter expansion level.
+// ============================================
+void dMeter2_onALBWHookshot()        { sHookshotFire       = true; }
+void dMeter2_onALBWDoubleHookshot()  { sDoubleHookshotFire = true; }
+bool dMeter2_canALBWHookshot()       { return !sALBWLocked && sALBWMeter >= 2725; }
+bool dMeter2_canALBWDoubleHookshot() { return !sALBWLocked && sALBWMeter >= 1362; }
+// ============================================
+// NEW CODE — ALBW Port
+// Sword and agility drain signals and gates.
+// Signal functions set the flag for moveKantera() to consume this frame.
+// Gate functions let the procInit caller decide whether to proceed:
+//   canALBWSword/Sidestep/BackJump/RollJump: blocked only while sALBWLocked
+//     (meter hit zero); minimum thresholds match their per-use drain amounts.
+//   canALBWHiddenSkill: blocked only while sALBWLocked, same as normal sword
+//     attacks. Hidden Skills cost 1/2 base meter (5450) and can be used at
+//     any meter level — if the drain pushes the meter to zero the animation
+//     finishes first, then Link enters the exhausted state. He must wait until
+//     the meter fully replenishes (sOilBaseMax) before Hidden Skills are
+//     available again.
+// ============================================
+void dMeter2_onALBWSword()       { sSwordSwing  = true; }
+void dMeter2_onALBWSidestep()    { sSidestep    = true; }
+void dMeter2_onALBWBackJump()    { sBackJump    = true; }
+void dMeter2_onALBWRollJump()    { sRollJump    = true; }
+void dMeter2_onALBWHiddenSkill() { sHiddenSkill = true; }
+// ============================================
+// NEW CODE — ALBW Port
+// All sword and agility gates (including Hidden Skills) check only the
+// lockout latch, not a minimum meter amount. This lets the action execute
+// even when the remaining meter is less than its own drain cost — the drain
+// may push the meter below zero, clamping it to 0 and latching sALBWLocked,
+// after which checkRestHPAnime() triggers tired state at the end of the
+// animation. The lock clears once sALBWMeter recovers to sOilBaseMax.
+// ============================================
+bool dMeter2_canALBWSword()       { return !sALBWLocked; }
+bool dMeter2_canALBWSidestep()    { return !sALBWLocked; }
+bool dMeter2_canALBWBackJump()    { return !sALBWLocked; }
+bool dMeter2_canALBWRollJump()    { return !sALBWLocked; }
+bool dMeter2_canALBWHiddenSkill() { return !sALBWLocked; }
+// ============================================
+// NEW CODE — ALBW Port
+// Wolf-form query used by the game-over warp gate.
+// Routes through d_meter2 so d_gameover.cpp does not need to include
+// the heavy player actor header. daPy_getPlayerActorClass() is already
+// called elsewhere in this translation unit (alphaAnimeKantera).
+// ============================================
+bool dMeter2_isWolfForm() { return daPy_getPlayerActorClass()->checkWolf() != 0; }
+// ============================================
+// NEW CODE — ALBW Port
+// Idle state setter — called from procWait() each frame while Link is
+// standing still. Cleared by the recovery tick; see sALBWPlayerIdle.
+// ============================================
+void dMeter2_setALBWPlayerIdle(bool i_idle) { sALBWPlayerIdle = i_idle; }
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+// ============================================
+// NEW CODE — ALBW Port
+// Magic armor on-hit drain and query functions.
+// dMeter2_onALBWArmorHit(): called from setDamagePoint() the moment the
+//   armor absorbs a blow. Instantly zeros the meter and arms the recovery
+//   timer so normal per-100ms refill starts immediately.
+// dMeter2_isALBWArmorDepleted(): queried by checkMagicArmorHeavy() and the
+//   per-frame hue updater to drive the gray/normal visual state.
+// dMeter2_canALBWArmorBlock(): queried by checkMagicArmorNoDamage(); true
+//   when the meter is non-zero and the armor is not in recovery. The
+//   rupee >= 500 check is handled at the call site in d_a_alink_damage.inc.
+// sALBWArmorDepleted is cleared in moveKantera() once the meter is full
+//   again AND the player has >= 500 rupees to fund the next activation.
+// ============================================
+void dMeter2_onALBWArmorHit() {
+    sALBWMeter         = 0;
+    sALBWArmorDepleted = true;
+    sLastRecoveryTime  = std::chrono::steady_clock::now();
+}
+bool dMeter2_isALBWArmorDepleted() { return sALBWArmorDepleted; }
+bool dMeter2_canALBWArmorBlock()   { return !sALBWArmorDepleted && sALBWMeter > 0; }
+// ============================================
+// NEW CODE — ALBW Port
+// Called from checkDamageAction() whenever an enemy attacks Link
+// while the magic armor is equipped (blocking OR not).
+//   actorID      — fopAcM_GetID() of the attacking actor
+//   dealtHPDamage — true when armor was NOT blocking (hit went through
+//                   to health); false when armor absorbed the blow
+// Adding to sArmorEncounterIDs is unconditional so the tracker knows
+// who is "in this encounter". Taint is only set on real HP damage.
+// ============================================
+void dMeter2_onArmorEncounterHit(fpc_ProcID actorID, bool dealtHPDamage) {
+    if (actorID == 0) return;
+    sArmorEncounterIDs.insert(actorID);
+    if (dealtHPDamage) {
+        sArmorTaintedIDs.insert(actorID);
+        sArmorRewardBlocked = true;
+    }
+}
+// ============================================
+// NEW CODE — ALBW Port
+// Attack-side encounter registration.
+// Called from setSwordHitVibration() whenever Link's sword/wolf attack
+// connects with an enemy actor. Adds the enemy to sArmorEncounterIDs
+// so the clean-encounter reward can fire even when enemies never land a
+// hit on Link (and therefore were never added from the defense side in
+// dMeter2_onArmorEncounterHit). Does NOT set sArmorRewardBlocked —
+// Link hitting an enemy is never a taint event.
+// ============================================
+void dMeter2_onArmorAttackHit(fpc_ProcID actorID) {
+    if (actorID == 0) return;
+    sArmorEncounterIDs.insert(actorID);
+}
+// ============================================
+// NEW CODE — ALBW Port
+// Fractional meter refill used by magic pickup items (S_MAGIC / L_MAGIC).
+// Amount is computed as (sOilMaxVar * numerator / denominator) so the
+// refill scales with any meter upgrades the player has collected.
+// The result is clamped to sOilMaxVar so the meter cannot overflow.
+// ============================================
+void dMeter2_addALBWFraction(int numerator, int denominator) {
+    int amount = (sOilMaxVar * numerator) / denominator;
+    sALBWMeter = cLib_minMaxLimit<int>(sALBWMeter + amount, 0, sOilMaxVar);
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+// ============================================
+// NEW CODE — ALBW Port
+// Game-over item reset and rental eligibility tracking.
+// dMeter2_fillALBWMeter():          Called from d_gameover on player death
+//   (type 0). Resets meter to full sOilMaxVar, clears lockout so Link
+//   respawns with full stamina. Meter capacity upgrades are NOT reset.
+// sALBWItemNos[]:                   Item-number lookup for the 12 rentable
+//   items. Order: Boomerang, Spinner, Bow, Ball&Chain, DomRod, Clawshot,
+//   DClawshot, Normal Bombs, Water Bombs, Bomblings, Slingshot, Magic Armor.
+// kRentalEligibleBase:              First saveBitLabels index reserved for
+//   rental eligibility. saveBitLabels[673+i] tracks whether sALBWItemNos[i]
+//   was ever stripped from inventory. Indices 673-684 are confirmed free in
+//   the TP save layout (large unused gap 673-784). Storing eligibility in
+//   the save file ensures it survives game restarts, continues, and reloads —
+//   the volatile static array it replaces was lost on any game exit or reload.
+// dMeter2_onALBWRentalEligible():   Sets saveBitLabels[673+i] for the item.
+//   Must be called BEFORE offItemFirstBit so the bit is written before strip.
+// dMeter2_isALBWRentalEligible():   Queries saveBitLabels[673+i]; used by
+//   the rental shop to show the real item name vs "Not in stock — Come Back Soon!".
+// ============================================
+static const u8 sALBWItemNos[12] = {
+    (u8)dItemNo_BOOMERANG_e,    (u8)dItemNo_SPINNER_e,
+    (u8)dItemNo_BOW_e,          (u8)dItemNo_IRONBALL_e,
+    (u8)dItemNo_COPY_ROD_e,     (u8)dItemNo_HOOKSHOT_e,
+    (u8)dItemNo_W_HOOKSHOT_e,   (u8)dItemNo_BOMB_BAG_LV1_e,
+    (u8)dItemNo_BOMB_BAG_LV2_e, (u8)dItemNo_POKE_BOMB_e,
+    (u8)dItemNo_PACHINKO_e,     (u8)dItemNo_ARMOR_e,
+};
+static constexpr int kRentalEligibleBase = 673; // saveBitLabels[673..684] — confirmed free
+
+void dMeter2_fillALBWMeter() {
+    sALBWMeter              = sOilMaxVar;
+    sALBWLocked             = false;
+    sALBWExpanding          = false;
+    sALBWRecoverSoundActive = false;
+}
+
+void dMeter2_onALBWRentalEligible(u8 itemNo) {
+    for (int i = 0; i < 12; i++) {
+        if (sALBWItemNos[i] == itemNo) {
+            dComIfGs_onEventBit(dSv_event_flag_c::saveBitLabels[kRentalEligibleBase + i]);
+            return;
+        }
+    }
+}
+
+bool dMeter2_isALBWRentalEligible(u8 itemNo) {
+    for (int i = 0; i < 12; i++) {
+        if (sALBWItemNos[i] == itemNo) {
+            return dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[kRentalEligibleBase + i]);
+        }
+    }
+    return false;
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
 int dMeter2_c::_create() {
     stage_stag_info_class* stag_info = dComIfGp_getStageStagInfo();
@@ -225,7 +623,7 @@ int dMeter2_c::_create() {
             }
         }
     }
-
+   
     mpMap = NULL;
     if (dMeterMap_c::isEnableDispMapAndMapDispSizeTypeNo()) {
         mpMap = JKR_NEW dMeterMap_c(mpMeterDraw->getMainScreenPtr());
@@ -742,6 +1140,15 @@ void dMeter2_c::moveKantera() {
         }
     }
 
+#if !TARGET_PC
+    // ============================================
+    // ORIGINAL CODE — Console only
+    // On PC this block is bypassed entirely because
+    // mNowOil is controlled by sALBWMeter in our
+    // TARGET_PC block below. Keeping this running
+    // on PC caused the recovery sound to trigger
+    // and overwrote our meter value every frame.
+    // ============================================
     if (mNowOil != dComIfGs_getOil()) {
         if (mNowOil < dComIfGs_getOil()) {
             mNowOil += 200;
@@ -750,8 +1157,8 @@ void dMeter2_c::moveKantera() {
             }
 
             if (!dComIfGp_getOxygenShowFlag() && mpMeterDraw->getMeterGaugeAlphaRate(1) > 0.0f) {
-                Z2GetAudioMgr()->seStartLevel(Z2SE_OIL_METER_RECOVER, NULL, 0, 0, 1.0f, 1.0f, -1.0f,
-                                              -1.0f, 0);
+                Z2GetAudioMgr()->seStartLevel(
+                    Z2SE_OIL_METER_RECOVER, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
             }
             draw_kantera = true;
         } else if (mNowOil > dComIfGs_getOil()) {
@@ -762,19 +1169,23 @@ void dMeter2_c::moveKantera() {
 
             if (mNowOil == 0) {
                 if (mpMeterDraw->getMeterGaugeAlphaRate(1) > 0.0f) {
-                    Z2GetAudioMgr()->seStart(Z2SE_OIL_METER_FINISH, NULL, 0, 0, 1.0f, 1.0f, -1.0f,
-                                             -1.0f, 0);
+                    Z2GetAudioMgr()->seStart(
+                        Z2SE_OIL_METER_FINISH, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
                 }
             } else if (((f32)dComIfGs_getOil() / (f32)dComIfGs_getMaxOil()) <= 0.1f &&
                        mpMeterDraw->getMeterGaugeAlphaRate(1) > 0.0f)
             {
-                Z2GetAudioMgr()->seStartLevel(Z2SE_OIL_METER_LESS, NULL, 0, 0, 1.0f, 1.0f, -1.0f,
-                                              -1.0f, 0);
+                Z2GetAudioMgr()->seStartLevel(
+                    Z2SE_OIL_METER_LESS, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
             }
 
             draw_kantera = true;
         }
     }
+#endif
+    // ============================================
+    // ORIGINAL CODE ENDS HERE
+    // ============================================
 
     f32 x_pos = g_drawHIO.mLanternMeterPosX;
     f32 y_pos = g_drawHIO.mLanternMeterPosY;
@@ -799,8 +1210,397 @@ void dMeter2_c::moveKantera() {
         draw_kantera = true;
     }
 
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Source: meterValuee function in ALBW main.cpp
+    // Moved before drawKantera so mNowOil is correct
+    // when the meter visual is updated this frame
+    // ============================================
+    {
+        auto sNow = std::chrono::steady_clock::now();
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Freeze recovery/drain timers while paused or during the game-over
+        // screen (heap lock flag 6). Wall-clock time keeps advancing even
+        // when gameplay is suspended, so without this reset the meter would
+        // silently refill and drain events would fire on unpause.
+        // ============================================
+        if (dComIfGp_isPauseFlag() || dComIfGp_isHeapLockFlag() == 6) {
+            sLastRecoveryTime     = sNow;
+            sLastSpinnerDrainTime = sNow;
+            sLastDomRodDrainTime  = sNow;
+        }
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Meter expansion / unlock detection.
+        // Unlock 1: player has accumulated 10 or more heart containers
+        //   (dComIfGs_getMaxLife() returns 5 units per heart).
+        // Unlock 2: magic armor is in the player's inventory.
+        // Each unlock permanently adds 5450 to sOilMaxVar (50% of base).
+        // Both unlocks together double the meter: 10900 → 21800.
+        //
+        // On the very first frame (sInitialized == false) we silently
+        // size the meter to match whatever the save already has earned —
+        // no animation, no sound (the player already had these unlocks).
+        // On any later frame where a NEW unlock is detected we set
+        // sALBWExpanding = true so the fill-with-sound path runs below.
+        // ============================================
+        {
+            int newUnlockCount = 0;
+            if (dComIfGs_getMaxLife() >= 50) newUnlockCount++;
+            if (dComIfGs_isItemFirstBit(dItemNo_ARMOR_e)) newUnlockCount++;
+
+            if (!sInitialized) {
+                sOilMaxVar       = sOilBaseMax + newUnlockCount * 5450;
+                sALBWMeter       = sOilMaxVar;
+                sPrevUnlockCount = newUnlockCount;
+                sInitialized     = true;
+            } else if (newUnlockCount > sPrevUnlockCount) {
+                sOilMaxVar       = sOilBaseMax + newUnlockCount * 5450;
+                sPrevUnlockCount = newUnlockCount;
+                sALBWExpanding   = true;
+            }
+        }
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+
+        if (sArrowMade) {
+            sALBWMeter -= 5450;
+            sArrowMade = false;
+            sLastRecoveryTime = sNow;
+        } else if (sBombAmmo) {
+            // ============================================
+            // NEW CODE — ALBW Port
+            // 50% of sOilBaseMax (5450). A doubled meter
+            // takes exactly 4 bombs to fully deplete.
+            // ============================================
+            sALBWMeter -= 5450;
+            sBombAmmo = false;
+            sLastRecoveryTime = sNow;
+        } else if (sBoomThrow) {
+            sALBWMeter -= 2725;
+            sBoomThrow = false;
+            sLastRecoveryTime = sNow;
+        }
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Source: slingshot drain check, ALBW main.cpp
+        // Drain value 3633 (1/3 meter, 3 shots to drain) — testing value.
+        // ============================================
+        else if (sSlingMade) {
+            sALBWMeter -= 3633;
+            sSlingMade = false;
+            sLastRecoveryTime = sNow;
+        } else if (sIronballThrow) {
+            // ============================================
+            // NEW CODE — ALBW Port
+            // Cost scales with sOilMaxVar so a doubled meter
+            // takes 4 throws to deplete (same ratio as bombs
+            // but relative to current ceiling, not base).
+            // ============================================
+            sALBWMeter -= sOilMaxVar / 2;
+            sIronballThrow = false;
+            sLastRecoveryTime = sNow;
+        } else if (sHookshotFire) {
+            // Single clawshot: fixed sOilBaseMax/4 = 2725 regardless of meter expansion
+            sALBWMeter -= 2725; sHookshotFire = false; sLastRecoveryTime = sNow;
+        } else if (sDoubleHookshotFire) {
+            // Double clawshot: fixed sOilBaseMax/8 = 1362 regardless of meter expansion
+            sALBWMeter -= 1362; sDoubleHookshotFire = false; sLastRecoveryTime = sNow;
+        }
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Sword attack and agility drain blocks.
+        // All costs are fixed to sOilBaseMax fractions so per-action
+        // consumption stays constant even when the meter is expanded.
+        // Each block mirrors the else-if pattern above: drain, clear flag,
+        // reset sLastRecoveryTime to defer recovery until the next interval.
+        // ============================================
+        else if (sSwordSwing) {
+            // Normal swing / stab / base finisher: 1/6 sOilBaseMax = 1817
+            sALBWMeter -= 1817; sSwordSwing = false; sLastRecoveryTime = sNow;
+        } else if (sSidestep) {
+            // Sidestep left/right: 1/5 sOilBaseMax = 2180
+            sALBWMeter -= 2180; sSidestep = false; sLastRecoveryTime = sNow;
+        } else if (sBackJump) {
+            // Backward sidestep / back jump: 1/3 sOilBaseMax = 3633
+            sALBWMeter -= 3633; sBackJump = false; sLastRecoveryTime = sNow;
+        } else if (sRollJump) {
+            // Roll/spin jump: 1/3 sOilBaseMax = 3633
+            sALBWMeter -= 3633; sRollJump = false; sLastRecoveryTime = sNow;
+        } else if (sHiddenSkill) {
+            // Hidden skill (Mortal Draw, Jump Strike, Helm Splitter, Great Spin): 1/2 sOilBaseMax = 5450
+            sALBWMeter -= 5450; sHiddenSkill = false; sLastRecoveryTime = sNow;
+        }
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Continuous drain: Spinner
+        // sSpinnerActive is set every frame by procSpinnerWait()
+        // while Link is riding. Drain is processed at most once per
+        // 100ms tick (sLastSpinnerDrainTime), so the total ride time
+        // before depletion scales with meter level:
+        //   Level 0 (sOilMaxVar = 10900): 156 units/100ms →  7.0s
+        //   Level 1 (sOilMaxVar = 16350): 164 units/100ms → 10.0s
+        //   Level 2 (sOilMaxVar = 21800):  88 units/100ms → 24.7s
+        // After the drain tick, sLastRecoveryTime is updated to prevent
+        // the recovery timer from running while the spinner is active.
+        // ============================================
+        if (sSpinnerActive) {
+            auto msSpin = std::chrono::duration_cast<std::chrono::milliseconds>(
+                sNow - sLastSpinnerDrainTime).count();
+            if (msSpin >= 100) {
+                int rate = (sOilMaxVar <= 10900) ? 156 : (sOilMaxVar <= 16350) ? 164 : 88;
+                sALBWMeter -= rate;
+                sLastSpinnerDrainTime = sNow;
+                sLastRecoveryTime     = sNow;
+            }
+            sSpinnerActive = false;
+        }
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Continuous drain: Dominion Rod
+        // sDomRodActive is set every frame by procCopyRodSubject() /
+        // procCopyRodMove() while a statue is under active control.
+        // Flat rate: 36 units per 100ms (same as recovery) so the
+        // meter drains at ≈ 30s from full regardless of meter level.
+        // ============================================
+        if (sDomRodActive) {
+            auto msDom = std::chrono::duration_cast<std::chrono::milliseconds>(
+                sNow - sLastDomRodDrainTime).count();
+            if (msDom >= 100) {
+                sALBWMeter       -= 36;
+                sLastDomRodDrainTime = sNow;
+                sLastRecoveryTime    = sNow;
+            }
+            sDomRodActive = false;
+        }
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+
+        if (sALBWMeter < 0) {
+            sALBWMeter = 0;
+        }
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Latch the lockout the moment the meter reaches zero.
+        // MAGIC_METER_DEC fires once on the false → true flag transition
+        // so it plays exactly once per full-depletion event.
+        // Cleared below once recovery reaches sOilBaseMax.
+        // ============================================
+        if (sALBWMeter <= 0) {
+            if (!sALBWLocked) {
+                Z2GetAudioMgr()->seStart(
+                    Z2SE_MAGIC_METER_DEC, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
+                sALBWRecoverSoundActive = false; // allow RECOVER on next refill cycle
+            }
+            sALBWLocked = true;
+        }
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+
+        if (sALBWMeter > sOilMaxVar) {
+            sALBWMeter = sOilMaxVar;
+        }
+
+        // ============================================
+        // MODIFIED CODE — ALBW Port (fix: framerate-dependent recovery)
+        // Old code incremented a frame counter and recovered +500 per frame,
+        // making recovery scale directly with FPS (instant at high framerates).
+        // Now uses wall-clock time with a base rate of 36 units per 100ms.
+        // Drain events reset sLastRecoveryTime to delay recovery by one interval.
+        //
+        // Audio: MAGIC_METER_RECOVER plays on every 100ms recovery tick
+        // (both normal and expanding paths), looping audibly while the meter
+        // refills. MAGIC_METER_FINISH plays once on the tick the meter first
+        // reaches sOilMaxVar (full), replacing that tick's RECOVER call.
+        //
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Recovery rate scales with meter upgrade level.
+        // Each unlock (10 hearts, magic armor) adds 55 units per 100ms tick:
+        //   0 unlocks: 109/100ms → 10.0s from zero to sOilBaseMax
+        //   1 unlock:  164/100ms → 6.65s
+        //   2 unlocks: 219/100ms → ~5.0s (4.98s)
+        // sALBWExpanding (level-up fill animation) intentionally stays at
+        // the flat 36 rate — it's a visual event, not a gameplay gate.
+        // ============================================
+        const int sBaseRecovery = 109 + sPrevUnlockCount * 55;
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Idle recovery boost: +5% while Link is standing still AND the
+        // meter is in the exhausted lockout state. Rewards the player for
+        // resting rather than running around after depleting the meter.
+        // sALBWPlayerIdle is asserted each frame by procWait() and cleared
+        // here each tick so it must be re-set on subsequent frames to remain
+        // active — stale "idle" readings from a previous action cannot linger.
+        // ============================================
+        const int sRecoveryRate = (sALBWLocked && sALBWPlayerIdle)
+            ? (sBaseRecovery * 105 / 100) : sBaseRecovery;
+        sALBWPlayerIdle = false;
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+        auto msElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            sNow - sLastRecoveryTime).count();
+        if (sALBWExpanding) {
+            if (msElapsed >= 100) {
+                sALBWMeter += 36;
+                sLastRecoveryTime = sNow;
+                if (sALBWMeter >= sOilMaxVar) {
+                    sALBWMeter     = sOilMaxVar;
+                    sALBWExpanding = false;
+                    sALBWRecoverSoundActive = false;
+                    Z2GetAudioMgr()->seStart(
+                        Z2SE_MAGIC_METER_FINISH, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
+                } else if (mpMeterDraw->getMeterGaugeAlphaRate(1) > 0.0f && !sALBWRecoverSoundActive) {
+                    sALBWRecoverSoundActive = true;
+                    if (sALBWLocked) {
+                        Z2GetAudioMgr()->seStart(
+                            Z2SE_MAGIC_METER_RECOVER, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
+                    }
+                }
+            }
+            if (sALBWMeter >= sOilMaxVar) {
+                sALBWMeter     = sOilMaxVar;
+                sALBWExpanding = false;
+            }
+        } else if (msElapsed >= 100 && sALBWMeter < sOilMaxVar && !sMeterinc) {
+            sALBWMeter += sRecoveryRate;
+            sLastRecoveryTime = sNow;
+            if (sALBWMeter >= sOilMaxVar) {
+                sALBWMeter = sOilMaxVar;
+                sALBWRecoverSoundActive = false;
+                Z2GetAudioMgr()->seStart(
+                    Z2SE_MAGIC_METER_FINISH, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
+            } else if (!sALBWRecoverSoundActive) {
+                sALBWRecoverSoundActive = true;
+                Z2GetAudioMgr()->seStartLevel(
+                    Z2SE_MAGIC_METER_RECOVER, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
+            }
+        }
+        // ============================================
+        // MODIFIED CODE ENDS HERE
+        // ============================================
+
+        // ============================================
+        // MODIFIED CODE — ALBW Port (fix: fill bar stuck at 50%)
+        // drawKantera divides by dComIfGs_getMaxOil() directly, not
+        // by i_max. The game's native oil max is 21600 but our internal
+        // ALBW scale is sOilMaxVar=10900, so passing sALBWMeter raw
+        // produced 10900/21600 ≈ 50% every frame with no recovery.
+        // We now scale [0, sOilMaxVar] → [0, nativeMax] before passing.
+        // ============================================
+        // === Clean-encounter reward check ===
+        // Each frame: scan sArmorEncounterIDs for actors that are gone (killed).
+        // Room change: detected via sArmorLastRoomNo mismatch — flush without reward
+        // so stale actor IDs from a different room never trigger a false positive.
+        // Reward fires (via the normal rupee queue) when all encounter actors are
+        // killed, at least one kill happened, and sArmorRewardBlocked is false.
+        {
+            s16 curRoom = dComIfGp_roomControl_getStayNo();
+            if (sArmorLastRoomNo != -1 && curRoom != sArmorLastRoomNo) {
+                sArmorEncounterIDs.clear();
+                sArmorTaintedIDs.clear();
+                sArmorRewardBlocked   = false;
+                sArmorEncounterKillCount = 0;
+            }
+            sArmorLastRoomNo = curRoom;
+
+            if (!sArmorEncounterIDs.empty()) {
+                std::vector<fpc_ProcID> killed;
+                for (fpc_ProcID id : sArmorEncounterIDs) {
+                    if (fopAcM_SearchByID(id) == NULL) {
+                        killed.push_back(id);
+                    }
+                }
+                for (fpc_ProcID id : killed) {
+                    sArmorEncounterIDs.erase(id);
+                    sArmorTaintedIDs.erase(id);
+                    sArmorEncounterKillCount++;
+                }
+                if (sArmorEncounterIDs.empty() && sArmorEncounterKillCount > 0) {
+                    if (!sArmorRewardBlocked) {
+                        // All enemies in the encounter killed with no damage — reward
+                        dComIfGp_setItemRupeeCount(300);
+                    }
+                    sArmorRewardBlocked      = false;
+                    sArmorEncounterKillCount = 0;
+                }
+            }
+        }
+
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Clear lockout and armor-depleted flags once the meter recovers
+        // to at least sOilBaseMax (the base meter size). This way players
+        // with an upgraded meter (up to 21800) do not have to wait for the
+        // full expanded meter to refill — only the original 10900 worth.
+        // Armor depleted also requires >= 500 rupees to re-arm.
+        // Both flags share the same sOilBaseMax threshold so items and
+        // armor hue restore at exactly the same moment.
+        // No sound here — MAGIC_METER_RECOVER is already looping per tick
+        // and MAGIC_METER_FINISH fires separately when meter hits sOilMaxVar.
+        // ============================================
+        if (sALBWLocked && sALBWMeter >= sOilBaseMax) {
+            sALBWLocked = false;
+        }
+        if (sALBWArmorDepleted && sALBWMeter >= sOilBaseMax && dComIfGs_getRupee() >= 500) {
+            sALBWArmorDepleted = false;
+        }
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+
+        s32 nativeMax = dComIfGs_getMaxOil();
+        mNowOil = (nativeMax > 0) ? (s32)((f32)sALBWMeter / (f32)sOilMaxVar * (f32)nativeMax) : 0;
+        mMaxOil = nativeMax;
+        draw_kantera = true;
+        // ============================================
+        // MODIFIED CODE ENDS HERE
+        // ============================================
+    }
+#endif
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+
     if (draw_kantera == true) {
         mpMeterDraw->drawKantera(mMaxOil, mNowOil, x_pos, y_pos);
+#if TARGET_PC
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Feed ALBW meter values into the cut magic meter widget.
+        // drawMagic expects 0-32 range — normalize from sOilMaxVar.
+        // x_pos/y_pos are the lantern position so the bar appears in the
+        // same HUD slot the lantern occupied. setAlphaMagicChange(false)
+        // propagates the alpha driven by draw() each frame to child panes.
+        // ============================================
+        {
+            s16 mCur = (sOilMaxVar > 0)
+                ? (s16)((f32)sALBWMeter / (f32)sOilMaxVar * 32.0f) : 0;
+            mpMeterDraw->drawMagic(32, mCur, x_pos, y_pos);
+            mpMeterDraw->setAlphaMagicChange(false);
+        }
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+#endif
     }
 
     alphaAnimeKantera();
@@ -2762,8 +3562,51 @@ void dMeter2_c::alphaAnimeLife() {
 }
 
 void dMeter2_c::alphaAnimeKantera() {
+#if TARGET_PC
+    // ============================================
+    // MODIFIED CODE — ALBW Port
+    // Original: meter showed only when lantern occupied SLOT_1 with oil > 0.
+    // On PC: meter shows whenever any ALBW meter-using item is equipped on
+    // X or Y, completely independent of lantern state or whether the lantern
+    // has been obtained. All other hide conditions (cutscenes, menus, etc.)
+    // are preserved unchanged below.
+    // ============================================
+    auto isALBWItem = [](u8 item) -> bool {
+        switch (item) {
+        case dItemNo_PACHINKO_e:     // Slingshot
+        case dItemNo_BOOMERANG_e:    // Boomerang
+        case dItemNo_BOW_e:          // Bow
+        case dItemNo_LIGHT_ARROW_e:  // Light Arrows
+        case dItemNo_ARROW_LV1_e:    // Fire Arrows
+        case dItemNo_ARROW_LV2_e:    // Ice Arrows
+        case dItemNo_ARROW_LV3_e:    // Shadow Arrows
+        case dItemNo_HAWK_ARROW_e:   // Hawkeye + Bow
+        case dItemNo_BOMB_ARROW_e:   // Bomb Arrows
+        case dItemNo_BOMB_BAG_LV1_e: // Bomb Bag Lv1
+        case dItemNo_BOMB_BAG_LV2_e: // Bomb Bag Lv2
+        case dItemNo_BOMB_IN_BAG_e:  // Bombs in Bag
+        case dItemNo_NORMAL_BOMB_e:  // Normal Bombs
+        case dItemNo_WATER_BOMB_e:   // Water Bombs
+        case dItemNo_POKE_BOMB_e:    // Bomblings
+        case dItemNo_HOOKSHOT_e:     // Clawshot
+        case dItemNo_W_HOOKSHOT_e:   // Double Clawshot
+        case dItemNo_SPINNER_e:      // Spinner
+        case dItemNo_IRONBALL_e:     // Ball and Chain
+        case dItemNo_COPY_ROD_e:     // Dominion Rod
+        case dItemNo_COPY_ROD_2_e:   // Dominion Rod (powered)
+        case dItemNo_ARMOR_e:        // Magic Armor
+            return true;
+        default:
+            return false;
+        }
+    };
+    bool noALBWItem = !isALBWItem(mItemStatus[X_ITEM]) && !isALBWItem(mItemStatus[Y_ITEM]);
+    if (noALBWItem ||
+#else
     if (dComIfGs_getMaxOil() == 0 || dComIfGs_getItem(SLOT_1, true) != dItemNo_KANTERA_e ||
-        !daPy_getPlayerActorClass()->checkUseKandelaar(0) || (mStatus & 0x4000) ||
+        !daPy_getPlayerActorClass()->checkUseKandelaar(0) ||
+#endif
+        (mStatus & 0x4000) ||
         ((mStatus & 0x40) && dComIfGp_event_checkHind(0x400)) || dComIfGp_getOxygenShowFlag() ||
         ((daPy_getPlayerActorClass()->getSumouMode() != 0) ||
          (daPy_getPlayerActorClass()->checkCanoeSlider() &&
@@ -2776,8 +3619,45 @@ void dMeter2_c::alphaAnimeKantera() {
     } else {
         mpMeterDraw->setAlphaKanteraAnimeMax();
     }
+#if TARGET_PC
+    // ============================================
+    // MODIFIED CODE ENDS HERE
+    // ============================================
+#endif
 
     mpMeterDraw->setAlphaKanteraChange(true);
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Drive the ALBW stamina meter (magic screen, mMeterAlphaRate[0])
+    // with the same HUD-hide conditions as all other meters so it fades
+    // in/out with the HUD during cutscenes, menus, and other states where
+    // game elements should not be on screen.
+    //
+    // Unlike the kantera meter this does NOT check noALBWItem — the ALBW
+    // meter is relevant regardless of what items are in the X/Y slots
+    // because sword attacks and agility also drain it.  It therefore shows
+    // whenever the player is in normal gameplay and hides under exactly the
+    // same conditions that suppress the life gauge and rupee counter.
+    // ============================================
+    if ((mStatus & 0x4000) ||
+        ((mStatus & 0x40) && dComIfGp_event_checkHind(0x400)) ||
+        dComIfGp_getOxygenShowFlag() ||
+        (daPy_getPlayerActorClass()->getSumouMode() != 0) ||
+        (daPy_getPlayerActorClass()->checkCanoeSlider() &&
+         (dComIfG_getTimerMode() == 3 || dComIfG_getTimerMode() == 4)) ||
+        (mStatus & 0x100000) || (mStatus & 0x80000000) || (mStatus & 8) || (mStatus & 0x10) ||
+        (mStatus & 0x01000000) || (mStatus & 0x20) || (mStatus & 0x04000000) ||
+        (mStatus & 0x08000000) || (mStatus & 0x10000000))
+    {
+        mpMeterDraw->setAlphaMagicAnimeMin();
+    } else {
+        mpMeterDraw->setAlphaMagicAnimeMax();
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
 }
 
 void dMeter2_c::alphaAnimeOxygen() {
@@ -2918,19 +3798,39 @@ void dMeter2_c::alphaAnimeButton() {
         mpMeterDraw->setButtonIconAlpha(i, mItemStatus[i * 2], mStatus,
                                         field_0x128 == 0 ? true : false);
 
+       // ============================================
+        // MODIFIED CODE — ALBW Port
+        // Source: Mod::visibleAmmo and silentAmmo in ALBW main.cpp
+        // Original code showed ammo for specific items.
+        // ALBW version hides ALL ammo counts since the shared
+        // meter replaces individual ammo tracking.
+        // Only lantern meter display is kept via drawKanteraMeter below.
+        // ============================================
+#if TARGET_PC
+        mpMeterDraw->drawItemNum(i, 0.0f);
+#else
         if (field_0x128 == 0 && dMeter2Info_getMiniGameItemSetFlag() != 1 &&
             (mItemStatus[i * 2] == dItemNo_BOW_e || mItemStatus[i * 2] == dItemNo_LIGHT_ARROW_e ||
-             mItemStatus[i * 2] == dItemNo_ARROW_LV1_e || mItemStatus[i * 2] == dItemNo_ARROW_LV2_e ||
-             mItemStatus[i * 2] == dItemNo_ARROW_LV3_e || mItemStatus[i * 2] == dItemNo_BOMB_BAG_LV1_e ||
-             mItemStatus[i * 2] == dItemNo_NORMAL_BOMB_e || mItemStatus[i * 2] == dItemNo_WATER_BOMB_e ||
-             mItemStatus[i * 2] == dItemNo_POKE_BOMB_e || mItemStatus[i * 2] == dItemNo_HAWK_ARROW_e ||
-             mItemStatus[i * 2] == dItemNo_BOMB_ARROW_e || mItemStatus[i * 2] == dItemNo_PACHINKO_e ||
-             mItemStatus[i * 2] == dItemNo_BEE_CHILD_e))
+                mItemStatus[i * 2] == dItemNo_ARROW_LV1_e ||
+                mItemStatus[i * 2] == dItemNo_ARROW_LV2_e ||
+                mItemStatus[i * 2] == dItemNo_ARROW_LV3_e ||
+                mItemStatus[i * 2] == dItemNo_BOMB_BAG_LV1_e ||
+                mItemStatus[i * 2] == dItemNo_NORMAL_BOMB_e ||
+                mItemStatus[i * 2] == dItemNo_WATER_BOMB_e ||
+                mItemStatus[i * 2] == dItemNo_POKE_BOMB_e ||
+                mItemStatus[i * 2] == dItemNo_HAWK_ARROW_e ||
+                mItemStatus[i * 2] == dItemNo_BOMB_ARROW_e ||
+                mItemStatus[i * 2] == dItemNo_PACHINKO_e ||
+                mItemStatus[i * 2] == dItemNo_BEE_CHILD_e))
         {
             mpMeterDraw->drawItemNum(i, 1.0f);
         } else {
             mpMeterDraw->drawItemNum(i, 0.0f);
         }
+#endif
+        // ============================================
+        // MODIFIED CODE ENDS HERE
+        // ============================================
 
         if (field_0x128 == 0 && mItemStatus[i * 2] == dItemNo_KANTERA_e) {
             mpMeterDraw->drawKanteraMeter(i, 1.0f);

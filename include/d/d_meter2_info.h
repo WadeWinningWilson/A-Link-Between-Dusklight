@@ -865,4 +865,70 @@ inline void dMeter2Info_onMenuInForce(int param_0) {
     g_meter2_info.onMenuInForce(param_0);
 }
 
+// ============================================
+// NEW CODE — ALBW Port
+// Source: drain flag setters, ALBW main.cpp
+// Called from item actor files to signal a drain
+// event this frame. One function per item type;
+// add new ones here as each item is connected.
+// ============================================
+#if TARGET_PC
+#include "f_pc/f_pc_base.h"
+void dMeter2_onALBWSling();
+void dMeter2_onALBWBoom();
+void dMeter2_onALBWArrow();
+void dMeter2_onALBWBomb();
+void dMeter2_onALBWIronball();
+void dMeter2_onALBWSpinner();
+void dMeter2_onALBWDomRod();
+void dMeter2_onALBWHookshot();
+void dMeter2_onALBWDoubleHookshot();
+void dMeter2_onALBWArmorHit();
+void dMeter2_onArmorEncounterHit(fpc_ProcID actorID, bool dealtHPDamage);
+void dMeter2_onArmorAttackHit(fpc_ProcID actorID);
+bool dMeter2_canALBWSling();
+bool dMeter2_canALBWBoom();
+bool dMeter2_canALBWArrow();
+bool dMeter2_canALBWBomb();
+bool dMeter2_canALBWIronball();
+bool dMeter2_canALBWHookshot();
+bool dMeter2_canALBWDoubleHookshot();
+bool dMeter2_canALBWArmorBlock();
+bool dMeter2_isALBWArmorDepleted();
+bool dMeter2_isALBWDepleted();
+bool dMeter2_isALBWLocked();
+bool dMeter2_canALBWSpinner();
+bool dMeter2_canALBWDomRod();
+void dMeter2_addALBWFraction(int numerator, int denominator);
+void dMeter2_fillALBWMeter();
+void dMeter2_onALBWRentalEligible(u8 itemNo);
+bool dMeter2_isALBWRentalEligible(u8 itemNo);
+// ============================================
+// NEW CODE — ALBW Port
+// Sword attack and agility drain API.
+// Signal functions are called from the procInit gate at the top of each
+// action to queue a one-frame drain consumed by moveKantera().
+// Gate functions are the corresponding pre-fire affordability checks;
+// the procInit returns 1 without changing state if the gate fails.
+// ============================================
+void dMeter2_onALBWSword();
+void dMeter2_onALBWSidestep();
+void dMeter2_onALBWBackJump();
+void dMeter2_onALBWRollJump();
+void dMeter2_onALBWHiddenSkill();
+bool dMeter2_canALBWSword();
+bool dMeter2_canALBWSidestep();
+bool dMeter2_canALBWBackJump();
+bool dMeter2_canALBWRollJump();
+bool dMeter2_canALBWHiddenSkill();
+bool dMeter2_isWolfForm();
+void dMeter2_setALBWPlayerIdle(bool i_idle);
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
 #endif /* D_METER_D_METER2_INFO_H */

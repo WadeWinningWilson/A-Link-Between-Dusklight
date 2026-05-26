@@ -556,10 +556,38 @@ void item_func_HEART() {
 }
 
 void item_func_GREEN_RUPEE() {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Green rupees are the small magic fill source. Every green rupee
+    // collected refills 1/15 of the current meter ceiling (scales with
+    // upgrades). At base ceiling (10900): +727. At max upgrade (21800):
+    // +1453. Intentionally smaller than L_MAGIC (1/3) so the dedicated
+    // orange-rupee drop feels meaningfully larger. Grass farming is not
+    // gated, so the denominator is kept lean to preserve resource tension.
+    // ============================================
+    dMeter2_addALBWFraction(1, 15);
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     dComIfGp_setItemRupeeCount(1);
 }
 
 void item_func_BLUE_RUPEE() {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Blue rupees give the same small meter refill as green rupees (1/15
+    // of the current ceiling), keeping parity between the two smallest
+    // denominations while still feeling like a step up from nothing.
+    // At base ceiling (10900): +727. At max upgrade (21800): +1453.
+    // ============================================
+    dMeter2_addALBWFraction(1, 15);
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     dComIfGp_setItemRupeeCount(5);
 }
 
@@ -584,11 +612,35 @@ void item_func_SILVER_RUPEE() {
 }
 
 void item_func_S_MAGIC() {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Refills 1/5 of the current meter ceiling (scales with upgrades).
+    // At base meter (10900): +2180. At max upgrade (21800): +4360.
+    // ============================================
+    dMeter2_addALBWFraction(1, 5);
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#else
     dComIfGp_setItemMagicCount(4);
+#endif
 }
 
 void item_func_L_MAGIC() {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Refills 1/3 of the current meter ceiling (scales with upgrades).
+    // At base meter (10900): +3633. At max upgrade (21800): +7266.
+    // ============================================
+    dMeter2_addALBWFraction(1, 3);
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#else
     dComIfGp_setItemMagicCount(8);
+#endif
 }
 
 void item_func_BOMB_5() {
@@ -1999,6 +2051,29 @@ int isArrow(u8 i_itemNo) {
     return is_arrow;
 }
 
+#if TARGET_PC
+// ============================================
+// NEW CODE — ALBW Port
+// Returns true for consumable ammo drops that are suppressed when the
+// noAmmoDrops setting is enabled. Covers all bomb variants (including
+// water and insect bombs), all arrow bundles, and slingshot seeds.
+// These pickups are irrelevant in the ALBW mod since items are fuelled
+// by the meter rather than counted as ammo.
+// ============================================
+BOOL isAmmo(u8 i_itemNo) {
+    return isBomb(i_itemNo)
+        || isArrow(i_itemNo)
+        || i_itemNo == dItemNo_PACHINKO_SHOT_e
+        || i_itemNo == dItemNo_WATER_BOMB_5_e  || i_itemNo == dItemNo_WATER_BOMB_10_e
+        || i_itemNo == dItemNo_WATER_BOMB_20_e || i_itemNo == dItemNo_WATER_BOMB_30_e
+        || i_itemNo == dItemNo_BOMB_INSECT_5_e || i_itemNo == dItemNo_BOMB_INSECT_10_e
+        || i_itemNo == dItemNo_BOMB_INSECT_20_e|| i_itemNo == dItemNo_BOMB_INSECT_30_e;
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+#endif
+
 BOOL isBottleItem(u8 i_itemNo) {
     switch (i_itemNo) {
     case dItemNo_OIL_BOTTLE3_e:
@@ -2083,6 +2158,22 @@ BOOL isInsect(u8 i_itemNo) {
 }
 
 u8 check_itemno(int i_itemNo) {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Magic pickups are always collectible in the ALBW mod. Return the
+    // item ID directly, bypassing both vanilla gates:
+    //   1. The "magic use flag not set" check at line 2086 (vanilla).
+    //   2. The unconditional green-rupee fallback further below (vanilla).
+    // Neither flag nor fallback is relevant when magic drops are active.
+    // ============================================
+    if (i_itemNo == dItemNo_S_MAGIC_e || i_itemNo == dItemNo_L_MAGIC_e) {
+        return (u8)i_itemNo;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     if (!dComIfGs_isGetMagicUseFlag() && (i_itemNo == dItemNo_S_MAGIC_e || i_itemNo == dItemNo_L_MAGIC_e)) {
         return dItemNo_GREEN_RUPEE_e;
     }

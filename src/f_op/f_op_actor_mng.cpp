@@ -20,6 +20,7 @@
 #include "d/actor/d_a_player.h"
 #include "d/actor/d_a_tag_stream.h"
 #include "d/d_item.h"
+#include "d/d_item_data.h"
 #include "d/d_path.h"
 #include "d/d_s_play.h"
 #include "d/d_debug_viewer.h"
@@ -1521,7 +1522,28 @@ fpc_ProcID fopAcM_createItemFromEnemyID(u8 i_enemyID, cXyz const* i_pos, int i_i
         }
         table++;
     }
-    
+
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // After the normal drop table is resolved, independently roll for a
+    // large magic pickup (meter refill drop). Green rupees from the normal
+    // drop table serve as the small fill (1/15 via item_func_GREEN_RUPEE);
+    // this roll produces the larger orange-rupee drop (L_MAGIC, 1/3 fill)
+    // as a rarer bonus on top.
+    //   10% chance: large drop (L_MAGIC) — 1.3× scale orange rupee
+    //   90% chance: no extra magic drop this kill
+    // "Always" arc is resident from game start, so no load guard is needed.
+    // ============================================
+    if (cM_rndF(1.0f) < 0.10f) {
+        static const cXyz largeScale(1.3f, 1.3f, 1.3f);
+        fopAcM_createItem(i_pos, dItemNo_L_MAGIC_e, -1, i_roomNo, i_angle, &largeScale, 0);
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
+
     if (daPy_getPlayerActorClass()->checkHorseRide()) {
         tableNo = fopAcM_getItemNoFromTableNo(tableNo);
         void* actor =
@@ -1545,6 +1567,18 @@ fpc_ProcID fopAcM_createItemFromTable(cXyz const* i_pos, int i_itemNo, int i_ite
     if (dusk::getSettings().game.noHeartDrops && isHeart(i_itemNo)) {
         return fpcM_ERROR_PROCESS_ID_e;
     }
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Suppress ammo drops (bombs, arrows, slingshot seeds) when the
+    // noAmmoDrops setting is on. Items are meter-fuelled in this mod;
+    // ammo refills have no purpose and would clutter the ground.
+    // ============================================
+    if (dusk::getSettings().game.noAmmoDrops && isAmmo(i_itemNo)) {
+        return fpcM_ERROR_PROCESS_ID_e;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     #endif
 
     u8 tableNum;
