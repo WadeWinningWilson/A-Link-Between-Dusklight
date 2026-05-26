@@ -192,6 +192,10 @@ void reset_for_speedrun_mode() {
     getSettings().game.enableTurboKeybind.setSpeedrunValue(false);
 
     getSettings().game.damageMultiplier.setSpeedrunValue(1);
+    getSettings().game.hpMultNormal.setSpeedrunValue(1);
+    getSettings().game.hpMultMidBoss.setSpeedrunValue(1);
+    getSettings().game.hpMultBoss.setSpeedrunValue(1);
+    getSettings().game.hpMultFinalBoss.setSpeedrunValue(1);
     getSettings().game.instantDeath.setSpeedrunValue(false);
     getSettings().game.noHeartDrops.setSpeedrunValue(false);
     getSettings().game.autoSave.setSpeedrunValue(false);
@@ -1143,10 +1147,123 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 pane.clear();
                 pane.add_text("Multiplies incoming damage.");
             });
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Enemy HP multiplier sliders (1–16×, one per category).
+        // Each divides attack power at the collision intercept in
+        // d_cc_uty.cpp so effective enemy health scales up without
+        // touching any HP values directly.
+        // ============================================
+        leftPane.register_control(
+            leftPane.add_child<NumberButton>(NumberButton::Props{
+                .key = "Enemy HP ×",
+                .getValue = [] { return getSettings().game.hpMultNormal.getValue(); },
+                .setValue =
+                    [](int value) {
+                        getSettings().game.hpMultNormal.setValue(value);
+                        config::Save();
+                    },
+                .isDisabled = [] { return getSettings().game.speedrunMode; },
+                .isModified =
+                    [] {
+                        return getSettings().game.hpMultNormal.getValue() !=
+                               getSettings().game.hpMultNormal.getDefaultValue();
+                    },
+                .min = 1,
+                .max = 16,
+                .suffix = "×",
+            }),
+            rightPane, [](Pane& pane) {
+                pane.clear();
+                pane.add_text(
+                    "Scales HP of standard enemies: Bokoblins, Stalfos, "
+                    "Lizalfos, Keese, and all other regular encounters.");
+            });
+        leftPane.register_control(
+            leftPane.add_child<NumberButton>(NumberButton::Props{
+                .key = "Mid-Boss HP ×",
+                .getValue = [] { return getSettings().game.hpMultMidBoss.getValue(); },
+                .setValue =
+                    [](int value) {
+                        getSettings().game.hpMultMidBoss.setValue(value);
+                        config::Save();
+                    },
+                .isDisabled = [] { return getSettings().game.speedrunMode; },
+                .isModified =
+                    [] {
+                        return getSettings().game.hpMultMidBoss.getValue() !=
+                               getSettings().game.hpMultMidBoss.getDefaultValue();
+                    },
+                .min = 1,
+                .max = 16,
+                .suffix = "×",
+            }),
+            rightPane, [](Pane& pane) {
+                pane.clear();
+                pane.add_text(
+                    "Scales HP of sub-bosses: Ook, Dangoro, Death Sword, "
+                    "Deku Toad, Skull Kid, King Bulblin, Darkhammer, "
+                    "Twilit Bloat, Phantom Zant, etc.");
+            });
+        leftPane.register_control(
+            leftPane.add_child<NumberButton>(NumberButton::Props{
+                .key = "Boss HP ×",
+                .getValue = [] { return getSettings().game.hpMultBoss.getValue(); },
+                .setValue =
+                    [](int value) {
+                        getSettings().game.hpMultBoss.setValue(value);
+                        config::Save();
+                    },
+                .isDisabled = [] { return getSettings().game.speedrunMode; },
+                .isModified =
+                    [] {
+                        return getSettings().game.hpMultBoss.getValue() !=
+                               getSettings().game.hpMultBoss.getDefaultValue();
+                    },
+                .min = 1,
+                .max = 16,
+                .suffix = "×",
+            }),
+            rightPane, [](Pane& pane) {
+                pane.clear();
+                pane.add_text(
+                    "Scales HP of dungeon bosses: Diababa, Fyrus, Morpheel, "
+                    "Stallord, Blizzeta, Armogohma, Argorok, and Zant.");
+            });
+        leftPane.register_control(
+            leftPane.add_child<NumberButton>(NumberButton::Props{
+                .key = "Final Boss HP ×",
+                .getValue = [] { return getSettings().game.hpMultFinalBoss.getValue(); },
+                .setValue =
+                    [](int value) {
+                        getSettings().game.hpMultFinalBoss.setValue(value);
+                        config::Save();
+                    },
+                .isDisabled = [] { return getSettings().game.speedrunMode; },
+                .isModified =
+                    [] {
+                        return getSettings().game.hpMultFinalBoss.getValue() !=
+                               getSettings().game.hpMultFinalBoss.getDefaultValue();
+                    },
+                .min = 1,
+                .max = 16,
+                .suffix = "×",
+            }),
+            rightPane, [](Pane& pane) {
+                pane.clear();
+                pane.add_text(
+                    "Scales HP of the final boss sequence: Dark Beast Ganon "
+                    "and the Ganondorf sword fight on Hyrule Castle rooftop.");
+            });
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
         addSpeedrunDisabledOption(
             "Instant Death", getSettings().game.instantDeath, "Any hit will instantly kill you.");
         addSpeedrunDisabledOption("No Heart Drops", getSettings().game.noHeartDrops,
             "Hearts will never drop from enemies, pots, and various other places.");
+        addOption("No Ammo Drops", getSettings().game.noAmmoDrops,
+            "Bombs, arrows, and seeds will not drop from enemies. Magic pickups (seed drops) replace them.");
 
         leftPane.add_section("Quality of Life");
         addOption("Bigger Wallets", getSettings().game.biggerWallets,

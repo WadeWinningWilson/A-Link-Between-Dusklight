@@ -35,7 +35,12 @@ UserSettings g_userSettings = {
         .disableRupeeCutscenes {"game.disableRupeeCutscenes", false},
         .noSwordRecoil {"game.noSwordRecoil", false},
         .damageMultiplier {"game.damageMultiplier", 1},
+        .hpMultNormal     {"game.hpMultNormal",     1},
+        .hpMultMidBoss    {"game.hpMultMidBoss",    1},
+        .hpMultBoss       {"game.hpMultBoss",       1},
+        .hpMultFinalBoss  {"game.hpMultFinalBoss",  1},
         .noHeartDrops {"game.noHeartDrops", false},
+        .noAmmoDrops  {"game.noAmmoDrops",  true},
         .instantDeath {"game.instantDeath", false},
         .fastClimbing {"game.fastClimbing", false},
         .noMissClimbing {"game.noMissClimbing", false},
@@ -204,7 +209,12 @@ void registerSettings() {
     Register(g_userSettings.game.disableRupeeCutscenes);
     Register(g_userSettings.game.noSwordRecoil);
     Register(g_userSettings.game.damageMultiplier);
+    Register(g_userSettings.game.hpMultNormal);
+    Register(g_userSettings.game.hpMultMidBoss);
+    Register(g_userSettings.game.hpMultBoss);
+    Register(g_userSettings.game.hpMultFinalBoss);
     Register(g_userSettings.game.noHeartDrops);
+    Register(g_userSettings.game.noAmmoDrops);
     Register(g_userSettings.game.instantDeath);
     Register(g_userSettings.game.fastClimbing);
     Register(g_userSettings.game.fastTears);
