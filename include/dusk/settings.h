@@ -135,7 +135,20 @@ struct UserSettings {
         ConfigVar<bool> disableRupeeCutscenes;
         ConfigVar<bool> noSwordRecoil;
         ConfigVar<int> damageMultiplier;
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Per-category enemy HP multipliers (1–16×, default 1 = off).
+        // Applied in d_cc_uty.cc via dAlbwHP_applyMult().
+        // ============================================
+        ConfigVar<int> hpMultNormal;
+        ConfigVar<int> hpMultMidBoss;
+        ConfigVar<int> hpMultBoss;
+        ConfigVar<int> hpMultFinalBoss;
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
         ConfigVar<bool> noHeartDrops;
+        ConfigVar<bool> noAmmoDrops;
         ConfigVar<bool> instantDeath;
         ConfigVar<bool> fastClimbing;
         ConfigVar<bool> noMissClimbing;

@@ -16,6 +16,7 @@
 #if TARGET_PC
 #include "dusk/achievements.h"
 #include "dusk/settings.h"
+#include "d/d_albw_hp_mult.h"
 #endif
 
 static int plCutLRC[58] = {
@@ -435,6 +436,24 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* i_enemy, dCcU_AtInfo* i_AtInfo) {
             fopAcM_GetGroup(i_enemy) == fopAc_ENEMY_e) {
             i_AtInfo->mAttackPower = 0;
         }
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Enemy HP multiplier intercept. Runs after all attack-power
+        // modifiers (Master Sword ×2, sword upgrade, light-arrow override)
+        // and after the invincibleEnemies zero-out above. Divides the final
+        // mAttackPower by the per-category setting so the enemy effectively
+        // takes fewer HP points per hit. The max(1,...) floor in
+        // dAlbwHP_applyMult() guarantees every hit still deals at least 1
+        // damage, preserving instant kills on 1-HP actors at any multiplier.
+        // Actors in dAlbwHP_EXCLUDED pass through unchanged.
+        // ============================================
+        if (i_AtInfo->mAttackPower > 0 && fopAcM_GetGroup(i_enemy) == fopAc_ENEMY_e) {
+            i_AtInfo->mAttackPower =
+                dAlbwHP_applyMult(fopAcM_GetName(i_enemy), i_AtInfo->mAttackPower);
+        }
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
 #endif
 
         if (i_AtInfo->mAttackPower != 0) {
