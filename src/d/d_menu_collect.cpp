@@ -1351,6 +1351,19 @@ void dMenu_Collect2D_c::setWalletSizeNum(u16 i_walletSize) {
         mpScreen->search(MULTI_CHAR('item_1_1'))->hide();
         mpScreen->search(MULTI_CHAR('item_1_2'))->show();
         break;
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Colossal Wallet reuses the Giant Wallet icon (item_1_2) since no
+    // 4th wallet icon exists in the game's asset data.
+    // ============================================
+    case COLOSSAL_WALLET:
+        mpScreen->search(MULTI_CHAR('item_1_0'))->hide();
+        mpScreen->search(MULTI_CHAR('item_1_1'))->hide();
+        mpScreen->search(MULTI_CHAR('item_1_2'))->show();
+        break;
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     }
 }
 #else

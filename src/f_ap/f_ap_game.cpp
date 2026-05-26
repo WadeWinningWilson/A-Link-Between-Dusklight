@@ -810,6 +810,23 @@ static void duskExecute() {
         dComIfGs_setRupee(dComIfGs_getRupeeMax());
     }
 
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Auto-grant Colossal Wallet (9999 rupees) when Cave of Ordeals is
+    // cleared (event flag 0x1F9 = B50 first arrival / clear).
+    // Checks each frame but only upgrades once: the wallet stays at
+    // COLOSSAL_WALLET on subsequent frames, so the < COLOSSAL_WALLET guard
+    // makes this a no-op after the first upgrade. Retroactive for saves
+    // that already completed the Cave of Ordeals before this feature.
+    // ============================================
+    if (dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[0x1F9]) &&
+        dComIfGs_getWalletSize() < COLOSSAL_WALLET) {
+        dComIfGs_setWalletSize(COLOSSAL_WALLET);
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+
     if (dusk::getSettings().game.infiniteOxygen) {
         dComIfGp_setOxygen(dComIfGp_getMaxOxygen());
     }

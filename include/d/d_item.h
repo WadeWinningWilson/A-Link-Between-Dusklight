@@ -65,6 +65,13 @@ void item_func_DUNGEON_EXIT_2();
 void item_func_WALLET_LV1();
 void item_func_WALLET_LV2();
 void item_func_WALLET_LV3();
+// ============================================
+// NEW CODE — ALBW Port
+// ============================================
+void item_func_WALLET_LV4();
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 void item_func_ZORAS_JEWEL();
 void item_func_HAWK_EYE();
 void item_func_WOOD_STICK();
@@ -254,6 +261,13 @@ int item_getcheck_func_DUNGEON_EXIT_2();
 int item_getcheck_func_WALLET_LV1();
 int item_getcheck_func_WALLET_LV2();
 int item_getcheck_func_WALLET_LV3();
+// ============================================
+// NEW CODE — ALBW Port
+// ============================================
+int item_getcheck_func_WALLET_LV4();
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 int item_getcheck_func_ZORAS_JEWEL();
 int item_getcheck_func_HAWK_EYE();
 int item_getcheck_func_WOOD_STICK();
@@ -395,6 +409,9 @@ int checkItemGet(u8, int);
 BOOL isHeart(u8 item_no);
 int isBomb(u8);
 int isArrow(u8);
+#if TARGET_PC
+BOOL isAmmo(u8 item_no);
+#endif
 int addBombCount(u8, u8);
 BOOL isBottleItem(u8 item_no);
 u8 check_itemno(int i_itemNo);

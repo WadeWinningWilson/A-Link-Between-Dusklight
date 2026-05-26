@@ -81,8 +81,8 @@ namespace dusk {
         { dItemNo_WALLET_LV1_e, {"Wallet"} },
         { dItemNo_WALLET_LV2_e, {"Big Wallet"} },
         { dItemNo_WALLET_LV3_e, {"Giant Wallet"} },
-        { dItemNo_NOENTRY_55_e, {"Reserved"} },
-        { dItemNo_NOENTRY_56_e, {"Reserved"} },
+        { dItemNo_WALLET_LV4_e, {"Colossal Wallet"} },   // ALBW Port — Cave of Ordeals reward
+        { dItemNo_DEITY_ARMOR_e, {"Deity Armor (flag)"} },  // ALBW Port — ability flag
         { dItemNo_NOENTRY_57_e, {"Reserved"} },
         { dItemNo_NOENTRY_58_e, {"Reserved"} },
         { dItemNo_NOENTRY_59_e, {"Reserved"} },
@@ -656,13 +656,23 @@ namespace dusk {
             ImGui::EndCombo();
         }
 
+        // ============================================
+        // MODIFIED CODE — ALBW Port
+        // Added COLOSSAL_WALLET (size 3, 9999 rupees) to the wallet picker.
+        // walletSize is clamped to avoid an out-of-bounds access if a future
+        // save has an unexpected wallet size value.
+        // ============================================
         const char* walletSizeNames[] = {
             "Normal",
             "Big",
             "Giant",
+            "Colossal (9999)",  // ALBW Port — Cave of Ordeals reward
         };
         int walletSize = statusA.getWalletSize();
-        if (ImGui::BeginCombo("Wallet Size", walletSizeNames[walletSize])) {
+        // Guard against out-of-bounds when wallet size exceeds our table.
+        const char* walletLabel = (walletSize >= 0 && walletSize <= 3)
+            ? walletSizeNames[walletSize] : "Unknown";
+        if (ImGui::BeginCombo("Wallet Size", walletLabel)) {
             if (ImGui::Selectable(walletSizeNames[WALLET])) {
                 statusA.setWalletSize(WALLET);
             }
@@ -672,8 +682,14 @@ namespace dusk {
             if (ImGui::Selectable(walletSizeNames[GIANT_WALLET])) {
                 statusA.setWalletSize(GIANT_WALLET);
             }
+            if (ImGui::Selectable(walletSizeNames[COLOSSAL_WALLET])) {
+                statusA.setWalletSize(COLOSSAL_WALLET);
+            }
             ImGui::EndCombo();
         }
+        // ============================================
+        // MODIFIED CODE ENDS HERE
+        // ============================================
 
         if (ImGui::BeginCombo("Form", statusA.mTransformStatus == 0 ? "Human" : "Wolf")) {
             if (ImGui::Selectable("Human")) {

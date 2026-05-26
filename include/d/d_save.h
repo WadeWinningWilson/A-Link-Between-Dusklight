@@ -35,6 +35,15 @@ static const int GIANT_QUIVER_MAX = 100;
 static const int WALLET_MAX = 300;
 static const int BIG_WALLET_MAX = 600;
 static const int GIANT_WALLET_MAX = 1000;
+// ============================================
+// NEW CODE — ALBW Port
+// Colossal Wallet: 9,999-rupee cap, awarded on Cave of Ordeals completion.
+// The biggerWallets setting does not scale this value — it is always 9999.
+// ============================================
+static const int COLOSSAL_WALLET_MAX = 9999;
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 static const int MAX_FINDABLE_FISHES = 6;
 
 static const int ITEM_BIT_MAX = 0x100;
@@ -48,7 +57,15 @@ enum ButtonIndexes {
 enum Wallets {
     /* 0x0 */ WALLET,
     /* 0x1 */ BIG_WALLET,
-    /* 0x2 */ GIANT_WALLET
+    /* 0x2 */ GIANT_WALLET,
+    // ============================================
+    // NEW CODE — ALBW Port
+    // 4th wallet tier; auto-granted when Cave of Ordeals flag 0x1F9 is set.
+    // ============================================
+    /* 0x3 */ COLOSSAL_WALLET
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
 };
 
 enum ItemSlots {
