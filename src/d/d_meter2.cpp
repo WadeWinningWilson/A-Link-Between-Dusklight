@@ -3648,7 +3648,21 @@ void dMeter2_c::alphaAnimeKantera() {
          (dComIfG_getTimerMode() == 3 || dComIfG_getTimerMode() == 4)) ||
         (mStatus & 0x100000) || (mStatus & 0x80000000) || (mStatus & 8) || (mStatus & 0x10) ||
         (mStatus & 0x01000000) || (mStatus & 0x20) || (mStatus & 0x04000000) ||
-        (mStatus & 0x08000000) || (mStatus & 0x10000000))
+        (mStatus & 0x08000000) || (mStatus & 0x10000000) ||
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Hide the ALBW stamina meter while Link is in wolf form.
+        // Covers both scripted Wolf Link sections and manual transformation.
+        // The existing animation system fades alpha smoothly to 0 on enter
+        // and back to full on return to human — no extra state needed.
+        // Meter state (value, lockout, recovery) is unaffected; only alpha
+        // changes. Wolf Link sections are already gameplay-unaffected per
+        // the "not touching Wolf Link with ALBW meter" constraint.
+        // ============================================
+        dMeter2_isWolfForm())
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
     {
         mpMeterDraw->setAlphaMagicAnimeMin();
     } else {
