@@ -192,11 +192,40 @@ int daAlink_c::setDamagePoint(int i_dmgAmount, BOOL i_checkZoraMag, BOOL i_setDm
 
     if (checkMagicArmorNoDamage()) {
 #if TARGET_PC
-        if(dusk::getSettings().game.freeMagicArmor) {
+        // ============================================
+        // MODIFIED CODE — ALBW Port
+        // Deity Armor upgrade (rupees > 5000): each hit costs 2500 rupees
+        // and does NOT drain the ALBW meter, allowing back-to-back blocks
+        // with no recovery window. Once rupees fall to 5000 or below,
+        // Deity Armor deactivates and regular Magic Armor behavior resumes:
+        // first hit drains the meter to zero and costs 500 rupees;
+        // subsequent hits deal normal damage until the meter recovers.
+        // freeMagicArmor cheat skips all costs regardless of armor tier.
+        // ============================================
+        if (!dusk::getSettings().game.freeMagicArmor) {
+            const bool deityActive = dComIfGs_isItemFirstBit((u8)dItemNo_DEITY_ARMOR_e)
+                                     && dComIfGs_getRupee() > 5000;
+            if (deityActive) {
+                // Deity Armor: 2500 rupee cost, meter is NOT drained
+                s32 newRupees = (s32)dComIfGs_getRupee() - 2500;
+                dComIfGs_setRupee((u16)(newRupees < 0 ? 0 : newRupees));
+            } else {
+                // Regular Magic Armor: instant meter drain + 500 rupee cost
+                dMeter2_onALBWArmorHit();
+                s32 newRupees = (s32)dComIfGs_getRupee() - 500;
+                dComIfGs_setRupee((u16)(newRupees < 0 ? 0 : newRupees));
+            }
+        }
+        i_dmgAmount = 0;
+        // ============================================
+        // MODIFIED CODE ENDS HERE
+        // ============================================
+#else
+        if (dusk::getSettings().game.freeMagicArmor) {
             i_dmgAmount = 0;
         }
-#endif
         dComIfGp_setItemRupeeCount(-i_dmgAmount * 10);
+#endif
     } else
     #if DEBUG
     if (!mpHIO->mDamage.m.mInvincible && g_debugHpMode == 0)
@@ -281,7 +310,36 @@ BOOL daAlink_c::checkIcePolygonDamage(cBgS_PolyInfo* i_poly) {
 }
 
 BOOL daAlink_c::checkMagicArmorNoDamage() {
+#if TARGET_PC
+    // ============================================
+    // MODIFIED CODE — ALBW Port
+    // Deity Armor upgrade: while the Deity Armor flag is set and the player
+    // holds more than 5000 rupees, each hit is blocked without consuming
+    // the ALBW meter (no recovery window). Below the 5000-rupee threshold,
+    // Deity Armor deactivates and regular Magic Armor rules apply:
+    //   1. Wearing the armor (not wolf, not cutscene)
+    //   2. Meter not in post-hit recovery (dMeter2_canALBWArmorBlock)
+    //   3. Player can afford the 500-rupee hit cost
+    // freeMagicArmor cheat bypasses all requirements.
+    // ============================================
+    if (!checkMagicArmorWearAbility()) return FALSE;
+
+    if (dComIfGs_isItemFirstBit((u8)dItemNo_DEITY_ARMOR_e)) {
+        // Deity Armor mode: active above 5000 rupees (or with cheat)
+        if (dComIfGs_getRupee() > 5000 || dusk::getSettings().game.freeMagicArmor) {
+            return TRUE;
+        }
+        // Rupees ≤ 5000: fall through to regular Magic Armor check
+    }
+
+    return dMeter2_canALBWArmorBlock() &&
+           (dComIfGs_getRupee() >= 500 || dusk::getSettings().game.freeMagicArmor);
+    // ============================================
+    // MODIFIED CODE ENDS HERE
+    // ============================================
+#else
     return checkMagicArmorWearAbility() && !checkMagicArmorHeavy();
+#endif
 }
 
 int daAlink_c::checkPolyDamage() {
@@ -683,8 +741,26 @@ BOOL daAlink_c::checkDamageAction() {
                 dComIfGp_getVibration().StartShock(VIBMODE_S_POWER2, 0x1F, cXyz(0.0f, 1.0f, 0.0f));
             }
 
+#if TARGET_PC
+            // ============================================
+            // NEW CODE — ALBW Port
+            // Register this enemy in the encounter tracker (defense side).
+            // Any hit on Link while armor is equipped — whether the armor
+            // absorbed it (armor_no_dmg=true) or HP damage went through
+            // (armor_no_dmg=false) — is a taint event. Previously this
+            // passed !armor_no_dmg which silently dropped blocked hits,
+            // allowing the reward to fire after "hit-then-run-then-kill"
+            // scenarios. Now always true: if an enemy hit you, taint.
+            // ============================================
+            if (checkMagicArmorWearAbility() && tghit_ac != NULL) {
+                dMeter2_onArmorEncounterHit(fopAcM_GetID(tghit_ac), true);
+            }
+            // ============================================
+            // NEW CODE ENDS HERE
+            // ============================================
+#endif
             setDamagePoint(dmg, at_mtrl == dCcD_MTRL_FIRE || at_mtrl == dCcD_MTRL_ICE, TRUE, 0);
-            
+
 #ifdef TARGET_PC
             if (tghit_ac_name == fpcNm_Obj_Carry_e) {
                 auto* carry = static_cast<daObjCarry_c*>(tghit_ac);
