@@ -2957,7 +2957,15 @@ void dComIfGs_setupRandomizerSave() {
 
     if (randoData.mSettings[RandomizerContext::SKIP_MINOR_CUTSCENES] == RandomizerContext::ON)
     {
-        dComIfGs_setAllLetterGet();
+        // Add letter data in this order to more or less reflect an order they can be obtained in game
+        static const int letterOrder[] = {3, 2, 4, 7, 5, 6, 13, 12, 10, 9, 8, 15, 0, 14, 11};
+        int letterNum = 0;
+        for (int i : letterOrder) {
+            if (dMenu_Letter::getLetterName(i) != 0) {
+                dComIfGs_onLetterGetFlag(i);
+                dComIfGs_setGetNumber(letterNum++, i + 1);
+            }
+        }
         dComIfGs_setAllLetterRead();
     }
 
