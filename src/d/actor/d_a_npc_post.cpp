@@ -13,6 +13,18 @@
 #include "d/d_debug_viewer.h"
 #include "Z2AudioLib/Z2Instances.h"
 #include <cstring>
+// ============================================
+// NEW CODE — ALBW Port
+// ============================================
+#if TARGET_PC
+#include "d/d_albw_rental.h"
+#include "d/actor/d_a_player.h"
+#include "dusk/ui/ui.hpp"
+#include <chrono>
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
 enum post_RES_File_ID {
     /* BCK */
@@ -535,6 +547,81 @@ int daNpc_Post_c::Delete() {
 }
 
 int daNpc_Post_c::Execute() {
+// ============================================
+// NEW CODE — ALBW Port
+// Poll input and advance the rental shop state machine from Execute().
+// After the tick, check one-shot transition flags and play the matching
+// body animation, face animation, and voice squeak:
+//
+//   justEnteredGreeting  → MOT_HELLO bow    + FACE_MOT_HELLO + Z2SE_POST_V_APPEAR
+//   justEnteredShop      → MOT_WAIT_A idle  + FACE_MOT_NONE_2
+//   justEnteredFarewell  → MOT_BYE salute   + FACE_MOT_BYE   + Z2SE_POST_V_FANFARE
+//
+// MOT_HELLO sequence auto-chains to MOT_WAIT_A when it finishes (see
+// l_motionSequenceData seq 3), so the Postman naturally settles into idle.
+// MOT_BYE chains to BCK_POST_BYE_WAIT loop (seq 5) — a held salute pose.
+//
+// ImGui rendering (dALBWRental_imguiDraw) is called separately from the
+// main game loop so it renders exactly once per presented frame regardless
+// of how many sim-ticks this Execute() runs (can be 0 on interpolated frames).
+// ============================================
+#if TARGET_PC
+    if (getBitSW() == 0x42) {
+        dALBWRental_tick();
+
+        // ============================================
+        // NEW CODE — ALBW Port (Purchase Sound)
+        // Sound ID catalogue for the ALBW rental postman.
+        // All sounds originate from the postman character's own audio library.
+        // To swap a sound: change the constant here; behaviour is unchanged.
+        // To remove purchase sounds entirely: delete the `else if (justPurchased)`
+        // branch and the three lines below; all other animations/sounds are
+        // unaffected. Grep "ALBW_POST_SFX" to locate every sound used here.
+        //
+        //   ALBW_POST_SFX  greeting  Z2SE_POST_V_APPEAR   0x5010B
+        //   ALBW_POST_SFX  farewell  Z2SE_POST_V_FANFARE  0x500F6
+        //   ALBW_POST_SFX  purchase  Z2SE_POST_V_SMILING  0x5010C
+        // ============================================
+        static constexpr u32 kALBWSound_Greeting = Z2SE_POST_V_APPEAR;   // bow hello
+        static constexpr u32 kALBWSound_Farewell = Z2SE_POST_V_FANFARE;  // salute bye
+        static constexpr u32 kALBWSound_Purchase = Z2SE_POST_V_SMILING;  // item rented!
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+
+        if (dALBWRental_justEnteredGreeting()) {
+            // Greeting: bow and look at player.
+            mFaceMotionSeqMngr.setNo(FACE_MOT_HELLO, -1.0f, FALSE, 0);
+            mMotionSeqMngr.setNo(MOT_HELLO, -1.0f, FALSE, 0);
+            mSound.startCreatureVoice(kALBWSound_Greeting, -1);
+        } else if (dALBWRental_justEnteredShop()) {
+            // Greeting dismissed — lock into standing idle while shop is open.
+            // MOT_HELLO auto-chains here, but set explicitly in case the
+            // player dismissed the toast before the animation completed.
+            mFaceMotionSeqMngr.setNo(FACE_MOT_NONE_2, -1.0f, FALSE, 0);
+            mMotionSeqMngr.setNo(MOT_WAIT_A, -1.0f, FALSE, 0);
+        } else if (dALBWRental_justEnteredFarewell()) {
+            // Farewell: salute, then hold the salute pose (BYE_WAIT loop).
+            mFaceMotionSeqMngr.setNo(FACE_MOT_BYE, -1.0f, FALSE, 0);
+            mMotionSeqMngr.setNo(MOT_BYE, -1.0f, FALSE, 0);
+            mSound.startCreatureVoice(kALBWSound_Farewell, -1);
+        } else if (dALBWRental_justPurchased()) {
+            // ============================================
+            // NEW CODE — ALBW Port (Purchase Sound)
+            // Congratulatory squeak when the player successfully rents an item.
+            // No animation change — postman stays in MOT_WAIT_A idle.
+            // Remove this else-if block to silence purchase feedback sounds.
+            // ============================================
+            mSound.startCreatureVoice(kALBWSound_Purchase, -1);
+            // ============================================
+            // NEW CODE ENDS HERE
+            // ============================================
+        }
+    }
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
     return execute();
 }
 
@@ -745,6 +832,52 @@ void daNpc_Post_c::srchActors() {
 }
 
 BOOL daNpc_Post_c::evtTalk() {
+// ============================================
+// NEW CODE — ALBW Port
+// Rental Postman intercept (getBitSW() == 0x42).
+// Human Link → open rental shop and keep returning TRUE while open.
+// Wolf Link  → immediately close the talk event with no response and
+//              push a single dismissal toast.
+// ============================================
+#if TARGET_PC
+    if (getBitSW() == 0x42) {
+        // Shop just finished — close the event to release Link's lock.
+        // sJustClosed is set by dALBWRental_tick() when STATE_CLOSED is
+        // entered; it reads and clears in one call so this fires only once.
+        if (dALBWRental_justClosed()) {
+            mEvtNo = EVT_NO_RESPONSE;
+            evtChange();
+            return TRUE;
+        }
+
+        if (!dALBWRental_isOpen()) {
+            if (daPy_py_c::checkNowWolf()) {
+                // Wolf cannot use the rental shop.
+                // End the talk event immediately so evtTalk() is not
+                // called again next frame (prevents toast spam).
+                mEvtNo = EVT_NO_RESPONSE;
+                evtChange();
+                dusk::ui::push_toast({
+                    .title    = "",
+                    .content  = "The Postman seems like he's trying to pretend you're not there.",
+                    .duration = std::chrono::seconds(4),
+                });
+            } else {
+                // Open the shop.  Intentionally NOT calling evtChange() —
+                // keeping the talk event alive makes checkEventRun() return
+                // true, which is exactly what locks Link's movement and
+                // blocks D-pad sub-screens during normal NPC dialogue.
+                // evtTalk() returns TRUE every frame until justClosed fires.
+                mEvtNo = EVT_NO_RESPONSE;
+                dALBWRental_open();
+            }
+        }
+        return TRUE;  // keep event alive → Link stays locked
+    }
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
     if (chkAction(&daNpc_Post_c::talk)) {
         (this->*mAction)(NULL);
     } else {
