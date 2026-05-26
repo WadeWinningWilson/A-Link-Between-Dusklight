@@ -9740,6 +9740,31 @@ BOOL daAlink_c::checkRestHPAnime() {
         return true;
     }
 
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Depleted ALBW meter (sALBWLocked) also triggers the tired-panting idle
+    // animation (ANM_WAIT_TIRED). The same preconditions as the original HP
+    // check apply — not guarding, no active upper animation, not targeting,
+    // not in a cutscene/demo — so combat and event scenes feel natural.
+    // Animation clears automatically once the meter recovers past sOilBaseMax
+    // and sALBWLocked is cleared. Wolf Link is excluded per ALBW port scope.
+    // ============================================
+    if (!checkWolf()
+        && !checkPlayerGuard()
+        && (checkNoUpperAnime() || checkHorseTiredAnime())
+        && mTargetedActor == NULL
+        && !checkWindSpeedOnAngle()
+        && !checkPlayerDemoMode()
+        && dMeter2_isALBWLocked())
+    {
+        return true;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
+
     return false;
 }
 
@@ -10363,7 +10388,32 @@ void daAlink_c::decideCommonDoStatus() {
                     } else {
                         setDoStatus(BUTTON_STATUS_UNK_139);
                     }
-                } else if (checkAttentionLock()) {
+                }
+                // ============================================
+                // NEW CODE — ALBW Port
+                // On PC, the d_a_tag_wljump actor reaches field_0x27f4 via
+                // ETC proximity targeting without requiring the player to
+                // hold the L lock-on button. The original check only reads
+                // mTargetedActor (L-locked), so pressing R1/Z near a jump
+                // point never set BUTTON_STATUS_UNK_147 and procWolfTagJumpInit
+                // was never called. Mirror the mTargetedActor logic here for
+                // the proximity (field_0x27f4) path so R1 correctly triggers
+                // the Midna jump without requiring an L-trigger lock-on first.
+                // ============================================
+#if TARGET_PC
+                else if (field_0x27f4 != NULL && fopAcM_GetName(field_0x27f4) == fpcNm_Tag_Wljump_e) {
+                    daTagWljump_c* wljump = static_cast<daTagWljump_c*>(field_0x27f4);
+                    if (wljump->getLockPos() != NULL && !getMidnaActor()->checkNoInput()) {
+                        setDoStatus(BUTTON_STATUS_UNK_147);
+                        onResetFlg0(RFLG0_WOLF_TAG_LOCK_JUMP_READY);
+                        field_0x3738 = *wljump->getLockPos();
+                    }
+                }
+#endif
+                // ============================================
+                // NEW CODE ENDS HERE
+                // ============================================
+                else if (checkAttentionLock()) {
                     setDoStatus(BUTTON_STATUS_UNK_139);
                 } else if (field_0x30d2 == 0 &&
                            (mStickValue > getFrontRollRate() || checkAttentionLock()))
@@ -12733,7 +12783,17 @@ void daAlink_c::setMagicArmorBrk(int i_status) {
 
 BOOL daAlink_c::checkMagicArmorHeavy() const {
 #if TARGET_PC
-    return checkMagicArmorWearAbility() && (dComIfGs_getRupee() == 0 && !dusk::getSettings().game.freeMagicArmor);
+    // ============================================
+    // MODIFIED CODE — ALBW Port
+    // "Heavy" (movement slow + gray hue) only while the armor is actively
+    // in its post-hit recovery state (sALBWArmorDepleted). Having fewer
+    // than 500 rupees blocks the next activation but does not slow Link.
+    // freeMagicArmor cheat bypasses the depleted check entirely.
+    // ============================================
+    return checkMagicArmorWearAbility() && dMeter2_isALBWArmorDepleted() && !dusk::getSettings().game.freeMagicArmor;
+    // ============================================
+    // MODIFIED CODE ENDS HERE
+    // ============================================
 #else
     return checkMagicArmorWearAbility() && dComIfGs_getRupee() == 0;
 #endif
@@ -12750,7 +12810,23 @@ BOOL daAlink_c::checkHeavyStateOn(BOOL param_0, BOOL param_1) {
             || (param_0 && checkIronBallWaitAnime())
             || checkIronBallAnime()
             || checkMagicArmorHeavy()
-            || getHeavyStateAndBoots())
+            || getHeavyStateAndBoots()
+#if TARGET_PC
+            // ============================================
+            // NEW CODE — ALBW Port
+            // Depleted ALBW meter (sALBWLocked) puts human Link into the heavy
+            // movement state: reduced roll rate, swim speed, run speed, etc.
+            // This reuses the same slow-movement hook used by Iron Boots and
+            // Magic Armor post-hit recovery, giving a consistent "exhausted"
+            // feel. Clears automatically when sALBWLocked is reset.
+            // Wolf Link is excluded per ALBW port scope.
+            // ============================================
+            || (dMeter2_isALBWLocked() && !checkWolf())
+            // ============================================
+            // NEW CODE ENDS HERE
+            // ============================================
+#endif
+            )
         {
             return true;
         }
@@ -14255,7 +14331,21 @@ BOOL daAlink_c::setItemActor() {
         }
 
         cXyz create_pos = (mLeftHandPos + mRightHandPos) * 0.5f;
+// ============================================
+// MODIFIED CODE — ALBW Port
+// Pre-fire check: bomb requires sOilBaseMax/2 = 5450
+// units before the actor is created. Gating here
+// prevents the bomb from being spawned at all if the
+// meter is too low — no partial-throw edge cases.
+// ============================================
+#if TARGET_PC
+        if (dMeter2_canALBWBomb() && checkReadyItem()) {
+#else
         if (checkReadyItem()) {
+#endif
+// ============================================
+// MODIFIED CODE ENDS HERE
+// ============================================
             fopAc_ac_c* actor;
             if (mEquipItem == dItemNo_NORMAL_BOMB_e) {
                 actor = dBomb_c::createNormalBombPlayer(&create_pos);
@@ -14266,7 +14356,20 @@ BOOL daAlink_c::setItemActor() {
             if (actor != NULL) {
                 mActiveBombNum++;
                 setGrabItemActor(actor);
+// ============================================
+// MODIFIED CODE — ALBW Port
+// Ammo decoupling: bombs are gated by the ALBW
+// meter only. Decrement skipped on PC so game
+// ammo count is purely cosmetic.
+// ============================================
+#if !TARGET_PC
                 dComIfGp_addSelectItemNum(mSelectItemId, -1);
+#else
+                dMeter2_onALBWBomb();
+#endif
+// ============================================
+// MODIFIED CODE ENDS HERE
+// ============================================
                 field_0x33e4 = 38.0f;
                 setGrabUpperAnime(mpHIO->mBasic.m.mBasicInterpolation);
             }
@@ -14685,10 +14788,29 @@ int daAlink_c::checkNewItemChange(u8 i_selItemIdx) {
             }
         }
     } else if (sel_item != dItemNo_NONE_e && mEquipItem != sel_item) {
+// ============================================
+// MODIFIED CODE — ALBW Port
+// Ammo decoupling: the bomb-count gate is removed on
+// PC. On console, having 0 bombs blocks item selection
+// entirely. On PC, bombs are gated solely by the ALBW
+// meter (canALBWBomb() in setItemActor()), so game ammo
+// count must never block the item-selection router.
+// The concurrent-active-bomb cap (mActiveBombNum >= 3)
+// and all other conditions are preserved unchanged.
+// ============================================
+#if TARGET_PC
+        if (((sel_item == dItemNo_NORMAL_BOMB_e || sel_item == dItemNo_WATER_BOMB_e) && mActiveBombNum >= 3)
+            || (sel_item == dItemNo_IRONBALL_e && (!mLinkAcch.ChkGroundHit() || checkModeFlg(0x70C52)))
+            || (sel_item == dItemNo_KANTERA_e && (checkNoResetFlg0(FLG0_WATER_IN_MOVE) || checkEndResetFlg1(ERFLG1_UNK_4) || checkModeFlg(0x40000))))
+#else
         if ((checkBombItem(sel_item) && !dComIfGp_getSelectItemNum(i_selItemIdx))
             || ((sel_item == dItemNo_NORMAL_BOMB_e || sel_item == dItemNo_WATER_BOMB_e) && mActiveBombNum >= 3)
             || (sel_item == dItemNo_IRONBALL_e && (!mLinkAcch.ChkGroundHit() || checkModeFlg(0x70C52)))
             || (sel_item == dItemNo_KANTERA_e && (checkNoResetFlg0(FLG0_WATER_IN_MOVE) || checkEndResetFlg1(ERFLG1_UNK_4) || checkModeFlg(0x40000))))
+#endif
+// ============================================
+// MODIFIED CODE ENDS HERE
+// ============================================
         {
             return ITEM_PROC_NONE;
         }
@@ -15632,6 +15754,22 @@ int daAlink_c::procWait() {
         }
     }
 
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Signal to the meter that Link is standing still this frame.
+    // Called every frame while PROC_WAIT is active (wolf excluded).
+    // The meter's 100ms recovery tick clears sALBWPlayerIdle after
+    // reading it, so this must fire each frame to keep the boost active.
+    // ============================================
+    if (!checkWolf()) {
+        dMeter2_setALBWPlayerIdle(true);
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
+
     return 1;
 }
 
@@ -15823,6 +15961,32 @@ int daAlink_c::procMoveTurn() {
 }
 
 int daAlink_c::procSideStepInit(int i_jumpDirection) {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Agility drain gate — checked before the direction branch so the correct
+    // amount is consumed whether the function routes to procBackJumpInit()
+    // or handles the jump animation itself.
+    //   DIR_BACKWARD (back jump): 1/3 base meter (3633 units)
+    //   DIR_LEFT / DIR_RIGHT (sidestep): 1/5 base meter (2180 units)
+    // Gate failure returns 1 to keep the current proc alive; the tired state
+    // engages on the same frame via checkRestHPAnime → dMeter2_isALBWLocked().
+    // ============================================
+    if (i_jumpDirection == DIR_BACKWARD) {
+        if (!dMeter2_canALBWBackJump()) {
+            return 1;
+        }
+        dMeter2_onALBWBackJump();
+    } else {
+        if (!dMeter2_canALBWSidestep()) {
+            return 1;
+        }
+        dMeter2_onALBWSidestep();
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     if (i_jumpDirection == DIR_BACKWARD && !checkHeavyStateOn(TRUE, TRUE) &&
         (checkNoUpperAnime() || checkEquipAnime() || (field_0x2fcc != 0 && checkUpperGuardAnime())))
     {
@@ -16127,6 +16291,24 @@ int daAlink_c::procFrontRollInit() {
     }
 
     BOOL is_dive_jump = mProcID == PROC_DIVE_JUMP;
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Forward roll drain: 1/3 base meter (3633 units).
+    // Only drains when Link has a genuine enemy lock-on (LockonTruth: status
+    // is LOCK/RELEASE AND a target actor exists). Free Z-targeting without an
+    // enemy — Lockon() returns true but LockonTruth() does not — is excluded,
+    // so exploration rolls near walls/objects don't cost meter. Also skipped
+    // for dive-jump landing rolls (recovery move) and Wolf Link (unaffected).
+    // ============================================
+    if (!is_dive_jump && !checkWolf() && mAttention->LockonTruth()) {
+        if (!dMeter2_canALBWRollJump()) { return 1; }
+        dMeter2_onALBWRollJump();
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     commonProcInit(PROC_FRONT_ROLL);
 
     f32 roll_anm_speed;
@@ -16402,8 +16584,25 @@ int daAlink_c::procFrontRollSuccess() {
 
 int daAlink_c::procSideRollInit(int param_0) {
     BOOL is_prev_guardAnm = checkUpperGuardAnime();
-#ifdef TARGET_PC            
+#ifdef TARGET_PC
     const f32 fastRollMultiplier = dusk::getSettings().game.fastRoll ? 2.0f : 1.0f;
+#endif
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Guard dodge-roll drain: 1/5 base meter (2180 units), same cost as a
+    // sidestep — both are lateral evasion moves. Only drains when Link has a
+    // genuine enemy lock-on (LockonTruth: status LOCK/RELEASE AND target actor
+    // exists). Free Z-targeting without an enemy is excluded. Wolf Link
+    // unaffected.
+    // ============================================
+    if (!checkWolf() && mAttention->LockonTruth()) {
+        if (!dMeter2_canALBWSidestep()) { return 1; }
+        dMeter2_onALBWSidestep();
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
 #endif
 
     if (!commonProcInitNotSameProc(PROC_SIDE_ROLL)) {
@@ -17000,6 +17199,20 @@ int daAlink_c::procDiveJump() {
 }
 
 int daAlink_c::procRollJumpInit() {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Roll/spin jump drain: 1/3 base meter (3633 units).
+    // Gate failure returns 1 without initiating the jump.
+    // ============================================
+    if (!dMeter2_canALBWRollJump()) {
+        return 1;
+    }
+    dMeter2_onALBWRollJump();
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     commonProcInit(PROC_ROLL_JUMP);
     setSingleAnimeBaseSpeed(ANM_ROLL_JUMP, 0.0f,
                             mpHIO->mAutoJump.m.mSpinJumpInterpolation);
@@ -18710,6 +18923,11 @@ int daAlink_c::execute() {
 #else
             if (checkMagicArmorWearAbility() && mClothesChangeWaitTimer == 0) {
 #endif
+#if !TARGET_PC
+                // ============================================
+                // ORIGINAL CODE — ALBW Port: passive per-frame rupee drain
+                // suppressed on PC. On PC the full cost is billed on hit instead.
+                // ============================================
                 if (checkMagicArmorNoDamage() && !checkEventRun()) {
                     if (field_0x2fc3 == 0) {
                         field_0x2fc3 = 10;
@@ -18718,7 +18936,32 @@ int daAlink_c::execute() {
                         field_0x2fc3--;
                     }
                 }
+                // ============================================
+                // ORIGINAL CODE ENDS HERE
+                // ============================================
+#endif
 
+#if TARGET_PC
+                // ============================================
+                // MODIFIED CODE — ALBW Port
+                // Hue driven by sALBWArmorDepleted (set on hit, cleared when
+                // meter is full + rupees ≥ 500) rather than raw rupee count.
+                // Also requires ≥ 500 rupees to show active hue, so the armor
+                // appears gray if the player can no longer afford activation.
+                // ============================================
+                if (dMeter2_isALBWArmorDepleted() && field_0x2fd7 != 0) {
+                    setMagicArmorBrk(0);
+                    seStartOnlyReverb(Z2SE_AL_M_ARMER_TURNOFF);
+                    mZ2Link.setLinkState(5);
+                } else if (!dMeter2_isALBWArmorDepleted() && dComIfGs_getRupee() >= 500 && field_0x2fd7 == 0) {
+                    setMagicArmorBrk(1);
+                    seStartOnlyReverb(Z2SE_AL_M_ARMER_RECOVER);
+                    mZ2Link.setLinkState(4);
+                }
+                // ============================================
+                // MODIFIED CODE ENDS HERE
+                // ============================================
+#else
                 if (dComIfGs_getRupee() == 0 && field_0x2fd7 != 0) {
                     setMagicArmorBrk(0);
                     seStartOnlyReverb(Z2SE_AL_M_ARMER_TURNOFF);
@@ -18728,6 +18971,7 @@ int daAlink_c::execute() {
                     seStartOnlyReverb(Z2SE_AL_M_ARMER_RECOVER);
                     mZ2Link.setLinkState(4);
                 }
+#endif
             }
 
             if (!checkWolf()) {
