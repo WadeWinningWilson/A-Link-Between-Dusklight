@@ -3,6 +3,8 @@
 #include "dusk/mod_loader.hpp"
 #include "mod_loader.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 #include <cstring>
 
 using namespace std::string_literals;
@@ -18,6 +20,19 @@ struct OverlayFileData {
 
 std::vector<OverlayFileData> s_overlayFiles;
 
+s32 s_nextEntryNum;
+absl::flat_hash_map<std::string, s32> s_entryNumIndex;
+
+s32 assignEntryNum(std::string_view const fileName) {
+    if (s_entryNumIndex.contains(fileName)) {
+        return s_entryNumIndex[fileName];
+    }
+
+    auto const newEntryNum = s_nextEntryNum++;
+    s_entryNumIndex[fileName] = newEntryNum;
+    return newEntryNum;
+}
+
 void findOverlayFiles(std::vector<AuroraOverlayFile>& files, dusk::LoadedMod& mod) {
     for (const auto& file : mod.bundle->getFileNames()) {
         if (!file.starts_with("overlay/")) {
@@ -32,7 +47,11 @@ void findOverlayFiles(std::vector<AuroraOverlayFile>& files, dusk::LoadedMod& mo
 
         const auto index = s_overlayFiles.size();
         s_overlayFiles.emplace_back(file, &mod);
-        files.emplace_back(strdup(overlayPath.c_str()), reinterpret_cast<void*>(index), size);
+        files.emplace_back(
+            strdup(overlayPath.c_str()),
+            reinterpret_cast<void*>(index),
+            size,
+            assignEntryNum(overlayPath));
     }
 }
 
@@ -88,6 +107,8 @@ namespace dusk {
 
 void ModLoader::initOverlayFiles() {
     Log.debug("Initializing overlay files...");
+
+    s_nextEntryNum = aurora_dvd_base_entry_count();
 
     aurora_dvd_overlay_callbacks(&s_overlayCallbacks);
 
