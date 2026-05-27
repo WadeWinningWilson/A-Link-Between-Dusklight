@@ -34,14 +34,15 @@ void dALBWRental_imguiDraw();           // main loop — ImGui shop window only
 // ============================================
 bool dALBWRental_justEnteredGreeting(); // Execute() — play MOT_HELLO + FACE_MOT_HELLO + Z2SE_POST_V_APPEAR
 bool dALBWRental_justEnteredShop();     // Execute() — play MOT_WAIT_A + FACE_MOT_NONE_2
-bool dALBWRental_justEnteredFarewell(); // Execute() — play MOT_BYE   + FACE_MOT_BYE  + Z2SE_POST_V_FANFARE
+bool dALBWRental_justEnteredFarewell(); // Execute() — play MOT_BYE   + FACE_MOT_BYE  + Z2SE_POST_V_THEME
 // ============================================
-// NEW CODE — ALBW Port (Purchase Sound)
-// One-shot flag consumed by Execute() to play Z2SE_POST_V_SMILING.
-// Delete this + sJustPurchased in d_albw_rental.cpp to remove purchase
-// sounds with zero impact on shop logic, animations, or dialogue.
+// NEW CODE — ALBW Port (Purchase / Failed-Purchase Sounds)
+// One-shot flags consumed by Execute() to play voice clips.
+// Delete justPurchased + sJustPurchased in d_albw_rental.cpp to remove
+// purchase sounds with zero impact on shop logic, animations, or dialogue.
 // ============================================
-bool dALBWRental_justPurchased();       // Execute() — play Z2SE_POST_V_SMILING congratulatory squeak
+bool dALBWRental_justPurchased();       // Execute() — play Z2SE_POST_V_FANFARE congratulatory fanfare
+bool dALBWRental_justFailedPurchase();  // Execute() — play Z2SE_POST_V_RUN_HIGH insufficient rupees
 // ============================================
 // NEW CODE ENDS HERE
 // ============================================

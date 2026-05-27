@@ -618,12 +618,13 @@ int daNpc_Post_c::Execute() {
         // ALBW_POST_SFX — search this tag to find all related touch-points.
         //
         //   ALBW_POST_SFX  greeting  Z2SE_POST_V_APPEAR   0x5010B
-        //   ALBW_POST_SFX  farewell  Z2SE_POST_V_FANFARE  0x500F6
-        //   ALBW_POST_SFX  purchase  Z2SE_POST_V_SMILING  0x5010C
+        //   ALBW_POST_SFX  farewell  Z2SE_POST_V_THEME    0x500F5
+        //   ALBW_POST_SFX  purchase  Z2SE_POST_V_FANFARE  0x500F6
+        //   ALBW_POST_SFX  failed    Z2SE_POST_V_RUN_HIGH 0x50065
         //
         // Deferred approach: latch a pending voice index on the one-shot
         // transition frame; flush each Execute() once ANY candidate arc
-        // reaches status 2.  field_0x1014 values: 0=none  1=APPEAR  2=FANFARE  3=SMILING
+        // reaches status 2.  field_0x1014 values: 0=none  1=APPEAR  2=THEME  3=FANFARE  4=RUN_HIGH
         // ============================================
 
         // Re-arm arc 0x4B if the scene manager erased it between frames.
@@ -654,14 +655,24 @@ int daNpc_Post_c::Execute() {
         } else if (dALBWRental_justEnteredFarewell()) {
             mFaceMotionSeqMngr.setNo(FACE_MOT_BYE, -1.0f, FALSE, 0);
             mMotionSeqMngr.setNo(MOT_BYE, -1.0f, FALSE, 0);
-            field_0x1014 = 2;  // pending: Z2SE_POST_V_FANFARE
+            field_0x1014 = 2;  // pending: Z2SE_POST_V_THEME
         } else if (dALBWRental_justPurchased()) {
             // ============================================
             // NEW CODE — ALBW Port (Purchase Sound)
-            // Celebratory squeak on successful rental.
+            // Triumphant fanfare on successful rental.
             // Remove this else-if to silence purchase feedback entirely.
             // ============================================
-            field_0x1014 = 3;  // pending: Z2SE_POST_V_SMILING
+            field_0x1014 = 3;  // pending: Z2SE_POST_V_FANFARE
+            // ============================================
+            // NEW CODE ENDS HERE
+            // ============================================
+        } else if (dALBWRental_justFailedPurchase()) {
+            // ============================================
+            // NEW CODE — ALBW Port (Failed Purchase Sound)
+            // Exerted breath when the player can't afford an item.
+            // Remove this else-if to silence failed-purchase feedback.
+            // ============================================
+            field_0x1014 = 4;  // pending: Z2SE_POST_V_RUN_HIGH
             // ============================================
             // NEW CODE ENDS HERE
             // ============================================
@@ -669,11 +680,12 @@ int daNpc_Post_c::Execute() {
 
         // Flush pending voice once arc 0x4B is resident.
         if (field_0x1014 != 0 && Z2GetSceneMgr()->getSeLoadStatus(0x4B) == 2) {
-            static const u32 kVoiceSounds[4] = {
+            static const u32 kVoiceSounds[5] = {
                 0,
-                Z2SE_POST_V_APPEAR,
-                Z2SE_POST_V_FANFARE,
-                Z2SE_POST_V_SMILING,
+                Z2SE_POST_V_APPEAR,    // 1 — greeting
+                Z2SE_POST_V_THEME,     // 2 — farewell
+                Z2SE_POST_V_FANFARE,   // 3 — successful purchase
+                Z2SE_POST_V_RUN_HIGH,  // 4 — failed purchase (not enough rupees)
             };
             mSound.startCreatureVoice(kVoiceSounds[field_0x1014], -1);
             field_0x1014 = 0;
