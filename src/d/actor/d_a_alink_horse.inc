@@ -1915,6 +1915,19 @@ int daAlink_c::procHorseSubjectivity() {
 }
 
 int daAlink_c::procHorseCutInit() {
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Block horseback sword attack when meter is exhausted.
+    // Returning early before commonProcInit leaves the
+    // horse-riding proc active — Link simply can't attack.
+    // ============================================
+#if TARGET_PC
+    if (!dMeter2_canALBWSword()) { return 1; }
+    dMeter2_onALBWSword();
+#endif
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     commonProcInit(PROC_HORSE_CUT);
     int var_r26 = 0;
 
@@ -2095,6 +2108,19 @@ int daAlink_c::procHorseCut() {
 }
 
 int daAlink_c::procHorseCutChargeReadyInit() {
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Block horseback spin-attack charge when meter is exhausted.
+    // Note: no drain signal here — the drain fires in procHorseCutTurnInit()
+    // so that the charge path and the direct-spin path both result in
+    // exactly one drain per spin, not two.
+    // ============================================
+#if TARGET_PC
+    if (!dMeter2_canALBWSword()) { return 1; }
+#endif
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     commonProcInit(PROC_HORSE_CUT_CHARGE_READY);
     setUpperAnimeParam(dRes_ID_ALANM_BCK_CUTHTP_e, UPPER_2, &mpHIO->mCut.mHorseCutCharge.m.mChargeAnm);
     setFacePriBck(dRes_ID_ALANM_BCK_FAT_e);
@@ -2151,6 +2177,20 @@ int daAlink_c::procHorseCutChargeReady() {
 }
 
 int daAlink_c::procHorseCutTurnInit() {
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Block horseback spin attack when meter is exhausted.
+    // Called both from procHorseCutChargeReady() (charge path)
+    // and directly from procHorseCut() (input-cancel shortcut),
+    // so it must be gated independently of the charge init.
+    // ============================================
+#if TARGET_PC
+    if (!dMeter2_canALBWSword()) { return 1; }
+    dMeter2_onALBWSword();
+#endif
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     commonProcInit(PROC_HORSE_CUT_TURN);
 
     if (checkHorseUnderItemAnime()) {

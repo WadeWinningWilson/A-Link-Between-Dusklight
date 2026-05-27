@@ -136,6 +136,68 @@ toast.controller-warning heading {
     color: #C2A42D;
 }
 
+/* ============================================
+   NEW CODE — ALBW Port
+   NPC dialogue toast: bottom-centre, styled to match the TP dialogue box.
+   Width, colours, and font all approximate the in-game Rodan dialogue panel.
+   To revert the entire block: restore this section to its original state
+   (search git history for "npc-dialogue") and remove the ALBW_RODAN_FONT
+   load_font call in ui.cpp.
+   ============================================ */
+toast.npc-dialogue {
+    top: auto;
+    right: auto;
+    bottom: 60dp;
+    left: 50%;
+    width: 720dp;
+    max-width: 82%;
+    /* TP dialogue box: semi-transparent near-black, dark antique-gold border */
+    background-color: rgba(5, 4, 3, 72%);
+    border: 2dp #6A4E1A;
+    border-radius: 4dp;
+    padding: 20dp 28dp;
+    /* Override base toast overflow:hidden so large Rodan bitmap glyphs aren't
+       clipped when font-size approaches the native BDF PIXEL_SIZE (36dp).
+       ALBW_RODAN_FONT — search this tag to find all related touch-points. */
+    overflow: visible;
+    transform: translateX(-50%) scale(0.9);
+}
+
+toast.npc-dialogue[open] {
+    transform: translateX(-50%) scale(1);
+}
+
+/* NPC name — amber-gold matching TP's character name header */
+toast.npc-dialogue heading {
+    color: #C2A42D;
+    font-family: "Fira Sans Condensed";
+    font-size: 15dp;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-decoration: underline;
+}
+
+/* Body text — Fira Sans (body default).
+   ALBW_RODAN_FONT: font-family "Rodan" is intentionally NOT set here.
+   FreeType's BDF driver only renders at the font's native PIXEL_SIZE (36px).
+   At any other size it returns zero-metric glyphs → invisible text.
+   To enable the bitmap font, we must either:
+     a) set font-size to exactly 36dp AND ensure the parent height can
+        accommodate it (overflow: visible is already set above), OR
+     b) convert rodan.bdf to a vector TTF/OTF so FreeType can scale freely.
+   Until then, Fira Sans (inherited from body) keeps dialogue visible.
+   Font is still loaded in ui.cpp (search ALBW_RODAN_FONT) so the
+   family "Rodan" is ready to activate by adding font-family below. */
+toast.npc-dialogue message {
+    font-size: 18dp;
+    line-height: 1.4;
+    color: #F2F0EC;
+}
+/* ============================================
+   NEW CODE ENDS HERE
+   ============================================ */
+
 toast.menu-notification {
     top: 40dp;
     right: auto;

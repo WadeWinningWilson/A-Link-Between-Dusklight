@@ -108,7 +108,18 @@ BOOL daAlink_c::checkBowAnime() const {
 }
 
 void daAlink_c::makeArrow() {
+#if TARGET_PC
+    // ============================================
+    // MODIFIED CODE — ALBW Port
+    // Pre-fire check: arrow requires 5450 units (50% of
+    // base meter) available before the actor is created.
+    // If unaffordable, arrow_p stays NULL and the player
+    // hears the empty-quiver click on release — no crash.
+    // ============================================
+    if (dMeter2_canALBWArrow()) {
+#else
     if (dComIfGs_getArrowNum() != 0) {
+#endif
         if (field_0x301e == 1 && dComIfGp_getSelectItemNum(mSelectItemId) == 0) {
             field_0x301e = 0;
         }
@@ -121,6 +132,9 @@ void daAlink_c::makeArrow() {
             JUT_ASSERT(221, 0);
         }
     }
+    // ============================================
+    // MODIFIED CODE ENDS HERE
+    // ============================================
 
     mItemVar0.field_0x3018 = 0;
 }
@@ -286,11 +300,26 @@ BOOL daAlink_c::checkUpperItemActionBow() {
                 u16 bck_res_id;
                 if (mEquipItem == dItemNo_PACHINKO_e) {
                     bck_res_id = dRes_ID_ALANM_BCK_PSHOOT_e;
+#if TARGET_PC
+                    // ============================================
+                    // MODIFIED CODE — ALBW Port
+                    // Ammo check and seed decrement bypassed on PC.
+                    // Pre-fire check added: seed only fires if the meter
+                    // has at least 3633 units (1/3 of base meter).
+                    // ============================================
+                    if (dMeter2_canALBWSling() && daArrow_c::makeSlingStone(this, &mHeldItemRootPos) != NULL) {
+                        dMeter2_onALBWSling();
+                    }
+                    // ============================================
+                    // MODIFIED CODE ENDS HERE
+                    // ============================================
+#else
                     if (dComIfGs_getPachinkoNum() != 0 &&
                         daArrow_c::makeSlingStone(this, &mHeldItemRootPos) != NULL)
                     {
                         dComIfGp_setItemPachinkoNumCount(-1);
                     }
+#endif
                 } else if (field_0x301c != 0) {
                     bck_res_id = dRes_ID_ALANM_BCK_BASHOOT_e;
                 } else {
@@ -334,11 +363,31 @@ BOOL daAlink_c::checkUpperItemActionBow() {
                     dComIfGp_getVibration().StartShock(vibmode, 1, cXyz(0.0f, 1.0f, 0.0f));
                     seStartOnlyReverb(sound);
 
+#if !TARGET_PC
+                    // ============================================
+                    // ORIGINAL CODE — Console only
+                    // Ammo decrements skipped on PC — meter is the only resource.
+                    // ============================================
                     if (field_0x301e == 1) {
                         dComIfGp_addSelectItemNum(mSelectItemId, -1);
                     }
-
                     dComIfGp_setItemArrowNumCount(-1);
+                    // ============================================
+                    // ORIGINAL CODE ENDS HERE
+                    // ============================================
+#else
+                    // ============================================
+                    // MODIFIED CODE — ALBW Port
+                    // Source: bow drain hook, ALBW main.cpp
+                    // Arrow count and special-type decrements bypassed on PC.
+                    // Meter is the only resource; arrow count never changes.
+                    // Drain: 5450 internal units (1/2 meter per shot).
+                    // ============================================
+                    dMeter2_onALBWArrow();
+                    // ============================================
+                    // MODIFIED CODE ENDS HERE
+                    // ============================================
+#endif
                     mItemAcKeep.clearData();
                     onResetFlg0(RFLG0_UNK_20000000);
                     field_0x30a4 = mpHIO->mItem.mBow.m.mBombArrowHoldTime;

@@ -2,6 +2,8 @@ name: Build
 
 on:
   push:
+    tags:
+      - 'v*'
     paths-ignore:
       - '*.md'
       - '*LICENSE'
@@ -210,6 +212,8 @@ jobs:
   build-windows:
     name: Build Windows (${{matrix.name}})
     runs-on: ${{matrix.runner}}
+    permissions:
+      contents: write
 
     strategy:
       fail-fast: false
@@ -272,3 +276,28 @@ jobs:
             build/install/*.dll
             build/install/res/
             build/install/debug.7z
+
+      - name: Package release zip
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          $zip = "dusklight-${{ github.ref_name }}-windows-${{matrix.artifact_arch}}.zip"
+          Compress-Archive -Path build/install/*.exe, build/install/*.dll, build/install/res -DestinationPath $zip
+          echo "RELEASE_ZIP=$zip" >> $env:GITHUB_ENV
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Dusklight ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: ${{ env.RELEASE_ZIP }}
+          body: |
+            ## Dusklight ${{ github.ref_name }} — Windows x86_64
+
+            ### Installation
+            1. Download and extract the zip below
+            2. Launch `dusklight.exe`
+            3. When prompted, point the app at your own legally-owned Twilight Princess disc image (ISO/GCM)
+
+            Includes all required runtime DLLs — no separate install needed.

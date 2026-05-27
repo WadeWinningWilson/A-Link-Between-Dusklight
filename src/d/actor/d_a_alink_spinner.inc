@@ -95,6 +95,20 @@ void daAlink_c::setSpinnerSyncPos() {
 }
 
 int daAlink_c::procSpinnerReadyInit() {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Block spinner activation while the meter is in lockout.
+    // Mirrors the canALBW* pattern: return 0 (no-op) so the item
+    // button press is silently ignored until the meter recovers.
+    // ============================================
+    if (!dMeter2_canALBWSpinner()) {
+        return 0;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     fopAc_ac_c* spinner = (fopAc_ac_c*)fopAcM_fastCreate(
         fpcNm_SPINNER_e, daSpinner_c::getWaitArg(), &current.pos, fopAcM_GetRoomNo(this),
         &shape_angle, NULL, -1, NULL, NULL);
@@ -186,6 +200,26 @@ int daAlink_c::procSpinnerWait() {
         setJumpMode();
         return procFallInit(1, mpHIO->mAutoJump.m.mFallInterpolation);
     }
+
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Force-eject when the ALBW meter is fully depleted.
+    // Uses the same exit path as the normal "stop riding" input
+    // so all animation and gravity state is reset cleanly.
+    // If the meter is not depleted, signal to moveKantera() that
+    // the spinner is actively draining this frame.
+    // ============================================
+    if (dMeter2_isALBWDepleted()) {
+        mNormalSpeed = 0.0f;
+        setJumpMode();
+        return procFallInit(1, mpHIO->mAutoJump.m.mFallInterpolation);
+    }
+    dMeter2_onALBWSpinner();
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
 
     if (spinner->checkSpinnerTagEnd()) {
         return procSmallJumpInit(2);

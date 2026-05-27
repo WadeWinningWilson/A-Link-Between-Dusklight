@@ -265,6 +265,18 @@ void daAlink_c::setCopyRodSight() {
 }
 
 int daAlink_c::procCopyRodSubjectInit() {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Block statue control activation while the meter is locked.
+    // ============================================
+    if (!dMeter2_canALBWDomRod()) {
+        return 0;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     if (!commonProcInitNotSameProc(PROC_COPY_ROD_SUBJECT)) {
         return 0;
     }
@@ -282,6 +294,28 @@ int daAlink_c::procCopyRodSubject() {
     if (!checkItemActorPointer()) {
         return 1;
     }
+
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Drain the ALBW meter while actively controlling a statue.
+    // getCopyRodControllActor() is non-NULL only when the rod is
+    // thrown and linked to a statue — that's the window we bill.
+    // If the meter is fully depleted, force-recall the rod
+    // (restores mItemAcKeep from mCopyRodAcKeep) so the control
+    // state exits naturally on the next checkNextAction() call.
+    // ============================================
+    if (getCopyRodControllActor() != NULL) {
+        if (dMeter2_isALBWDepleted()) {
+            returnCopyRod();
+        } else {
+            dMeter2_onALBWDomRod();
+        }
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
 
     if (checkCopyRodReadyAnime()) {
         setDoStatus(BUTTON_STATUS_BACK);
@@ -301,6 +335,18 @@ int daAlink_c::procCopyRodSubject() {
 }
 
 int daAlink_c::procCopyRodMoveInit() {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Block statue control activation while the meter is locked.
+    // ============================================
+    if (!dMeter2_canALBWDomRod()) {
+        return 0;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     if (!commonProcInitNotSameProc(PROC_COPY_ROD_MOVE)) {
         return 0;
     }
@@ -320,6 +366,25 @@ int daAlink_c::procCopyRodMove() {
     if (!checkItemActorPointer()) {
         return 1;
     }
+
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Same drain / force-recall logic as procCopyRodSubject() above.
+    // Both procs run while the statue is under control; we bill in both
+    // so the meter drains whether Link is standing still or walking.
+    // ============================================
+    if (getCopyRodControllActor() != NULL) {
+        if (dMeter2_isALBWDepleted()) {
+            returnCopyRod();
+        } else {
+            dMeter2_onALBWDomRod();
+        }
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
 
     if (!checkNextAction(0)) {
         f32 morf = -1.0f;

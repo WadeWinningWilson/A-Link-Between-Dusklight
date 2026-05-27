@@ -174,7 +174,8 @@ private:
     /* 0x1011 */ u8 mLetterBDispFlag;
     /* 0x1012 */ u8 mFlagModelDispFlag;
     /* 0x1013 */ u8 mSitFlag;
-    /* 0x1014 */ u8 field_0x1014;
+    /* 0x1014 */ u8 field_0x1014; // ALBW_POST_SFX: pending voice index when getBitSW()==0x42 (0=none, 1=APPEAR, 2=FANFARE, 3=SMILING)
+    /* 0x1015 */ u8 field_0x1015; // ALBW_POST_SFX: 1 while Z2BGM_POSTMAN sub-BGM is playing
 };
 
 STATIC_ASSERT(sizeof(daNpc_Post_c) == 0x1018);

@@ -23,6 +23,7 @@
 #include "SSystem/SComponent/c_API_graphic.h"
 #include "Z2AudioLib/Z2WolfHowlMgr.h"
 #include "c/c_dylink.h"
+#include "d/d_albw_rental.h"
 #include "d/d_com_inf_game.h"
 #include "d/d_debug_pad.h"
 #include "d/d_s_logo.h"
@@ -276,6 +277,23 @@ void main01(void) {
         mDoGph_gInf_c::updateRenderSize();
 
         dusk::ui::update();
+
+// ============================================
+// NEW CODE — ALBW Port
+// Render the rental shop ImGui window once per presented frame.
+// This must live here — after aurora_begin_frame() (which calls
+// ImGui::NewFrame) and before aurora_end_frame() (ImGui::Render) — so
+// that ImGui::Begin/End are submitted in a valid frame context.
+// Calling this from actor Execute() caused flickering because the
+// sim-tick loop can run Execute() 0 times on interpolated frames,
+// leaving the window unsubmitted and invisible for that render pass.
+// ============================================
+#if TARGET_PC
+        dALBWRental_imguiDraw();
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
         const auto pacing = dusk::game_clock::advance_main_loop();
         if (pacing.is_interpolating) {

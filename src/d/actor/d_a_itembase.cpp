@@ -28,7 +28,26 @@ int daItemBase_c::CreateItemHeap(char const* i_arcName, s16 i_bmdName, s16 i_btk
     JUT_ASSERT(0, 0 <= m_itemNo && m_itemNo <= 255);
 
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(i_arcName, i_bmdName);
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Magic drops use F_gD_rupy as a placeholder arc. That arc loads
+    // on-demand and may not be resident yet on the first kill in a room.
+    // Return 0 here so the actor framework deletes the failed item actor
+    // cleanly rather than asserting. Once the arc is resident (after any
+    // normal rupee drop has triggered its load) subsequent kills will
+    // succeed. Remove this guard when a dedicated always-loaded arc
+    // replaces the placeholder.
+    // ============================================
+    if (modelData == NULL) {
+        return 0;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#else
     JUT_ASSERT(0, modelData != NULL);
+#endif
 
     u32 flags = 0x11000084;
     u32 modelflags = 0x80000;

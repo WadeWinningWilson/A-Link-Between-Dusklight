@@ -59,6 +59,18 @@ public:
     void drawKanteraScreen(u8);
     void drawMagic(s16, s16, f32, f32);
     void setAlphaMagicChange(bool);
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // ALBW meter alpha animation (magic screen, index 0).
+    // Driven by alphaAnimeKantera() — same fade system as kantera/oxygen.
+    // ============================================
+    void setAlphaMagicAnimeMin();
+    void setAlphaMagicAnimeMax();
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     void drawKantera(s32, s32, f32, f32);
     void setAlphaKanteraChange(bool);
     void setAlphaKanteraAnimeMin();

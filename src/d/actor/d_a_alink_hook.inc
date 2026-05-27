@@ -631,8 +631,32 @@ int daAlink_c::checkUpperItemActionHookshot() {
     }
 
     if (mItemMode == HS_MODE_READY_e) {
+#if TARGET_PC
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Pre-fire meter gate: block clawshot fire if the meter cannot
+        // cover the cost. Single clawshot costs 2725 (4 shots per base
+        // meter); double clawshot costs 1362 (8 shots per base meter).
+        // Costs are fixed to sOilBaseMax so shot count is constant
+        // regardless of meter expansion level.
+        // ============================================
+        if (!itemButton() && mItemVar0.field_0x3018 == 0 && checkReadyItem() &&
+            ((mEquipItem == dItemNo_HOOKSHOT_e   && dMeter2_canALBWHookshot()) ||
+             (mEquipItem == dItemNo_W_HOOKSHOT_e && dMeter2_canALBWDoubleHookshot()))) {
+#else
         if (!itemButton() && mItemVar0.field_0x3018 == 0 && checkReadyItem()) {
+#endif
             mItemMode = 2;
+#if TARGET_PC
+            if (mEquipItem == dItemNo_HOOKSHOT_e) {
+                dMeter2_onALBWHookshot();
+            } else {
+                dMeter2_onALBWDoubleHookshot();
+            }
+#endif
+            // ============================================
+            // NEW CODE ENDS HERE
+            // ============================================
             field_0x3026 = 0;
             field_0x3494 = -1.0f;
             mHookTargetAcKeep.clearData();

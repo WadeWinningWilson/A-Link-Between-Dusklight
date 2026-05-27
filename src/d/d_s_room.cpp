@@ -234,6 +234,31 @@ static bool objectSetCheck(room_of_scene_class* i_this) {
             }
 
             fopAcM_create(fpcNm_BG_e, roomNo, NULL, -1, NULL, NULL, -1);
+// ============================================
+// NEW CODE — ALBW Port
+// Spawn the rental Postman in F_SP103 room 1 (Outside Link's House)
+// once Talo has been rescued (event bit 625).
+// Uses getStartStageName() (not getLastPlayStageName()) because
+// setLastPlayStageName() is called later inside roomInit(), which runs
+// after this block — getLastPlayStageName() would still hold the
+// previous stage name at this point.
+// World coords recorded in-game; angle -14439 faces the Postman back
+// toward the death-warp spawn so he is in Link's line of sight.
+// ============================================
+#if TARGET_PC
+            if (strcmp(dComIfGp_getStartStageName(), "F_SP103") == 0 &&
+                roomNo == 1 &&
+                dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625])) {
+                static const cXyz  kPostPos   = { 1505.3680f, 800.0000f, -2529.2832f };
+                static const csXyz kPostAngle = { 0, (s16)-13008, 0 };
+                static const cXyz  kPostScale = { 1.0f, 1.0f, 1.0f };
+                fopAcM_create(fpcNm_NPC_POST_e, (0x42u << 8) | 0x00u,
+                              &kPostPos, roomNo, &kPostAngle, &kPostScale, -1);
+            }
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
             dComIfGp_getPEvtManager()->demoInit();
             dComIfGp_getPEvtManager()->roomInit(roomNo);
             dStage_dt_c_roomReLoader(i_this->roomInfo, i_this->roomDt, roomNo);

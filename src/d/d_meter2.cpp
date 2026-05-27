@@ -1560,7 +1560,11 @@ void dMeter2_c::moveKantera() {
         if (sALBWLocked && sALBWMeter >= sOilBaseMax) {
             sALBWLocked = false;
         }
-        if (sALBWArmorDepleted && sALBWMeter >= sOilBaseMax && dComIfGs_getRupee() >= 500) {
+        if (sALBWArmorDepleted && sALBWMeter >= sOilBaseMax) {
+            // Rupee check intentionally omitted: affordability for the NEXT block
+            // is already enforced in checkMagicArmorNoDamage(). Keeping a rupee
+            // gate here caused the heavy/gray state to persist at full meter when
+            // the player happened to be < 500 rupees — unintended exhausted lock.
             sALBWArmorDepleted = false;
         }
         // ============================================
