@@ -55,7 +55,7 @@ size_t ModBundleDisk::getFileSize(const std::string& fileName) {
 
 std::filesystem::path ModBundleDisk::toRealPath(const std::string& fileName) const {
     const fs::path filePath = reinterpret_cast<const char8_t*>(fileName.c_str());
-    return root_path / fileName;
+    return root_path / filePath;
 }
 
 }  // namespace dusk::modding
