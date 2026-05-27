@@ -217,7 +217,8 @@ static bool sJustEnteredFarewell  = false;  // → MOT_BYE   + Z2SE_POST_V_FANFA
 // To remove purchase sounds entirely: delete this flag, the sJustPurchased
 // assignment in tryPurchase(), and dALBWRental_justPurchased() below.
 // ============================================
-static bool sJustPurchased        = false;  // → Z2SE_POST_V_SMILING congratulatory squeak
+static bool sJustPurchased        = false;  // → Z2SE_POST_V_FANFARE congratulatory fanfare
+static bool sJustFailedPurchase   = false;  // → Z2SE_POST_V_RUN_HIGH insufficient rupees
 // ============================================
 // NEW CODE ENDS HERE
 // ============================================
@@ -284,8 +285,9 @@ static void tryPurchase(int visIdx) {
     const ALBWRentalEntry& e = kItems[sVisibleList[visIdx].kItemsIdx];
     u16 rupees = dComIfGs_getRupee();
     if (rupees < (u16)e.price) {
-        sStatusMsg    = "Sincerest apologies, but we can't return\nthat to you for that little..";
-        sStatusExpiry = clock::now() + std::chrono::seconds(5);
+        sStatusMsg          = "Sincerest apologies, but we can't return\nthat to you for that little..";
+        sStatusExpiry       = clock::now() + std::chrono::seconds(5);
+        sJustFailedPurchase = true;  // triggers Z2SE_POST_V_RUN_HIGH in d_a_npc_post.cpp
         return;
     }
     dComIfGs_setRupee(rupees - (u16)e.price);
@@ -294,7 +296,7 @@ static void tryPurchase(int visIdx) {
         dComIfGs_setItem(e.slotNo, e.itemNo);
     }
     sPurchasedThisSession = true;
-    sJustPurchased        = true;   // triggers Z2SE_POST_V_SMILING in d_a_npc_post.cpp
+    sJustPurchased        = true;   // triggers Z2SE_POST_V_FANFARE in d_a_npc_post.cpp
     sStatusMsg    = "One step closer to becoming a Senior Postman.\nI can smell the fields now, thank you for your patronage!";
     sStatusExpiry = clock::now() + std::chrono::seconds(6);
     rebuildVisibleList();
@@ -380,6 +382,18 @@ bool dALBWRental_justPurchased() {
     return false;
 }
 // ============================================
+// NEW CODE — ALBW Port (Failed Purchase Sound)
+// Returns true exactly once after a failed rental attempt (not enough rupees).
+// Consumed by daNpc_Post_c::Execute() to play Z2SE_POST_V_RUN_HIGH.
+// ============================================
+bool dALBWRental_justFailedPurchase() {
+    if (sJustFailedPurchase) {
+        sJustFailedPurchase = false;
+        return true;
+    }
+    return false;
+}
+// ============================================
 // NEW CODE ENDS HERE
 // ============================================
 
@@ -398,6 +412,7 @@ void dALBWRental_open() {
     sJustEnteredGreeting  = false;
     sJustEnteredShop      = false;
     sJustEnteredFarewell  = false;
+    sJustFailedPurchase   = false;
     sScrollToSelected     = false;
     rebuildVisibleList();
 
