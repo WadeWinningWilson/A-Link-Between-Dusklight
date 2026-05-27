@@ -1560,6 +1560,8 @@ set(DUSK_FILES
         src/dusk/randomizer/generator/logic/flatten/flatten.hpp
         src/dusk/randomizer/generator/logic/flatten/simplify_algebraic.cpp
         src/dusk/randomizer/generator/logic/flatten/simplify_algebraic.hpp
+        src/dusk/randomizer/generator/logic/hints.cpp
+        src/dusk/randomizer/generator/logic/hints.hpp
         src/dusk/randomizer/generator/logic/item.cpp
         src/dusk/randomizer/generator/logic/item.hpp
         src/dusk/randomizer/generator/logic/item_pool.cpp
