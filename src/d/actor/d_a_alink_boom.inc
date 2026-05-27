@@ -176,6 +176,23 @@ void daAlink_c::throwBoomerang() {
     BOOL boomerang_item = fopAcM_GetName(item) == fpcNm_BOOMERANG_e;
     if (boomerang_item) {
         item->setThrow();
+#if TARGET_PC
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Source: boomerang drain hook, ALBW main.cpp
+        // Currently drains once per throw (2725 internal units, testing).
+        // INTENDED: drain sOilBaseMax/5 = 2180 per locked-on target (up to 5).
+        // Total cost of a full 5-target throw = 10900 = one full base meter.
+        // Uses sOilBaseMax (not sOilMaxVar) so cost stays fixed after meter
+        // expansion — 5 lock-ons always costs the base amount, not the expanded max.
+        // Per-target drain requires hooking daBoomerang_c lock-on/hit detection;
+        // deferred until after all items are connected.
+        // ============================================
+        dMeter2_onALBWBoom();
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+#endif
         item->current.angle.y = shape_angle.y + mBodyAngle.y;
         item->current.angle.x = -mBodyAngle.x;
 
@@ -273,7 +290,20 @@ int daAlink_c::checkUpperItemActionBoomerang() {
         }
     }
 
+// ============================================
+// MODIFIED CODE — ALBW Port
+// Pre-fire check: boomerang throw requires 2725 units
+// available. Holding the boomerang ready does not drain
+// meter; drain only triggers if the throw is permitted.
+// ============================================
+#if TARGET_PC
+    if (checkReadyItem() && !itemButton() && checkBoomerangReadyAnime() && dMeter2_canALBWBoom()) {
+#else
     if (checkReadyItem() && !itemButton() && checkBoomerangReadyAnime()) {
+#endif
+// ============================================
+// MODIFIED CODE ENDS HERE
+// ============================================
         setThrowBoomerangAnime();
         return 1;
     }

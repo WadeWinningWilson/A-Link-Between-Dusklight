@@ -325,6 +325,29 @@ BOOL daAlink_c::setSwordHitVibration(dCcD_GObjInf* i_gobj) {
             return true;
         }
 
+#if TARGET_PC
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Populate sArmorEncounterIDs from the offense side.
+        // When Link's sword/wolf attack connects with an enemy actor,
+        // register that actor in the encounter tracker. This lets the
+        // clean-encounter reward fire even when the enemy never lands a
+        // hit on Link (and was therefore never added from the defense
+        // side in checkDamageAction). Enemy-group filter prevents
+        // barrels, walls, and NPC contacts from polluting the set.
+        // ============================================
+        {
+            fopAc_ac_c* hitAc = i_gobj->GetAtHitAc();
+            if (hitAc != NULL && fopAcM_GetGroup(hitAc) == fopAc_ENEMY_e &&
+                checkMagicArmorWearAbility()) {
+                dMeter2_onArmorAttackHit(fopAcM_GetID(hitAc));
+            }
+        }
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+#endif
+
         int vibmode;
         if (checkWolf()) {
             vibmode = VIBMODE_S_POWER3;
@@ -445,6 +468,17 @@ void daAlink_c::setCutDash(BOOL param_0, BOOL param_1) {
     if (!param_0 && checkNoResetFlg1(FLG1_UNK_4000000)) {
         checkCutAction();
     } else {
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Block running/dash sword attacks when meter is exhausted.
+        // ============================================
+#if TARGET_PC
+        if (!dMeter2_canALBWSword()) { return; }
+        dMeter2_onALBWSword();
+#endif
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
         field_0x2fce = 5;
         resetCombo(FALSE);
         offNoResetFlg2(FLG2_COMBO_RESERB);
@@ -899,6 +933,23 @@ void daAlink_c::setCutJumpSpeed(BOOL i_isAirCut) {
 }
 
 int daAlink_c::procCutNormalInit(int i_type) {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Normal sword swings (vertical, left, right, stab, combo) each drain
+    // 1/6 of the base ALBW meter (1817 units).  When sALBWLocked (meter
+    // already at zero) the attack is suppressed — stay in the current
+    // proc so the tired-wait state can take over naturally via
+    // checkRestHPAnime() which reads dMeter2_isALBWLocked().
+    // ============================================
+    if (!dMeter2_canALBWSword()) {
+        return 1;
+    }
+    dMeter2_onALBWSword();
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     static daAlink_cutParamTbl const cutParamTable[5] = {
         {
             ANM_CUT_NM_VERTICAL,
@@ -1104,6 +1155,32 @@ int daAlink_c::procCutNormal() {
 }
 
 int daAlink_c::procCutFinishInit(int i_type) {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Finisher moves branch by type:
+    //   Mortal Draw A/B — hidden skills: require a fully charged meter
+    //     (sALBWMeter >= sOilMaxVar).  Cost is 1/2 base (5450 units).
+    //   All other finishers (left, vertical, stab, right) — normal sword
+    //     attacks: drain 1/6 base (1817 units) like procCutNormalInit.
+    // In both cases, gate failure returns 1 to keep the current proc alive
+    // so the tired-state path in checkRestHPAnime() can engage if needed.
+    // ============================================
+    if (i_type == CUT_FINISH_PARAM_MORTAL_DRAW_A || i_type == CUT_FINISH_PARAM_MORTAL_DRAW_B) {
+        if (!dMeter2_canALBWHiddenSkill()) {
+            return 1;
+        }
+        dMeter2_onALBWHiddenSkill();
+    } else {
+        if (!dMeter2_canALBWSword()) {
+            return 1;
+        }
+        dMeter2_onALBWSword();
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     static daAlink_cutParamTbl const cutParamTable[6] = {
         {
             ANM_CUT_FINISH_LEFT,
@@ -1350,6 +1427,17 @@ int daAlink_c::procCutFinish() {
 }
 
 int daAlink_c::procCutFinishJumpUpInit() {
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Block aerial uppercut when meter is exhausted.
+    // ============================================
+#if TARGET_PC
+    if (!dMeter2_canALBWSword()) { return 1; }
+    dMeter2_onALBWSword();
+#endif
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     BOOL is_proc_sideRoll = mProcID == PROC_SIDE_ROLL;
 
     commonProcInit(PROC_CUT_FINISH_JUMP_UP);
@@ -1575,6 +1663,17 @@ int daAlink_c::procCutReverse() {
 }
 
 int daAlink_c::procCutJumpInit(BOOL i_isAirCut) {
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Block jump sword attacks when meter is exhausted.
+    // ============================================
+#if TARGET_PC
+    if (!dMeter2_canALBWSword()) { return 1; }
+    dMeter2_onALBWSword();
+#endif
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     commonProcInit(PROC_CUT_JUMP);
     setSingleAnimeParam(ANM_CUT_JUMP, &mpHIO->mCut.mCutJump.m.mCutAnm);
 
@@ -1696,6 +1795,19 @@ int daAlink_c::procCutJumpLand() {
 }
 
 int daAlink_c::procCutTurnInit(int param_0, int param_1) {
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Block spin attack when meter is exhausted.
+    // Covers jump-landing spins and combo-continuation
+    // spins that don't come through procCutTurnChargeInit.
+    // ============================================
+#if TARGET_PC
+    if (!dMeter2_canALBWSword()) { return 1; }
+    dMeter2_onALBWSword();
+#endif
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     const daAlinkHIO_cutTurn_c1* cutData = &mpHIO->mCut.mCutTurn.m;
     const daAlinkHIO_anm_c* anm_data;
     daAlink_ANM anmID;
@@ -1849,7 +1961,19 @@ int daAlink_c::procCutTurnChargeInit() {
         setUpperAnimeBase(dRes_ID_ALANM_BCK_CUTDTP_e);
         return 1;
     }
-
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Block spin-attack charge when meter is exhausted.
+    // Gate is placed after the dash-animation early-return
+    // so that pure animation overrides are unaffected.
+    // ============================================
+#if TARGET_PC
+    if (!dMeter2_canALBWSword()) { return 1; }
+    dMeter2_onALBWSword();
+#endif
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     commonProcInit(PROC_CUT_TURN_CHARGE);
     setSingleAnimeParam(ANM_CUT_TURN_CHARGE_START, &mpHIO->mCut.mCutTurn.m.mChargeAnm);
     mNormalSpeed = 0.0f;
@@ -2045,7 +2169,20 @@ int daAlink_c::procCutDownInit() {
     {
         return 1;
     }
-
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Jump Strike is a hidden skill — requires a full meter before entry.
+    // Costs 1/2 base meter (5450 units).
+    // ============================================
+    if (!dMeter2_canALBWHiddenSkill()) {
+        return 1;
+    }
+    dMeter2_onALBWHiddenSkill();
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     commonProcInit(PROC_CUT_DOWN);
     resetCombo(TRUE);
 
@@ -2233,7 +2370,20 @@ int daAlink_c::procCutHeadInit() {
     if (mDemo.getDemoMode() == daPy_demo_c::DEMO_CUT_HEAD_e && (mProcID == PROC_CUT_HEAD || mProcID == PROC_CUT_HEAD_LAND)) {
         return 1;
     }
-
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Helm Splitter is a hidden skill — requires a full meter before entry.
+    // Costs 1/2 base meter (5450 units).
+    // ============================================
+    if (!dMeter2_canALBWHiddenSkill()) {
+        return 1;
+    }
+    dMeter2_onALBWHiddenSkill();
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     commonProcInit(PROC_CUT_HEAD);
     resetCombo(TRUE);
     setSingleAnimeParam(ANM_CUT_HEAD_JUMP, &mpHIO->mCut.mCutHead.m.mJumpAnm);
@@ -2339,6 +2489,22 @@ int daAlink_c::procCutHeadLand() {
 }
 
 int daAlink_c::procCutLargeJumpChargeInit() {
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Great Spin (Large Jump Charge) is a hidden skill — requires a full
+    // meter (sALBWMeter >= sOilMaxVar) to begin charging.  Costs 1/2 base
+    // meter (5450 units).  Gate failure keeps Link in his current airborne
+    // proc; the tired state engages if sALBWLocked when he lands.
+    // ============================================
+    if (!dMeter2_canALBWHiddenSkill()) {
+        return 1;
+    }
+    dMeter2_onALBWHiddenSkill();
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     commonProcInit(PROC_CUT_LARGE_JUMP_CHARGE);
     setSingleAnimeParam(ANM_CUT_JUMP_LARGE_CHARGE, &mpHIO->mCut.mCutLargeJump.m.mChargeAnm);
     mNormalSpeed = 0.0f;

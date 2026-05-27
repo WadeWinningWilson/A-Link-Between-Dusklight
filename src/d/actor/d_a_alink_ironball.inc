@@ -846,7 +846,19 @@ BOOL daAlink_c::checkUpperItemActionIronBall() {
 
     if (checkIronBallPreSwingAnime()) {
         daPy_frameCtrl_c* frameCtrl = mUnderFrameCtrl;
+// ============================================
+// MODIFIED CODE — ALBW Port
+// Pre-fire check: throw blocked if meter < sOilMaxVar/2.
+// Player can keep swinging while waiting for recovery.
+// ============================================
+#if TARGET_PC
+        if (dMeter2_canALBWIronball() && field_0x3020 != 0 && frameCtrl->checkPass(19.0f)) {
+#else
         if (field_0x3020 != 0 && frameCtrl->checkPass(19.0f)) {
+#endif
+// ============================================
+// MODIFIED CODE ENDS HERE
+// ============================================
             return procIronBallThrowInit();
         }
 
@@ -867,7 +879,18 @@ BOOL daAlink_c::checkUpperItemActionIronBall() {
     } else {
         daPy_frameCtrl_c* frameCtrl = &mUpperFrameCtrl[2];
 
+// ============================================
+// MODIFIED CODE — ALBW Port
+// Same pre-fire check as the pre-swing path above.
+// ============================================
+#if TARGET_PC
+        if (dMeter2_canALBWIronball() && field_0x3020 != 0 && frameCtrl->checkPass(18.0f)) {
+#else
         if (field_0x3020 != 0 && frameCtrl->checkPass(18.0f)) {
+#endif
+// ============================================
+// MODIFIED CODE ENDS HERE
+// ============================================
             return procIronBallThrowInit();
         } else if (frameCtrl->checkPass(0.0f)) {
             seStartOnlyReverb(Z2SE_AL_IB_SWING);
@@ -997,6 +1020,19 @@ int daAlink_c::procIronBallThrowInit() {
     voiceStart(Z2SE_AL_V_THROW_IB);
     seStartOnlyReverb(Z2SE_AL_IB_THROW);
     mAtSph.SetAtAtp(3);
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Drain sOilMaxVar/2 on throw (scales with meter
+    // expansion; same ratio as bombs relative to ceiling).
+    // canALBWIronball() gate in checkUpperItemActionIronBall()
+    // ensures this is only reached when affordable.
+    // ============================================
+    dMeter2_onALBWIronball();
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     return 1;
 }
 

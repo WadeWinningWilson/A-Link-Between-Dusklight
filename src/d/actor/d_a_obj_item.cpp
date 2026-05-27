@@ -858,6 +858,24 @@ void daItem_c::itemGetNextExecute() {
         case dItemNo_BOOMERANG_e:
             procInitGetDemoEvent();
             break;
+#if TARGET_PC
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Magic drops behave like simple consumables (same as HEART / GREEN_RUPEE):
+        // procInitSimpleGetDemo animates the pickup away; itemGet plays the sound
+        // and calls execItemGet which invokes item_func_S/L_MAGIC to fill the
+        // ALBW meter. No canoe/horse or wallet-full branching needed — meter
+        // refills are always accepted (cLib_minMaxLimit clamps at ceiling).
+        // ============================================
+        case dItemNo_S_MAGIC_e:
+        case dItemNo_L_MAGIC_e:
+            procInitSimpleGetDemo();
+            itemGet();
+            break;
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+#endif
         default:
             // "[daItem_c] Get process not defined[%d]\n"
             OS_REPORT_ERROR("[daItem_c]ゲット処理が定義されていません[%d]\n", m_itemNo);
@@ -905,6 +923,22 @@ void daItem_c::itemGet() {
         mDoAud_seStart(Z2SE_RED_LUPY_GET, NULL, 0, 0);
         execItemGet(m_itemNo);
         break;
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Play the orange-rupee sound as a placeholder; replace with a dedicated
+    // magic-pickup sound when the custom arc is ready. execItemGet calls
+    // item_func_S/L_MAGIC which fills the ALBW meter via dMeter2_addALBWFraction.
+    // ============================================
+    case dItemNo_S_MAGIC_e:
+    case dItemNo_L_MAGIC_e:
+        mDoAud_seStart(Z2SE_RED_LUPY_GET, NULL, 0, 0);
+        execItemGet(m_itemNo);
+        break;
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     case dItemNo_BOOMERANG_e:
         break;
     case dItemNo_ARROW_10_e:

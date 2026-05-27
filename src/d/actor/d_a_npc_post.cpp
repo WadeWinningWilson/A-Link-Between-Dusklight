@@ -20,6 +20,7 @@
 #include "d/d_albw_rental.h"
 #include "d/actor/d_a_player.h"
 #include "dusk/ui/ui.hpp"
+#include "Z2AudioLib/Z2SceneMgr.h"
 #include <chrono>
 #endif
 // ============================================
@@ -432,6 +433,29 @@ cPhs_Step daNpc_Post_c::create() {
 
         mSound.init(&current.pos, &eyePos, 3, 1);
         field_0x9c0.init(&mAcch, 0.0f, 0.0f);
+        // ============================================
+        // NEW CODE — ALBW Port (Postman Voice Wave Arc)
+        // Pre-load the NPC voice wave arcs so that
+        // Z2SE_POST_V_APPEAR / _SMILING / _FANFARE work at the ALBW spawn point.
+        // Normally this arc is loaded by the room event system only at vanilla
+        // delivery scenes; at the ALBW custom location it is absent.
+        // The load is asynchronous (DVD→ARAM DMA); status reaches 2 well before
+        // the player walks to the postman.  eraseSeWave(0x6e) in Delete() returns
+        // the ARAM when the actor is destroyed.
+        // ALBW_POST_SFX — search this tag to find all related touch-points.
+        // ============================================
+#if TARGET_PC
+        if (getBitSW() == 0x42) {
+            // Arc 0x4B owns the postman voice wave handles (confirmed via JASBank diagnostic).
+            // Asynchronous load; status reaches 2 well before the player reaches the postman.
+            Z2GetSceneMgr()->loadSeWave(0x4B);
+            field_0x1014 = 0;  // no pending voice yet
+            field_0x1015 = 0;  // BGM not playing yet
+        }
+#endif
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
 
         #if DEBUG
         mHIO = &l_HIO;
@@ -541,6 +565,26 @@ int daNpc_Post_c::CreateHeap() {
 
 int daNpc_Post_c::Delete() {
     OS_REPORT("|%06d:%x|daNpc_Post_c -> Delete\n", g_Counter.mCounter0, this);
+    // ============================================
+    // NEW CODE — ALBW Port (Postman Voice Wave Arc cleanup)
+    // Return the wave arc loaded during Create() to avoid an ARAM leak when
+    // the actor is destroyed (scene transitions that don't pass 0x6e as a
+    // seWave arg will never erase it via the normal Z2SceneMgr lifecycle).
+    // ALBW_POST_SFX — search this tag to find all related touch-points.
+    // ============================================
+#if TARGET_PC
+    if (getBitSW() == 0x42) {
+        Z2GetSceneMgr()->eraseSeWave(0x4B);
+        // Safety: stop BGM if actor is destroyed mid-interaction.
+        if (field_0x1015) {
+            mDoAud_subBgmStop();
+            field_0x1015 = 0;
+        }
+    }
+#endif
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     fopAcM_RegisterDeleteID(this, "NPC_POST");
     this->~daNpc_Post_c();
     return 1;
@@ -570,53 +614,87 @@ int daNpc_Post_c::Execute() {
         dALBWRental_tick();
 
         // ============================================
-        // NEW CODE — ALBW Port (Purchase Sound)
-        // Sound ID catalogue for the ALBW rental postman.
-        // All sounds originate from the postman character's own audio library.
-        // To swap a sound: change the constant here; behaviour is unchanged.
-        // To remove purchase sounds entirely: delete the `else if (justPurchased)`
-        // branch and the three lines below; all other animations/sounds are
-        // unaffected. Grep "ALBW_POST_SFX" to locate every sound used here.
+        // NEW CODE — ALBW Port (Postman Audio)
+        // ALBW_POST_SFX — search this tag to find all related touch-points.
         //
         //   ALBW_POST_SFX  greeting  Z2SE_POST_V_APPEAR   0x5010B
         //   ALBW_POST_SFX  farewell  Z2SE_POST_V_FANFARE  0x500F6
         //   ALBW_POST_SFX  purchase  Z2SE_POST_V_SMILING  0x5010C
-        // ============================================
-        static constexpr u32 kALBWSound_Greeting = Z2SE_POST_V_APPEAR;   // bow hello
-        static constexpr u32 kALBWSound_Farewell = Z2SE_POST_V_FANFARE;  // salute bye
-        static constexpr u32 kALBWSound_Purchase = Z2SE_POST_V_SMILING;  // item rented!
-        // ============================================
-        // NEW CODE ENDS HERE
+        //
+        // Deferred approach: latch a pending voice index on the one-shot
+        // transition frame; flush each Execute() once ANY candidate arc
+        // reaches status 2.  field_0x1014 values: 0=none  1=APPEAR  2=FANFARE  3=SMILING
         // ============================================
 
+        // Re-arm arc 0x4B if the scene manager erased it between frames.
+        if (Z2GetSceneMgr()->getSeLoadStatus(0x4B) == 0) {
+            Z2GetSceneMgr()->loadSeWave(0x4B);
+        }
+
+        // Latch voice index on state transition; start BGM when player engages.
         if (dALBWRental_justEnteredGreeting()) {
-            // Greeting: bow and look at player.
             mFaceMotionSeqMngr.setNo(FACE_MOT_HELLO, -1.0f, FALSE, 0);
             mMotionSeqMngr.setNo(MOT_HELLO, -1.0f, FALSE, 0);
-            mSound.startCreatureVoice(kALBWSound_Greeting, -1);
+            field_0x1014 = 1;  // pending: Z2SE_POST_V_APPEAR
+            // ============================================
+            // NEW CODE — ALBW Port (Postman BGM)
+            // Start the postman's theme as a sub-BGM overlaying the scene BGM.
+            // Stopped below once the interaction closes.
+            // ALBW_POST_SFX — search this tag to find all related touch-points.
+            // ============================================
+            mDoAud_subBgmStart(Z2BGM_POSTMAN);
+            field_0x1015 = 1;
+            // ============================================
+            // NEW CODE ENDS HERE
+            // ============================================
         } else if (dALBWRental_justEnteredShop()) {
             // Greeting dismissed — lock into standing idle while shop is open.
-            // MOT_HELLO auto-chains here, but set explicitly in case the
-            // player dismissed the toast before the animation completed.
             mFaceMotionSeqMngr.setNo(FACE_MOT_NONE_2, -1.0f, FALSE, 0);
             mMotionSeqMngr.setNo(MOT_WAIT_A, -1.0f, FALSE, 0);
         } else if (dALBWRental_justEnteredFarewell()) {
-            // Farewell: salute, then hold the salute pose (BYE_WAIT loop).
             mFaceMotionSeqMngr.setNo(FACE_MOT_BYE, -1.0f, FALSE, 0);
             mMotionSeqMngr.setNo(MOT_BYE, -1.0f, FALSE, 0);
-            mSound.startCreatureVoice(kALBWSound_Farewell, -1);
+            field_0x1014 = 2;  // pending: Z2SE_POST_V_FANFARE
         } else if (dALBWRental_justPurchased()) {
             // ============================================
             // NEW CODE — ALBW Port (Purchase Sound)
-            // Congratulatory squeak when the player successfully rents an item.
-            // No animation change — postman stays in MOT_WAIT_A idle.
-            // Remove this else-if block to silence purchase feedback sounds.
+            // Celebratory squeak on successful rental.
+            // Remove this else-if to silence purchase feedback entirely.
             // ============================================
-            mSound.startCreatureVoice(kALBWSound_Purchase, -1);
+            field_0x1014 = 3;  // pending: Z2SE_POST_V_SMILING
             // ============================================
             // NEW CODE ENDS HERE
             // ============================================
         }
+
+        // Flush pending voice once arc 0x4B is resident.
+        if (field_0x1014 != 0 && Z2GetSceneMgr()->getSeLoadStatus(0x4B) == 2) {
+            static const u32 kVoiceSounds[4] = {
+                0,
+                Z2SE_POST_V_APPEAR,
+                Z2SE_POST_V_FANFARE,
+                Z2SE_POST_V_SMILING,
+            };
+            mSound.startCreatureVoice(kVoiceSounds[field_0x1014], -1);
+            field_0x1014 = 0;
+        }
+
+        // ============================================
+        // NEW CODE — ALBW Port (Postman BGM)
+        // Stop the postman's theme once the interaction fully closes
+        // (player pressed A/B on farewell toast or it timed out).
+        // ALBW_POST_SFX — search this tag to find all related touch-points.
+        // ============================================
+        if (field_0x1015 && !dALBWRental_isOpen()) {
+            mDoAud_subBgmStop();
+            field_0x1015 = 0;
+        }
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
     }
 #endif
 // ============================================

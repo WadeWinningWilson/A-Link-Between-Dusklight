@@ -40,6 +40,18 @@ enum dGameover_Proc {
     /* 6 */ PROC_SAVE_MOVE,
     /* 7 */ PROC_SAVE_CLOSE,
     /* 8 */ PROC_DELETE_WAIT,
+// ============================================
+// NEW CODE — ALBW Port
+// Additional state inserted between SAVE_CLOSE and DELETE_WAIT.
+// Shown to the player after "Continue" is confirmed on the game-over
+// screen; lets them choose a respawn destination before the stage reloads.
+// ============================================
+#if TARGET_PC
+    /* 9 */ PROC_ALBW_WARP_CHOICE,
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 };
 
 class dGameover_c : public msg_class {
@@ -64,6 +76,17 @@ public:
     void saveClose_proc();
     void deleteWait_init();
     void deleteWait_proc();
+// ============================================
+// NEW CODE — ALBW Port
+// Warp-destination choice shown after "Continue" on real player deaths.
+// ============================================
+#if TARGET_PC
+    void warpChoice_init();
+    void warpChoice_proc();
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
     int _draw();
     int _delete();
 

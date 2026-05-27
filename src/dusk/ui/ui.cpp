@@ -54,6 +54,18 @@ bool initialize() noexcept {
     load_font("AlegreyaSC-Bold.ttf");
     load_font("MaterialSymbolsRounded-Regular.ttf");
     load_font("NotoMono-Regular.ttf");
+    // ============================================================
+    // NEW CODE — ALBW Port
+    // ALBW_RODAN_FONT  family:"Rodan"  rodan.bdf
+    // TP Rodan bitmap font for the NPC dialogue toast (npc-dialogue).
+    // Extracted from fontres.arc (GameCube I4, 256x576 atlas).
+    // To revert: remove this load_font call and the font-family
+    // override in overlay.rcss (search ALBW_RODAN_FONT in both files).
+    // ============================================================
+    load_font("rodan.bdf");
+    // ============================================================
+    // NEW CODE ENDS HERE
+    // ============================================================
 
     sInitialized = true;
     return true;

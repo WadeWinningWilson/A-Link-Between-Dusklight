@@ -445,7 +445,7 @@ void dALBWRental_close() {
 
     dusk::ui::push_toast({
         .type     = "npc-dialogue",
-        .title    = "Postman",
+        .title    = "Postman's Lending Service",
         .content  = farewell,
         .duration = kFarewellDuration,
     });

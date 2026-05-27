@@ -581,7 +581,25 @@ void dMeter2Draw_c::draw() {
     graf_ctx->setup2D();
 
     mpScreen->draw(0.0f, 0.0f, graf_ctx);
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Replace the lantern screen (type 1) with the cut magic meter screen
+    // (type 0) so the ALBW meter is drawn in the same HUD slot.
+    // mMeterAlphaRate[0] is now driven by setAlphaMagicAnimeMin/Max()
+    // called from alphaAnimeKantera() — same fade system as the kantera
+    // and oxygen meters — so the ALBW meter follows all HUD show/hide
+    // conditions (cutscenes, menus, pause, etc.) automatically.
+    // ============================================
+    if (!dComIfGp_isPauseFlag() && dComIfGp_isHeapLockFlag() != 6) {
+        drawKanteraScreen(0);
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#else
     drawKanteraScreen(1);
+#endif
     drawKanteraScreen(2);
 
     for (int i = 0; i < 2; i++) {
@@ -1740,6 +1758,44 @@ void dMeter2Draw_c::setAlphaKanteraAnimeMax() {
         mMeterAlphaRate[1] = (field_0x742[1] / 5.0f) * g_drawHIO.mParentAlpha;
     }
 }
+
+#if TARGET_PC
+// ============================================
+// NEW CODE — ALBW Port
+// ALBW stamina meter alpha animation (magic screen, index 0).
+// Exact mirror of setAlphaKanteraAnimeMin/Max (index 1) and
+// setAlphaOxygenAnimeMin/Max (index 2), operating on index 0 and
+// field_0x742[0].  Called from alphaAnimeKantera() every sim-tick
+// with the same HUD-hide condition set as the other meters, so the
+// ALBW meter fades in and out with the rest of the HUD automatically.
+// ============================================
+void dMeter2Draw_c::setAlphaMagicAnimeMin() {
+    if (field_0x742[0] <= 0) {
+        mMeterAlphaRate[0] = 0.0f;
+    } else {
+        field_0x742[0]--;
+        if (field_0x742[0] < 0) {
+            field_0x742[0] = 0;
+        }
+        mMeterAlphaRate[0] = (field_0x742[0] / 5.0f) * g_drawHIO.mParentAlpha;
+    }
+}
+
+void dMeter2Draw_c::setAlphaMagicAnimeMax() {
+    if (field_0x742[0] >= 5) {
+        mMeterAlphaRate[0] = g_drawHIO.mParentAlpha;
+    } else {
+        field_0x742[0]++;
+        if (field_0x742[0] > 5) {
+            field_0x742[0] = 5;
+        }
+        mMeterAlphaRate[0] = (field_0x742[0] / 5.0f) * g_drawHIO.mParentAlpha;
+    }
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+#endif
 
 void dMeter2Draw_c::drawOxygen(s32 i_max, s32 i_oxygen, f32 i_posX, f32 i_posY) {
     f32 var_f6 = mpMagicFrameR->getInitPosX() - mpMagicFrameL->getInitPosX();

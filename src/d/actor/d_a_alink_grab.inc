@@ -1358,8 +1358,34 @@ int daAlink_c::procPickPut() {
         checkNextAction(1);
     } else if (framectrl->checkPass(9.0f)) {
         if (mProcVar2.field_0x300c != 0) {
+// ============================================
+// MODIFIED CODE — ALBW Port
+// Pre-fire check: bombling shares the bomb cost
+// (5450 units). Actor is never created if unaffordable.
+// Ammo decoupling: decrement also skipped on PC.
+// ============================================
+#if TARGET_PC
+            if (dMeter2_canALBWBomb() && checkReadyItem() && dBomb_c::createInsectBombPlayer(&current.pos)) {
+#else
             if (checkReadyItem() && dBomb_c::createInsectBombPlayer(&current.pos)) {
+#endif
+// ============================================
+// MODIFIED CODE ENDS HERE
+// ============================================
+// ============================================
+// MODIFIED CODE — ALBW Port
+// Ammo decoupling: bomblings are gated by the ALBW
+// meter only. Decrement skipped on PC so game
+// ammo count is purely cosmetic.
+// ============================================
+#if !TARGET_PC
                 dComIfGp_addSelectItemNum(mSelectItemId, -1);
+#else
+                dMeter2_onALBWBomb();
+#endif
+// ============================================
+// MODIFIED CODE ENDS HERE
+// ============================================
                 field_0x2fcf++;
             }
             mEquipItem = dItemNo_NONE_e;
