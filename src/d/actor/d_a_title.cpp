@@ -170,7 +170,7 @@ int daTitle_c::Execute() {
     }
 
 #ifdef TARGET_PC
-    if (!dusk::getSettings().game.enableFrameInterpolation) {
+    if (!dusk::frame_interp::is_enabled()) {
 #endif
         dMenu_Collect3D_c::setViewPortOffsetY(0.0f);
 #ifdef TARGET_PC
@@ -250,7 +250,7 @@ void daTitle_c::loadWait_proc() {
             text[i]->setFont(mpFont);
             text[i]->setString(0x80, "");
 
-            char* msg = text[i]->getStringPtr();
+            TEXT_SPAN msg = text[i]->getStringPtr();
             fopMsgM_messageGet(msg, 100);
         }
 
@@ -354,7 +354,7 @@ void daTitle_c::fastLogoDispInit() {
     mProcID = 5;
 
 #ifdef TARGET_PC
-    if (dusk::getSettings().game.enableFrameInterpolation) {
+    if (dusk::frame_interp::is_enabled()) {
         dusk::frame_interp::request_presentation_sync();
     }
 #endif

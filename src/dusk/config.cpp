@@ -8,6 +8,8 @@
 #include "dusk/settings.h"
 
 #include <limits>
+#include <filesystem>
+#include <system_error>
 #include <string>
 
 #include "dusk/main.h"
@@ -24,8 +26,24 @@ aurora::Module DuskConfigLog("dusk::config");
 static absl::flat_hash_map<std::string_view, ConfigVarBase*> RegisteredConfigVars;
 static bool RegistrationDone = false;
 
-static std::u8string GetConfigJsonPath() {
-    return (dusk::ConfigPath / ConfigFileName).u8string();
+static std::filesystem::path GetConfigJsonPath() {
+    return dusk::ConfigPath / ConfigFileName;
+}
+
+static std::filesystem::path GetTempConfigJsonPath(const std::filesystem::path& configJsonPath) {
+    auto tempPath = configJsonPath;
+    tempPath.replace_filename(fmt::format(".{}.tmp", configJsonPath.filename().string()));
+    return tempPath;
+}
+
+static void ReplaceFile(const std::filesystem::path& source, const std::filesystem::path& target) {
+    std::error_code ec;
+    std::filesystem::rename(source, target, ec);
+    if (ec) {
+        const auto renameError = ec;
+        std::filesystem::remove(source, ec);
+        throw std::system_error(renameError);
+    }
 }
 
 ConfigVarBase::ConfigVarBase(const char* name, const ConfigImplBase* impl) : name(name), registered(false), layer(ConfigVarLayer::Default), impl(impl) {
@@ -56,6 +74,23 @@ static T sanitizeEnumValue(const ConfigVar<T>& cVar, T value) {
 
 template<ConfigValue T>
 void ConfigImpl<T>::loadFromJson(ConfigVar<T>& cVar, const json& jsonValue) {
+    if constexpr (std::is_enum_v<T>) {
+        if (jsonValue.is_boolean()) {
+            using Underlying = std::underlying_type_t<T>;
+            const bool b = jsonValue.get<bool>();
+
+            Underlying raw;
+            if constexpr (std::is_same_v<T, dusk::FrameInterpMode>) {
+                raw = b ? static_cast<Underlying>(2) : static_cast<Underlying>(0);
+            } else {
+                raw = b ? static_cast<Underlying>(1) : static_cast<Underlying>(0);
+            }
+
+            cVar.setValue(sanitizeEnumValue(cVar, static_cast<T>(raw)), false);
+            return;
+        }
+    }
+
     cVar.setValue(sanitizeEnumValue(cVar, jsonValue.get<T>()), false);
 }
 
@@ -155,9 +190,13 @@ namespace dusk::config {
     template class ConfigImpl<f64>;
     template class ConfigImpl<std::string>;
     template class ConfigImpl<dusk::BloomMode>;
+    template class ConfigImpl<dusk::DepthOfFieldMode>;
     template class ConfigImpl<dusk::DiscVerificationState>;
     template class ConfigImpl<dusk::GameLanguage>;
     template class ConfigImpl<dusk::GyroMode>;
+    template class ConfigImpl<dusk::FrameInterpMode>;
+    template class ConfigImpl<dusk::MenuScaling>;
+    template class ConfigImpl<dusk::Resampler>;
 }
 
 void dusk::config::Register(ConfigVarBase& configVar) {
@@ -190,7 +229,8 @@ void dusk::config::LoadFromUserPreferences() {
     if (configJsonPath.empty()) {
         return;
     }
-    LoadFromFileName(reinterpret_cast<const char*>(configJsonPath.c_str()));
+    const auto configPathString = io::fs_path_to_string(configJsonPath);
+    LoadFromFileName(configPathString.c_str());
 }
 
 static void LoadFromPath(const char* path) {
@@ -233,6 +273,10 @@ void dusk::config::LoadFromFileName(const char* path) {
         } else {
             DuskConfigLog.error("Failed to load from config! {}", e.what());
         }
+    } catch (const nlohmann::json::parse_error& e) {
+        DuskConfigLog.error("Failed to parse config JSON, staying with defaults: {}", e.what());
+    } catch (const std::exception& e) {
+        DuskConfigLog.error("Failed to load from config, staying with defaults: {}", e.what());
     }
 }
 
@@ -241,10 +285,11 @@ void dusk::config::Save() {
     if (configJsonPath.empty()) {
         return;
     }
+    const auto configPathString = io::fs_path_to_string(configJsonPath);
 
     DuskConfigLog.info(
         "Saving config to '{}'",
-        reinterpret_cast<const char*>(configJsonPath.c_str()));
+        configPathString);
 
     json j;
 
@@ -255,7 +300,13 @@ void dusk::config::Save() {
         }
     }
 
-    io::FileStream::WriteAllText(reinterpret_cast<const char*>(configJsonPath.c_str()), j.dump(4));
+    try {
+        const auto tempConfigJsonPath = GetTempConfigJsonPath(configJsonPath);
+        io::FileStream::WriteAllText(tempConfigJsonPath, j.dump(4));
+        ReplaceFile(tempConfigJsonPath, configJsonPath);
+    } catch (const std::exception& e) {
+        DuskConfigLog.error("Failed to save config to '{}': {}", configPathString, e.what());
+    }
 }
 
 void dusk::config::ClearAllActionBindings(int port) {

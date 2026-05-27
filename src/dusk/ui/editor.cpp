@@ -196,7 +196,7 @@ Rml::String get_player_name() {
     if (!has_save_data()) {
         return "";
     }
-    return dComIfGs_getPlayerName();
+    return dComIfGs_getPlayerName().buffer;
 }
 
 void set_player_name(Rml::String name) {
@@ -207,7 +207,7 @@ Rml::String get_horse_name() {
     if (!has_save_data()) {
         return "";
     }
-    return dComIfGs_getHorseName();
+    return dComIfGs_getHorseName().buffer;
 }
 
 void set_horse_name(Rml::String name) {
@@ -1501,14 +1501,14 @@ EditorWindow::EditorWindow() {
                 .getValue =
                     [] {
                         return std::popcount(static_cast<unsigned>(
-                            get_player_status_b()->mTransformLevelFlag & 0x7));
+                            get_player_status_b()->mTransformLevelFlag & 0xF));
                     },
                 .setValue =
                     [](int value) {
                         get_player_status_b()->mTransformLevelFlag =
                             static_cast<u8>((1u << value) - 1u);
                     },
-                .max = 3,
+                .max = 4,
             }),
             rightPane, {});
         leftPane.register_control(
