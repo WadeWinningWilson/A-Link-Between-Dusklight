@@ -25,6 +25,9 @@
 #include "m_Do/m_Do_graphic.h"
 #include <cstdio>
 #include <cstring>
+#include <dusk/ui/settings.hpp>
+
+#include "dusk/string.hpp"
 
 void dComIfG_play_c::ct() {
     mWindowNum = 0;
@@ -2571,8 +2574,11 @@ u8 dComIfG_getNowCalcRegion() {
 
 bool dComIfGp_isLightDropMapVisible() {
     for (int i = 0; i < 3; i++) {
-        #if DUSK_TPHD
-        if (dComIfGs_isLightDropGetFlag(i) != FALSE && dComIfGs_getLightDropNum(i) < 12) {
+        #if TARGET_PC
+        if (dComIfGs_isLightDropGetFlag(i) != FALSE && 
+            ((dusk::tphd_active() && dComIfGs_getLightDropNum(i) < 12) ||
+            (!dusk::tphd_active() && dComIfGs_getLightDropNum(i) < 16)))
+        {
         #else
         if (dComIfGs_isLightDropGetFlag(i) != FALSE && dComIfGs_getLightDropNum(i) < 16) {
         #endif
@@ -2653,7 +2659,7 @@ static void dComIfGs_setWarpItemData(int param_0, char const* i_stage, cXyz i_po
 
 void dComIfG_play_c::setWarpItemData(char const* i_stage, cXyz i_pos, s16 i_angle, s8 i_roomNo,
                                      u8 param_4, u8 param_5) {
-    strcpy(mItemInfo.mWarpItemData.mWarpItemStage, i_stage);
+    SAFE_STRCPY(mItemInfo.mWarpItemData.mWarpItemStage, i_stage);
     mItemInfo.mWarpItemData.mWarpItemPos.set(i_pos);
     mItemInfo.mWarpItemData.mWarpItemAngle = i_angle;
     mItemInfo.mWarpItemData.mWarpItemRoom = i_roomNo;
@@ -2740,7 +2746,7 @@ void* dComIfG_getOldStageRes(char const* i_resName) {
 
 char* dComIfG_getRoomArcName(int i_roomNo) {
     static char buf[32];
-    sprintf(buf, "R%02d_00", i_roomNo);
+    SAFE_SPRINTF(buf, "R%02d_00", i_roomNo);
     return buf;
 }
 

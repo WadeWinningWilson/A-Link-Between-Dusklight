@@ -10,6 +10,7 @@
 #include "d/actor/d_a_player.h"
 #include "d/d_com_inf_game.h"
 #include <cstring>
+#include <dusk/ui/settings.hpp>
 
 static int daKytag04_Draw(kytag04_class* i_this) {
     dScnKy_env_light_c* kankyo = dKy_getEnvlight();
@@ -260,8 +261,10 @@ static int daKytag04_Create(fopAc_ac_c* i_this) {
 
     a_this->mNeedDropNum = i_this->current.angle.z & 0xFF;
 
-    #if DUSK_TPHD
-    a_this->mNeedDropNum = 12;
+    #if TARGET_PC
+    if (dusk::tphd_active()) {
+        a_this->mNeedDropNum = 12;
+    }
     #endif
 
     int phase_state = dComIfG_resLoad(&a_this->mPhase, "Kytag04");
@@ -270,8 +273,11 @@ static int daKytag04_Create(fopAc_ac_c* i_this) {
         a_this->mStageNo = (i_this->current.angle.z >> 8) & 0xFF;
         a_this->mExitID = fopAcM_GetParam(i_this) & 0xFF;
         a_this->mNeedDropNum = i_this->current.angle.z & 0xFF;
-        #if DUSK_TPHD
-        a_this->mNeedDropNum = 12;
+
+        #if TARGET_PC
+        if (dusk::tphd_active()) {
+            a_this->mNeedDropNum = 12;
+        }
         #endif
 
         a_this->field_0x5b5 = fopAcM_GetParam(i_this) >> 0x10;
