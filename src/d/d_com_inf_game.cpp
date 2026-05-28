@@ -26,6 +26,8 @@
 #include <cstdio>
 #include <cstring>
 
+#include "dusk/string.hpp"
+
 void dComIfG_play_c::ct() {
     mWindowNum = 0;
     mParticle = NULL;

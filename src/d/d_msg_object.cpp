@@ -461,12 +461,12 @@ int dMsgObject_c::_execute() {
             mpCtrl->setMessageCode(mpRefer->getRevoMessageID());
             mpRefer->setRevoMessageID(0);
             jmessage_tReference* pRef = (jmessage_tReference*)mpRenProc->getReference();
-            strcpy(pRef->getTextPtr(), "");
-            strcpy(pRef->getTextSPtr(), "");
-            strcpy(pRef->getRubyPtr(), "");
+            SAFE_STRCPY(pRef->getTextPtr(), "");
+            SAFE_STRCPY(pRef->getTextSPtr(), "");
+            SAFE_STRCPY(pRef->getRubyPtr(), "");
             for (int i = 0; i < 3; i++) {
-                strcpy(pRef->getSelTextPtr(i), "");
-                strcpy(pRef->getSelRubyPtr(i), "");
+                SAFE_STRCPY(pRef->getSelTextPtr(i), "");
+                SAFE_STRCPY(pRef->getSelRubyPtr(i), "");
             }
         }
         field_0x4ca = mpCtrl->update();
@@ -1021,12 +1021,12 @@ void dMsgObject_c::continueProc() {
         offAutoMessageFlagLocal();
         setMessageIndex(field_0x100->msg_idx, field_0x100->field_0xf0, true);
         mpScrnDraw->fukiPosCalc(pRef->getFukiPosType());
-        strcpy(pRef->getTextPtr(), "");
-        strcpy(pRef->getTextSPtr(), "");
-        strcpy(pRef->getRubyPtr(), "");
+        SAFE_STRCPY(pRef->getTextPtr(), "");
+        SAFE_STRCPY(pRef->getTextSPtr(), "");
+        SAFE_STRCPY(pRef->getRubyPtr(), "");
         for (int i = 0; i < 3; i++) {
-            strcpy(pRef->getSelTextPtr(i), "");
-            strcpy(pRef->getSelRubyPtr(i), "");
+            SAFE_STRCPY(pRef->getSelTextPtr(i), "");
+            SAFE_STRCPY(pRef->getSelRubyPtr(i), "");
         }
         mpScrnDraw->arwAnimeInit();
         mpRenProc->setTextInitPos(mpScrnDraw->getTextBoxPosX(), mpScrnDraw->getTextBoxPosY());
@@ -1781,13 +1781,13 @@ bool dMsgObject_c::getStringLocal(u32 param_1, J2DTextBox* param_2, J2DTextBox* 
                 *param_9 = mpRefer->getCharSoundInfo().field_0x40e;
             }
             if (param_6 != NULL) {
-                strcpy(param_6, pRef->getTextPtr());
+                SAFE_STRCPY(param_6, pRef->getTextPtr());
             }
             if (param_7 != NULL) {
-                strcpy(param_7, pRef->getRubyPtr());
+                SAFE_STRCPY(param_7, pRef->getRubyPtr());
             }
             if (param_8 != NULL) {
-                strcpy(param_8, pRef->getTextSPtr());
+                SAFE_STRCPY(param_8, pRef->getTextSPtr());
             }
             mpCtrl->reset();
             mpCtrl->resetResourceCache();

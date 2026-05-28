@@ -22,6 +22,8 @@
 #include "dusk/string.hpp"
 #endif
 
+#include "dusk/string.hpp"
+
 #if VERSION == VERSION_GCN_JPN
 #define STR_BUF_LEN 528
 #else

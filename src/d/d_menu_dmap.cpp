@@ -26,6 +26,8 @@
 #include "m_Do/m_Do_graphic.h"
 #include <cstring>
 
+#include "dusk/string.hpp"
+
 #if (PLATFORM_WII || PLATFORM_SHIELD)
 #define POINTER_OPT dComIfGs_getOptPointer()
 #else

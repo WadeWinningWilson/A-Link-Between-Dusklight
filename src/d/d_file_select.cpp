@@ -23,6 +23,8 @@
 #include "m_Do/m_Do_graphic.h"
 #include <cstring>
 
+#include "dusk/string.hpp"
+
 static s32 SelStartFrameTbl[3] = {
     59,
     99,
@@ -4182,7 +4184,7 @@ void dFile_select_c::errDispInitSet(char* i_errMesg) {
     mErrorMsgTxtPane[mErrorTxtDispIdx]->setAlpha(0xFF);
     mErrorMsgTxtPane[mErrorTxtDispIdx ^ 1]->setAlpha(0);
 
-    SAFE_STRCPY(mErrorMsgStringPtr[mErrorTxtDispIdx], i_errMesg);
+    SAFE_STRCPY_BOUNDED(mErrorMsgStringPtr[mErrorTxtDispIdx], i_errMesg);
 
     if (field_0x014a) {
         errorMoveAnmInitSet(2859, 2849);
@@ -4391,7 +4393,8 @@ void dFile_select_c::MemCardLoadWait() {
         if (mDoMemCd_getDataVersion() != 6) {
             char errmsg[264];
             // "Savedata version is different\n\nVersion %d\n\nFormatting data."
-            SAFE_SPRINTF(errmsg, "ã‚»ãƒ¼ãƒ–ãƒ‡ãƒ¼ã‚¿ã®ãƒãƒ¼ã‚¸ãƒ§ãƒ³ãŒé•ã„ã¾ã™\n\nãƒãƒ¼ã‚¸ãƒ§ãƒ³ %d\n\nãƒ‡ãƒ¼ã‚¿ã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚", mDoMemCd_getDataVersion());
+            SAFE_SPRINTF(errmsg, "セーブデータのバージョンが違います\n\nバージョン %d\n\nデータを初期化します。", mDoMemCd_getDataVersion());
+
             errDispInitSet(errmsg);
             field_0x0280 = false;
             mWindowCloseMsgDispCb = NULL;

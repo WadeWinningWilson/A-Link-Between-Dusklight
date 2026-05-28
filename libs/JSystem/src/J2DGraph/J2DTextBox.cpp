@@ -317,10 +317,6 @@ TEXT_SPAN J2DTextBox::getStringPtr() const {
 #endif
 }
 
-dusk::TextSpan J2DTextBox::getSpan() const {
-    return { mStringPtr, mStringLength };
-}
-
 s32 J2DTextBox::setString(char const* string, ...) {
     va_list args;
     va_start(args, string);

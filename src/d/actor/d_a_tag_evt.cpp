@@ -8,6 +8,8 @@
 #include "f_op/f_op_actor_mng.h"
 #include <cstring>
 
+#include "dusk/string.hpp"
+
 static char* l_evtNameList[] = {
     NULL,
     "JUMP_DEMOSTAGE",

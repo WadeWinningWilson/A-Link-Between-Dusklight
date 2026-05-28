@@ -22,6 +22,7 @@
 #include "d/d_msg_scrn_explain.h"
 #include "d/d_stage.h"
 #include "dusk/memory.h"
+#include "dusk/string.hpp"
 #include "f_op/f_op_msg_mng.h"
 
 static dMf_HIO_c g_fmHIO;
