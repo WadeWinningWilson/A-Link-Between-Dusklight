@@ -744,7 +744,7 @@ static void fapGm_AfterRecord() {
 BOOL isRecording = false;
 
 static void duskExecute() {
-    handleGamepadColor();
+    dusk::input::handleGamepadColor();
     updateAutoSave();
 
     if (dusk::getSettings().game.recordingMode) {
