@@ -134,7 +134,7 @@ int daObjAvalanche_c::checkCollapse() {
     local_28 = l_check_pos[0];
     local_1c = l_check_pos[1];
     cXyz playerDist = player->current.pos - current.pos;
-    mDoMtx_stack_c::YrotM(-shape_angle.y);
+    DUSK_IF_ELSE(mDoMtx_stack_c::YrotS(-shape_angle.y), mDoMtx_stack_c::YrotM(-shape_angle.y));
     mDoMtx_stack_c::multVec(&playerDist, &playerDist);
     if (player->current.pos.y > current.pos.y && player->current.pos.y < current.pos.y + 300.0f &&
         playerDist.x > local_28.x && playerDist.x < local_1c.x && playerDist.z > local_28.z &&
