@@ -350,8 +350,8 @@ void dMeter2Info_c::decMsgKeyWaitTimer() {
     }
 }
 
-void dMeter2Info_c::getString(u32 i_stringID, char* o_string, JMSMesgEntry_c* i_msgEntry) {
-    strcpy(o_string, "");
+void dMeter2Info_c::getString(u32 i_stringID, TEXT_SPAN o_string, JMSMesgEntry_c* i_msgEntry) {
+    SAFE_STRCPY(o_string, "");
 
     u8* msgRes;
     if (mMsgResource == NULL) {
@@ -372,7 +372,7 @@ void dMeter2Info_c::getString(u32 i_stringID, char* o_string, JMSMesgEntry_c* i_
         // check if i_stringID equals the message entry "Message ID"
         if (i_stringID == bmg_inf->entries[i].message_id) {
             string_ptr = (char*)(string_data + bmg_inf->entries[i].string_offset);  // use entry "String Offset" to get string pointer
-            strcpy(o_string, string_ptr);
+            SAFE_STRCPY(o_string, string_ptr);
 
             if (i_msgEntry != NULL) {
                 memcpy(i_msgEntry, &bmg_inf->entries[i], sizeof(JMSMesgEntry_c));
@@ -387,8 +387,8 @@ void dMeter2Info_c::getString(u32 i_stringID, char* o_string, JMSMesgEntry_c* i_
     }
 }
 
-void dMeter2Info_c::getStringKana(u32 i_stringID, char* o_string, JMSMesgEntry_c* i_msgEntry) {
-    strcpy(o_string, "");
+void dMeter2Info_c::getStringKana(u32 i_stringID, TEXT_SPAN o_string, JMSMesgEntry_c* i_msgEntry) {
+    SAFE_STRCPY(o_string, "");
 
     u8* msgRes;
     if (mMsgResource == NULL) {
@@ -456,8 +456,8 @@ void dMeter2Info_c::getStringKana(u32 i_stringID, char* o_string, JMSMesgEntry_c
     }
 }
 
-void dMeter2Info_c::getStringKanji(u32 i_stringID, char* o_string, JMSMesgEntry_c* i_msgEntry) {
-    strcpy(o_string, "");
+void dMeter2Info_c::getStringKanji(u32 i_stringID, TEXT_SPAN o_string, JMSMesgEntry_c* i_msgEntry) {
+    SAFE_STRCPY(o_string, "");
 
     u8* msgRes;
     if (mMsgResource == NULL) {
