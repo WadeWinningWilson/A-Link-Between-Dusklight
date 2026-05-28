@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file d_a_npc_saru.cpp
  * 
 */
@@ -336,7 +336,7 @@ int daNpc_Saru_c::create() {
         mSound.init(&current.pos, &eyePos, 3, 1);
         #if DEBUG
         mpHIO = &l_HIO;
-        mpHIO->entryHIO("サル"); // Monkey
+        mpHIO->entryHIO("ã‚µãƒ«"); // Monkey
         #endif
         reset();
 
@@ -956,7 +956,7 @@ int daNpc_Saru_c::cutYmLook(int param_1) {
     if (dComIfGp_getEventManager().getIsAddvance(param_1) != 0) {
         switch (iVar1) {
             case 0:
-                strcpy(acStack_88, l_evtList[2].eventName);
+                SAFE_STRCPY(acStack_88, l_evtList[2].eventName);
                 strcat(acStack_88, "@");
                 dComIfGp_getEvent()->setSkipZev(this, acStack_88);
                 dComIfGp_getEvent()->onSkipFade();

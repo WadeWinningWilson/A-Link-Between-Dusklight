@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file d_a_obj_flag.cpp
  * 
 */
@@ -192,7 +192,7 @@ inline int daObjFlag_c::createHeap() {
         tmp = true;
 
         char resName[12];
-        sprintf(resName, "flag%02d.bmd", angle);
+        SAFE_SPRINTF(resName, "flag%02d.bmd", angle);
 
         shape_angle.setall(0);
         current.angle.setall(0);

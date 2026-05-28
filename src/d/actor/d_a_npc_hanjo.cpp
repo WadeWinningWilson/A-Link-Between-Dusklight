@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file d_a_npc_hanjo.cpp
  * 
 */
@@ -175,7 +175,7 @@ void daNpc_Hanjo_HIO_c::genMessage(JORMContext* ctx) {
 
 
 daNpc_Hanjo_c::~daNpc_Hanjo_c() {
-    OS_REPORT("|%06d:%x|daNpc_Hanjo_c -> デストラクト\n", g_Counter.mCounter0, this);
+    OS_REPORT("|%06d:%x|daNpc_Hanjo_c -> ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ãƒˆ\n", g_Counter.mCounter0, this);
     if (mpMorf[0] != 0) {
         mpMorf[0]->stopZelAnime();
     }
@@ -218,7 +218,7 @@ int daNpc_Hanjo_c::create() {
 
 #if DEBUG
         mpHIO = &l_HIO;
-        mpHIO->entryHIO("ハンジョ－");
+        mpHIO->entryHIO("ãƒãƒ³ã‚¸ãƒ§ï¼");
 #endif
 
         reset();
@@ -1336,7 +1336,7 @@ int daNpc_Hanjo_c::cutAppearHawker(int param_1) {
             home.angle.y += 0x8000;
             setAngle(home.angle.y);
             initTalk(0xcf, NULL);
-            strcpy(acStack_98, l_evtList[9].eventName);
+            SAFE_STRCPY(acStack_98, l_evtList[9].eventName);
             strcat(acStack_98, "@");
             dComIfGp_getEvent()->setSkipZev(this, acStack_98);
             dComIfGp_getEvent()->onSkipFade();

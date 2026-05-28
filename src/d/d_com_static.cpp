@@ -1,4 +1,4 @@
-#include "d/d_com_static.h"
+﻿#include "d/d_com_static.h"
 #include "d/d_debug_viewer.h"
 #include "d/d_demo.h"
 #include "d/d_s_play.h"
@@ -261,21 +261,21 @@ daCanBall_c::Hio_c::Hio_c() {
 }
 
 void daCanBall_c::Hio_c::genMessage(JORMContext* mctx) {
-    mctx->genLabel("§ 鉄球のパラメータ設定  §\n", 0x80000001);
-    mctx->genSlider("鉄球の寿命", &field_0x38, 0, 500);
-    mctx->genSlider("重力加速度", &field_0x8, -20.0, 0.0);
-    mctx->genSlider("落下最高速度", &field_0xc, -50.0, 0.0);
-    mctx->genSlider("床の跳ね返り係数", &field_0x10, 0.0, 1.0);
-    mctx->genSlider("床の跳ね返り最小値", &field_0x14, 0.0, 10.0);
-    mctx->genSlider("壁の跳ね返り係数", &field_0x18, 0.0, 1.0);
-    mctx->genSlider("壁の跳ね返り最小値", &field_0x1c, 0.0, 10.0);
-    mctx->genSlider("画面を揺らす最小値", &field_0x20, 0.0, 10.0);
-    mctx->genSlider("初速度", &field_0x24, 0.0, 200.0);
-    mctx->genSlider("加速度", &field_0x28, 0.0, 200.0);
-    mctx->genSlider("最高速度", &field_0x2c, 0.0, 200.0);
-    mctx->genSlider("着地煙のサイズ", &field_0x30, 0.0, 20.0);
-    mctx->genSlider("バレルの長さ", &field_0x34, 200.0, 400.0);
-    mctx->genSlider("消滅する時の時間", &field_0x3c, -100.0, 100.0);
+    mctx->genLabel("Â§ é‰„çƒã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿è¨­å®š  Â§\n", 0x80000001);
+    mctx->genSlider("é‰„çƒã®å¯¿å‘½", &field_0x38, 0, 500);
+    mctx->genSlider("é‡åŠ›åŠ é€Ÿåº¦", &field_0x8, -20.0, 0.0);
+    mctx->genSlider("è½ä¸‹æœ€é«˜é€Ÿåº¦", &field_0xc, -50.0, 0.0);
+    mctx->genSlider("åºŠã®è·³ã­è¿”ã‚Šä¿‚æ•°", &field_0x10, 0.0, 1.0);
+    mctx->genSlider("åºŠã®è·³ã­è¿”ã‚Šæœ€å°å€¤", &field_0x14, 0.0, 10.0);
+    mctx->genSlider("å£ã®è·³ã­è¿”ã‚Šä¿‚æ•°", &field_0x18, 0.0, 1.0);
+    mctx->genSlider("å£ã®è·³ã­è¿”ã‚Šæœ€å°å€¤", &field_0x1c, 0.0, 10.0);
+    mctx->genSlider("ç”»é¢ã‚’æºã‚‰ã™æœ€å°å€¤", &field_0x20, 0.0, 10.0);
+    mctx->genSlider("åˆé€Ÿåº¦", &field_0x24, 0.0, 200.0);
+    mctx->genSlider("åŠ é€Ÿåº¦", &field_0x28, 0.0, 200.0);
+    mctx->genSlider("æœ€é«˜é€Ÿåº¦", &field_0x2c, 0.0, 200.0);
+    mctx->genSlider("ç€åœ°ç…™ã®ã‚µã‚¤ã‚º", &field_0x30, 0.0, 20.0);
+    mctx->genSlider("ãƒãƒ¬ãƒ«ã®é•·ã•", &field_0x34, 200.0, 400.0);
+    mctx->genSlider("æ¶ˆæ»…ã™ã‚‹æ™‚ã®æ™‚é–“", &field_0x3c, -100.0, 100.0);
 }
 #endif
 
@@ -351,13 +351,13 @@ const char* daSetBgObj_c::getArcName(fopAc_ac_c* i_this) {
 
     u32 r30 = fopAcM_GetParam(i_this);
     u16 r29 = fopAcM_GetParam(i_this);
-    sprintf(arcName, "@bg%04x", r29);
+    SAFE_SPRINTF(arcName, "@bg%04x", r29);
 
     if (DEBUG && r30 & 0x80000000) {
-        OS_REPORT("\e[43;30m旧仕様の地形ユニットMoveBGが残っています！！！\n\e[m");
+        OS_REPORT("\e[43;30mæ—§ä»•æ§˜ã®åœ°å½¢ãƒ¦ãƒ‹ãƒƒãƒˆMoveBGãŒæ®‹ã£ã¦ã„ã¾ã™ï¼ï¼ï¼\n\e[m");
         u16 r28 = r30 >> 12 & 0x1FF;
         u16 r27 = r30 & 0xFFF;
-        sprintf(arcName, "@%03x%03x", r28, (u16)r27);
+        SAFE_SPRINTF(arcName, "@%03x%03x", r28, (u16)r27);
     }
     return arcName;
 }

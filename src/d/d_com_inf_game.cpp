@@ -1,4 +1,4 @@
-/**
+﻿/**
  * d_com_inf_game.cpp
  * Game Information
  */
@@ -2649,7 +2649,7 @@ static void dComIfGs_setWarpItemData(int param_0, char const* i_stage, cXyz i_po
 
 void dComIfG_play_c::setWarpItemData(char const* i_stage, cXyz i_pos, s16 i_angle, s8 i_roomNo,
                                      u8 param_4, u8 param_5) {
-    strcpy(mItemInfo.mWarpItemData.mWarpItemStage, i_stage);
+    SAFE_STRCPY(mItemInfo.mWarpItemData.mWarpItemStage, i_stage);
     mItemInfo.mWarpItemData.mWarpItemPos.set(i_pos);
     mItemInfo.mWarpItemData.mWarpItemAngle = i_angle;
     mItemInfo.mWarpItemData.mWarpItemRoom = i_roomNo;
@@ -2736,7 +2736,7 @@ void* dComIfG_getOldStageRes(char const* i_resName) {
 
 char* dComIfG_getRoomArcName(int i_roomNo) {
     static char buf[32];
-    sprintf(buf, "R%02d_00", i_roomNo);
+    SAFE_SPRINTF(buf, "R%02d_00", i_roomNo);
     return buf;
 }
 
@@ -2955,7 +2955,7 @@ void dComIfGs_onVisitedRoom(int i_roomNo) {
         u8 region = dComIfG_getNowCalcRegion();
         if (region != 0xFF && !dComIfGs_isRegionBit(region)) {
             dComIfGs_onRegionBit(region);
-            OS_REPORT("●●●●リージョン%d　到達フラグ立ちました！！！！！●●●●●\n", region);
+            OS_REPORT("â—â—â—â—ãƒªãƒ¼ã‚¸ãƒ§ãƒ³%dã€€åˆ°é”ãƒ•ãƒ©ã‚°ç«‹ã¡ã¾ã—ãŸï¼ï¼ï¼ï¼ï¼â—â—â—â—â—\n", region);
         }
 
         JUT_ASSERT(6169, 0 <= dComIfGp_roomControl_getStayNo() && dComIfGp_roomControl_getStayNo() < 64);

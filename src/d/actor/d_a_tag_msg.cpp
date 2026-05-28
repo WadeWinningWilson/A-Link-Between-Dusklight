@@ -1,4 +1,4 @@
-/**
+﻿/**
  * d_a_tag_msg.cpp
  *
  */
@@ -55,7 +55,7 @@ int daTag_Msg_c::create() {
         }
 
 #if DEBUG
-        mpHIO->mChild = mDoHIO_createChild("メッセ－ジタグ", mpHIO);
+        mpHIO->mChild = mDoHIO_createChild("ãƒ¡ãƒƒã‚»ï¼ã‚¸ã‚¿ã‚°", mpHIO);
 #endif
     }
 
@@ -219,7 +219,7 @@ void daTag_Msg_c::getParam() {
 
     scale.x *= 100.0f;
     scale.y *= 100.0f;
-    strcpy(mStaffName, "Tag_ms");
+    SAFE_STRCPY(mStaffName, "Tag_ms");
 }
 
 char* daTag_Msg_c::mEvtCutTBL[2] = {
@@ -261,7 +261,7 @@ daTag_Msg_HIO_c::~daTag_Msg_HIO_c() {
 }
 
 void daTag_Msg_HIO_c::genMessage(JORMContext* ctx) {
-    ctx->genCheckBox("デバグ描画ＯＮ  ", &m.mDebugAdjustON, 1, 0, NULL, -1, -1, 0x200, 0x18);
+    ctx->genCheckBox("ãƒ‡ãƒã‚°æç”»ï¼¯ï¼®  ", &m.mDebugAdjustON, 1, 0, NULL, -1, -1, 0x200, 0x18);
 }
 #endif
 

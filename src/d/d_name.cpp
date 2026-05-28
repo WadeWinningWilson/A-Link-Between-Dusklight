@@ -1,4 +1,4 @@
-#include "d/dolzel.h" // IWYU pragma: keep
+﻿#include "d/dolzel.h" // IWYU pragma: keep
 
 #include "d/d_name.h"
 #include "JSystem/J2DGraph/J2DTextBox.h"
@@ -18,51 +18,51 @@ static bool isPalOrJpn() {
 }
 
 static const char* l_mojiHira[65] = {
-    "あ", "い", "う", "え", "お", "か", "き", "く", "け", "こ", "さ", "し", "す",
-    "せ", "そ", "た", "ち", "つ", "て", "と", "な", "に", "ぬ", "ね", "の", "は",
-    "ひ", "ふ", "へ", "ほ", "ま", "み", "む", "め", "も", "や", "　", "ゆ", "　",
-    "よ", "ら", "り", "る", "れ", "ろ", "わ", "　", "を", "　", "ん", "ぁ", "ぃ",
-    "ぅ", "ぇ", "ぉ", "ゃ", "　", "ゅ", "　", "ょ", "っ", "　", "ー", "゛", "゜",
+    "ã‚", "ã„", "ã†", "ãˆ", "ãŠ", "ã‹", "ã", "ã", "ã‘", "ã“", "ã•", "ã—", "ã™",
+    "ã›", "ã", "ãŸ", "ã¡", "ã¤", "ã¦", "ã¨", "ãª", "ã«", "ã¬", "ã­", "ã®", "ã¯",
+    "ã²", "ãµ", "ã¸", "ã»", "ã¾", "ã¿", "ã‚€", "ã‚", "ã‚‚", "ã‚„", "ã€€", "ã‚†", "ã€€",
+    "ã‚ˆ", "ã‚‰", "ã‚Š", "ã‚‹", "ã‚Œ", "ã‚", "ã‚", "ã€€", "ã‚’", "ã€€", "ã‚“", "ã", "ãƒ",
+    "ã…", "ã‡", "ã‰", "ã‚ƒ", "ã€€", "ã‚…", "ã€€", "ã‚‡", "ã£", "ã€€", "ãƒ¼", "ã‚›", "ã‚œ",
 };
 
 static const char* l_mojiHira2[65] = {
-    "￥", "￥", "￥", "￥", "￥", "が", "ぎ", "ぐ", "げ", "ご", "ざ", "じ", "ず",
-    "ぜ", "ぞ", "だ", "ぢ", "づ", "で", "ど", "￥", "￥", "￥", "￥", "￥", "ば",
-    "び", "ぶ", "べ", "ぼ", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
-    "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
-    "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ãŒ", "ãŽ", "ã", "ã’", "ã”", "ã–", "ã˜", "ãš",
+    "ãœ", "ãž", "ã ", "ã¢", "ã¥", "ã§", "ã©", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ã°",
+    "ã³", "ã¶", "ã¹", "ã¼", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
 };
 
 static const char* l_mojiHira3[65] = {
-    "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
-    "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "ぱ",
-    "ぴ", "ぷ", "ぺ", "ぽ", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
-    "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
-    "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ã±",
+    "ã´", "ã·", "ãº", "ã½", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
 };
 
 static const char* l_mojikata[65] = {
-    "ア", "イ", "ウ", "エ", "オ", "カ", "キ", "ク", "ケ", "コ", "サ", "シ", "ス",
-    "セ", "ソ", "タ", "チ", "ツ", "テ", "ト", "ナ", "ニ", "ヌ", "ネ", "ノ", "ハ",
-    "ヒ", "フ", "ヘ", "ホ", "マ", "ミ", "ム", "メ", "モ", "ヤ", "　", "ユ", "　",
-    "ヨ", "ラ", "リ", "ル", "レ", "ロ", "ワ", "　", "ヲ", "　", "ン", "ァ", "ィ",
-    "ゥ", "ェ", "ォ", "ャ", "　", "ュ", "　", "ョ", "ッ", "　", "ー", "゛", "゜",
+    "ã‚¢", "ã‚¤", "ã‚¦", "ã‚¨", "ã‚ª", "ã‚«", "ã‚­", "ã‚¯", "ã‚±", "ã‚³", "ã‚µ", "ã‚·", "ã‚¹",
+    "ã‚»", "ã‚½", "ã‚¿", "ãƒ", "ãƒ„", "ãƒ†", "ãƒˆ", "ãƒŠ", "ãƒ‹", "ãƒŒ", "ãƒ", "ãƒŽ", "ãƒ",
+    "ãƒ’", "ãƒ•", "ãƒ˜", "ãƒ›", "ãƒž", "ãƒŸ", "ãƒ ", "ãƒ¡", "ãƒ¢", "ãƒ¤", "ã€€", "ãƒ¦", "ã€€",
+    "ãƒ¨", "ãƒ©", "ãƒª", "ãƒ«", "ãƒ¬", "ãƒ­", "ãƒ¯", "ã€€", "ãƒ²", "ã€€", "ãƒ³", "ã‚¡", "ã‚£",
+    "ã‚¥", "ã‚§", "ã‚©", "ãƒ£", "ã€€", "ãƒ¥", "ã€€", "ãƒ§", "ãƒƒ", "ã€€", "ãƒ¼", "ã‚›", "ã‚œ",
 };
 
 static const char* l_mojikata2[65] = {
-    "￥", "￥", "ヴ", "￥", "￥", "ガ", "ギ", "グ", "ゲ", "ゴ", "ザ", "ジ", "ズ",
-    "ゼ", "ゾ", "ダ", "ヂ", "ヅ", "デ", "ド", "￥", "￥", "￥", "￥", "￥", "バ",
-    "ビ", "ブ", "ベ", "ボ", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
-    "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
-    "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
+    "ï¿¥", "ï¿¥", "ãƒ´", "ï¿¥", "ï¿¥", "ã‚¬", "ã‚®", "ã‚°", "ã‚²", "ã‚´", "ã‚¶", "ã‚¸", "ã‚º",
+    "ã‚¼", "ã‚¾", "ãƒ€", "ãƒ‚", "ãƒ…", "ãƒ‡", "ãƒ‰", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ãƒ",
+    "ãƒ“", "ãƒ–", "ãƒ™", "ãƒœ", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
 };
 
 static const char* l_mojikata3[65] = {
-    "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
-    "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "パ",
-    "ピ", "プ", "ペ", "ポ", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
-    "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
-    "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥", "￥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ãƒ‘",
+    "ãƒ”", "ãƒ—", "ãƒš", "ãƒ", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
+    "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥", "ï¿¥",
 };
 
 static const char* l_mojiEisu[65] = {
@@ -105,10 +105,10 @@ static const char* l_mojiEisuPal_2[65] = {
 #endif
 
 #if TARGET_PC
-// '　' (full-width space)
+// 'ã€€' (full-width space)
 #define SPACE_MAYBE_FULL (dusk::version::isRegionJpn() ? '\x81\x40' : ' ')
 #elif REGION_JPN
-// '　' (full-width space)
+// 'ã€€' (full-width space)
 #define SPACE_MAYBE_FULL '\x81\x40'
 #else
 #define SPACE_MAYBE_FULL ' '
@@ -511,7 +511,7 @@ void dName_c::MojiSelectAnm3() {}
 
 int dName_c::mojiChange(u8 idx) {
     if (mChrInfo[idx].field_0x3 == 0 || mChrInfo[idx].mMojiSet == MOJI_EIGO ||
-        mChrInfo[idx].mCharacter == SJIS('　', 0x8140U))
+        mChrInfo[idx].mCharacter == SJIS('ã€€', 0x8140U))
     {
         return 0;
     }
@@ -525,20 +525,20 @@ int dName_c::mojiChange(u8 idx) {
     switch (mChrInfo[idx].mColumn) {
     case 0:
     case 10: {
-        if (mChrInfo[idx].mCharacter == SJIS('ウ', 0x8345U) || mChrInfo[idx].mCharacter == SJIS('ゥ', 0x8344U) ||
-            mChrInfo[idx].mCharacter == SJIS('ヴ', 0x8394U))
+        if (mChrInfo[idx].mCharacter == SJIS('ã‚¦', 0x8345U) || mChrInfo[idx].mCharacter == SJIS('ã‚¥', 0x8344U) ||
+            mChrInfo[idx].mCharacter == SJIS('ãƒ´', 0x8394U))
         {
             mChrInfo[idx].mCharacter++;
 
-            if (mChrInfo[idx].mCharacter == SJIS('ェ', 0x8346U)) {
-                mChrInfo[idx].mCharacter = SJIS('ヴ', 0x8394U);
+            if (mChrInfo[idx].mCharacter == SJIS('ã‚§', 0x8346U)) {
+                mChrInfo[idx].mCharacter = SJIS('ãƒ´', 0x8394U);
             }
 
-            if (mChrInfo[idx].mCharacter == SJIS('ヵ', 0x8395U)) {
-                mChrInfo[idx].mCharacter = SJIS('ゥ', 0x8344U);
+            if (mChrInfo[idx].mCharacter == SJIS('ãƒµ', 0x8395U)) {
+                mChrInfo[idx].mCharacter = SJIS('ã‚¥', 0x8344U);
             }
         } else {
-            int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ァ', 0x8340U) : SJIS('ぁ', 0x829fU);
+            int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ã‚¡', 0x8340U) : SJIS('ã', 0x829fU);
 
             if ((mChrInfo[idx].mCharacter - c) % 2) {
                 --mChrInfo[idx].mCharacter;
@@ -549,7 +549,7 @@ int dName_c::mojiChange(u8 idx) {
         break;
     }
     case 1: {
-        int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('カ', 0x834aU) : SJIS('か', 0x82a9U);
+        int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ã‚«', 0x834aU) : SJIS('ã‹', 0x82a9U);
         c = ((mChrInfo[idx].mCharacter - c) % 2);
 
         int c2 = c + 1;
@@ -557,7 +557,7 @@ int dName_c::mojiChange(u8 idx) {
         break;
     }
     case 2: {
-        int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('サ', 0x8354U) : SJIS('さ', 0x82b3U);
+        int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ã‚µ', 0x8354U) : SJIS('ã•', 0x82b3U);
         c = ((mChrInfo[idx].mCharacter - c) % 2);
 
         int c2 = c + 1;
@@ -567,24 +567,24 @@ int dName_c::mojiChange(u8 idx) {
     case 3:
     case 12: {
         if (mChrInfo[idx].mCharacter != (u32)0x815b) {
-            if (mChrInfo[idx].mCharacter <= (mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ヂ', 0x8361U) : SJIS('ぢ', 0x82c0U))) {
-                int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('タ', 0x835eU) : SJIS('た', 0x82bdU);
+            if (mChrInfo[idx].mCharacter <= (mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ãƒ‚', 0x8361U) : SJIS('ã¢', 0x82c0U))) {
+                int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ã‚¿', 0x835eU) : SJIS('ãŸ', 0x82bdU);
                 c = ((mChrInfo[idx].mCharacter - c) % 2);
 
                 int c2 = c + 1;
                 mChrInfo[idx].mCharacter = (mChrInfo[idx].mCharacter - c) + (c2 & 1);
             } else if (mChrInfo[idx].mCharacter <=
-                           (mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ド', 0x8368U) : SJIS('ど', 0x82c7U)) &&
+                           (mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ãƒ‰', 0x8368U) : SJIS('ã©', 0x82c7U)) &&
                        mChrInfo[idx].mCharacter >=
-                           (mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('テ', 0x8365U) : SJIS('て', 0x82c4U)))
+                           (mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ãƒ†', 0x8365U) : SJIS('ã¦', 0x82c4U)))
             {
-                int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('テ', 0x8365U) : SJIS('て', 0x82c4U);
+                int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ãƒ†', 0x8365U) : SJIS('ã¦', 0x82c4U);
                 c = ((mChrInfo[idx].mCharacter - c) % 2);
 
                 int c2 = c + 1;
                 mChrInfo[idx].mCharacter = (mChrInfo[idx].mCharacter - c) + (c2 & 1);
             } else {
-                int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ッ', 0x8362U) : SJIS('っ', 0x82c1U);
+                int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ãƒƒ', 0x8362U) : SJIS('ã£', 0x82c1U);
                 int c2 = (mChrInfo[idx].mCharacter - c) % 3;
 
                 int ivar2 = c2 + 1;
@@ -598,7 +598,7 @@ int dName_c::mojiChange(u8 idx) {
         break;
     }
     case 5: {
-        int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ハ', 0x836eU) : SJIS('は', 0x82cdU);
+        int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ãƒ', 0x836eU) : SJIS('ã¯', 0x82cdU);
         int c2 = (mChrInfo[idx].mCharacter - c) % 3;
 
         int ivar2 = c2 + 1;
@@ -611,7 +611,7 @@ int dName_c::mojiChange(u8 idx) {
     }
     case 7:
     case 11: {
-        int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ャ', 0x8383U) : SJIS('ゃ', 0x82e1U);
+        int c = mChrInfo[idx].mMojiSet != MOJI_HIRA ? SJIS('ãƒ£', 0x8383U) : SJIS('ã‚ƒ', 0x82e1U);
         c = ((mChrInfo[idx].mCharacter - c) % 2);
 
         int c2 = c + 1;
@@ -628,7 +628,7 @@ void dName_c::selectMojiSet() {
     #if REGION_JPN
     int moji = getMoji();
     if (moji != -1) {
-        if (moji == '゛' || moji == '゜') {
+        if (moji == 'ã‚›' || moji == 'ã‚œ') {
             if (mCurPos != 0) {
                 if (checkDakuon(moji, mCurPos - 1) == 1) {
                     mDoAud_seStart(Z2SE_SY_NAME_INPUT, NULL, 0, 0);
@@ -658,17 +658,17 @@ int dName_c::checkDakuon(int param_0, u8 param_1) {
         return 0;
     }
 
-    if (param_0 == '゜' && mChrInfo[param_1].mColumn != 5) {
+    if (param_0 == 'ã‚œ' && mChrInfo[param_1].mColumn != 5) {
         return 0;
     }
 
-    if (param_0 == '゛' &&
-        (mChrInfo[param_1].mCharacter == 'ウ' || mChrInfo[param_1].mCharacter == 'ヴ'))
+    if (param_0 == 'ã‚›' &&
+        (mChrInfo[param_1].mCharacter == 'ã‚¦' || mChrInfo[param_1].mCharacter == 'ãƒ´'))
     {
         return 1;
     }
 
-    if (param_0 == '゛' && mChrInfo[param_1].mColumn != 1 && mChrInfo[param_1].mColumn != 2 &&
+    if (param_0 == 'ã‚›' && mChrInfo[param_1].mColumn != 1 && mChrInfo[param_1].mColumn != 2 &&
         mChrInfo[param_1].mColumn != 3 && mChrInfo[param_1].mColumn != 5)
     {
         return 0;
@@ -680,46 +680,46 @@ int dName_c::checkDakuon(int param_0, u8 param_1) {
 int dName_c::setDakuon(int param_1, u8 param_2) {
     int c;
 
-    if (param_1 == '゛') {
+    if (param_1 == 'ã‚›') {
         switch (mChrInfo[param_2].mColumn) {
         case 0: {
             c = -1;
-            if (mChrInfo[param_2].mCharacter == 'ウ' || mChrInfo[param_2].mCharacter == 'ヴ') {
+            if (mChrInfo[param_2].mCharacter == 'ã‚¦' || mChrInfo[param_2].mCharacter == 'ãƒ´') {
                 c = 4;
-                mChrInfo[param_2].mCharacter = 'ヴ';
+                mChrInfo[param_2].mCharacter = 'ãƒ´';
             }
             break;
         }
         case 1: {
-            int c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'カ' : 'か';
+            int c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'ã‚«' : 'ã‹';
             c = (mChrInfo[param_2].mCharacter - c2) % 2;
             break;
         }
         case 2: {
-            int c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'サ' : 'さ';
+            int c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'ã‚µ' : 'ã•';
             c = (mChrInfo[param_2].mCharacter - c2) % 2;
             break;
         }
         case 3: {
             int c2;
             if (mChrInfo[param_2].mCharacter <=
-                ((mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'ヂ' : 'ぢ')))
+                ((mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'ãƒ‚' : 'ã¢')))
             {
-                c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'タ' : 'た';
+                c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'ã‚¿' : 'ãŸ';
                 c = (mChrInfo[param_2].mCharacter - c2) % 2;
             } else {
-                if (mChrInfo[param_2].mCharacter <= (mChrInfo[param_2].mMojiSet != 0 ? 'ド' : 'ど'))
+                if (mChrInfo[param_2].mCharacter <= (mChrInfo[param_2].mMojiSet != 0 ? 'ãƒ‰' : 'ã©'))
                 {
                     if (mChrInfo[param_2].mCharacter >=
-                        (mChrInfo[param_2].mMojiSet != 0 ? 'テ' : 'て'))
+                        (mChrInfo[param_2].mMojiSet != 0 ? 'ãƒ†' : 'ã¦'))
                     {
-                        c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'テ' : 'て';
+                        c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'ãƒ†' : 'ã¦';
                         c = (mChrInfo[param_2].mCharacter - c2) % 2;
                         break;
                     }
                 }
 
-                c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'ッ' : 'っ';
+                c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'ãƒƒ' : 'ã£';
                 c = (mChrInfo[param_2].mCharacter - c2) % 3;
                 if (c == 2) {
                     c = 1;
@@ -732,7 +732,7 @@ int dName_c::setDakuon(int param_1, u8 param_2) {
             break;
         }
         case 5: {
-            int c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'ハ' : 'は';
+            int c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'ãƒ' : 'ã¯';
             c = (mChrInfo[param_2].mCharacter - c2) % 3;
             break;
         }
@@ -751,8 +751,8 @@ int dName_c::setDakuon(int param_1, u8 param_2) {
 
             return 1;
         }
-    } else if (param_1 == '゜') {
-        int c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'ハ' : 'は';
+    } else if (param_1 == 'ã‚œ') {
+        int c2 = mChrInfo[param_2].mMojiSet != MOJI_HIRA ? 'ãƒ' : 'ã¯';
         c = (mChrInfo[param_2].mCharacter - c2) % 3;
         if (c != 2) {
             mChrInfo[param_2].mCharacter = mChrInfo[param_2].mCharacter + (2 - c);
@@ -908,7 +908,7 @@ void dName_c::setNameText() {
             #if REGION_JPN
             if (mChrInfo[i].mMojiSet == 2) {
             #endif
-                sprintf(mNameText[i],
+                SAFE_SPRINTF(mNameText[i],
                         "\x1b"
                         "CD\x1b"
                         "CR\x1b"
@@ -919,7 +919,7 @@ void dName_c::setNameText() {
                 );
             #if REGION_JPN
             } else {
-                sprintf(mNameText[i],
+                SAFE_SPRINTF(mNameText[i],
                         "\x1b"
                         "CD\x1b"
                         "CR\x1b"
@@ -1330,7 +1330,7 @@ void dName_c::mojiListChange() {
 
     char buf[74];
     for (int i = 0; i < 65; i++) {
-        strcpy(buf, "\x1B"
+        SAFE_STRCPY(buf, "\x1B"
                     "CD"
                     "\x1B"
                     "CR"
@@ -1346,7 +1346,7 @@ void dName_c::mojiListChange() {
                     "\x1B"
                     "GM[0]");
         strcat(buf, mojiSet[i]);
-        strcpy(mMojiText[i], buf);
+        SAFE_STRCPY(mMojiText[i], buf);
     }
 
     #if TARGET_PC || REGION_PAL || REGION_JPN

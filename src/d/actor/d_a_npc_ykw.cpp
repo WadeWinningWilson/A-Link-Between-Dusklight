@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file d_a_npc_ykw.cpp
  *
 */
@@ -193,29 +193,29 @@ void daNpc_ykW_HIO_c::listenPropertyEvent(const JORPropertyEvent* event) {
             sp8 = 0;
 
             daNpcT_cmnListenPropertyEvent(buffer, &sp8, &m.common);
-            sprintf(buffer + sp8, "%.3ff,\t//  飛ばしフレ－ム\n", m.mSkipFrame);
+            SAFE_SPRINTF(buffer + sp8, "%.3ff,\t//  é£›ã°ã—ãƒ•ãƒ¬ï¼ãƒ \n", m.mSkipFrame);
             sp8 = strlen(buffer);
-            sprintf(buffer + sp8, "%.3ff,\t//  飛ばし速度\n", m.mFlySpeed);
+            SAFE_SPRINTF(buffer + sp8, "%.3ff,\t//  é£›ã°ã—é€Ÿåº¦\n", m.mFlySpeed);
             sp8 = strlen(buffer);
-            sprintf(buffer + sp8, "%.3ff,\t//  飛ばし角度\n", m.mFlyAngle);
+            SAFE_SPRINTF(buffer + sp8, "%.3ff,\t//  é£›ã°ã—è§’åº¦\n", m.mFlyAngle);
             sp8 = strlen(buffer);
-            sprintf(buffer + sp8, "%.3ff,\t//  ジャンプ初速\n", m.mJumpInitialSpeed);
+            SAFE_SPRINTF(buffer + sp8, "%.3ff,\t//  ã‚¸ãƒ£ãƒ³ãƒ—åˆé€Ÿ\n", m.mJumpInitialSpeed);
             sp8 = strlen(buffer);
-            sprintf(buffer + sp8, "%.3ff,\t//  滑り加速\n", m.mSlidingAccel);
+            SAFE_SPRINTF(buffer + sp8, "%.3ff,\t//  æ»‘ã‚ŠåŠ é€Ÿ\n", m.mSlidingAccel);
             sp8 = strlen(buffer);
-            sprintf(buffer + sp8, "%.3ff,\t//  滑り速度\n", m.mSlidingSpeed);
+            SAFE_SPRINTF(buffer + sp8, "%.3ff,\t//  æ»‘ã‚Šé€Ÿåº¦\n", m.mSlidingSpeed);
             sp8 = strlen(buffer);
-            sprintf(buffer + sp8, "%d,   \t//  競争パラメ－タａ\n", m.mCompetParamA);
+            SAFE_SPRINTF(buffer + sp8, "%d,   \t//  ç«¶äº‰ãƒ‘ãƒ©ãƒ¡ï¼ã‚¿ï½\n", m.mCompetParamA);
             sp8 = strlen(buffer);
-            sprintf(buffer + sp8, "%d,   \t//  競争パラメ－タｂ\n", m.mCompetParamB);
+            SAFE_SPRINTF(buffer + sp8, "%d,   \t//  ç«¶äº‰ãƒ‘ãƒ©ãƒ¡ï¼ã‚¿ï½‚\n", m.mCompetParamB);
             sp8 = strlen(buffer);
-            sprintf(buffer + sp8, "%.3ff,\t//  競争パラメ－タｃ\n", m.mCompetParamC);
+            SAFE_SPRINTF(buffer + sp8, "%.3ff,\t//  ç«¶äº‰ãƒ‘ãƒ©ãƒ¡ï¼ã‚¿ï½ƒ\n", m.mCompetParamC);
             sp8 = strlen(buffer);
-            sprintf(buffer + sp8, "%d,   \t//  歩き時間\n", m.mWalkingTime);
+            SAFE_SPRINTF(buffer + sp8, "%d,   \t//  æ­©ãæ™‚é–“\n", m.mWalkingTime);
             sp8 = strlen(buffer);
-            sprintf(buffer + sp8, "%d,   \t//  停止時間\n", m.mDownTime);
+            SAFE_SPRINTF(buffer + sp8, "%d,   \t//  åœæ­¢æ™‚é–“\n", m.mDownTime);
             sp8 = strlen(buffer);
-            sprintf(buffer + sp8, "%d,   \t//  ステップの速さ\n", m.mStepSpeed);
+            SAFE_SPRINTF(buffer + sp8, "%d,   \t//  ã‚¹ãƒ†ãƒƒãƒ—ã®é€Ÿã•\n", m.mStepSpeed);
             sp8 = strlen(buffer);
 
             sp10.writeData(buffer, sp8);
@@ -230,26 +230,26 @@ void daNpc_ykW_HIO_c::listenPropertyEvent(const JORPropertyEvent* event) {
 
 void daNpc_ykW_HIO_c::genMessage(JORMContext* ctx) {
     daNpcT_cmnGenMessage(ctx, &m.common);
-    ctx->genSlider("飛ばしフレ－ム  ", &m.mSkipFrame, 0.0f, 100.0f);
-    ctx->genSlider("飛ばし速度      ", &m.mFlySpeed, 0.0f, 100.0f);
-    ctx->genSlider("飛ばし角度      ", &m.mFlyAngle, 0.0f, 90.0f);
-    ctx->genSlider("ジャンプ初速    ", &m.mJumpInitialSpeed, 0.0f, 100.0f);
-    ctx->genSlider("滑り加速        ", &m.mSlidingAccel, 0.0f, 8.0f);
-    ctx->genSlider("滑り速度        ", &m.mSlidingSpeed, 0.0f, 128.0f);
-    ctx->genSlider("競争パラメ－タａ", &m.mCompetParamA, -100, 100);
-    ctx->genSlider("競争パラメ－タｂ", &m.mCompetParamB, 1, 100);
-    ctx->genSlider("競争パラメ－タｃ", &m.mCompetParamC, 0.0, 10.0f);
-    ctx->genSlider("歩き時間        ", &m.mWalkingTime, 0, 10000);
-    ctx->genSlider("停止時間        ", &m.mDownTime, 0, 10000);
-    ctx->genSlider("ステップの速さ  ", &m.mStepSpeed, 0, 100);
+    ctx->genSlider("é£›ã°ã—ãƒ•ãƒ¬ï¼ãƒ   ", &m.mSkipFrame, 0.0f, 100.0f);
+    ctx->genSlider("é£›ã°ã—é€Ÿåº¦      ", &m.mFlySpeed, 0.0f, 100.0f);
+    ctx->genSlider("é£›ã°ã—è§’åº¦      ", &m.mFlyAngle, 0.0f, 90.0f);
+    ctx->genSlider("ã‚¸ãƒ£ãƒ³ãƒ—åˆé€Ÿ    ", &m.mJumpInitialSpeed, 0.0f, 100.0f);
+    ctx->genSlider("æ»‘ã‚ŠåŠ é€Ÿ        ", &m.mSlidingAccel, 0.0f, 8.0f);
+    ctx->genSlider("æ»‘ã‚Šé€Ÿåº¦        ", &m.mSlidingSpeed, 0.0f, 128.0f);
+    ctx->genSlider("ç«¶äº‰ãƒ‘ãƒ©ãƒ¡ï¼ã‚¿ï½", &m.mCompetParamA, -100, 100);
+    ctx->genSlider("ç«¶äº‰ãƒ‘ãƒ©ãƒ¡ï¼ã‚¿ï½‚", &m.mCompetParamB, 1, 100);
+    ctx->genSlider("ç«¶äº‰ãƒ‘ãƒ©ãƒ¡ï¼ã‚¿ï½ƒ", &m.mCompetParamC, 0.0, 10.0f);
+    ctx->genSlider("æ­©ãæ™‚é–“        ", &m.mWalkingTime, 0, 10000);
+    ctx->genSlider("åœæ­¢æ™‚é–“        ", &m.mDownTime, 0, 10000);
+    ctx->genSlider("ã‚¹ãƒ†ãƒƒãƒ—ã®é€Ÿã•  ", &m.mStepSpeed, 0, 100);
     // "File export"
-    ctx->genButton("ファイル書き出し", 0x40000002);
+    ctx->genButton("ãƒ•ã‚¡ã‚¤ãƒ«æ›¸ãå‡ºã—", 0x40000002);
 }
 #endif
 
 daNpc_ykW_c::~daNpc_ykW_c() {
     // "daNpc_ykW_c -> destruct"
-    OS_REPORT("|%06d:%x|daNpc_ykW_c -> デストラクト\n", g_Counter.mCounter0, this);
+    OS_REPORT("|%06d:%x|daNpc_ykW_c -> ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ãƒˆ\n", g_Counter.mCounter0, this);
 
     if (heap != NULL) {
         mpMorf[0]->stopZelAnime();
@@ -330,7 +330,7 @@ int daNpc_ykW_c::create() {
 #if DEBUG
         this->mpHIO = &l_HIO;
         // "Snow woman"
-        mpHIO->entryHIO("雪女");
+        mpHIO->entryHIO("é›ªå¥³");
 #endif
 
         reset();
@@ -1411,9 +1411,9 @@ int daNpc_ykW_c::cutGoIntoBossRoom(int param_0) {
 
         if (skip != 0 && (prm == 0 || prm == 4)) {
             if (prm == 0) {
-                strcpy(unkStrBuf1, l_evtList[4].eventName);
+                SAFE_STRCPY(unkStrBuf1, l_evtList[4].eventName);
             } else {
-                strcpy(unkStrBuf1, l_evtList[5].eventName);
+                SAFE_STRCPY(unkStrBuf1, l_evtList[5].eventName);
             }
             strcat(unkStrBuf1, "@");
             dComIfGp_getEvent()->setSkipZev(this, unkStrBuf1);

@@ -1,4 +1,4 @@
-//
+﻿//
 // Door Spiral
 //
 
@@ -94,9 +94,9 @@ const char* daSpiral_c::getBmd(int i_type) {
 const char* daSpiral_c::getBmd2(int i_type) {
     static char bmdName[32];
     if (i_type == daSpiral_TYPE_DOWN_e) {
-        sprintf(bmdName, "door-stairSpiralU.bmd");
+        SAFE_SPRINTF(bmdName, "door-stairSpiralU.bmd");
     } else {
-        sprintf(bmdName, "door-stairSpiralD.bmd");
+        SAFE_SPRINTF(bmdName, "door-stairSpiralD.bmd");
     }
 
     return bmdName;
@@ -144,14 +144,14 @@ bool daSpiral_c::debugCheckParam() {
         u8 fRoomNo = door_param2_c::getFRoomNo(this);
         if (fRoomNo == 0x3F) {
             // "Spiral Staircase: No room number specified!\n"
-            OS_REPORT_ERROR("螺旋階段：部屋番号指定がありません！\n");
+            OS_REPORT_ERROR("èžºæ—‹éšŽæ®µï¼šéƒ¨å±‹ç•ªå·æŒ‡å®šãŒã‚ã‚Šã¾ã›ã‚“ï¼\n");
             rt = true;
         }
 
         u8 fOption = door_param2_c::getFrontOption(this);
         if (fOption == 2) {
             // "Spiral Staircase: Key option is not supported!\n"
-            OS_REPORT_ERROR("螺旋階段：鍵オプションは対応していません！\n");
+            OS_REPORT_ERROR("èžºæ—‹éšŽæ®µï¼šéµã‚ªãƒ—ã‚·ãƒ§ãƒ³ã¯å¯¾å¿œã—ã¦ã„ã¾ã›ã‚“ï¼\n");
             rt = true;
         }
 
@@ -196,7 +196,7 @@ int daSpiral_c::create() {
         break;
     default:
         // "Spiral Staircase back-door option setting is incorrect!<%d>\n"
-        OS_REPORT_ERROR("螺旋階段の裏オプション設定が正しくありません！<%d>\n", back_option);
+        OS_REPORT_ERROR("èžºæ—‹éšŽæ®µã®è£ã‚ªãƒ—ã‚·ãƒ§ãƒ³è¨­å®šãŒæ­£ã—ãã‚ã‚Šã¾ã›ã‚“ï¼<%d>\n", back_option);
         JUT_ASSERT(300, 0);
         break;
     }
@@ -309,7 +309,7 @@ void daSpiral_c::setEventPrm() {
     daSpiral_c* other = (daSpiral_c*)fopAcM_Search(searchSpiralSub, this);
     if (other == NULL) {
         // "Spiral Staircase: No matching spiral staircase!\n"
-        OS_REPORT_ERROR("螺旋階段：対になる螺旋階段がありません！\n");
+        OS_REPORT_ERROR("èžºæ—‹éšŽæ®µï¼šå¯¾ã«ãªã‚‹èžºæ—‹éšŽæ®µãŒã‚ã‚Šã¾ã›ã‚“ï¼\n");
         JUT_ASSERT(488, 0);
     }
 
@@ -497,7 +497,7 @@ int daSpiral_c::demoProc() {
         case daSpiral_DEMOACT_SETPOS_e:
             setNextSpiral();
             // "Spiral Staircase: force player move!<%d>"
-            OS_REPORT("\x1B[33m螺旋階段：プレイヤー強制移動！<%d>\n\x1B[m", g_Counter.mCounter0);
+            OS_REPORT("\x1B[33mèžºæ—‹éšŽæ®µï¼šãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼å¼·åˆ¶ç§»å‹•ï¼<%d>\n\x1B[m", g_Counter.mCounter0);
             mTimer = 10;
             break;
         case daSpiral_DEMOACT_STOP_OPEN_e:

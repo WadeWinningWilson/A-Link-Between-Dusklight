@@ -1,4 +1,4 @@
-#include "d/dolzel.h" // IWYU pragma: keep
+﻿#include "d/dolzel.h" // IWYU pragma: keep
 
 #include "JSystem/JKernel/JKRAramArchive.h"
 #include "JSystem/JKernel/JKRExpHeap.h"
@@ -49,14 +49,14 @@ void dStage_nextStage_c::set(const char* i_stage, s8 i_roomId, s16 i_point, s8 i
 
 void dStage_SetErrorRoom() {
     // "Room information might be corrupted. \nPlease try to re-convert. \n"
-    OSReport_Error("部屋情報が、多分ですが壊れています。\n変換し直してみてください。\n");
-    OS_REPORT("または、ステージの情報が部屋にあります。↓を参考に。\n");
+    OSReport_Error("éƒ¨å±‹æƒ…å ±ãŒã€å¤šåˆ†ã§ã™ãŒå£Šã‚Œã¦ã„ã¾ã™ã€‚\nå¤‰æ›ã—ç›´ã—ã¦ã¿ã¦ãã ã•ã„ã€‚\n");
+    OS_REPORT("ã¾ãŸã¯ã€ã‚¹ãƒ†ãƒ¼ã‚¸ã®æƒ…å ±ãŒéƒ¨å±‹ã«ã‚ã‚Šã¾ã™ã€‚â†“ã‚’å‚è€ƒã«ã€‚\n");
 }
 
 void dStage_SetErrorStage() {
     // "Stage information might be corrupted. \nPlease try to re-convert. "
-    OSReport_Error("ステージ情報が、多分ですが壊れています。\n変換し直してみてください。");
-    OS_REPORT("または、部屋の情報がステージにあります。↓を参考に。\n");
+    OSReport_Error("ã‚¹ãƒ†ãƒ¼ã‚¸æƒ…å ±ãŒã€å¤šåˆ†ã§ã™ãŒå£Šã‚Œã¦ã„ã¾ã™ã€‚\nå¤‰æ›ã—ç›´ã—ã¦ã¿ã¦ãã ã•ã„ã€‚");
+    OS_REPORT("ã¾ãŸã¯ã€éƒ¨å±‹ã®æƒ…å ±ãŒã‚¹ãƒ†ãƒ¼ã‚¸ã«ã‚ã‚Šã¾ã™ã€‚â†“ã‚’å‚è€ƒã«ã€‚\n");
 }
 
 static dStage_KeepDoorInfo DoorInfo;
@@ -160,7 +160,7 @@ void dStage_startStage_c::set(const char* i_Name, s8 i_RoomNo, s16 i_Point, s8 i
         dusk::SafeStringCopy(mName, i_Name);
     }
 #else
-    strcpy(mName, i_Name);
+    SAFE_STRCPY(mName, i_Name);
 #endif
     mRoomNo = i_RoomNo;
     mPoint = i_Point;
@@ -234,7 +234,7 @@ void dStage_roomControl_c::initZone() {
 
 dStage_roomDt_c* dStage_roomControl_c::getStatusRoomDt(int i_statusIdx) {
     if (i_statusIdx < 0 || i_statusIdx >= 0x40) {
-        OS_REPORT_ERROR("getStatusRoomDt():部屋番号範囲外:%d(0～%d)\n", i_statusIdx, 0x40);
+        OS_REPORT_ERROR("getStatusRoomDt():éƒ¨å±‹ç•ªå·ç¯„å›²å¤–:%d(0ï½ž%d)\n", i_statusIdx, 0x40);
         return NULL;
     }
     return &mStatus[i_statusIdx].mRoomDt;
@@ -482,7 +482,7 @@ void* dStage_roomControl_c::roomDzs_c::add(u8 i_no, u8 roomNo) {
     void** dzs = m_dzs + i_no;
     if (*dzs == NULL) {
         char dzsName[20];
-        sprintf(dzsName, "%s/room%d.dzs", dComIfGp_getStartStageName(), roomNo);
+        SAFE_SPRINTF(dzsName, "%s/room%d.dzs", dComIfGp_getStartStageName(), roomNo);
         JUT_ASSERT(1167, strlen(dzsName) <= sizeof(dzsName));
 
         u32 expandSize =
@@ -1532,7 +1532,7 @@ dStage_objectNameInf* dStage_searchName(char const* objName) {
         obj++;
     }
 
-    OS_REPORT("オブジェクト名無し！！<%s>\n", objName);
+    OS_REPORT("ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆåç„¡ã—ï¼ï¼<%s>\n", objName);
     return NULL;
 }
 
@@ -1692,7 +1692,7 @@ static int dStage_playerInit(dStage_dt_c* i_stage, void* i_data, int num, void* 
             DuskLog.fatal("Failed to find player start point for next stage! Requested point: {}, Valid points: [{}]",
                           point, fmt::join(valid_points, ", "));
 #else
-            OS_REPORT_ERROR("プレイヤーが発見できません。[No.%d]\n切り替えの情報や処理の確認をお願いします。\n", point);
+            OS_REPORT_ERROR("ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãŒç™ºè¦‹ã§ãã¾ã›ã‚“ã€‚[No.%d]\nåˆ‡ã‚Šæ›¿ãˆã®æƒ…å ±ã‚„å‡¦ç†ã®ç¢ºèªã‚’ãŠé¡˜ã„ã—ã¾ã™ã€‚\n", point);
 #endif
         }
         JUT_ASSERT(1636, i != num);
@@ -2240,7 +2240,7 @@ static int dStage_stEventInfoInit(dStage_dt_c* i_stage, void* i_data, int entryN
     UNUSED(param_3);
     dStage_MapEventInfo_c* mapEvent = (dStage_MapEventInfo_c*)((char*)i_data + 4);
     i_stage->setMapEventInfo(mapEvent);
-    OS_REPORT("\nステージイベントデータ初期化！！ %d %x\n\n", mapEvent->num, mapEvent->m_entries);
+    OS_REPORT("\nã‚¹ãƒ†ãƒ¼ã‚¸ã‚¤ãƒ™ãƒ³ãƒˆãƒ‡ãƒ¼ã‚¿åˆæœŸåŒ–ï¼ï¼ %d %x\n\n", mapEvent->num, mapEvent->m_entries);
     return 1;
 }
 
@@ -2396,7 +2396,7 @@ static void readMult(dStage_dt_c* i_stage, dStage_Multi_c* multi, bool useOldRes
 
             if (dzs == NULL) {
                 char dzsName[11];
-                sprintf(dzsName, "room%d.dzs", info->mRoomNo);
+                SAFE_SPRINTF(dzsName, "room%d.dzs", info->mRoomNo);
                 JUT_ASSERT(3548, strlen(dzsName) <= sizeof(dzsName));
 
                 if (useOldRes) {
@@ -2797,7 +2797,7 @@ void dStage_Delete() {
             dComIfGp_resetOldMulti();
         }
     } else {
-        OS_REPORT(">>> ステージデータ保持！\n");
+        OS_REPORT(">>> ã‚¹ãƒ†ãƒ¼ã‚¸ãƒ‡ãƒ¼ã‚¿ä¿æŒï¼\n");
     }
 
     dComIfG_deleteObjectResMain("Event");
@@ -2907,7 +2907,7 @@ int dStage_changeScene4Event(int i_exitId, s8 room_no, int i_wipe, bool param_3,
 
     if (scls == NULL) {
         // "%d: %d: Scene List doesn't exist. \n"
-        OSReport_Error("%s: %d: シーンリストがありません。\n", "d_stage.cpp", 4865);
+        OSReport_Error("%s: %d: ã‚·ãƒ¼ãƒ³ãƒªã‚¹ãƒˆãŒã‚ã‚Šã¾ã›ã‚“ã€‚\n", "d_stage.cpp", 4865);
         return 0;
     }
 

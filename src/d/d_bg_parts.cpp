@@ -1,4 +1,4 @@
-#include "d/dolzel.h" // IWYU pragma: keep
+﻿#include "d/dolzel.h" // IWYU pragma: keep
 
 #include "d/d_bg_parts.h"
 #include "d/d_s_play.h"
@@ -255,7 +255,7 @@ void dBgp_c::share_c::reset() {
 
 const char* dBgp_c::share_c::getArcName() {
     static char arcName[8];
-    sprintf(arcName, "@mt%04x", mId);
+    SAFE_SPRINTF(arcName, "@mt%04x", mId);
     return arcName;
 }
 
@@ -430,7 +430,7 @@ dBgp_c::packet_c::packet_c() {
 void dBgp_c::create(s8 i_roomNo, void* i_data) {
     mPointer = i_data;
     mPacket.setRoomNo(i_roomNo);
-    strcpy(mArcName, dComIfG_getRoomArcName(i_roomNo));
+    SAFE_STRCPY(mArcName, dComIfG_getRoomArcName(i_roomNo));
 
     if (mPointer != NULL) {
         JKRExpHeap* block = dStage_roomControl_c::getMemoryBlock(i_roomNo);
@@ -457,7 +457,7 @@ void dBgp_c::create(s8 i_roomNo, void* i_data) {
         unit_group_class* unitGroup = mapUnit->groups;
         for (int i = 0; i < mapUnit->num; i++) {
             char resName[16];
-            sprintf(resName, "bp%04d.dzb", i);
+            SAFE_SPRINTF(resName, "bp%04d.dzb", i);
 
             cBgD_t* dzb = (cBgD_t*)dComIfG_getStageRes(mArcName, resName);
             if (dzb != NULL) {
@@ -534,7 +534,7 @@ int dBgp_c::remove() {
 
 const char* dBgp_c::getArcName(u16 i_id, u16 i_arg) {
     static char arcName[8];
-    sprintf(arcName, "@%03x%03x", i_id, i_arg);
+    SAFE_SPRINTF(arcName, "@%03x%03x", i_id, i_arg);
     return arcName;
 }
 
@@ -648,7 +648,7 @@ int dBgp_c::execute(bool param_0) {
                 u16 arg = getArg0(unitData->field_0x0);
                 const char* arcName = getArcName(id, arg);
                 if (dComIfG_getObjectResInfo(arcName)->getResNum() != 6) {
-                    OS_REPORT("特殊オブジェクト<%s>セット！！\n", arcName);
+                    OS_REPORT("ç‰¹æ®Šã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ<%s>ã‚»ãƒƒãƒˆï¼ï¼\n", arcName);
                     cXyz pos(unitData->pos);
                     csXyz angle(0, unitData->angle, 0);
                     cXyz size(1.0f, 1.0f, 1.0f);

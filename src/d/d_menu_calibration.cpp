@@ -1,4 +1,4 @@
-/**
+﻿/**
  * d_menu_calibration.cpp
  * Wii Remote Calibration Option Menu
  */
@@ -252,7 +252,7 @@ void dMenu_Calibration_c::setCalibrationValue() {
 void dMenu_Calibration_c::setAButtonString(u16 i_stringID) {
     if (i_stringID == 0) {
         for (int i = 0; i < 5; i++) {
-            strcpy(mpAButtonString[i]->getStringPtr(), "");
+            SAFE_STRCPY(mpAButtonString[i]->getStringPtr(), "");
         }
     } else {
         for (int i = 0; i < 5; i++) {
@@ -264,7 +264,7 @@ void dMenu_Calibration_c::setAButtonString(u16 i_stringID) {
 void dMenu_Calibration_c::setBButtonString(u16 i_stringID) {
     if (i_stringID == 0) {
         for (int i = 0; i < 5; i++) {
-            strcpy(mpBButtonString[i]->getStringPtr(), "");
+            SAFE_STRCPY(mpBButtonString[i]->getStringPtr(), "");
         }
     } else {
         for (int i = 0; i < 5; i++) {
@@ -276,7 +276,7 @@ void dMenu_Calibration_c::setBButtonString(u16 i_stringID) {
 void dMenu_Calibration_c::setStepString(u16 i_stringID) {
     if (i_stringID == 0) {
         for (int i = 0; i < 3; i++) {
-            strcpy(mpStepString[i]->getStringPtr(), "");
+            SAFE_STRCPY(mpStepString[i]->getStringPtr(), "");
         }
     } else {
         for (int i = 0; i < 3; i++) {
@@ -288,7 +288,7 @@ void dMenu_Calibration_c::setStepString(u16 i_stringID) {
 void dMenu_Calibration_c::setExplainString(u16 i_stringID) {
     if (i_stringID == 0) {
         for (int i = 0; i < 3; i++) {
-            strcpy(mpExplainString[i]->getStringPtr(), "");
+            SAFE_STRCPY(mpExplainString[i]->getStringPtr(), "");
         }
     } else {
         for (int i = 0; i < 3; i++) {

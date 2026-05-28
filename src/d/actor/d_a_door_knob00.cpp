@@ -1,4 +1,4 @@
-//
+﻿//
 // Door Knob
 //
 
@@ -55,7 +55,7 @@ static char* l_bmd_base_name = "door-knob_";
 char* daKnob20_c::getBmd() {
     static char l_bmdName[32];
 
-    sprintf(l_bmdName, "%s%02d.bmd", l_bmd_base_name, knob_param_c::getDoorModel(this));
+    SAFE_SPRINTF(l_bmdName, "%s%02d.bmd", l_bmd_base_name, knob_param_c::getDoorModel(this));
     return l_bmdName;
 }
 
@@ -393,7 +393,7 @@ int daKnob20_c::demoProc() {
     case 10:
         dComIfGp_event_offHindFlag(1);
         if (field_0x5c0.doFlow(this, NULL, 0) != 0) {
-            OS_REPORT("会話終了！\n"); // Conversation over!
+            OS_REPORT("ä¼šè©±çµ‚äº†ï¼\n"); // Conversation over!
             int msgNo = knob_param_c::getMsgNo(this);
             if (msgNo != 0xffff) {
                 field_0x5c0.init(this, msgNo, 0, NULL);

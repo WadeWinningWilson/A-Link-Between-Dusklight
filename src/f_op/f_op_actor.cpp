@@ -1,4 +1,4 @@
-/**
+﻿/**
  * f_op_actor.cpp
  * Actor base process class
 */
@@ -112,7 +112,7 @@ void print_error_check_c::check() {
     if (mPrintErrors != print_errors) {
         static char l_name[dStage_NAME_LENGTH];
         fopAcM_getNameString(mpActor, l_name);
-        OS_REPORT("\x1b[36m↑%s_SUBMETHOD %08x %08x %s %s\n\x1b[m",
+        OS_REPORT("\x1b[36mâ†‘%s_SUBMETHOD %08x %08x %s %s\n\x1b[m",
             mName, mpActor, mpActor->base.base.name, fpcDbSv_getNameString(mpActor->base.base.name), l_name);
     }
 
@@ -121,7 +121,7 @@ void print_error_check_c::check() {
         if (mTimeMs != 0 && tick_diff > OSMicrosecondsToTicks(mTimeMs)) {
             static char l_name[dStage_NAME_LENGTH];
             fopAcM_getNameString(mpActor, l_name);
-            OSReport_Warning("%s_SUBMETHOD 処理時間ながすぎ %4d us [%s] %s\n",
+            OSReport_Warning("%s_SUBMETHOD å‡¦ç†æ™‚é–“ãªãŒã™ãŽ %4d us [%s] %s\n",
                 mName, OSTicksToMicroseconds(tick_diff), fpcDbSv_getNameString(mpActor->base.base.name), l_name);
         }
     }
@@ -182,16 +182,16 @@ fopac_HIO_c::~fopac_HIO_c() {}
 static fopac_HIO_c l_HIO;
 
 void fopac_HIO_c::genMessage(JORMContext* mctx) {
-    mctx->genLabel("処理速度調査用", 0x80000001);
-    mctx->genSlider("アクター番号", &mActorNum, 0, 4000);
-    mctx->genCheckBox("動作静止", &mStopExecute, 0x1);
-    mctx->genCheckBox("描画停止", &mStopDraw, 0x1);
-    mctx->genCheckBox("Bボタンでアクター番号を表示", &mBBtnInfoDisp, 0x1);
-    mctx->genCheckBox("メソッド速度調査", &print_error_check_c::mThresholdEnable, 0x1);
-    mctx->genCheckBox("最高優先度", &print_error_check_c::mPriorityMaximum, 0x1);
-    mctx->genCheckBox("PRINT抑制", &print_error_check_c::mPrintDisable, 0x1);
+    mctx->genLabel("å‡¦ç†é€Ÿåº¦èª¿æŸ»ç”¨", 0x80000001);
+    mctx->genSlider("ã‚¢ã‚¯ã‚¿ãƒ¼ç•ªå·", &mActorNum, 0, 4000);
+    mctx->genCheckBox("å‹•ä½œé™æ­¢", &mStopExecute, 0x1);
+    mctx->genCheckBox("æç”»åœæ­¢", &mStopDraw, 0x1);
+    mctx->genCheckBox("Bãƒœã‚¿ãƒ³ã§ã‚¢ã‚¯ã‚¿ãƒ¼ç•ªå·ã‚’è¡¨ç¤º", &mBBtnInfoDisp, 0x1);
+    mctx->genCheckBox("ãƒ¡ã‚½ãƒƒãƒ‰é€Ÿåº¦èª¿æŸ»", &print_error_check_c::mThresholdEnable, 0x1);
+    mctx->genCheckBox("æœ€é«˜å„ªå…ˆåº¦", &print_error_check_c::mPriorityMaximum, 0x1);
+    mctx->genCheckBox("PRINTæŠ‘åˆ¶", &print_error_check_c::mPrintDisable, 0x1);
 
-    mctx->genLabel("メソッド閾値", 0);
+    mctx->genLabel("ãƒ¡ã‚½ãƒƒãƒ‰é–¾å€¤", 0);
     mctx->genSlider("EXECUTE", &print_error_check_c::sEXECUTE.timeMs, 0, 10000);
     mctx->genSlider("CREATE", &print_error_check_c::sCREATE.timeMs, 0, 10000);
     mctx->genSlider("DELETE", &print_error_check_c::sDELETE.timeMs, 0, 10000);
@@ -231,7 +231,7 @@ static int fopAc_Draw(void* i_this) {
         if (l_HIO.field_0x8 != l_HIO.mStopDraw) {
             static char l_name[dStage_NAME_LENGTH];
             fopAcM_getNameString(actor, l_name);
-            OSReport("<%s> の描画を停止します\n", l_name);
+            OSReport("<%s> ã®æç”»ã‚’åœæ­¢ã—ã¾ã™\n", l_name);
         }
 
         l_HIO.field_0x8 = l_HIO.mStopDraw;
@@ -275,7 +275,7 @@ static int fopAc_Draw(void* i_this) {
     char message[40];
     char name[dStage_NAME_LENGTH];
     fopAcM_getNameString(actor, name);
-    sprintf(message, "%s（描画処理）", name);
+    SAFE_SPRINTF(message, "%sï¼ˆæç”»å‡¦ç†ï¼‰", name);
     fapGm_HIO_c::stopCpuTimer(message);
     #endif
 
@@ -293,7 +293,7 @@ static int fopAc_Execute(void* i_this) {
         if (l_HIO.field_0x7 != l_HIO.mStopExecute) {
             static char l_name[dStage_NAME_LENGTH];
             fopAcM_getNameString(actor, l_name);
-            OSReport("<%s> の処理を停止します\n", l_name);
+            OSReport("<%s> ã®å‡¦ç†ã‚’åœæ­¢ã—ã¾ã™\n", l_name);
         }
 
         l_HIO.field_0x7 = l_HIO.mStopExecute;
@@ -310,7 +310,7 @@ static int fopAc_Execute(void* i_this) {
     {
         static char l_name[dStage_NAME_LENGTH];
         fopAcM_getNameString(actor, l_name);
-        OSReport("！！！<%s> が範囲外にいます！！！\n", l_name);
+        OSReport("ï¼ï¼ï¼<%s> ãŒç¯„å›²å¤–ã«ã„ã¾ã™ï¼ï¼ï¼\n", l_name);
     }
 
     JUT_ASSERT(685, -1.0e32f < actor->current.pos.x && actor->current.pos.x < 1.0e32f && -1.0e32f < actor->current.pos.y && actor->current.pos.y < 1.0e32f && -1.0e32f < actor->current.pos.z && actor->current.pos.z < 1.0e32f);
@@ -368,7 +368,7 @@ static int fopAc_Execute(void* i_this) {
     char message[40];
     char name[dStage_NAME_LENGTH];
     fopAcM_getNameString(actor, name);
-    sprintf(message, "%s（計算処理）", name);
+    SAFE_SPRINTF(message, "%sï¼ˆè¨ˆç®—å‡¦ç†ï¼‰", name);
     fapGm_HIO_c::stopCpuTimer(message);
     #endif
 
@@ -512,7 +512,7 @@ static int fopAc_Create(void* i_this) {
                 if (sw != 0xFF && dComIfGs_isSwitch(sw, actor->home.roomNo) &&
                     profile->group == fopAc_ENEMY_e)
                 {
-                    OS_WARNING("f_op_actor.cpp マップツール設定により敵グループは削除されました！\n");
+                    OS_WARNING("f_op_actor.cpp ãƒžãƒƒãƒ—ãƒ„ãƒ¼ãƒ«è¨­å®šã«ã‚ˆã‚Šæ•µã‚°ãƒ«ãƒ¼ãƒ—ã¯å‰Šé™¤ã•ã‚Œã¾ã—ãŸï¼\n");
                     return cPhs_ERROR_e;
                 }
             } else {
@@ -520,7 +520,7 @@ static int fopAc_Create(void* i_this) {
                 if (sw != 0xFF && !dComIfGs_isSwitch(sw, actor->home.roomNo) &&
                     profile->group == fopAc_ENEMY_e)
                 {
-                    OS_WARNING("f_op_actor.cpp マップツール設定により敵グループは削除されました！\n");
+                    OS_WARNING("f_op_actor.cpp ãƒžãƒƒãƒ—ãƒ„ãƒ¼ãƒ«è¨­å®šã«ã‚ˆã‚Šæ•µã‚°ãƒ«ãƒ¼ãƒ—ã¯å‰Šé™¤ã•ã‚Œã¾ã—ãŸï¼\n");
                     return cPhs_ERROR_e;
                 }
             }
@@ -548,7 +548,7 @@ static int fopAc_Create(void* i_this) {
 
     #if DEBUG
     if (l_HIO.mId < 0) {
-        l_HIO.mId = mDoHIO_CREATE_CHILD("処理速度チェック用", &l_HIO);
+        l_HIO.mId = mDoHIO_CREATE_CHILD("å‡¦ç†é€Ÿåº¦ãƒã‚§ãƒƒã‚¯ç”¨", &l_HIO);
     }
     #endif
 

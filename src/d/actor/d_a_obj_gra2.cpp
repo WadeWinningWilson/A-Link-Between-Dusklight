@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file d_a_obj_gra2.cpp
  *
 */
@@ -36,27 +36,27 @@ public:
 
     void genMessage(JORMContext* ctext) {
         // featured offset
-        ctext->genSlider("注目オフセット  ", &m.field_0x00, 0.0f, 100.0f);
+        ctext->genSlider("æ³¨ç›®ã‚ªãƒ•ã‚»ãƒƒãƒˆ  ", &m.field_0x00, 0.0f, 100.0f);
         // gravity
-        ctext->genSlider("重力            ", &m.mGravity, -99.0f, 99.0f);
+        ctext->genSlider("é‡åŠ›            ", &m.mGravity, -99.0f, 99.0f);
         // scale
-        ctext->genSlider("スケ－ル        ", &m.field_0x08, 0.0f, 100.0f);
+        ctext->genSlider("ã‚¹ã‚±ï¼ãƒ«        ", &m.field_0x08, 0.0f, 100.0f);
         // interpolated frames
-        ctext->genSlider("補間フレ－ム    ", &m.field_0x0c, 0.0f, 100.0f);
+        ctext->genSlider("è£œé–“ãƒ•ãƒ¬ï¼ãƒ     ", &m.field_0x0c, 0.0f, 100.0f);
         // height
-        ctext->genSlider("高さ            ", &m.field_0x14, 0.0f, 999.0f);
+        ctext->genSlider("é«˜ã•            ", &m.field_0x14, 0.0f, 999.0f);
         // knee-length
-        ctext->genSlider("ひざ丈          ", &m.mWallR, 0.0f, 999.0f);
+        ctext->genSlider("ã²ã–ä¸ˆ          ", &m.mWallR, 0.0f, 999.0f);
         // width
-        ctext->genSlider("幅              ", &m.mWallH, 0.0f, 999.0f);
+        ctext->genSlider("å¹…              ", &m.mWallH, 0.0f, 999.0f);
         // weight
-        ctext->genSlider("体重            ", &m.mWeight, 0.0f, 255.0f);
+        ctext->genSlider("ä½“é‡            ", &m.mWeight, 0.0f, 255.0f);
         // back upper x angle
-        ctext->genSlider("背のＸ角上限    ", &m.field_0x24, -90.0f, 90.0f);
+        ctext->genSlider("èƒŒã®ï¼¸è§’ä¸Šé™    ", &m.field_0x24, -90.0f, 90.0f);
         // back lower x angle
-        ctext->genSlider("背のＸ角下限    ", &m.field_0x28, -90.0f, 90.0f);
+        ctext->genSlider("èƒŒã®ï¼¸è§’ä¸‹é™    ", &m.field_0x28, -90.0f, 90.0f);
         // back upper y angle
-        ctext->genSlider("背のＹ角上限    ", &m.field_0x2c, -180.0f, 179.0f);
+        ctext->genSlider("èƒŒã®ï¼¹è§’ä¸Šé™    ", &m.field_0x2c, -180.0f, 179.0f);
         // --- TODO ---
         ctext->genSlider("", &m.field_0x30, -180.0f, 179.0f);
         ctext->genSlider("", &m.field_0x34, -90.0f, 90.0f);
@@ -76,7 +76,7 @@ public:
         ctext->genSlider("", &m.field_0x64, 0.0f, 999.0f);
         ctext->genSlider("", &m.field_0x68, 0, 1000);
         // Goron Soldier Guard
-        ctext->genLabel("\n-----------------------【見張りゴロン兵】", 0);
+        ctext->genLabel("\n-----------------------ã€è¦‹å¼µã‚Šã‚´ãƒ­ãƒ³å…µã€‘", 0);
         ctext->genSlider("", &m.field_0x70, 0.0f, 1.0f);
         ctext->genSlider("", &m.field_0x74, 0.0f, 1.0f);
         ctext->genSlider("", &m.field_0x84, 0.0f, 1.0f);
@@ -85,7 +85,7 @@ public:
         ctext->genSlider("", &m.field_0x9c, 0, 1000);
         ctext->genSlider("", &m.field_0x9a, 0, 1000);
         // Rolling attack start demo parameters
-        ctext->genLabel("\n○転がり攻撃開始デモ用パラメータ", 0);
+        ctext->genLabel("\nâ—‹è»¢ãŒã‚Šæ”»æ’ƒé–‹å§‹ãƒ‡ãƒ¢ç”¨ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿", 0);
         ctext->genSlider("", &m.field_0xac, 0, 1000);
         ctext->genSlider("", &m.field_0xae, 0, 1000);
         ctext->genSlider("", &m.field_0xb0, 0, 1000);
@@ -94,26 +94,26 @@ public:
         ctext->genSlider("", &m.field_0xb8, 0.0f, 999.0f);
         ctext->genSlider("", &m.field_0xbc, 0.0f, 999.0f);
         // Goron Regular Soldier
-        ctext->genLabel("\n-----------------------【ゴロン一般兵】", 0);
+        ctext->genLabel("\n-----------------------ã€ã‚´ãƒ­ãƒ³ä¸€èˆ¬å…µã€‘", 0);
         // search radius (10)
-        ctext->genSlider("サ－チ半径(10)  ", &m.field_0x6c, 0.0f, 9999.0f);
+        ctext->genSlider("ã‚µï¼ãƒåŠå¾„(10)  ", &m.field_0x6c, 0.0f, 9999.0f);
         // turning speed
-        ctext->genSlider("旋回速度        ", &m.field_0x88, 0, 0x4000);
+        ctext->genSlider("æ—‹å›žé€Ÿåº¦        ", &m.field_0x88, 0, 0x4000);
         // walking speed
-        ctext->genSlider("歩く速度        ", &m.field_0x90, 0.0f, 999.0f);
+        ctext->genSlider("æ­©ãé€Ÿåº¦        ", &m.field_0x90, 0.0f, 999.0f);
         // punch start distance
-        ctext->genSlider("パンチ開始距離  ", &m.field_0x94, 0.0f, 999.0f);
+        ctext->genSlider("ãƒ‘ãƒ³ãƒé–‹å§‹è·é›¢  ", &m.field_0x94, 0.0f, 999.0f);
         // post attack wait time
-        ctext->genSlider("攻撃後待ち時間  ", &m.field_0x98, 0, 1000);
+        ctext->genSlider("æ”»æ’ƒå¾Œå¾…ã¡æ™‚é–“  ", &m.field_0x98, 0, 1000);
         // attack hand radius
-        ctext->genSlider("攻撃時の手の半径", &m.field_0x8c, 0.0f, 999.0f);
+        ctext->genSlider("æ”»æ’ƒæ™‚ã®æ‰‹ã®åŠå¾„", &m.field_0x8c, 0.0f, 999.0f);
         // return speed
-        ctext->genSlider("戻る速度        ", &m.field_0xa0, 0.0f, 9999.0f);
+        ctext->genSlider("æˆ»ã‚‹é€Ÿåº¦        ", &m.field_0xa0, 0.0f, 9999.0f);
         ctext->genLabel("\n", 0);
         // debug draw ON
-        ctext->genCheckBox("デバグ描画ＯＮ  ", &m.field_0x8a, 0x1);
+        ctext->genCheckBox("ãƒ‡ãƒã‚°æç”»ï¼¯ï¼®  ", &m.field_0x8a, 0x1);
         // Export File
-        ctext->genButton("ファイル書き出し", 0x40000002);
+        ctext->genButton("ãƒ•ã‚¡ã‚¤ãƒ«æ›¸ãå‡ºã—", 0x40000002);
     }
 
     void listenPropertyEvent(const JORPropertyEvent*) {
@@ -539,7 +539,7 @@ const char* daObj_GrA_c::getResName() {
 
 u8 daObj_GrA_c::getMode() {
     u32 uVar1 = fopAcM_GetParam(this) >> 28 & 3;
-    strcpy(field_0x744, "Obj_grA");
+    SAFE_STRCPY(field_0x744, "Obj_grA");
 
     switch (uVar1) {
         case 1:
@@ -665,7 +665,7 @@ int daObj_GrA_c::init() {
     mpHIO = &l_HIO;
 #if DEBUG
     // "Goron"
-    mpHIO->entryHIO("ゴロン");
+    mpHIO->entryHIO("ã‚´ãƒ­ãƒ³");
 #endif
     attention_info.distances[fopAc_attn_CARRY_e] = 40;
     attention_info.distances[fopAc_attn_BATTLE_e] = 22;
@@ -1468,11 +1468,11 @@ int daObj_GrA_c::talk(void* param_1) {
                 char* cVar1;
                 int choiceNo = mMsgFlow.getChoiceNo();
                 if (choiceNo != 0) {
-                    cVar1 = "はい"; // Yes
+                    cVar1 = "ã¯ã„"; // Yes
                 } else {
-                    cVar1 = "いいえ"; // No
+                    cVar1 = "ã„ã„ãˆ"; // No
                 }
-                OS_REPORT("二択分岐 %s %d\n", cVar1, choiceNo);
+                OS_REPORT("äºŒæŠžåˆ†å² %s %d\n", cVar1, choiceNo);
                 #endif
 
                 if (mMsgFlow.getChoiceNo() == 0) {
