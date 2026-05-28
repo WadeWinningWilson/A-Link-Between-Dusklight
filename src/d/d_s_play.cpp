@@ -1,4 +1,4 @@
-/**
+﻿/**
  * d_s_play.cpp
  * Main Gameplay Scene
  */
@@ -131,9 +131,9 @@ static u8 doPreLoad = 1;
 
 #if DEBUG
 void dScnPly_preLoad_HIO_c::genMessage(JORMContext* mctx) {
-    mctx->startComboBox("プリロード", &doPreLoad);
-    mctx->genComboBoxItem("しない", 0);
-    mctx->genComboBoxItem("する", 1);
+    mctx->startComboBox("ãƒ—ãƒªãƒ­ãƒ¼ãƒ‰", &doPreLoad);
+    mctx->genComboBoxItem("ã—ãªã„", 0);
+    mctx->genComboBoxItem("ã™ã‚‹", 1);
     mctx->endComboBox();
 }
 #endif
@@ -163,62 +163,62 @@ void dScnPly_reg_childHIO_c::genMessage(JORMContext* mctx) {
     char textbuf[8];
 
     for (int i = 0; i < 20; i++) {
-        sprintf(textbuf, " F(%02d)", i);
+        SAFE_SPRINTF(textbuf, " F(%02d)", i);
         mctx->genSlider(textbuf, &mFloatReg[i], -100000.0f, 100000.0f);
     }
 
     for (int i = 20; i < 25; i++) {
-        sprintf(textbuf, " F(%02d)", i);
+        SAFE_SPRINTF(textbuf, " F(%02d)", i);
         mctx->genSlider(textbuf, &mFloatReg[i], 0.0f, 1.0f);
     }
 
     for (int i = 25; i < 30; i++) {
-        sprintf(textbuf, " F(%02d)", i);
+        SAFE_SPRINTF(textbuf, " F(%02d)", i);
         mctx->genSlider(textbuf, &mFloatReg[i], -1.0f, 1.0f);
     }
 
     for (int i = 0; i < 10; i++) {
-        sprintf(textbuf, " S(%02d)", i);
+        SAFE_SPRINTF(textbuf, " S(%02d)", i);
         mctx->genSlider(textbuf, &mShortReg[i], -0x8000, 0x7FFF);
     }
 }
 
 void dScnPly_reg_HIO_c::genMessage(JORMContext* mctx) {
     static const char l_nodeName[][20] = {
-        "森田(T)",
-        "まつたに(D)",
-        "イワワキ(I)",
-        "ささ(S)",
-        "うめみや(U)",
-        "おがわ(O)",
-        "坂口(Y)",
-        "さかい(K)",
-        "ハラ(B)",
-        "すみよし(M)",
-        "(空)-たけした(A)",
-        "吉田茂樹(P)",
-        "(空)-のま(N)",
-        "(空)-にしわき(W)",
-        "(空)-榊原政郎(J)",
-        "はやかわ(H)",
-        "(空)-定本(V)",
-        "(空)-西川(X)",
-        "(空)-鈴木（ゆ）(Z)",
-        "なかにし(n)",
-        "くわじま(k)",
-        "おかじま(o)",
-        "山崎(y)",
-        "芦田(a)",
-        "岡田(h)",
-        "高橋(t)",
+        "æ£®ç”°(T)",
+        "ã¾ã¤ãŸã«(D)",
+        "ã‚¤ãƒ¯ãƒ¯ã‚­(I)",
+        "ã•ã•(S)",
+        "ã†ã‚ã¿ã‚„(U)",
+        "ãŠãŒã‚(O)",
+        "å‚å£(Y)",
+        "ã•ã‹ã„(K)",
+        "ãƒãƒ©(B)",
+        "ã™ã¿ã‚ˆã—(M)",
+        "(ç©º)-ãŸã‘ã—ãŸ(A)",
+        "å‰ç”°èŒ‚æ¨¹(P)",
+        "(ç©º)-ã®ã¾(N)",
+        "(ç©º)-ã«ã—ã‚ã(W)",
+        "(ç©º)-æ¦ŠåŽŸæ”¿éƒŽ(J)",
+        "ã¯ã‚„ã‹ã‚(H)",
+        "(ç©º)-å®šæœ¬(V)",
+        "(ç©º)-è¥¿å·(X)",
+        "(ç©º)-éˆ´æœ¨ï¼ˆã‚†ï¼‰(Z)",
+        "ãªã‹ã«ã—(n)",
+        "ãã‚ã˜ã¾(k)",
+        "ãŠã‹ã˜ã¾(o)",
+        "å±±å´Ž(y)",
+        "èŠ¦ç”°(a)",
+        "å²¡ç”°(h)",
+        "é«˜æ©‹(t)",
     };
 
     // "Example usage"
-    mctx->genLabel("使い方例", 0);
-    mctx->genLabel("R_HS(00-09) ... はやかわレジスタ -32768 - +32767(short)", 0);
-    mctx->genLabel("R_HF(00-19) ... はやかわレジスタ -100000.0 - +100000.0", 0);
-    mctx->genLabel("R_HF(20-24) ... はやかわレジスタ  0.0f - 1.0f", 0);
-    mctx->genLabel("R_HF(25-29) ... はやかわレジスタ -1.0f - 1.0f", 0);
+    mctx->genLabel("ä½¿ã„æ–¹ä¾‹", 0);
+    mctx->genLabel("R_HS(00-09) ... ã¯ã‚„ã‹ã‚ãƒ¬ã‚¸ã‚¹ã‚¿ -32768 - +32767(short)", 0);
+    mctx->genLabel("R_HF(00-19) ... ã¯ã‚„ã‹ã‚ãƒ¬ã‚¸ã‚¹ã‚¿ -100000.0 - +100000.0", 0);
+    mctx->genLabel("R_HF(20-24) ... ã¯ã‚„ã‹ã‚ãƒ¬ã‚¸ã‚¹ã‚¿  0.0f - 1.0f", 0);
+    mctx->genLabel("R_HF(25-29) ... ã¯ã‚„ã‹ã‚ãƒ¬ã‚¸ã‚¹ã‚¿ -1.0f - 1.0f", 0);
 
     for (int i = 0; i < 26; i++) {
         mctx->genNode(l_nodeName[i], &mChildReg[i], 0, 0);
@@ -250,7 +250,7 @@ void dScnPly_preset_HIO_c::exePreset() {
             }
         } else {
             // "\nLoading error loop"
-            OS_REPORT("\n読み込みしっぱいのまきまき");
+            OS_REPORT("\nèª­ã¿è¾¼ã¿ã—ã£ã±ã„ã®ã¾ãã¾ã");
         }
 
         g_presetHIO.filename_buf[0] = 0;
@@ -259,37 +259,37 @@ void dScnPly_preset_HIO_c::exePreset() {
 
 void dScnPly_preset_HIO_c::genMessage(JORMContext* mctx) {
     // "Load situation file"
-    mctx->genLabel("【状況ファイルを読みこみ】", 0x80000001);
+    mctx->genLabel("ã€çŠ¶æ³ãƒ•ã‚¡ã‚¤ãƒ«ã‚’èª­ã¿ã“ã¿ã€‘", 0x80000001);
     // "Items and Status can be set in a file"
-    mctx->genLabel("　アイテムやステータスの状態をファイルで指定することが出来ます。", 0x80000001);
+    mctx->genLabel("ã€€ã‚¢ã‚¤ãƒ†ãƒ ã‚„ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã®çŠ¶æ…‹ã‚’ãƒ•ã‚¡ã‚¤ãƒ«ã§æŒ‡å®šã™ã‚‹ã“ã¨ãŒå‡ºæ¥ã¾ã™ã€‚", 0x80000001);
     mctx->genLabel("", 0x80000001);
 
     // "Click here to select a file to load!"
-    mctx->genButton("ここを押して読込ファイルを指定して下さい！", 0x40000001);
+    mctx->genButton("ã“ã“ã‚’æŠ¼ã—ã¦èª­è¾¼ãƒ•ã‚¡ã‚¤ãƒ«ã‚’æŒ‡å®šã—ã¦ä¸‹ã•ã„ï¼", 0x40000001);
     mctx->genLabel("", 0x80000001);
 
     // "- Loading during gameplay will automatically return you to the debug menu."
-    mctx->genLabel("・ゲーム中に読み込むと自動的にデバッグメニューへ戻ります。", 0x80000001);
+    mctx->genLabel("ãƒ»ã‚²ãƒ¼ãƒ ä¸­ã«èª­ã¿è¾¼ã‚€ã¨è‡ªå‹•çš„ã«ãƒ‡ãƒãƒƒã‚°ãƒ¡ãƒ‹ãƒ¥ãƒ¼ã¸æˆ»ã‚Šã¾ã™ã€‚", 0x80000001);
     // "- When loading a file from the debug menu,"
-    mctx->genLabel("・デバッグメニューでファイルを読み込んだ際", 0x80000001);
+    mctx->genLabel("ãƒ»ãƒ‡ãƒãƒƒã‚°ãƒ¡ãƒ‹ãƒ¥ãƒ¼ã§ãƒ•ã‚¡ã‚¤ãƒ«ã‚’èª­ã¿è¾¼ã‚“ã éš›", 0x80000001);
     // "  if a stage command exists the game will temporarily load then return to the menu."
-    mctx->genLabel("　stage命令がある場合は一旦ゲームに入りメニューへと戻ります。", 0x80000001);
+    mctx->genLabel("ã€€stageå‘½ä»¤ãŒã‚ã‚‹å ´åˆã¯ä¸€æ—¦ã‚²ãƒ¼ãƒ ã«å…¥ã‚Šãƒ¡ãƒ‹ãƒ¥ãƒ¼ã¸ã¨æˆ»ã‚Šã¾ã™ã€‚", 0x80000001);
     // "  (To position the cursor)"
-    mctx->genLabel("　（カーソルを合わせる為）", 0x80000001);
+    mctx->genLabel("ã€€ï¼ˆã‚«ãƒ¼ã‚½ãƒ«ã‚’åˆã‚ã›ã‚‹ç‚ºï¼‰", 0x80000001);
     mctx->genLabel("", 0x80000001);
 
     // "Reset state to before loading situation file"
-    mctx->genButton("状況ファイルを読み込んでいない状態に戻す", 0x40000003);
+    mctx->genButton("çŠ¶æ³ãƒ•ã‚¡ã‚¤ãƒ«ã‚’èª­ã¿è¾¼ã‚“ã§ã„ãªã„çŠ¶æ…‹ã«æˆ»ã™", 0x40000003);
     mctx->genLabel("", 0x80000001);
     mctx->genLabel("", 0x80000001);
 
     // "Click here for the situation file location!"
-    mctx->genButton("状況ファイルの格納場所はコチラを押下！", 0x40000005);
+    mctx->genButton("çŠ¶æ³ãƒ•ã‚¡ã‚¤ãƒ«ã®æ ¼ç´å ´æ‰€ã¯ã‚³ãƒãƒ©ã‚’æŠ¼ä¸‹ï¼", 0x40000005);
     mctx->genLabel("\\\\10.121.2.9\\zelda$\\JMAP_FOLDER\\situation", 0x80000001);
     // "For details about the situation file contents, please refer to Nakamura-san's website"
-    mctx->genLabel("ファイルの内容については中村さんのＨＰをご参照ください", 0x80000001);
+    mctx->genLabel("ãƒ•ã‚¡ã‚¤ãƒ«ã®å†…å®¹ã«ã¤ã„ã¦ã¯ä¸­æ‘ã•ã‚“ã®ï¼¨ï¼°ã‚’ã”å‚ç…§ãã ã•ã„", 0x80000001);
     // "Click here to launch browser and view webpage."
-    mctx->genButton("ここを押すとブラウザが起動し表示されます。", 0x40000004);
+    mctx->genButton("ã“ã“ã‚’æŠ¼ã™ã¨ãƒ–ãƒ©ã‚¦ã‚¶ãŒèµ·å‹•ã—è¡¨ç¤ºã•ã‚Œã¾ã™ã€‚", 0x40000004);
     mctx->genLabel("http://www-ead/~nakamuh/gc-zelda_2/misc/spec-situation_file.html", 0x80000001);
 }
 
@@ -299,7 +299,7 @@ void dScnPly_preset_HIO_c::listenPropertyEvent(const JORPropertyEvent* event) {
 
     switch ((int)event->id) {
     case 0x40000001:
-        if (file.open(1, "すべてのファイル(*.*)\0*.*", NULL, NULL, NULL)) {
+        if (file.open(1, "ã™ã¹ã¦ã®ãƒ•ã‚¡ã‚¤ãƒ«(*.*)\0*.*", NULL, NULL, NULL)) {
             memset(mPresetData, 0, sizeof(mPresetData));
             field_0x2716 = 0;
             field_0x2717 = 1;
@@ -358,25 +358,25 @@ dScnPly_env_otherHIO_c::dScnPly_env_otherHIO_c() {
 
 void dScnPly_env_otherHIO_c::genMessage(JORMContext* mctx) {
     #if DEBUG
-    mctx->genCheckBox("影表示", &mDisplayShadows, 1);
-    mctx->genSlider("影濃さ", &mShadowDensity, 0.0f, 255.0f);
-    mctx->genCheckBox("被写界深度", &mDepthOfField, 1);
-    mctx->genCheckBox("ＬＯＤバイアス変更", &mAdjustLODBias, 1);
-    mctx->genCheckBox("カリングＦａｒ変更", &mAdjustCullFar, 1);
-    mctx->genSlider("カリングＦａｒ値", &mCullFarValue, 0.0f, 50000.0f);
-    mctx->genCheckBox("影イメージ表示", &mDisplayShadowImage, 1);
-    mctx->genCheckBox("影ポリゴン表示", &mDisplayShadowPoly, 1);
-    mctx->genCheckBox("透明円柱表示", &mDisplayTransparentCyl, 1);
-    mctx->genCheckBox("カリングボックス表示", &mDisplayCullBox, 1);
-    mctx->genCheckBox("パーティクル情報表示", &mDisplayParticleInfo, 1);
-    mctx->genButton("パーティクル履歴", 0x4000003);
-    mctx->genCheckBox("全部屋読み込み", &mLoadAllRooms, 1);
-    mctx->genButton("部屋メモリ", 0x4000001);
-    mctx->genButton("草、花、低木本数", 0x4000002);
-    mctx->genSlider("レールサイズ", &mRailSize, 0.0f, 100.0f);
-    mctx->genSlider("レールカラー(R)", &mRailColorR, 0, 0xff);
-    mctx->genSlider("レールカラー(G)", &mRailColorG, 0, 0xff);
-    mctx->genSlider("レールカラー(B)", &mRailColorB, 0, 0xff);
+    mctx->genCheckBox("å½±è¡¨ç¤º", &mDisplayShadows, 1);
+    mctx->genSlider("å½±æ¿ƒã•", &mShadowDensity, 0.0f, 255.0f);
+    mctx->genCheckBox("è¢«å†™ç•Œæ·±åº¦", &mDepthOfField, 1);
+    mctx->genCheckBox("ï¼¬ï¼¯ï¼¤ãƒã‚¤ã‚¢ã‚¹å¤‰æ›´", &mAdjustLODBias, 1);
+    mctx->genCheckBox("ã‚«ãƒªãƒ³ã‚°ï¼¦ï½ï½’å¤‰æ›´", &mAdjustCullFar, 1);
+    mctx->genSlider("ã‚«ãƒªãƒ³ã‚°ï¼¦ï½ï½’å€¤", &mCullFarValue, 0.0f, 50000.0f);
+    mctx->genCheckBox("å½±ã‚¤ãƒ¡ãƒ¼ã‚¸è¡¨ç¤º", &mDisplayShadowImage, 1);
+    mctx->genCheckBox("å½±ãƒãƒªã‚´ãƒ³è¡¨ç¤º", &mDisplayShadowPoly, 1);
+    mctx->genCheckBox("é€æ˜Žå††æŸ±è¡¨ç¤º", &mDisplayTransparentCyl, 1);
+    mctx->genCheckBox("ã‚«ãƒªãƒ³ã‚°ãƒœãƒƒã‚¯ã‚¹è¡¨ç¤º", &mDisplayCullBox, 1);
+    mctx->genCheckBox("ãƒ‘ãƒ¼ãƒ†ã‚£ã‚¯ãƒ«æƒ…å ±è¡¨ç¤º", &mDisplayParticleInfo, 1);
+    mctx->genButton("ãƒ‘ãƒ¼ãƒ†ã‚£ã‚¯ãƒ«å±¥æ­´", 0x4000003);
+    mctx->genCheckBox("å…¨éƒ¨å±‹èª­ã¿è¾¼ã¿", &mLoadAllRooms, 1);
+    mctx->genButton("éƒ¨å±‹ãƒ¡ãƒ¢ãƒª", 0x4000001);
+    mctx->genButton("è‰ã€èŠ±ã€ä½Žæœ¨æœ¬æ•°", 0x4000002);
+    mctx->genSlider("ãƒ¬ãƒ¼ãƒ«ã‚µã‚¤ã‚º", &mRailSize, 0.0f, 100.0f);
+    mctx->genSlider("ãƒ¬ãƒ¼ãƒ«ã‚«ãƒ©ãƒ¼(R)", &mRailColorR, 0, 0xff);
+    mctx->genSlider("ãƒ¬ãƒ¼ãƒ«ã‚«ãƒ©ãƒ¼(G)", &mRailColorG, 0, 0xff);
+    mctx->genSlider("ãƒ¬ãƒ¼ãƒ«ã‚«ãƒ©ãƒ¼(B)", &mRailColorB, 0, 0xff);
     #endif
 }
 
@@ -433,19 +433,19 @@ dScnPly_env_debugHIO_c::dScnPly_env_debugHIO_c() {
 
 void dScnPly_env_debugHIO_c::genMessage(JORMContext* mctx) {
     #if DEBUG
-    mctx->genLabel("【ボックスカリング(CULLSIZE_DEBUG)サイズ】", 0x80000001);
-    mctx->genSlider("最小Ｘ", &mBoxCullMinSize.x, -10000.0f, 10000.0f);
-    mctx->genSlider("最小Ｙ", &mBoxCullMinSize.y, -10000.0f, 10000.0f);
-    mctx->genSlider("最小Ｚ", &mBoxCullMinSize.z, -10000.0f, 10000.0f);
-    mctx->genSlider("最大Ｘ", &mBoxCullMaxSize.x, -10000.0f, 10000.0f);
-    mctx->genSlider("最大Ｙ", &mBoxCullMaxSize.y, -10000.0f, 10000.0f);
-    mctx->genSlider("最大Ｚ", &mBoxCullMaxSize.z, -10000.0f, 10000.0f);
+    mctx->genLabel("ã€ãƒœãƒƒã‚¯ã‚¹ã‚«ãƒªãƒ³ã‚°(CULLSIZE_DEBUG)ã‚µã‚¤ã‚ºã€‘", 0x80000001);
+    mctx->genSlider("æœ€å°ï¼¸", &mBoxCullMinSize.x, -10000.0f, 10000.0f);
+    mctx->genSlider("æœ€å°ï¼¹", &mBoxCullMinSize.y, -10000.0f, 10000.0f);
+    mctx->genSlider("æœ€å°ï¼º", &mBoxCullMinSize.z, -10000.0f, 10000.0f);
+    mctx->genSlider("æœ€å¤§ï¼¸", &mBoxCullMaxSize.x, -10000.0f, 10000.0f);
+    mctx->genSlider("æœ€å¤§ï¼¹", &mBoxCullMaxSize.y, -10000.0f, 10000.0f);
+    mctx->genSlider("æœ€å¤§ï¼º", &mBoxCullMaxSize.z, -10000.0f, 10000.0f);
 
-    mctx->genLabel("【球カリング(CULLSIZE_Q_DEBUG)サイズ】", 0x80000001);
-    mctx->genSlider("中心Ｘ", &mSphereCullCenter.x, -10000.0f, 10000.0f);
-    mctx->genSlider("中心Ｙ", &mSphereCullCenter.y, -10000.0f, 10000.0f);
-    mctx->genSlider("中心Ｚ", &mSphereCullCenter.z, -10000.0f, 10000.0f);
-    mctx->genSlider("半径", &mSphereCullRadius, -10000.0f, 10000.0f);
+    mctx->genLabel("ã€çƒã‚«ãƒªãƒ³ã‚°(CULLSIZE_Q_DEBUG)ã‚µã‚¤ã‚ºã€‘", 0x80000001);
+    mctx->genSlider("ä¸­å¿ƒï¼¸", &mSphereCullCenter.x, -10000.0f, 10000.0f);
+    mctx->genSlider("ä¸­å¿ƒï¼¹", &mSphereCullCenter.y, -10000.0f, 10000.0f);
+    mctx->genSlider("ä¸­å¿ƒï¼º", &mSphereCullCenter.z, -10000.0f, 10000.0f);
+    mctx->genSlider("åŠå¾„", &mSphereCullRadius, -10000.0f, 10000.0f);
     #endif
 }
 
@@ -460,8 +460,8 @@ void dScnPly_env_debugHIO_c::listenPropertyEvent(const JORPropertyEvent* event) 
 }
 
 void dScnPly_env_HIO_c::genMessage(JORMContext* mctx) {
-    mctx->genNode("デバッグ用", &mDebug, 0, 0);
-    mctx->genNode("その他", &mOther, 0, 0);
+    mctx->genNode("ãƒ‡ãƒãƒƒã‚°ç”¨", &mDebug, 0, 0);
+    mctx->genNode("ãã®ä»–", &mOther, 0, 0);
 }
 
 static u32 l_usedMemoryBlockSize = 0xFFFFFFFF;
@@ -649,7 +649,7 @@ static int dScnPly_Draw(dScnPly_c* i_this) {
     dDebugPad.Update();
 
     fapGm_HIO_c::printCpuTimer("");
-    fapGm_HIO_c::stopCpuTimer("ゲーム管理（計算処理２）");
+    fapGm_HIO_c::stopCpuTimer("ã‚²ãƒ¼ãƒ ç®¡ç†ï¼ˆè¨ˆç®—å‡¦ç†ï¼’ï¼‰");
     fapGm_HIO_c::printCpuTimer("");
     #endif
 
@@ -689,7 +689,7 @@ static int dScnPly_Draw(dScnPly_c* i_this) {
     }
 
     fapGm_HIO_c::printCpuTimer("");
-    fapGm_HIO_c::stopCpuTimer("ゲーム管理（描画処理）");
+    fapGm_HIO_c::stopCpuTimer("ã‚²ãƒ¼ãƒ ç®¡ç†ï¼ˆæç”»å‡¦ç†ï¼‰");
     #endif
 
     return 1;
@@ -718,15 +718,15 @@ static int dScnPly_Execute(dScnPly_c* i_this) {
         u32 var_r27 = OSGetTick() - l_sceneChangeStartTick;
         OS_REPORT("\x1b[33m");
         // "Scene transition time: %f seconds\n"
-        OS_REPORT("シーン切り替え時間　%f秒\n\x1B[m", (f32)OSTicksToMicroseconds(var_r27) / 1000000.0f);
+        OS_REPORT("ã‚·ãƒ¼ãƒ³åˆ‡ã‚Šæ›¿ãˆæ™‚é–“ã€€%fç§’\n\x1B[m", (f32)OSTicksToMicroseconds(var_r27) / 1000000.0f);
         lbl_8074CAE4 = 0;
 
         initUsedHeapSize();
         OS_REPORT("Game Heap <%d,%d,%d>\n", mDoExt_getGameHeap()->getTotalUsedSize(), mDoExt_getGameHeap()->getTotalFreeSize(), mDoExt_getGameHeap()->getFreeSize());
         OS_REPORT("Zelda Heap <%d,%d,%d>\n", mDoExt_getZeldaHeap()->getTotalUsedSize(), mDoExt_getZeldaHeap()->getTotalFreeSize(), mDoExt_getZeldaHeap()->getFreeSize());
         OS_REPORT("Archive Heap <%d,%d,%d>\n", mDoExt_getArchiveHeap()->getTotalUsedSize(), mDoExt_getArchiveHeap()->getTotalFreeSize(), mDoExt_getArchiveHeap()->getFreeSize());
-        OS_REPORT("最終残り　%d(%fM)\n", JFWSystem::getRootHeap()->getTotalFreeSize(), (f32)JFWSystem::getRootHeap()->getTotalFreeSize() / (f32)0x100000);
-        OS_REPORT("拡張最終残り　%d(%fM)\n", JKRGetRootHeap2()->getTotalFreeSize(), (f32)JKRGetRootHeap2()->getTotalFreeSize() / (f32)0x100000);
+        OS_REPORT("æœ€çµ‚æ®‹ã‚Šã€€%d(%fM)\n", JFWSystem::getRootHeap()->getTotalFreeSize(), (f32)JFWSystem::getRootHeap()->getTotalFreeSize() / (f32)0x100000);
+        OS_REPORT("æ‹¡å¼µæœ€çµ‚æ®‹ã‚Šã€€%d(%fM)\n", JKRGetRootHeap2()->getTotalFreeSize(), (f32)JKRGetRootHeap2()->getTotalFreeSize() / (f32)0x100000);
         OS_REPORT("\x1b[m");
     }
     #endif
@@ -821,7 +821,7 @@ static int dScnPly_Execute(dScnPly_c* i_this) {
 
     #if DEBUG
     fapGm_HIO_c::printCpuTimer("");
-    fapGm_HIO_c::stopCpuTimer("ゲーム管理（計算処理１）");
+    fapGm_HIO_c::stopCpuTimer("ã‚²ãƒ¼ãƒ ç®¡ç†ï¼ˆè¨ˆç®—å‡¦ç†ï¼‘ï¼‰");
     fapGm_HIO_c::printCpuTimer("");
     #endif
 
@@ -904,7 +904,7 @@ static int dScnPly_Delete(dScnPly_c* i_this) {
     dComIfGd_setView(NULL);
 
     if (preLoadNo >= 0) {
-        OS_REPORT("\x1b[32mプリロード解放\n\x1b[m");
+        OS_REPORT("\x1b[32mãƒ—ãƒªãƒ­ãƒ¼ãƒ‰è§£æ”¾\n\x1b[m");
 
         const char** resname_table = PreLoadInfoT[preLoadNo].resNameTbl;
         int res_num = PreLoadInfoT[preLoadNo].resNameNum;
@@ -1023,7 +1023,7 @@ static BOOL heapSizeCheck(const char* i_label, JKRExpHeap* i_heap, s32 i_base, B
     int var_r30 = std::abs(total - i_base);
     if (var_r30 > 64) {
         // "%d (0x%x) byte difference!\n"
-        OS_REPORT("%d (0x%x) バイトの差があります！\n", var_r30, var_r30);
+        OS_REPORT("%d (0x%x) ãƒã‚¤ãƒˆã®å·®ãŒã‚ã‚Šã¾ã™ï¼\n", var_r30, var_r30);
         i_heap->dump();
         return FALSE;
     }
@@ -1216,9 +1216,9 @@ static int phase_1(dScnPly_c* i_this) {
         if (dComIfGp_getStartStageLayer() != -1 && dComIfGp_getStartStageLayer() < 10 && dComIfG_play_c::getLayerNo(0) < 10) {
             if (strcmp(dComIfGp_getStartStageName(), "D_MN08") != 0) {
                 // "Twilight layer spec error! sasaki"
-                OSReport_Error("\nトワイライトのレイヤー指定異常です！ sasaki");
+                OSReport_Error("\nãƒˆãƒ¯ã‚¤ãƒ©ã‚¤ãƒˆã®ãƒ¬ã‚¤ãƒ¤ãƒ¼æŒ‡å®šç•°å¸¸ã§ã™ï¼ sasaki");
                 // "(If loaded from the debug menu, you can directly specify layers, so I can't tell if it's invalid.)"
-                OSReport_Error("\n(デバグメニューからの場合はレイヤー直指定できるので危険なのかは予測つきません。）");
+                OSReport_Error("\n(ãƒ‡ãƒã‚°ãƒ¡ãƒ‹ãƒ¥ãƒ¼ã‹ã‚‰ã®å ´åˆã¯ãƒ¬ã‚¤ãƒ¤ãƒ¼ç›´æŒ‡å®šã§ãã‚‹ã®ã§å±é™ºãªã®ã‹ã¯äºˆæ¸¬ã¤ãã¾ã›ã‚“ã€‚ï¼‰");
 
                 OSReport_Error("\nstage[%s]", dComIfGp_getStartStageName());
                 OSReport_Error("\nroom[%d]", dComIfGp_getStartStageRoomNo());
@@ -1491,10 +1491,10 @@ static int phase_4(dScnPly_c* i_this) {
     mDoGph_gInf_c::setTickRate(OS_TIMER_CLOCK / 30);
 
     #if DEBUG
-    g_preLoadHIO.entryHIO("プリロード制御");
+    g_preLoadHIO.entryHIO("ãƒ—ãƒªãƒ­ãƒ¼ãƒ‰åˆ¶å¾¡");
     #endif
-    g_envHIO.field_0x4 = mDoHIO_CREATE_CHILD("描画設定", &g_envHIO);
-    g_save_bit_HIO.field_0x4 = mDoHIO_CREATE_CHILD("記録ビット", &g_save_bit_HIO);
+    g_envHIO.field_0x4 = mDoHIO_CREATE_CHILD("æç”»è¨­å®š", &g_envHIO);
+    g_save_bit_HIO.field_0x4 = mDoHIO_CREATE_CHILD("è¨˜éŒ²ãƒ“ãƒƒãƒˆ", &g_save_bit_HIO);
 
     #if DEBUG
     daObj::HioObj_c::init();
@@ -1526,7 +1526,7 @@ static int phase_4(dScnPly_c* i_this) {
         return cPhs_COMPLEATE_e;
     }
 
-    OS_REPORT("\x1b[32mプリロードやります\n\x1b[m");
+    OS_REPORT("\x1b[32mãƒ—ãƒªãƒ­ãƒ¼ãƒ‰ã‚„ã‚Šã¾ã™\n\x1b[m");
     resPreLoadTime0 = OSGetTime();
     return cPhs_NEXT_e;
 }
@@ -1552,12 +1552,12 @@ static int phase_5(dScnPly_c* i_this) {
                 loadNum++;
             }
 
-            OS_REPORT("\x1b[32mリソースプリロード %d/%d\n\x1b[m", goodLoads, loadNum);
+            OS_REPORT("\x1b[32mãƒªã‚½ãƒ¼ã‚¹ãƒ—ãƒªãƒ­ãƒ¼ãƒ‰ %d/%d\n\x1b[m", goodLoads, loadNum);
         }
     
         if (phase_state == cPhs_COMPLEATE_e) {
             resPreLoadTime1 = OSGetTime();
-            OS_REPORT("\x1b[32mリソースプリロード %lld ms\n\x1b[m", OSTicksToMilliseconds(resPreLoadTime1 - resPreLoadTime0));
+            OS_REPORT("\x1b[32mãƒªã‚½ãƒ¼ã‚¹ãƒ—ãƒªãƒ­ãƒ¼ãƒ‰ %lld ms\n\x1b[m", OSTicksToMilliseconds(resPreLoadTime1 - resPreLoadTime0));
         }
     
         return phase_state;
@@ -1587,12 +1587,12 @@ static int phase_6(dScnPly_c* i_this) {
                 loadNum++;
             }
 
-            OS_REPORT("\x1b[32mダイナミックリンクプリロード %d/%d\n\x1b[m", goodLoads, loadNum);
+            OS_REPORT("\x1b[32mãƒ€ã‚¤ãƒŠãƒŸãƒƒã‚¯ãƒªãƒ³ã‚¯ãƒ—ãƒªãƒ­ãƒ¼ãƒ‰ %d/%d\n\x1b[m", goodLoads, loadNum);
         }
 
         if (phase_state == cPhs_COMPLEATE_e) {
             dylPreLoadTime1 = OSGetTime();
-            OS_REPORT("\x1b[32mダイナミックリンクプリロード %lld ms\n\x1b[m", OSTicksToMilliseconds(dylPreLoadTime1 - dylPreLoadTime0));
+            OS_REPORT("\x1b[32mãƒ€ã‚¤ãƒŠãƒŸãƒƒã‚¯ãƒªãƒ³ã‚¯ãƒ—ãƒªãƒ­ãƒ¼ãƒ‰ %lld ms\n\x1b[m", OSTicksToMilliseconds(dylPreLoadTime1 - dylPreLoadTime0));
         }
 
         return phase_state;

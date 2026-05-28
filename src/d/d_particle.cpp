@@ -1,4 +1,4 @@
-// d_particle is odd in that it doesn't appear to include dolzel.pch.
+﻿// d_particle is odd in that it doesn't appear to include dolzel.pch.
 // It uses ...data pooling, but weak data from the PCH (e.g. Z2Calc::cNullVec)
 // isn't present like would be expected for a TU using pooling.
 //
@@ -1200,7 +1200,7 @@ void dPa_control_c::createCommon(void const* param_0) {
 #if DEBUG
     s32 heapSize = m_resHeap->getSize((void*)param_0);
     // "Resident particle resource size"
-    OS_REPORT("常駐パーティクルリソースサイズ<%d>\n", heapSize);
+    OS_REPORT("å¸¸é§ãƒ‘ãƒ¼ãƒ†ã‚£ã‚¯ãƒ«ãƒªã‚½ãƒ¼ã‚¹ã‚µã‚¤ã‚º<%d>\n", heapSize);
 #endif
     mHeap = mDoExt_createSolidHeapFromSystem(0, 0);
     JKRHEAP_NAME(mHeap, "dPa_control_c::mHeap");
@@ -1263,7 +1263,7 @@ bool dPa_control_c::readScene(u8 param_0, mDoDvdThd_toMainRam_c** param_1) {
     JUT_ASSERT(2647, !mSceneCount++);
     field_0x18 = param_0;
     static char jpcName[32];
-    sprintf(jpcName, "/res/Particle/Pscene%03d.jpc", param_0);
+    SAFE_SPRINTF(jpcName, "/res/Particle/Pscene%03d.jpc", param_0);
     *param_1 = mDoDvdThd_toMainRam_c::create(jpcName, 0, m_resHeap);
     return 1;
 }
@@ -1277,7 +1277,7 @@ void dPa_control_c::createScene(void const* param_0) {
 #if DEBUG
         s32 resHeapSize = m_resHeap->getSize(m_sceneRes);
         // "Scene-dependent particle resource size"
-        OS_REPORT("シーン依存パーティクルリソースサイズ<%d>\n", resHeapSize);
+        OS_REPORT("ã‚·ãƒ¼ãƒ³ä¾å­˜ãƒ‘ãƒ¼ãƒ†ã‚£ã‚¯ãƒ«ãƒªã‚½ãƒ¼ã‚¹ã‚µã‚¤ã‚º<%d>\n", resHeapSize);
 #endif
     }
     if (m_sceneRes != NULL) {
@@ -1317,7 +1317,7 @@ void dPa_control_c::removeScene(bool param_0) {
     dPa_modelEcallBack::remove();
 
     if (getEmitterNum()) {
-        OS_REPORT("\x1b[43;30m常駐エミッター開放してない！！");
+        OS_REPORT("\x1b[43;30må¸¸é§ã‚¨ãƒŸãƒƒã‚¿ãƒ¼é–‹æ”¾ã—ã¦ãªã„ï¼ï¼");
     }
 }
 
@@ -1648,7 +1648,7 @@ void dummy3() {
 
 bool dPa_control_c::newSimple(u16 param_0, u8 param_1, u32* param_2) {
     if (field_0x19 >= ARRAY_SIZE(field_0x1c)) {
-        OSReport("\x1B[43;30m１エミッター登録数オーバー！！\n");
+        OSReport("\x1B[43;30mï¼‘ã‚¨ãƒŸãƒƒã‚¿ãƒ¼ç™»éŒ²æ•°ã‚ªãƒ¼ãƒãƒ¼ï¼ï¼\n");
         return false;
     }
 

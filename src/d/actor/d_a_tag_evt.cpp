@@ -1,4 +1,4 @@
-#include "d/dolzel_rel.h" // IWYU pragma: keep
+﻿#include "d/dolzel_rel.h" // IWYU pragma: keep
 
 #include "d/actor/d_a_tag_evt.h"
 #include "d/actor/d_a_player.h"
@@ -26,7 +26,7 @@ int daTag_Evt_c::create() {
     cPhs_Step phase = dComIfG_resLoad(&mPhase, l_resFileName);
     if (phase == cPhs_COMPLEATE_e) {
         eventInfo.setArchiveName(l_resFileName);
-        strcpy(field_0x568, "TagEvt");
+        SAFE_STRCPY(field_0x568, "TagEvt");
         getParam();
         field_0x572 = -1;
     }

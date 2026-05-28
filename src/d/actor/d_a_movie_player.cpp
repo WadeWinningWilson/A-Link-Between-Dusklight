@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file d_a_movie_player.cpp
  * 
 */
@@ -4315,7 +4315,7 @@ static BOOL daMP_ActivePlayer_Init(char const* moviePath) {
 #endif
 
     // "The memory needed for this THP movie is %d bytes\n"
-    OS_REPORT("このＴＨＰムービーが必要なメモリは%dバイトです\n", daMP_THPPlayerCalcNeedMemory());
+    OS_REPORT("ã“ã®ï¼´ï¼¨ï¼°ãƒ ãƒ¼ãƒ“ãƒ¼ãŒå¿…è¦ãªãƒ¡ãƒ¢ãƒªã¯%dãƒã‚¤ãƒˆã§ã™\n", daMP_THPPlayerCalcNeedMemory());
 
     daMP_buffer = mDoExt_getArchiveHeap()->alloc(daMP_THPPlayerCalcNeedMemory(), 0x20);
     if (daMP_buffer == NULL) {
@@ -4494,7 +4494,7 @@ int daMP_c::daMP_c_Init() {
     JUT_ASSERT(9507, 0 <= movieNo && movieNo <= 99);
 
     char path[32];
-    sprintf(path, "/Movie/demo_movie%02d_%02d.thp", demoNo, movieNo);
+    SAFE_SPRINTF(path, "/Movie/demo_movie%02d_%02d.thp", demoNo, movieNo);
 
     if (!daMP_ActivePlayer_Init(path)) {
         daMP_Fail_alloc = TRUE;

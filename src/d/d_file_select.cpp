@@ -1,4 +1,4 @@
-/**
+﻿/**
  * d_file_select.cpp
  * dolzel2 - Quest Log Management (File Select Menu)
  */
@@ -85,45 +85,45 @@ dFs_HIO_c::dFs_HIO_c() {
 
 #if DEBUG
 void dFs_HIO_c::genMessage(JORMContext* mctx) {
-    mctx->genLabel("\n*****タイトルメッセージチェック*****\n", 0);
-    mctx->genCheckBox("ＯＮ", &title_mesg_check, 0x1);
+    mctx->genLabel("\n*****ã‚¿ã‚¤ãƒˆãƒ«ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ãƒã‚§ãƒƒã‚¯*****\n", 0);
+    mctx->genCheckBox("ï¼¯ï¼®", &title_mesg_check, 0x1);
 
-    mctx->genLabel("\n*****エラーメッセージチェック*****\n", 0);
-    mctx->genCheckBox("ＯＮ", &error_mesg_check, 0x1);
+    mctx->genLabel("\n*****ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ãƒã‚§ãƒƒã‚¯*****\n", 0);
+    mctx->genCheckBox("ï¼¯ï¼®", &error_mesg_check, 0x1);
 
-    mctx->genLabel("\n*****出現　表示調整*****\n", 0);
-    mctx->genSlider("表示待ちフレーム", &appear_display_wait_frames, 0, 120);
-    mctx->genSlider("カード待ちフレーム", &card_wait_frames, 0, 120);
-    mctx->genSlider("本エフェクト出現フレーム", &base_effect_appear_frames, 0, 120);
-    mctx->genSlider("文字切り替えフレーム", &char_switch_frames, 0, 120);
-    mctx->genSlider("選択アイコン", &select_icon_appear_frames, 0, 120);
-    mctx->genSlider("選択枠", &select_box_appear_frames, 0, 120);
+    mctx->genLabel("\n*****å‡ºç¾ã€€è¡¨ç¤ºèª¿æ•´*****\n", 0);
+    mctx->genSlider("è¡¨ç¤ºå¾…ã¡ãƒ•ãƒ¬ãƒ¼ãƒ ", &appear_display_wait_frames, 0, 120);
+    mctx->genSlider("ã‚«ãƒ¼ãƒ‰å¾…ã¡ãƒ•ãƒ¬ãƒ¼ãƒ ", &card_wait_frames, 0, 120);
+    mctx->genSlider("æœ¬ã‚¨ãƒ•ã‚§ã‚¯ãƒˆå‡ºç¾ãƒ•ãƒ¬ãƒ¼ãƒ ", &base_effect_appear_frames, 0, 120);
+    mctx->genSlider("æ–‡å­—åˆ‡ã‚Šæ›¿ãˆãƒ•ãƒ¬ãƒ¼ãƒ ", &char_switch_frames, 0, 120);
+    mctx->genSlider("é¸æŠžã‚¢ã‚¤ã‚³ãƒ³", &select_icon_appear_frames, 0, 120);
+    mctx->genSlider("é¸æŠžæž ", &select_box_appear_frames, 0, 120);
 
-    mctx->genLabel("\nコピー、消去エフェクト出現、消去\n", 0);
-    mctx->genSlider("フレーム数", &copy_erase_frames, 0, 120);
+    mctx->genLabel("\nã‚³ãƒ”ãƒ¼ã€æ¶ˆåŽ»ã‚¨ãƒ•ã‚§ã‚¯ãƒˆå‡ºç¾ã€æ¶ˆåŽ»\n", 0);
+    mctx->genSlider("ãƒ•ãƒ¬ãƒ¼ãƒ æ•°", &copy_erase_frames, 0, 120);
 
-    mctx->genLabel("\n***** 鏡、仮面表示テスト *****\n", 0);
-    mctx->genCheckBox("ＯＮ", &mask_mirror_test_display, 0x1);
-    mctx->startComboBox("仮面", &test_mask_display);
-    mctx->genComboBoxItem("０", 0);
-    mctx->genComboBoxItem("１", 1);
-    mctx->genComboBoxItem("２", 2);
-    mctx->genComboBoxItem("３", 3);
-    mctx->genComboBoxItem("４", 4);
+    mctx->genLabel("\n***** é¡ã€ä»®é¢è¡¨ç¤ºãƒ†ã‚¹ãƒˆ *****\n", 0);
+    mctx->genCheckBox("ï¼¯ï¼®", &mask_mirror_test_display, 0x1);
+    mctx->startComboBox("ä»®é¢", &test_mask_display);
+    mctx->genComboBoxItem("ï¼", 0);
+    mctx->genComboBoxItem("ï¼‘", 1);
+    mctx->genComboBoxItem("ï¼’", 2);
+    mctx->genComboBoxItem("ï¼“", 3);
+    mctx->genComboBoxItem("ï¼”", 4);
     mctx->endComboBox();
 
-    mctx->startComboBox("鏡", &test_mirror_display);
-    mctx->genComboBoxItem("０", 0);
-    mctx->genComboBoxItem("１", 1);
-    mctx->genComboBoxItem("２", 2);
-    mctx->genComboBoxItem("３", 3);
-    mctx->genComboBoxItem("４", 4);
+    mctx->startComboBox("é¡", &test_mirror_display);
+    mctx->genComboBoxItem("ï¼", 0);
+    mctx->genComboBoxItem("ï¼‘", 1);
+    mctx->genComboBoxItem("ï¼’", 2);
+    mctx->genComboBoxItem("ï¼“", 3);
+    mctx->genComboBoxItem("ï¼”", 4);
     mctx->endComboBox();
 
-    mctx->genLabel("\n*****テスト調整*****\n", 0);
-    mctx->genSlider("フレーム１", &test_frame_counts[0], 1.0f, 5.0f);
-    mctx->genSlider("フレーム２", &test_frame_counts[1], 1.0f, 5.0f);
-    mctx->genSlider("フレーム３", &test_frame_counts[2], 1.0f, 5.0f);
+    mctx->genLabel("\n*****ãƒ†ã‚¹ãƒˆèª¿æ•´*****\n", 0);
+    mctx->genSlider("ãƒ•ãƒ¬ãƒ¼ãƒ ï¼‘", &test_frame_counts[0], 1.0f, 5.0f);
+    mctx->genSlider("ãƒ•ãƒ¬ãƒ¼ãƒ ï¼’", &test_frame_counts[1], 1.0f, 5.0f);
+    mctx->genSlider("ãƒ•ãƒ¬ãƒ¼ãƒ ï¼“", &test_frame_counts[2], 1.0f, 5.0f);
 }
 #endif
 
@@ -242,7 +242,7 @@ void dFile_select_c::_create() {
     stick = JKR_NEW STControl(2, 2, 1, 1, 0.9f, 0.5f, 0, 0x2000);
     JUT_ASSERT(355, stick != NULL);
 
-    g_fsHIO.no = mDoHIO_CREATE_CHILD("ファイルセレクト画面", &g_fsHIO);
+    g_fsHIO.no = mDoHIO_CREATE_CHILD("ãƒ•ã‚¡ã‚¤ãƒ«ã‚»ãƒ¬ã‚¯ãƒˆç”»é¢", &g_fsHIO);
 
     for (i = 0; i < 3; i++) {
         mIsDataNew[i] = false;
@@ -3507,7 +3507,7 @@ void dFile_select_c::headerTxtSet(u16 i_msgId, u8 i_type, u8 param_3) {
     }
 
     if (i_msgId == 0xFFFF) {
-        strcpy(mHeaderStringPtr[dispIdx], "");
+        SAFE_STRCPY(mHeaderStringPtr[dispIdx], "");
     } else {
         static f32 fontsize[2] = {21.0f, 27.0f};
         #if VERSION == VERSION_GCN_JPN
@@ -4182,7 +4182,7 @@ void dFile_select_c::errDispInitSet(char* i_errMesg) {
     mErrorMsgTxtPane[mErrorTxtDispIdx]->setAlpha(0xFF);
     mErrorMsgTxtPane[mErrorTxtDispIdx ^ 1]->setAlpha(0);
 
-    strcpy(mErrorMsgStringPtr[mErrorTxtDispIdx], i_errMesg);
+    SAFE_STRCPY(mErrorMsgStringPtr[mErrorTxtDispIdx], i_errMesg);
 
     if (field_0x014a) {
         errorMoveAnmInitSet(2859, 2849);
@@ -4391,7 +4391,7 @@ void dFile_select_c::MemCardLoadWait() {
         if (mDoMemCd_getDataVersion() != 6) {
             char errmsg[264];
             // "Savedata version is different\n\nVersion %d\n\nFormatting data."
-            sprintf(errmsg, "セーブデータのバージョンが違います\n\nバージョン %d\n\nデータを初期化します。", mDoMemCd_getDataVersion());
+            SAFE_SPRINTF(errmsg, "ã‚»ãƒ¼ãƒ–ãƒ‡ãƒ¼ã‚¿ã®ãƒãƒ¼ã‚¸ãƒ§ãƒ³ãŒé•ã„ã¾ã™\n\nãƒãƒ¼ã‚¸ãƒ§ãƒ³ %d\n\nãƒ‡ãƒ¼ã‚¿ã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚", mDoMemCd_getDataVersion());
             errDispInitSet(errmsg);
             field_0x0280 = false;
             mWindowCloseMsgDispCb = NULL;
@@ -4528,7 +4528,7 @@ void dFile_select_c::MemCardLoadWaitCard() {
             }
         } else if (result == 2) {
             // "\n=== failed to read from memory card ===\n\n"
-            OS_REPORT("\n=== メモリーカードからの読み込み失敗 ===\n\n");
+            OS_REPORT("\n=== ãƒ¡ãƒ¢ãƒªãƒ¼ã‚«ãƒ¼ãƒ‰ã‹ã‚‰ã®èª­ã¿è¾¼ã¿å¤±æ•— ===\n\n");
             loadFileNAND();
         }
     }
@@ -5237,7 +5237,7 @@ void dFile_select_c::MemCardErrYesNoCursorMoveAnm() {
 
 void dFile_select_c::errorTxtSet(u16 i_msgId) {
     if (i_msgId == 0xffff) {
-        strcpy(mErrorMsgStringPtr[mErrorTxtDispIdx ^ 1], "");
+        SAFE_STRCPY(mErrorMsgStringPtr[mErrorTxtDispIdx ^ 1], "");
     } else {
         fileSel.mMessageString->getString(
             i_msgId, (J2DTextBox*)mErrorMsgTxtPane[mErrorTxtDispIdx ^ 1]->getPanePtr(), NULL,

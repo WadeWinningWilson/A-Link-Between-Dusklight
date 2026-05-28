@@ -1,4 +1,4 @@
-#if DEBUG
+﻿#if DEBUG
 
 #include "d/d_debug_camera.h"
 #include "d/d_event_data.h"
@@ -109,7 +109,7 @@ dDbgCamSetup_c::dDbgCamSetup_c() {
 
 void dDbgCamSetup_c::Init(dDbgCamera_c* i_dbgCamera) {
     // "Debug Camera"
-    m_childNo = mDoHIO_CREATE_CHILD("デバッグカメラ", this);
+    m_childNo = mDoHIO_CREATE_CHILD("ãƒ‡ãƒãƒƒã‚°ã‚«ãƒ¡ãƒ©", this);
     mpDbgCam = i_dbgCamera;
 }
 
@@ -182,71 +182,71 @@ static int search_actor(fopAc_ac_c* actor, void* data) {
 }
 
 void dDbgCamSetup_c::genMessage(JORMContext* mctx) {
-    mctx->genLabel("- カメラ位置表示", 0);
-    mctx->genCheckBox(" 現在位置", &mFlag, 0x4);
-    mctx->genCheckBox(" (補正前)", &mFlag, 0x8);
+    mctx->genLabel("- ã‚«ãƒ¡ãƒ©ä½ç½®è¡¨ç¤º", 0);
+    mctx->genCheckBox(" ç¾åœ¨ä½ç½®", &mFlag, 0x4);
+    mctx->genCheckBox(" (è£œæ­£å‰)", &mFlag, 0x8);
 
-    mctx->genLabel("- ヒットポリゴン表示", 0);
-    mctx->genCheckBox(" 壁あたり", &mFlag, 0x10);
-
-    mctx->genLabel("-", 0);
-    mctx->genLabel("- 移動", 0);
-    mctx->genSlider(" スピード", &mMoveSpeed, 0.0f, 5000.0f);
-    mctx->genSlider("     最大", &mMoveMax, 0.0f, 5000.0f);
-    mctx->genSlider(" ターボ", &mMoveTurbo, 0.0f, 5000.0f);
-    mctx->genSlider("     最大", &mUnkMax, 0.0f, 5000.0f);
-    mctx->genSlider(" 平行移動", &mMoveParallelShift, 0.0f, 5000.0f);
-    mctx->genSlider(" 加速度", &mTransAccel, 0.0f, 1.0f);
+    mctx->genLabel("- ãƒ’ãƒƒãƒˆãƒãƒªã‚´ãƒ³è¡¨ç¤º", 0);
+    mctx->genCheckBox(" å£ã‚ãŸã‚Š", &mFlag, 0x10);
 
     mctx->genLabel("-", 0);
-    mctx->genLabel("- 回転", 0);
-    mctx->genSlider(" スピード", &mRotateSpeed, 0.0f, 90.0f);
-    mctx->genSlider("     最大", &mRotateMax, 0.0f, 90.0f);
-    mctx->genSlider(" 加速度", &mRotAccel, 0.0f, 1.0f);
+    mctx->genLabel("- ç§»å‹•", 0);
+    mctx->genSlider(" ã‚¹ãƒ”ãƒ¼ãƒ‰", &mMoveSpeed, 0.0f, 5000.0f);
+    mctx->genSlider("     æœ€å¤§", &mMoveMax, 0.0f, 5000.0f);
+    mctx->genSlider(" ã‚¿ãƒ¼ãƒœ", &mMoveTurbo, 0.0f, 5000.0f);
+    mctx->genSlider("     æœ€å¤§", &mUnkMax, 0.0f, 5000.0f);
+    mctx->genSlider(" å¹³è¡Œç§»å‹•", &mMoveParallelShift, 0.0f, 5000.0f);
+    mctx->genSlider(" åŠ é€Ÿåº¦", &mTransAccel, 0.0f, 1.0f);
 
     mctx->genLabel("-", 0);
-    mctx->genLabel("- 画角", 0);
-    mctx->genSlider(" スピード", &mFovyTick, 0.0f, 90.0f);
+    mctx->genLabel("- å›žè»¢", 0);
+    mctx->genSlider(" ã‚¹ãƒ”ãƒ¼ãƒ‰", &mRotateSpeed, 0.0f, 90.0f);
+    mctx->genSlider("     æœ€å¤§", &mRotateMax, 0.0f, 90.0f);
+    mctx->genSlider(" åŠ é€Ÿåº¦", &mRotAccel, 0.0f, 1.0f);
 
     mctx->genLabel("-", 0);
-    mctx->genLabel("- センターマーカ", 0);
-    mctx->genSlider(" 線の長さ", &mCenterCross, 0.0f, 4000.0f);
-    mctx->genSlider(" 球の大きさ", &mCenterBall, 0.0f, 4000.0f);
-    mctx->startRadioButton("表示", &mCenterMarker, 0, NULL, 0xFFFF, 0xFFFF, 0x100, 0xFFFF);
-    mctx->genRadioButtonItem("常に表示", 3, 0, 0xFFFF, 0xFFFF, 0x80, 0x10);
-    mctx->genRadioButtonItem("動くと表示", 1, 0, 0xFFFF, 0xFFFF, 0x80, 0x10);
-    mctx->genRadioButtonItem("常に非表示", 0, 0, 0xFFFF, 0xFFFF, 0x80, 0x10);
+    mctx->genLabel("- ç”»è§’", 0);
+    mctx->genSlider(" ã‚¹ãƒ”ãƒ¼ãƒ‰", &mFovyTick, 0.0f, 90.0f);
+
+    mctx->genLabel("-", 0);
+    mctx->genLabel("- ã‚»ãƒ³ã‚¿ãƒ¼ãƒžãƒ¼ã‚«", 0);
+    mctx->genSlider(" ç·šã®é•·ã•", &mCenterCross, 0.0f, 4000.0f);
+    mctx->genSlider(" çƒã®å¤§ãã•", &mCenterBall, 0.0f, 4000.0f);
+    mctx->startRadioButton("è¡¨ç¤º", &mCenterMarker, 0, NULL, 0xFFFF, 0xFFFF, 0x100, 0xFFFF);
+    mctx->genRadioButtonItem("å¸¸ã«è¡¨ç¤º", 3, 0, 0xFFFF, 0xFFFF, 0x80, 0x10);
+    mctx->genRadioButtonItem("å‹•ãã¨è¡¨ç¤º", 1, 0, 0xFFFF, 0xFFFF, 0x80, 0x10);
+    mctx->genRadioButtonItem("å¸¸ã«éžè¡¨ç¤º", 0, 0, 0xFFFF, 0xFFFF, 0x80, 0x10);
     mctx->endRadioButton();
 
-    mctx->genLabel("- 情報表示", 0);
-    mctx->genCheckBox(" 有効", &mFlag, 0x8000);
-    mctx->genSlider("   表示位置 Ｘ", &mPosX, 0, FB_WIDTH);
-    mctx->genSlider("            Ｙ", &mPosY, 0, 480);
+    mctx->genLabel("- æƒ…å ±è¡¨ç¤º", 0);
+    mctx->genCheckBox(" æœ‰åŠ¹", &mFlag, 0x8000);
+    mctx->genSlider("   è¡¨ç¤ºä½ç½® ï¼¸", &mPosX, 0, FB_WIDTH);
+    mctx->genSlider("            ï¼¹", &mPosY, 0, 480);
 
     mctx->genLabel("-", 0);
-    mctx->genLabel("- 座標系", 0);
-    mctx->startRadioButton("基準", &mActorSrchType, 0, NULL, 0xFFFF, 0xFFFF, 0x100, 0xFFFF);
-    mctx->genRadioButtonItem("絶対座標", 0, 0, 0xFFFF, 0xFFFF, 0x80, 0x10);
-    mctx->genRadioButtonItem("プレイヤー相対座標", 1, 0, 0xFFFF, 0xFFFF, 0x80, 0x10);
-    mctx->genRadioButtonItem("指定アクター相対座標", 2, 0, 0xFFFF, 0xFFFF, 0x80, 0x10);
+    mctx->genLabel("- åº§æ¨™ç³»", 0);
+    mctx->startRadioButton("åŸºæº–", &mActorSrchType, 0, NULL, 0xFFFF, 0xFFFF, 0x100, 0xFFFF);
+    mctx->genRadioButtonItem("çµ¶å¯¾åº§æ¨™", 0, 0, 0xFFFF, 0xFFFF, 0x80, 0x10);
+    mctx->genRadioButtonItem("ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ç›¸å¯¾åº§æ¨™", 1, 0, 0xFFFF, 0xFFFF, 0x80, 0x10);
+    mctx->genRadioButtonItem("æŒ‡å®šã‚¢ã‚¯ã‚¿ãƒ¼ç›¸å¯¾åº§æ¨™", 2, 0, 0xFFFF, 0xFFFF, 0x80, 0x10);
     mctx->endRadioButton();
-    mctx->genButton(" 更新 ", 0x66);
+    mctx->genButton(" æ›´æ–° ", 0x66);
 
-    mctx->genLabel("- イベント", 0);
-    mctx->genButton(" 保存 ", 0x68);
+    mctx->genLabel("- ã‚¤ãƒ™ãƒ³ãƒˆ", 0);
+    mctx->genButton(" ä¿å­˜ ", 0x68);
 
     mctx->genLabel("-", 0);
-    mctx->genLabel("- 座標指定", 0);
-    mctx->genSlider("   注視点 Ｘ", &mGazePoint.x, -100000.0f, 100000.0f);
-    mctx->genSlider("   　　　 Ｙ", &mGazePoint.y, -100000.0f, 100000.0f);
-    mctx->genSlider("   　　　 Ｚ", &mGazePoint.z, -100000.0f, 100000.0f);
-    mctx->genButton(" 更新 ", 0x69);
-    mctx->genSlider("  視点 　 Ｘ", &mPerspective.x, -100000.0f, 100000.0f);
-    mctx->genSlider("   　　　 Ｙ", &mPerspective.y, -100000.0f, 100000.0f);
-    mctx->genSlider("   　　　 Ｚ", &mPerspective.z, -100000.0f, 100000.0f);
-    mctx->genButton(" 更新 ", 0x6A);
-    mctx->genSlider("   画角 　　", &mAngle, 0.0f, 180.0f);
-    mctx->genButton(" 更新 ", 0x6B);
+    mctx->genLabel("- åº§æ¨™æŒ‡å®š", 0);
+    mctx->genSlider("   æ³¨è¦–ç‚¹ ï¼¸", &mGazePoint.x, -100000.0f, 100000.0f);
+    mctx->genSlider("   ã€€ã€€ã€€ ï¼¹", &mGazePoint.y, -100000.0f, 100000.0f);
+    mctx->genSlider("   ã€€ã€€ã€€ ï¼º", &mGazePoint.z, -100000.0f, 100000.0f);
+    mctx->genButton(" æ›´æ–° ", 0x69);
+    mctx->genSlider("  è¦–ç‚¹ ã€€ ï¼¸", &mPerspective.x, -100000.0f, 100000.0f);
+    mctx->genSlider("   ã€€ã€€ã€€ ï¼¹", &mPerspective.y, -100000.0f, 100000.0f);
+    mctx->genSlider("   ã€€ã€€ã€€ ï¼º", &mPerspective.z, -100000.0f, 100000.0f);
+    mctx->genButton(" æ›´æ–° ", 0x6A);
+    mctx->genSlider("   ç”»è§’ ã€€ã€€", &mAngle, 0.0f, 180.0f);
+    mctx->genButton(" æ›´æ–° ", 0x6B);
     mctx->genLabel("-", 0);
 }
 
@@ -745,7 +745,7 @@ int dDbgCamera_c::makeZevData() {
     header->eventNum = 1;
     size += sizeof(dEvDtEvent_DBG_c);
     event->Init();
-    strcpy(event->mName, "_DebugCamera");
+    SAFE_STRCPY(event->mName, "_DebugCamera");
     event->mStaff[0] = 0;
     event->mStaff[1] = 1;
     event->mNStaff = 2;
@@ -755,7 +755,7 @@ int dDbgCamera_c::makeZevData() {
     header->staffNum = 2;
     size += sizeof(dEvDtStaff_DBG_c);
     camera_staff->Init();
-    strcpy(camera_staff->mName, "CAMERA");
+    SAFE_STRCPY(camera_staff->mName, "CAMERA");
     camera_staff->mType = dEvDtStaff_c::TYPE_CAMERA;
     camera_staff->mIndex = 0;
     camera_staff->mStartCut = 1;
@@ -764,7 +764,7 @@ int dDbgCamera_c::makeZevData() {
     dEvDtStaff_DBG_c* all_staff = (dEvDtStaff_DBG_c*)(zevwork::WorkBuffer + size);
     size += sizeof(dEvDtStaff_DBG_c);
     all_staff->Init();
-    strcpy(all_staff->mName, "ALL");
+    SAFE_STRCPY(all_staff->mName, "ALL");
     all_staff->mType = dEvDtStaff_c::TYPE_ALL;
     all_staff->mIndex = 1;
     all_staff->mStartCut = 0;
@@ -776,7 +776,7 @@ int dDbgCamera_c::makeZevData() {
     size += sizeof(dEvDtCut_c) * zevwork::CutMaxNum;
     dEvDtCut_DBG_c* prev_cut = NULL;
     cut->Init();
-    strcpy(cut->mName, "DUMMY");
+    SAFE_STRCPY(cut->mName, "DUMMY");
     cut->mIndex = header->cutNum++;
     cut->mFlagId = sp38++;
     event->mFlags[0] = cut->mFlagId;
@@ -812,7 +812,7 @@ int dDbgCamera_c::makeZevData() {
 
     for (keyNo = 0; keyNo < ARRAY_SIZE(mKeys); keyNo++) {
         cut->Init();
-        strcpy(cut->mName, ActionName(mKeys[keyNo].mAction));
+        SAFE_STRCPY(cut->mName, ActionName(mKeys[keyNo].mAction));
         cut->mDataTop = header->dataNum;
 
         switch (mKeys[keyNo].mAction) {
@@ -820,14 +820,14 @@ int dDbgCamera_c::makeZevData() {
         case dDbgCam_KeyAction_UNITRANS:
             if (mKeys[keyNo].mActorInfo.id != fpcM_ERROR_PROCESS_ID_e) {
                 pdata->Init();
-                strcpy(pdata->mName, "RelActor");
+                SAFE_STRCPY(pdata->mName, "RelActor");
                 pdata->mIndex = header->dataNum++;
                 pdata->mType = dEvDtData_c::TYPE_STRING;
                 pdata->mDataIndex = sp14;
                 pdata->mNumber = 1;
                 pdata->mNext = header->dataNum;
                 pdata++;
-                strcpy(sdata, mKeys[keyNo].mActorInfo.name);
+                SAFE_STRCPY(sdata, mKeys[keyNo].mActorInfo.name);
                 sp48 = strlen(mKeys[keyNo].mActorInfo.name) + 1;
                 header->sDataNum++;
                 sdata += sp48;
@@ -835,7 +835,7 @@ int dDbgCamera_c::makeZevData() {
             }
 
             pdata->Init();
-            strcpy(pdata->mName, "Center");
+            SAFE_STRCPY(pdata->mName, "Center");
             pdata->mIndex = header->dataNum++;
             pdata->mType = dEvDtData_c::TYPE_VEC;
             pdata->mDataIndex = header->fDataNum;
@@ -849,7 +849,7 @@ int dDbgCamera_c::makeZevData() {
             header->fDataNum += 3;
 
             pdata->Init();
-            strcpy(pdata->mName, "Eye");
+            SAFE_STRCPY(pdata->mName, "Eye");
             pdata->mIndex = header->dataNum++;
             pdata->mType = dEvDtData_c::TYPE_VEC;
             pdata->mDataIndex = header->fDataNum;
@@ -863,7 +863,7 @@ int dDbgCamera_c::makeZevData() {
             header->fDataNum += 3;
 
             pdata->Init();
-            strcpy(pdata->mName, "Fovy");
+            SAFE_STRCPY(pdata->mName, "Fovy");
             pdata->mIndex = header->dataNum++;
             pdata->mType = dEvDtData_c::TYPE_FLOAT;
             pdata->mDataIndex = header->fDataNum;
@@ -875,7 +875,7 @@ int dDbgCamera_c::makeZevData() {
             header->fDataNum += 1;
 
             pdata->Init();
-            strcpy(pdata->mName, "Bank");
+            SAFE_STRCPY(pdata->mName, "Bank");
             pdata->mIndex = header->dataNum++;
             pdata->mType = dEvDtData_c::TYPE_FLOAT;
             pdata->mDataIndex = header->fDataNum;
@@ -887,7 +887,7 @@ int dDbgCamera_c::makeZevData() {
             header->fDataNum += 1;
 
             pdata->Init();
-            strcpy(pdata->mName, "Timer");
+            SAFE_STRCPY(pdata->mName, "Timer");
             pdata->mIndex = header->dataNum++;
             pdata->mType = dEvDtData_c::TYPE_INT;
             pdata->mDataIndex = header->iDataNum;
@@ -916,7 +916,7 @@ int dDbgCamera_c::makeZevData() {
 
             if (mKeys[keyNo].mActorInfo.id != fpcM_ERROR_PROCESS_ID_e) {
                 pdata->Init();
-                strcpy(pdata->mName, "RelActor");
+                SAFE_STRCPY(pdata->mName, "RelActor");
                 pdata->mIndex = header->dataNum++;
                 pdata->mType = dEvDtData_c::TYPE_STRING;
                 pdata->mDataIndex = sp14;
@@ -924,7 +924,7 @@ int dDbgCamera_c::makeZevData() {
                 pdata->mNext = header->dataNum;
                 pdata++;
 
-                strcpy(sdata, mKeys[keyNo].mActorInfo.name);
+                SAFE_STRCPY(sdata, mKeys[keyNo].mActorInfo.name);
                 sp10 = strlen(mKeys[keyNo].mActorInfo.name) + 1;
                 header->sDataNum += 1;
 
@@ -933,7 +933,7 @@ int dDbgCamera_c::makeZevData() {
             }
 
             pdata->Init();
-            strcpy(pdata->mName, "Centers");
+            SAFE_STRCPY(pdata->mName, "Centers");
             pdata->mIndex = header->dataNum++;
             pdata->mType = dEvDtData_c::TYPE_VEC;
             pdata->mDataIndex = header->fDataNum;
@@ -951,7 +951,7 @@ int dDbgCamera_c::makeZevData() {
             header->fDataNum += sp48 * 3;
 
             pdata->Init();
-            strcpy(pdata->mName, "Eyes");
+            SAFE_STRCPY(pdata->mName, "Eyes");
             pdata->mIndex = header->dataNum++;
             pdata->mType = dEvDtData_c::TYPE_VEC;
             pdata->mDataIndex = header->fDataNum;
@@ -968,7 +968,7 @@ int dDbgCamera_c::makeZevData() {
             header->fDataNum += sp48 * 3;
 
             pdata->Init();
-            strcpy(pdata->mName, "Fovys");
+            SAFE_STRCPY(pdata->mName, "Fovys");
             pdata->mIndex = header->dataNum++;
             pdata->mType = dEvDtData_c::TYPE_FLOAT;
             pdata->mDataIndex = header->fDataNum;
@@ -983,7 +983,7 @@ int dDbgCamera_c::makeZevData() {
             header->fDataNum += sp48;
 
             pdata->Init();
-            strcpy(pdata->mName, "Timer");
+            SAFE_STRCPY(pdata->mName, "Timer");
             pdata->mIndex = header->dataNum++;
             pdata->mType = dEvDtData_c::TYPE_INT;
             pdata->mDataIndex = header->iDataNum;
@@ -1053,8 +1053,8 @@ int dDbgCamera_c::makeZevData() {
 void dDbgCamera_c::printZevData() {
     OSReport("\n");
     OSReport("<?xml version=\"1.0\" encoding=\"Shift_JIS\"?>\n\n");
-    OSReport("<!--\n    △ \n   △△ Game Cube Zelda - ");
-    OSReport("Camera Tool Event Data \n ▼▼ \n  ▼ \n-->\n");
+    OSReport("<!--\n    â–³ \n   â–³â–³ Game Cube Zelda - ");
+    OSReport("Camera Tool Event Data \n â–¼â–¼ \n  â–¼ \n-->\n");
     OSReport("<event version=\"2.0\">\n");
     OSReport("  <sequence name=\"???\" finish=\"CAMERA\">\n");
     OSReport("    <staff name=\"CAMERA\" type=\"CAMERA\">\n");
@@ -1172,8 +1172,8 @@ void dDbgCamera_c::WriteZevData() {
 
     PrintFile("\n");
     PrintFile("<?xml version=\"1.0\" encoding=\"Shift_JIS\"?>\n\n");
-    PrintFile("<!--\n    △ \n   △△ Game Cube Zelda - ");
-    PrintFile("Camera Tool Event Data \n ▼▼ \n  ▼ \n-->\n");
+    PrintFile("<!--\n    â–³ \n   â–³â–³ Game Cube Zelda - ");
+    PrintFile("Camera Tool Event Data \n â–¼â–¼ \n  â–¼ \n-->\n");
     PrintFile("<event version=\"2.0\">\n");
     PrintFile("  <sequence name=\"???\" finish=\"CAMERA\">\n");
     PrintFile("    <staff name=\"CAMERA\" type=\"CAMERA\">\n");
@@ -1755,7 +1755,7 @@ int dDbgCamera_c::Report(int x, int y, JUtility::TColor color, const char* mesg,
 }
 
 void dDbgCamera_c::OpenFile() {
-    const char ext[] = "イベントファイル(*.zev)\0*.zev\0その他のファイル(*.*)\0*.*\0";
+    const char ext[] = "ã‚¤ãƒ™ãƒ³ãƒˆãƒ•ã‚¡ã‚¤ãƒ«(*.zev)\0*.zev\0ãã®ä»–ã®ãƒ•ã‚¡ã‚¤ãƒ«(*.*)\0*.*\0";
     mFile.open("dbgcam.zev", 2, ext, NULL, NULL, NULL);
 }
 

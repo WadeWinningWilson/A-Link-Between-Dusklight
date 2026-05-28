@@ -1,4 +1,4 @@
-/**
+﻿/**
  * f_op_actor_mng.cpp
  * Actor Manager
  */
@@ -48,7 +48,7 @@ public:
 
     void entry() {
         if (mId < 0) {
-            mId = mDoHIO_CREATE_CHILD("アクターマネージャ", this);
+            mId = mDoHIO_CREATE_CHILD("ã‚¢ã‚¯ã‚¿ãƒ¼ãƒžãƒãƒ¼ã‚¸ãƒ£", this);
         }
     }
 
@@ -70,14 +70,14 @@ public:
 
 #if DEBUG
 void l_HIO::genMessage(JORMContext* mctx) {
-    mctx->genLabel("アクターソリッドヒープ用プリント表示制御", 0);
-    mctx->genCheckBox("HeapAdjustEntry(ぴったりサイズで格納しようとします)", &fopAcM::HeapAdjustEntry, 0x1);
-    mctx->genCheckBox("HeapAdjustVerbose(アジャストの情報を表示します)", &fopAcM::HeapAdjustVerbose, 0x1);
-    mctx->genCheckBox("HeapAdjustQuiet(アジャストの情報を表示しません)", &fopAcM::HeapAdjustQuiet, 0x1);
-    mctx->genCheckBox("HeapDummyCreate(調査のため、ダミー領域に一度格納します)", &fopAcM::HeapDummyCreate, 0x1);
-    mctx->genCheckBox("mDoExt::HeapAdjustVerbose(mDoExtのほうでアジャストの情報を表示します)",
+    mctx->genLabel("ã‚¢ã‚¯ã‚¿ãƒ¼ã‚½ãƒªãƒƒãƒ‰ãƒ’ãƒ¼ãƒ—ç”¨ãƒ—ãƒªãƒ³ãƒˆè¡¨ç¤ºåˆ¶å¾¡", 0);
+    mctx->genCheckBox("HeapAdjustEntry(ã´ã£ãŸã‚Šã‚µã‚¤ã‚ºã§æ ¼ç´ã—ã‚ˆã†ã¨ã—ã¾ã™)", &fopAcM::HeapAdjustEntry, 0x1);
+    mctx->genCheckBox("HeapAdjustVerbose(ã‚¢ã‚¸ãƒ£ã‚¹ãƒˆã®æƒ…å ±ã‚’è¡¨ç¤ºã—ã¾ã™)", &fopAcM::HeapAdjustVerbose, 0x1);
+    mctx->genCheckBox("HeapAdjustQuiet(ã‚¢ã‚¸ãƒ£ã‚¹ãƒˆã®æƒ…å ±ã‚’è¡¨ç¤ºã—ã¾ã›ã‚“)", &fopAcM::HeapAdjustQuiet, 0x1);
+    mctx->genCheckBox("HeapDummyCreate(èª¿æŸ»ã®ãŸã‚ã€ãƒ€ãƒŸãƒ¼é ˜åŸŸã«ä¸€åº¦æ ¼ç´ã—ã¾ã™)", &fopAcM::HeapDummyCreate, 0x1);
+    mctx->genCheckBox("mDoExt::HeapAdjustVerbose(mDoExtã®ã»ã†ã§ã‚¢ã‚¸ãƒ£ã‚¹ãƒˆã®æƒ…å ±ã‚’è¡¨ç¤ºã—ã¾ã™)",
                       &mDoExt::HeapAdjustVerbose, 0x1);
-    mctx->genCheckBox("mDoExt::HeapAdjustQuiet(mDoExtのほうでアジャストの情報を表示しません)",
+    mctx->genCheckBox("mDoExt::HeapAdjustQuiet(mDoExtã®ã»ã†ã§ã‚¢ã‚¸ãƒ£ã‚¹ãƒˆã®æƒ…å ±ã‚’è¡¨ç¤ºã—ã¾ã›ã‚“)",
                       &mDoExt::HeapAdjustQuiet, 0x1);
 }
 
@@ -237,7 +237,7 @@ void fopAcM_Log(fopAc_ac_c const* i_actor, char const* i_message) {
 
 s32 fopAcM_delete(fopAc_ac_c* i_actor) {
     // "Deleting Actor"
-    fopAcM_Log(i_actor, "アクターの削除");
+    fopAcM_Log(i_actor, "ã‚¢ã‚¯ã‚¿ãƒ¼ã®å‰Šé™¤");
     return fpcM_Delete(i_actor);
 }
 
@@ -246,7 +246,7 @@ s32 fopAcM_delete(fpc_ProcID i_actorID) {
 
     if (actor != NULL) {
         // "Deleting Actor"
-        fopAcM_Log((fopAc_ac_c*)actor, "アクターの削除");
+        fopAcM_Log((fopAc_ac_c*)actor, "ã‚¢ã‚¯ã‚¿ãƒ¼ã®å‰Šé™¤");
         return fpcM_Delete(actor);
     } else {
         return 1;
@@ -349,14 +349,14 @@ BOOL fopAcM_createHeap(fopAc_ac_c* i_this, u32 size, u32 align) {
     JUT_ASSERT(0, i_this->heap == NULL);
 
     // "Creating Actor Heap"
-    fopAcM_Log(i_this, "アクターのヒープの生成");
+    fopAcM_Log(i_this, "ã‚¢ã‚¯ã‚¿ãƒ¼ã®ãƒ’ãƒ¼ãƒ—ã®ç”Ÿæˆ");
     if (align == 0)
         align = 0x20;
 
     i_this->heap = mDoExt_createSolidHeapFromGameToCurrent(size, align);
     if (i_this->heap == NULL) {
         // "fopAcM_createHeap allocation failure\n"
-        OSReport_Error("fopAcM_createHeap 確保失敗\n");
+        OSReport_Error("fopAcM_createHeap ç¢ºä¿å¤±æ•—\n");
         JUT_CONFIRM(0, i_this->heap != NULL);
         return FALSE;
     }
@@ -366,7 +366,7 @@ BOOL fopAcM_createHeap(fopAc_ac_c* i_this, u32 size, u32 align) {
 
 void fopAcM_DeleteHeap(fopAc_ac_c* i_actor) {
     // "Destroying actor's heap"
-    fopAcM_Log(i_actor, "アクターのヒープの破壊");
+    fopAcM_Log(i_actor, "ã‚¢ã‚¯ã‚¿ãƒ¼ã®ãƒ’ãƒ¼ãƒ—ã®ç ´å£Š");
     if (i_actor->heap != NULL) {
         mDoExt_destroySolidHeap(i_actor->heap);
         i_actor->heap = NULL;
@@ -417,16 +417,16 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
 
             if (fopAcM::HeapAdjustVerbose) {
                 // Attempting registration with max dummy heap.
-                OS_REPORT("ダミーヒープ最大で登録してみます。%08x\n", heap);
+                OS_REPORT("ãƒ€ãƒŸãƒ¼ãƒ’ãƒ¼ãƒ—æœ€å¤§ã§ç™»éŒ²ã—ã¦ã¿ã¾ã™ã€‚%08x\n", heap);
             }
             result = fopAcM_callCallback(i_actor, i_heapCallback, heap);
             if (!result) {
                 // Registration failed with max dummy heap.
-                OS_REPORT_ERROR("ダミーヒープ最大で登録失敗。%08x[%s]\n", heap->getFreeSize(),
+                OS_REPORT_ERROR("ãƒ€ãƒŸãƒ¼ãƒ’ãƒ¼ãƒ—æœ€å¤§ã§ç™»éŒ²å¤±æ•—ã€‚%08x[%s]\n", heap->getFreeSize(),
                                 procNameString);
             } else if (fopAcM::HeapAdjustVerbose) {
                 // Registration successful with max dummy heap.
-                OS_REPORT("ダミーヒープ最大で登録成功。\n");
+                OS_REPORT("ãƒ€ãƒŸãƒ¼ãƒ’ãƒ¼ãƒ—æœ€å¤§ã§ç™»éŒ²æˆåŠŸã€‚\n");
             }
 
             mDoExt_destroySolidHeap(heap);
@@ -437,7 +437,7 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
 
     if (fopAcM::HeapAdjustVerbose) {
         // fopAcM_entrySolidHeap Start [%s] Estimated Size=%08x
-        OS_REPORT("\x1b[36mfopAcM_entrySolidHeap 開始 [%s] 見積もりサイズ=%08x\n\x1b[m",
+        OS_REPORT("\x1b[36mfopAcM_entrySolidHeap é–‹å§‹ [%s] è¦‹ç©ã‚‚ã‚Šã‚µã‚¤ã‚º=%08x\n\x1b[m",
                   procNameString, i_size);
     }
 
@@ -449,7 +449,7 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
         if (i_size != 0) {
             if (fopAcM::HeapAdjustVerbose) {
                 // Attempting to allocate with estimated heap size (%08x). [%s]
-                OS_REPORT("見積もりヒープサイズで(%08x)確保してみます。 [%s]\n", i_size,
+                OS_REPORT("è¦‹ç©ã‚‚ã‚Šãƒ’ãƒ¼ãƒ—ã‚µã‚¤ã‚ºã§(%08x)ç¢ºä¿ã—ã¦ã¿ã¾ã™ã€‚ [%s]\n", i_size,
                           procNameString);
             }
 
@@ -458,7 +458,7 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
                 JKRHEAP_NAMEF(heap, "Actor mng (%s)", procNameString);
                 if (fopAcM::HeapAdjustVerbose) {
                     // Attempting registration with estimated heap size. %08x [%s]
-                    OS_REPORT("見積もりヒープサイズで登録してみます。%08x [%s]\n", heap,
+                    OS_REPORT("è¦‹ç©ã‚‚ã‚Šãƒ’ãƒ¼ãƒ—ã‚µã‚¤ã‚ºã§ç™»éŒ²ã—ã¦ã¿ã¾ã™ã€‚%08x [%s]\n", heap,
                               procNameString);
                 }
 
@@ -466,7 +466,7 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
                 if (!result) {
                     if (!DEBUG || !fopAcM::HeapAdjustQuiet) {
                         // Registration failed with estimated heap size (%08x). %08x[%s]
-                        OSReport_Error("見積もりヒープサイズ(%08x)で登録失敗しました。%08x[%s]\n",
+                        OSReport_Error("è¦‹ç©ã‚‚ã‚Šãƒ’ãƒ¼ãƒ—ã‚µã‚¤ã‚º(%08x)ã§ç™»éŒ²å¤±æ•—ã—ã¾ã—ãŸã€‚%08x[%s]\n",
                                         i_size, heap->getFreeSize(), procNameString);
                     }
                     mDoExt_destroySolidHeap(heap);
@@ -488,7 +488,7 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
                             if (fopAcM::HeapAdjustVerbose) {
                                 // Registration successful with estimated heap size. %08x %08x %08x
                                 OS_REPORT(
-                                    "見積もりヒープサイズで登録成功しました。 %08x %08x %08x\n",
+                                    "è¦‹ç©ã‚‚ã‚Šãƒ’ãƒ¼ãƒ—ã‚µã‚¤ã‚ºã§ç™»éŒ²æˆåŠŸã—ã¾ã—ãŸã€‚ %08x %08x %08x\n",
                                     adjustedHeap, res, i_size);
                             }
                             i_actor->heap = heap;
@@ -499,12 +499,12 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
                             // Too much free space remaining with estimated heap size. %08x %08x
                             // [%s]
                             OSReport_Warning(
-                                "見積もりヒープサイズでは空きが多すぎます。 %08x %08x [%s]\n",
+                                "è¦‹ç©ã‚‚ã‚Šãƒ’ãƒ¼ãƒ—ã‚µã‚¤ã‚ºã§ã¯ç©ºããŒå¤šã™ãŽã¾ã™ã€‚ %08x %08x [%s]\n",
                                 adjustedHeap, i_size, procNameString);
                         }
 #if DEBUG
                         // Destroying heap temporarily to obtain exact size
-                        OS_WARNING("正確なサイズを得るために一旦 heap を破棄します\n");
+                        OS_WARNING("æ­£ç¢ºãªã‚µã‚¤ã‚ºã‚’å¾—ã‚‹ãŸã‚ã«ä¸€æ—¦ heap ã‚’ç ´æ£„ã—ã¾ã™\n");
                         mDoExt_destroySolidHeap(heap);
                         heap = NULL;
 #endif
@@ -513,7 +513,7 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
 #endif
             } else {
                 // Could not allocate estimated heap. %08x [%s]
-                OSReport_Error("見積もりヒープが確保できませんでした。 %08x [%s]\n", i_size,
+                OSReport_Error("è¦‹ç©ã‚‚ã‚Šãƒ’ãƒ¼ãƒ—ãŒç¢ºä¿ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚ %08x [%s]\n", i_size,
                                 procNameString);
             }
         }
@@ -522,14 +522,14 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
             heap = mDoExt_createSolidHeapFromGame(-1, 0x20);
             if (heap == NULL) {
                 // Allocation failed with max free heap size. [%s]
-                OSReport_Error("最大空きヒープサイズで確保失敗。[%s]\n", procNameString);
+                OSReport_Error("æœ€å¤§ç©ºããƒ’ãƒ¼ãƒ—ã‚µã‚¤ã‚ºã§ç¢ºä¿å¤±æ•—ã€‚[%s]\n", procNameString);
                 return false;
             }
             JKRHEAP_NAMEF(heap, "Actor mng (%s)", procNameString);
 #if DEBUG
             if (!fopAcM::HeapAdjustQuiet) {
                 // Attempting registration with max heap size. %08x
-                OS_REPORT("最大ヒープサイズで登録してみます。%08x\n", heap);
+                OS_REPORT("æœ€å¤§ãƒ’ãƒ¼ãƒ—ã‚µã‚¤ã‚ºã§ç™»éŒ²ã—ã¦ã¿ã¾ã™ã€‚%08x\n", heap);
             }
             heap->alloc(16, 16);
 
@@ -537,7 +537,7 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
 
             if (!result2) {
                 // Registration failed with max free heap size -16 (1st attempt).
-                OS_REPORT_ERROR("最大空きヒープサイズ-16(1回目)で登録失敗。%08x[%s]\n",
+                OS_REPORT_ERROR("æœ€å¤§ç©ºããƒ’ãƒ¼ãƒ—ã‚µã‚¤ã‚º-16(1å›žç›®)ã§ç™»éŒ²å¤±æ•—ã€‚%08x[%s]\n",
                                 heap->getFreeSize(), procNameString);
                 mDoExt_destroySolidHeap(heap);
                 heap = NULL;
@@ -550,7 +550,7 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
             bool result3 = fopAcM_callCallback(i_actor, i_heapCallback, heap);
             if (!result3) {
                 // Registration failed with max free heap size (2nd attempt).
-                OS_REPORT_ERROR("最大空きヒープサイズ(2回目)で登録失敗。%08x[%s]\n",
+                OS_REPORT_ERROR("æœ€å¤§ç©ºããƒ’ãƒ¼ãƒ—ã‚µã‚¤ã‚º(2å›žç›®)ã§ç™»éŒ²å¤±æ•—ã€‚%08x[%s]\n",
                                 heap->getFreeSize(), procNameString);
                 mDoExt_destroySolidHeap(heap);
                 heap = NULL;
@@ -564,7 +564,7 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
             {
                 // Sizes differ between 1st and 2nd attempts. Registration failed. [%s] 0x%08x
                 // 0x%08x
-                OS_REPORT_ERROR("1回目と2回目でサイズが違います。登録失敗。[%s] 0x%08x 0x%08x\n",
+                OS_REPORT_ERROR("1å›žç›®ã¨2å›žç›®ã§ã‚µã‚¤ã‚ºãŒé•ã„ã¾ã™ã€‚ç™»éŒ²å¤±æ•—ã€‚[%s] 0x%08x 0x%08x\n",
                                 procNameString, prevAlignedHeapSize, alignedHeapSize);
                 mDoExt_destroySolidHeap(heap);
                 heap = NULL;
@@ -577,29 +577,29 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
 
                 if (!fopAcM::HeapAdjustQuiet) {
                     // Registration successful with max free heap size. [%s(%d)] 0x%08x 0x%08x
-                    OS_WARNING("最大空きヒープサイズで登録成功。[%s(%d)] 0x%08x 0x%08x\n",
+                    OS_WARNING("æœ€å¤§ç©ºããƒ’ãƒ¼ãƒ—ã‚µã‚¤ã‚ºã§ç™»éŒ²æˆåŠŸã€‚[%s(%d)] 0x%08x 0x%08x\n",
                                procNameString, procProfName, prevAlignedHeapSize, alignedHeapSize);
                 }
 
                 if (i_size == 0) {
                     if (!fopAcM::HeapAdjustQuiet) {
                         // Please set the estimated size value. (0x%08x)
-                        OS_WARNING("見積もりサイズの値を設定してください。(0x%08x)\n", maxSize);
+                        OS_WARNING("è¦‹ç©ã‚‚ã‚Šã‚µã‚¤ã‚ºã®å€¤ã‚’è¨­å®šã—ã¦ãã ã•ã„ã€‚(0x%08x)\n", maxSize);
                     }
                 } else if (i_size != maxSize) {
                     // Please change the estimated size value. (0x%08x -> 0x%08x) [%s]
-                    OS_REPORT_ERROR("見積もりサイズの値を変更してください。(0x%08x→0x%08x) [%s]\n",
+                    OS_REPORT_ERROR("è¦‹ç©ã‚‚ã‚Šã‚µã‚¤ã‚ºã®å€¤ã‚’å¤‰æ›´ã—ã¦ãã ã•ã„ã€‚(0x%08xâ†’0x%08x) [%s]\n",
                                     i_size, maxSize, procNameString);
                 } else if (fopAcM::HeapAdjustVerbose) {
                     // Matches the estimated size. (0x%08x)
-                    OS_REPORT("見積もりサイズと一致しています。(0x%08x)\n", maxSize);
+                    OS_REPORT("è¦‹ç©ã‚‚ã‚Šã‚µã‚¤ã‚ºã¨ä¸€è‡´ã—ã¦ã„ã¾ã™ã€‚(0x%08x)\n", maxSize);
                 }
             }
 #else
             bool result2 = fopAcM_callCallback(i_actor, i_heapCallback, heap);
             if (!result2) {
                 // "Entry failed for maximum heap size. %08x[%s]\n"
-                OSReport_Error("最大空きヒープサイズで登録失敗。%08x[%s]\n", heap->getFreeSize(),
+                OSReport_Error("æœ€å¤§ç©ºããƒ’ãƒ¼ãƒ—ã‚µã‚¤ã‚ºã§ç™»éŒ²å¤±æ•—ã€‚%08x[%s]\n", heap->getFreeSize(),
                                procNameString);
                 mDoExt_destroySolidHeap(heap);
                 return false;
@@ -615,7 +615,7 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
             adjustedHeap = mDoExt_adjustSolidHeap(heap);
             if (fopAcM::HeapAdjustVerbose) {
                 // Skipping exact size check for speed optimization. %08x
-                OS_REPORT("高速化のためぴったりサイズは調べません。%08x\n", adjustedHeap);
+                OS_REPORT("é«˜é€ŸåŒ–ã®ãŸã‚ã´ã£ãŸã‚Šã‚µã‚¤ã‚ºã¯èª¿ã¹ã¾ã›ã‚“ã€‚%08x\n", adjustedHeap);
             }
             i_actor->heap = heap;
             return true;
@@ -632,18 +632,18 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
 
             if (fopAcM::HeapAdjustVerbose) {
                 // Attempting registration with exact size. %08x %08x
-                OS_REPORT("ぴったりサイズで登録してみます。%08x %08x\n", newHeap, alignedSize);
+                OS_REPORT("ã´ã£ãŸã‚Šã‚µã‚¤ã‚ºã§ç™»éŒ²ã—ã¦ã¿ã¾ã™ã€‚%08x %08x\n", newHeap, alignedSize);
             }
 
             if (newHeap != NULL) {
                 if (newHeap < heap) {
                     if (fopAcM::HeapAdjustVerbose) {
                         // Exact size heap was allocated at the front.
-                        OS_REPORT("ぴったりサイズヒープは前のほうに確保されました。\n");
+                        OS_REPORT("ã´ã£ãŸã‚Šã‚µã‚¤ã‚ºãƒ’ãƒ¼ãƒ—ã¯å‰ã®ã»ã†ã«ç¢ºä¿ã•ã‚Œã¾ã—ãŸã€‚\n");
                     }
                     if (fopAcM::HeapAdjustVerbose) {
                         // Destroying the previous heap first. %08x
-                        OS_REPORT("先にさっきのヒープは破壊しておきます。%08x\n", heap);
+                        OS_REPORT("å…ˆã«ã•ã£ãã®ãƒ’ãƒ¼ãƒ—ã¯ç ´å£Šã—ã¦ãŠãã¾ã™ã€‚%08x\n", heap);
                     }
 
                     mDoExt_destroySolidHeap(heap);
@@ -654,12 +654,12 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
 
                     if (!result) {
                         // Registration failed with exact size? (Bug)
-                        OSReport_Error("ぴったりサイズで、登録失敗？(バグ)\n");
+                        OSReport_Error("ã´ã£ãŸã‚Šã‚µã‚¤ã‚ºã§ã€ç™»éŒ²å¤±æ•—ï¼Ÿ(ãƒã‚°)\n");
                         mDoExt_destroySolidHeap(newHeap);
                         newHeap = NULL;
                     } else if (fopAcM::HeapAdjustVerbose) {
                         // Registration successful with exact size.
-                        OS_REPORT("ぴったりサイズで登録成功しました。\n");
+                        OS_REPORT("ã´ã£ãŸã‚Šã‚µã‚¤ã‚ºã§ç™»éŒ²æˆåŠŸã—ã¾ã—ãŸã€‚\n");
                     }
                 } else {
                     mDoExt_destroySolidHeap(newHeap);
@@ -668,19 +668,19 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
                     if (fopAcM::HeapAdjustVerbose) {
                         // Exact size heap was allocated at the back, so it will not be used.
                         OS_REPORT(
-                            "ぴったりサイズヒープは後ろのほうに確保されたので採用しません。\n");
+                            "ã´ã£ãŸã‚Šã‚µã‚¤ã‚ºãƒ’ãƒ¼ãƒ—ã¯å¾Œã‚ã®ã»ã†ã«ç¢ºä¿ã•ã‚ŒãŸã®ã§æŽ¡ç”¨ã—ã¾ã›ã‚“ã€‚\n");
                     }
                 }
             } else if (fopAcM::HeapAdjustVerbose) {
                 // Could not allocate new exact size heap.
-                OS_REPORT("ぴったりサイズヒープを新たに確保できませんでした。\n");
+                OS_REPORT("ã´ã£ãŸã‚Šã‚µã‚¤ã‚ºãƒ’ãƒ¼ãƒ—ã‚’æ–°ãŸã«ç¢ºä¿ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚\n");
             }
 
             if (newHeap != NULL) {
                 adjustedHeap = mDoExt_adjustSolidHeap(newHeap);
                 if (fopAcM::HeapAdjustVerbose) {
                     // Using the exact size heap. %08x
-                    OS_REPORT("ぴったりサイズヒープを採用します。%08x\n", adjustedHeap);
+                    OS_REPORT("ã´ã£ãŸã‚Šã‚µã‚¤ã‚ºãƒ’ãƒ¼ãƒ—ã‚’æŽ¡ç”¨ã—ã¾ã™ã€‚%08x\n", adjustedHeap);
                 }
                 i_actor->heap = newHeap;
                 return true;
@@ -690,22 +690,22 @@ bool fopAcM_entrySolidHeap_(fopAc_ac_c* i_actor, heapCallbackFunc i_heapCallback
                 adjustedHeap = mDoExt_adjustSolidHeap(heap);
                 if (fopAcM::HeapAdjustVerbose) {
                     // Using the previous heap. This is normal. %08x
-                    OS_REPORT("さっきのヒープを採用します。これは正常です。%08x\n", adjustedHeap);
+                    OS_REPORT("ã•ã£ãã®ãƒ’ãƒ¼ãƒ—ã‚’æŽ¡ç”¨ã—ã¾ã™ã€‚ã“ã‚Œã¯æ­£å¸¸ã§ã™ã€‚%08x\n", adjustedHeap);
                 }
                 i_actor->heap = heap;
                 return true;
             }
 
-            OSReport_Error("ばぐばぐです\n");  // It is extremely buggy.
+            OSReport_Error("ã°ãã°ãã§ã™\n");  // It is extremely buggy.
             JUT_ASSERT(1454, FALSE);
 #if VERSION != VERSION_WII_USA_R0
-            OSReport_Error("緊急回避措置\n");  // Emergency evasion measure.
+            OSReport_Error("ç·Šæ€¥å›žé¿æŽªç½®\n");  // Emergency evasion measure.
             fopAcM::HeapAdjustEntry = false;
 #endif
         }
     }
     // fopAcM_entrySolidHeap failed. [%s]
-    OSReport_Error("fopAcM_entrySolidHeap だめでした [%s]\n", procNameString);
+    OSReport_Error("fopAcM_entrySolidHeap ã ã‚ã§ã—ãŸ [%s]\n", procNameString);
     return false;
 }
 
@@ -1300,7 +1300,7 @@ s32 fopAcM_orderMapToolEvent(fopAc_ac_c* i_actor, u8 param_1, s16 i_eventID, u16
             i_eventID = dComIfGp_getEventManager().getEventIdx(i_actor, param_1);
         }
     } else {
-        OS_REPORT("\x1b[31m%s: %d: fopAcM_orderMapToolEvent() マップデータがみつかりません\n\x1b[m", __FILE__, 2984); // "Map data could not be found."
+        OS_REPORT("\x1b[31m%s: %d: fopAcM_orderMapToolEvent() ãƒžãƒƒãƒ—ãƒ‡ãƒ¼ã‚¿ãŒã¿ã¤ã‹ã‚Šã¾ã›ã‚“\n\x1b[m", __FILE__, 2984); // "Map data could not be found."
     }
 
     if (i_flag & 0x100) {
@@ -1398,7 +1398,7 @@ fpc_ProcID fopAcM_createItemForPresentDemo(cXyz const* i_pos, int i_itemNo, u8 p
     #endif
 
     if (i_itemNo == dItemNo_NONE_e) {
-        OS_REPORT("プレゼントデモ用なのに「ハズレ」です！[%d]\n", i_itemNo); // Even though it is for a Present Demo, it is a 'Miss'!
+        OS_REPORT("ãƒ—ãƒ¬ã‚¼ãƒ³ãƒˆãƒ‡ãƒ¢ç”¨ãªã®ã«ã€Œãƒã‚ºãƒ¬ã€ã§ã™ï¼[%d]\n", i_itemNo); // Even though it is for a Present Demo, it is a 'Miss'!
         return fpcM_ERROR_PROCESS_ID_e;
     }
 
@@ -1418,7 +1418,7 @@ fpc_ProcID fopAcM_createItemForTrBoxDemo(cXyz const* i_pos, int i_itemNo, int i_
     #endif
 
     if (i_itemNo == dItemNo_NONE_e) {
-        OS_REPORT("ゲットデモ用なのに「ハズレ」です！[%d]\n", i_itemNo); // Even though it is for a Get Demo, it is a 'Miss'!
+        OS_REPORT("ã‚²ãƒƒãƒˆãƒ‡ãƒ¢ç”¨ãªã®ã«ã€Œãƒã‚ºãƒ¬ã€ã§ã™ï¼[%d]\n", i_itemNo); // Even though it is for a Get Demo, it is a 'Miss'!
         return fpcM_ERROR_PROCESS_ID_e;
     }
 
@@ -1446,7 +1446,7 @@ u8 fopAcM_getItemNoFromTableNo(u8 i_tableNo) {
     u8 tableNum = tableList->mTableNum;
     if (tableNum - 1 < i_tableNo) {
         // "Table Num<%d>, Specified Table<%d>, over table num!\n"
-        OSReport_Error("テーブル数<%d>、指定テーブル番号<%d>で、テーブル数オーバーしています！\n",
+        OSReport_Error("ãƒ†ãƒ¼ãƒ–ãƒ«æ•°<%d>ã€æŒ‡å®šãƒ†ãƒ¼ãƒ–ãƒ«ç•ªå·<%d>ã§ã€ãƒ†ãƒ¼ãƒ–ãƒ«æ•°ã‚ªãƒ¼ãƒãƒ¼ã—ã¦ã„ã¾ã™ï¼\n",
                        tableNum, i_tableNo);
         i_tableNo = 0;
     }
@@ -1525,13 +1525,13 @@ fpc_ProcID fopAcM_createItemFromEnemyID(u8 i_enemyID, cXyz const* i_pos, int i_i
 
 #if TARGET_PC
     // ============================================
-    // NEW CODE — ALBW Port
+    // NEW CODE â€” ALBW Port
     // After the normal drop table is resolved, independently roll for a
     // large magic pickup (meter refill drop). Green rupees from the normal
     // drop table serve as the small fill (1/15 via item_func_GREEN_RUPEE);
     // this roll produces the larger orange-rupee drop (L_MAGIC, 1/3 fill)
     // as a rarer bonus on top.
-    //   10% chance: large drop (L_MAGIC) — 1.3× scale orange rupee
+    //   10% chance: large drop (L_MAGIC) â€” 1.3Ã— scale orange rupee
     //   90% chance: no extra magic drop this kill
     // "Always" arc is resident from game start, so no load guard is needed.
     // ============================================
@@ -1568,7 +1568,7 @@ fpc_ProcID fopAcM_createItemFromTable(cXyz const* i_pos, int i_itemNo, int i_ite
         return fpcM_ERROR_PROCESS_ID_e;
     }
     // ============================================
-    // NEW CODE — ALBW Port
+    // NEW CODE â€” ALBW Port
     // Suppress ammo drops (bombs, arrows, slingshot seeds) when the
     // noAmmoDrops setting is on. Items are meter-fuelled in this mod;
     // ammo refills have no purpose and would clutter the ground.
@@ -1591,7 +1591,7 @@ fpc_ProcID fopAcM_createItemFromTable(cXyz const* i_pos, int i_itemNo, int i_ite
 #if DEBUG
     tableNum = tableList->mTableNum;
     if (tableNum - 1 < i_itemNo) {
-        OSReport_Error("テーブル数<%d>、指定テーブル番号<%d>で、テーブル数オーバーしています！\n",
+        OSReport_Error("ãƒ†ãƒ¼ãƒ–ãƒ«æ•°<%d>ã€æŒ‡å®šãƒ†ãƒ¼ãƒ–ãƒ«ç•ªå·<%d>ã§ã€ãƒ†ãƒ¼ãƒ–ãƒ«æ•°ã‚ªãƒ¼ãƒãƒ¼ã—ã¦ã„ã¾ã™ï¼\n",
                        tableNum, i_itemNo);
         i_itemNo = 0;
     }
@@ -1746,17 +1746,17 @@ fpc_ProcID fopAcM_createItem(const cXyz* i_pos, int i_itemNo, int i_itemBitNo, i
 // Return pointer fopAc_ac_c* is uninitialized for these branches
     case dItemNo_SMALL_KEY_e:
         // "Small Key: Can't support map display, so program generation is prohibited!\n"
-        OS_REPORT_ERROR("小さい鍵：マップ表示対応出来ないので、プログラム生成禁止！\n");
+        OS_REPORT_ERROR("å°ã•ã„éµï¼šãƒžãƒƒãƒ—è¡¨ç¤ºå¯¾å¿œå‡ºæ¥ãªã„ã®ã§ã€ãƒ—ãƒ­ã‚°ãƒ©ãƒ ç”Ÿæˆç¦æ­¢ï¼\n");
         JUT_ASSERT(4145, FALSE);
         break;
     case dItemNo_KANTERA_e:
         // "Lantern: Program generation is prohibited!\n"
-        OS_REPORT_ERROR("カンテラ：プログラム生成禁止！\n");
+        OS_REPORT_ERROR("ã‚«ãƒ³ãƒ†ãƒ©ï¼šãƒ—ãƒ­ã‚°ãƒ©ãƒ ç”Ÿæˆç¦æ­¢ï¼\n");
         JUT_ASSERT(4149, FALSE);
         break;
     case dItemNo_LIGHT_DROP_e:
         // "Light Drop: Program generation is prohibited!\n"
-        OS_REPORT_ERROR("光の雫：プログラム生成禁止！\n");
+        OS_REPORT_ERROR("å…‰ã®é›«ï¼šãƒ—ãƒ­ã‚°ãƒ©ãƒ ç”Ÿæˆç¦æ­¢ï¼\n");
         JUT_ASSERT(4153, FALSE);
         break;
 #endif
@@ -1818,17 +1818,17 @@ fopAc_ac_c* fopAcM_fastCreateItem2(const cXyz* i_pos, int i_itemNo, int i_itemBi
 // Return pointer fopAc_ac_c* is uninitialized for these branches
     case dItemNo_SMALL_KEY_e:
         // "Small Key: Can't support map display, so program generation is prohibited!\n"
-        OS_REPORT_ERROR("小さい鍵：マップ表示対応出来ないので、プログラム生成禁止！\n");
+        OS_REPORT_ERROR("å°ã•ã„éµï¼šãƒžãƒƒãƒ—è¡¨ç¤ºå¯¾å¿œå‡ºæ¥ãªã„ã®ã§ã€ãƒ—ãƒ­ã‚°ãƒ©ãƒ ç”Ÿæˆç¦æ­¢ï¼\n");
         JUT_ASSERT(4268, FALSE);
         break;
     case dItemNo_KANTERA_e:
         // "Lantern: Program generation is prohibited!\n"
-        OS_REPORT_ERROR("カンテラ：プログラム生成禁止！\n");
+        OS_REPORT_ERROR("ã‚«ãƒ³ãƒ†ãƒ©ï¼šãƒ—ãƒ­ã‚°ãƒ©ãƒ ç”Ÿæˆç¦æ­¢ï¼\n");
         JUT_ASSERT(4272, FALSE);
         break;
     case dItemNo_LIGHT_DROP_e:
         // "Light Drop: Program generation is prohibited!\n"
-        OS_REPORT_ERROR("光の雫：プログラム生成禁止！\n");
+        OS_REPORT_ERROR("å…‰ã®é›«ï¼šãƒ—ãƒ­ã‚°ãƒ©ãƒ ç”Ÿæˆç¦æ­¢ï¼\n");
         JUT_ASSERT(4276, FALSE);
         break;
 #endif
@@ -1883,17 +1883,17 @@ fopAc_ac_c* fopAcM_fastCreateItem(const cXyz* i_pos, int i_itemNo, int i_roomNo,
 // Return pointer fopAc_ac_c* is uninitialized for these branches
     case dItemNo_SMALL_KEY_e:
         // "Small Key: Can't support map display, so program generation is prohibited!\n"
-        OS_REPORT_ERROR("小さい鍵：マップ表示対応出来ないので、プログラム生成禁止！\n");
+        OS_REPORT_ERROR("å°ã•ã„éµï¼šãƒžãƒƒãƒ—è¡¨ç¤ºå¯¾å¿œå‡ºæ¥ãªã„ã®ã§ã€ãƒ—ãƒ­ã‚°ãƒ©ãƒ ç”Ÿæˆç¦æ­¢ï¼\n");
         JUT_ASSERT(4383, FALSE);
         break;
     case dItemNo_KANTERA_e:
         // "Lantern: Program generation is prohibited!\n"
-        OS_REPORT_ERROR("カンテラ：プログラム生成禁止！\n");
+        OS_REPORT_ERROR("ã‚«ãƒ³ãƒ†ãƒ©ï¼šãƒ—ãƒ­ã‚°ãƒ©ãƒ ç”Ÿæˆç¦æ­¢ï¼\n");
         JUT_ASSERT(4387, FALSE);
         break;
     case dItemNo_LIGHT_DROP_e:
         // "Light Drop: Program generation is prohibited!\n"
-        OS_REPORT_ERROR("光の雫：プログラム生成禁止！\n");
+        OS_REPORT_ERROR("å…‰ã®é›«ï¼šãƒ—ãƒ­ã‚°ãƒ©ãƒ ç”Ÿæˆç¦æ­¢ï¼\n");
         JUT_ASSERT(4391, FALSE);
         break;
 #endif
@@ -2383,7 +2383,7 @@ fopAc_ac_c* fopAcM_findObject4EventCB(fopAc_ac_c* i_actor, void* i_data) {
 fopAc_ac_c* fopAcM_searchFromName4Event(char const* i_name, s16 i_eventID) {
     fopAcM_search4ev_prm prm;
     prm.event_id = i_eventID;
-    strcpy(prm.name, i_name);
+    SAFE_STRCPY(prm.name, i_name);
 
     char* chr = std::strchr(prm.name, ':');
     if (chr != NULL) {

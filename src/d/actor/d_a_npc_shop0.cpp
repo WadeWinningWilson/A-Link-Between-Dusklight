@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file d_a_npc_shop0.cpp
  * 
 */
@@ -184,7 +184,7 @@ int daNpc_Shop0_c::init() {
 static char l_fileName[21];
 
 J3DAnmTransform* daNpc_Shop0_c::getTrnsfrmAnmP(int i_fileIndex, char** i_fileName) {
-    strcpy(l_fileName, i_fileName[i_fileIndex]);
+    SAFE_STRCPY(l_fileName, i_fileName[i_fileIndex]);
     strcat(l_fileName, ".bck");
     return (J3DAnmTransform*) dComIfG_getObjectRes(getResName(), l_fileName);
 }

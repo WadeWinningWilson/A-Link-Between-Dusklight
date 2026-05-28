@@ -1,4 +1,4 @@
-#include "d/dolzel.h" // IWYU pragma: keep
+﻿#include "d/dolzel.h" // IWYU pragma: keep
 
 #include "d/d_ev_camera.h"
 #include "d/d_debug_viewer.h"
@@ -46,7 +46,7 @@ int dCamera_c::StartEventCamera(int param_0, int param_1, ...) {
     for (int i = 0; i < 8; i++) {
         char* param_name = va_arg(args, char*);
         if (param_name != NULL) {
-            strcpy(mEventData.mEventParams[i].name, param_name);
+            SAFE_STRCPY(mEventData.mEventParams[i].name, param_name);
             mEventData.mEventParams[i].field_0x10 = va_arg(args, int);
             mEventData.mEventParams[i].value = va_arg(args, uintptr_t);
         } else {
@@ -520,7 +520,7 @@ bool dCamera_c::fixedFrameEvCamera() {
 #if DEBUG
         if (strlen(fframe_p->mRelUseMask) != 2) {
             OSReport("camera: event:                   bad length -> xx\n");
-            strcpy(fframe_p->mRelUseMask, "xx");
+            SAFE_STRCPY(fframe_p->mRelUseMask, "xx");
             JUTAssertion::showAssert(JUTAssertion::getSDevice(), "d_ev_camera.cpp", 0x32e, "0");
             OSPanic("d_ev_camera.cpp", 0x32e, "Halt");
         }
@@ -3424,7 +3424,7 @@ bool dCamera_c::fixedFramesEvCamera() {
 #if DEBUG
         if (strlen(&fframes_p->mRelUseMask) != 2) {
             OSReport("camera: event:                   bad length -> xx\n");
-            strcpy(&fframes_p->mRelUseMask, "xx");
+            SAFE_STRCPY(&fframes_p->mRelUseMask, "xx");
             JUTAssertion::showAssert(JUTAssertion::getSDevice(), "d_ev_camera.cpp", 0x129c, "Halt");
             OSPanic("d_ev_camera.cpp", 0x129c, "Halt");
         }
@@ -3959,7 +3959,7 @@ bool dCamera_c::bspTransEvCamera() {
 
         bspTrans->mSet1 = 0;
         char use1[8];
-        strcpy(use1, "xxxxxx");
+        SAFE_STRCPY(use1, "xxxxxx");
 
         iVar1 = getEvFloatListData(&bspTrans->mSet1, "Set1");
         if (iVar1 != 0) {
@@ -3970,7 +3970,7 @@ bool dCamera_c::bspTransEvCamera() {
 #if DEBUG
             if (strlen(use1) != 6) {
                 OSReport("camera: event:                   bad length -> xxxxxx\n");
-                strcpy(use1, "xxxxxx");
+                SAFE_STRCPY(use1, "xxxxxx");
                 JUTAssertion::showAssert(JUTAssertion::getSDevice(), "d_ev_camera.cpp", 0x14f9, "0");
                 OSPanic("d_ev_camera.cpp", 0x14f9, "Halt");
             }
@@ -3979,7 +3979,7 @@ bool dCamera_c::bspTransEvCamera() {
 
         bspTrans->mSet2 = 0;
         char use2[8];
-        strcpy(use2, "xxxxxx");
+        SAFE_STRCPY(use2, "xxxxxx");
 
         iVar1 = getEvFloatListData(&bspTrans->mSet2, "Set2");
         if (iVar1 != 0) {
@@ -3990,7 +3990,7 @@ bool dCamera_c::bspTransEvCamera() {
 #if DEBUG
             if (strlen(use2) != 6) {
                 OSReport_Error("camera: event:                   bad length -> xxxxxx\n");
-                strcpy(use2, "xxxxxx");
+                SAFE_STRCPY(use2, "xxxxxx");
                 JUTAssertion::showAssert(JUTAssertion::getSDevice(), "d_ev_camera.cpp", 0x1509, "0");
                 OSPanic("d_ev_camera.cpp", 0x1509, "Halt");
             }
@@ -4005,7 +4005,7 @@ bool dCamera_c::bspTransEvCamera() {
 #if DEBUG
             if (strlen(&bspTrans->mRelUseMask) != 2) {
                 OSReport_Error("camera: event:                   bad length -> xx\n");
-                strcpy(&bspTrans->mRelUseMask, "xx");
+                SAFE_STRCPY(&bspTrans->mRelUseMask, "xx");
                 JUTAssertion::showAssert(JUTAssertion::getSDevice(), "d_ev_camera.cpp", 0x1515, "0");
                 OSPanic("d_ev_camera.cpp", 0x1515, "Halt");
             }

@@ -1,4 +1,4 @@
-#include "d/dolzel.h" // IWYU pragma: keep
+﻿#include "d/dolzel.h" // IWYU pragma: keep
 
 #include "d/d_event.h"
 #include "d/actor/d_a_alink.h"
@@ -49,7 +49,7 @@ s32 dEvt_control_c::orderOld(u16 type, u16 prio, u16 flag, u16 hind, void* reque
     if (event_debug_evnt()) {
         if (type == dEvt_type_OTHER_e && eventName != NULL) {
             // "requested event %s!!"
-            OS_REPORT("要求イベント %s!!", eventName);
+            OS_REPORT("è¦æ±‚ã‚¤ãƒ™ãƒ³ãƒˆ %s!!", eventName);
         }
         OS_REPORT("\n");
     }
@@ -77,23 +77,23 @@ s32 dEvt_control_c::order(u16 type, u16 prio, u16 flag, u16 hind, void* requestA
 
         if (requestActor != NULL) {
             // "Request actor %s!!"
-            OS_REPORT("要求者 %s!!", dStage_getName(fopAcM_GetProfName(requestActor), -1));
+            OS_REPORT("è¦æ±‚è€… %s!!", dStage_getName(fopAcM_GetProfName(requestActor), -1));
         }
 
         if (targetActor != NULL) {
             // "Target actor %s!!"
-            OS_REPORT("対象者 %s!!", dStage_getName(fopAcM_GetProfName(targetActor), -1));
+            OS_REPORT("å¯¾è±¡è€… %s!!", dStage_getName(fopAcM_GetProfName(targetActor), -1));
         }
 
         // "Request id = %d prio = %d "
-        OS_REPORT(" 要求 id = %d prio = %d ", id, prio);
+        OS_REPORT(" è¦æ±‚ id = %d prio = %d ", id, prio);
         OS_REPORT("\n");
     }
     #endif
 
     if (mNum >= ARRAY_SIZE(mOrder)) {
         // "%06d: event: order failed"
-        OS_REPORT("\x1b[34m%06d: event: 注文失敗\n\x1b[m", g_Counter.mCounter0);
+        OS_REPORT("\x1b[34m%06d: event: æ³¨æ–‡å¤±æ•—\n\x1b[m", g_Counter.mCounter0);
         return 0;
     }
 
@@ -143,7 +143,7 @@ s32 dEvt_control_c::order(u16 type, u16 prio, u16 flag, u16 hind, void* requestA
     #if DEBUG
     if (event_debug_evnt()) {
         // "%06d: event: order success  mNum = %d"
-        OS_REPORT("\x1B[34m%06d: event: 注文成功　mNum = %d\n\x1B[m", g_Counter.mCounter0, mNum);
+        OS_REPORT("\x1B[34m%06d: event: æ³¨æ–‡æˆåŠŸã€€mNum = %d\n\x1B[m", g_Counter.mCounter0, mNum);
     }
     #endif
 
@@ -204,7 +204,7 @@ s32 dEvt_control_c::beforeFlagProc(dEvt_order_c* order) {
 }
 
 static char const* dummy1() {
-    return "？？？";
+    return "ï¼Ÿï¼Ÿï¼Ÿ";
 }
 
 void dEvt_control_c::afterFlagProc(dEvt_order_c* order) {
@@ -245,9 +245,9 @@ int dEvt_control_c::talkCheck(dEvt_order_c* order) {
         #if DEBUG
         if (event_debug_evnt()) {
             // "conversation  actor1 = %x  actor2 = %x"
-            OS_REPORT("会話へ actor1 = %x  actor2 = %x\n", order->mpRequestActor, order->mpTargetActor);
+            OS_REPORT("ä¼šè©±ã¸ actor1 = %x  actor2 = %x\n", order->mpRequestActor, order->mpTargetActor);
             // "conversation partner %s"
-            OS_REPORT("会話相手 %s\n", dStage_getName(fopAcM_GetProfName(actor), -1));
+            OS_REPORT("ä¼šè©±ç›¸æ‰‹ %s\n", dStage_getName(fopAcM_GetProfName(actor), -1));
         }
         #endif
 
@@ -263,7 +263,7 @@ int dEvt_control_c::talkCheck(dEvt_order_c* order) {
 
         if (!dComIfGp_getEventManager().order(mEventId)) {
             // "specified event %d not ordered!!"
-            OS_REPORT("指定イベント %d が無い!!\n", mEventId);
+            OS_REPORT("æŒ‡å®šã‚¤ãƒ™ãƒ³ãƒˆ %d ãŒç„¡ã„!!\n", mEventId);
             JUT_ASSERT(429, FALSE);
         }
 
@@ -315,9 +315,9 @@ int dEvt_control_c::talkXyCheck(dEvt_order_c* order) {
         #if DEBUG
         if (event_debug_evnt()) {
             // "conversation  actor1 = %x  actor2 = %x"
-            OS_REPORT("会話へ actor1 = %x  actor2 = %x\n", order->mpRequestActor, order->mpTargetActor);
+            OS_REPORT("ä¼šè©±ã¸ actor1 = %x  actor2 = %x\n", order->mpRequestActor, order->mpTargetActor);
             // "conversation partner"
-            OS_REPORT("会話相手 %s\n", dStage_getName(fopAcM_GetProfName(targetActor), -1));
+            OS_REPORT("ä¼šè©±ç›¸æ‰‹ %s\n", dStage_getName(fopAcM_GetProfName(targetActor), -1));
         }
         #endif
 
@@ -327,7 +327,7 @@ int dEvt_control_c::talkXyCheck(dEvt_order_c* order) {
         
         if (!dComIfGp_getEventManager().order(mEventId)) {
             // "specified event %d not ordered!!"
-            OS_REPORT("指定イベント %d が無い!!\n", mEventId);
+            OS_REPORT("æŒ‡å®šã‚¤ãƒ™ãƒ³ãƒˆ %d ãŒç„¡ã„!!\n", mEventId);
             JUT_ASSERT(512, FALSE);
         }
         return 1;
@@ -356,7 +356,7 @@ int dEvt_control_c::catchCheck(dEvt_order_c* order) {
     if (mEventId != -1) {
         if (!dComIfGp_getEventManager().order(mEventId)) {
             // "specified event %d not ordered!!"
-            OS_REPORT("指定イベント %d が無い!!\n", mEventId);
+            OS_REPORT("æŒ‡å®šã‚¤ãƒ™ãƒ³ãƒˆ %d ãŒç„¡ã„!!\n", mEventId);
             JUT_ASSERT(551, FALSE);
         }
     }
@@ -482,7 +482,7 @@ int dEvt_control_c::potentialCheck(dEvt_order_c* order) {
         }
 
         // "%06d: event: potential demo start (%s) "
-        OS_REPORT("\x1b[34m%06d: event: 仮想デモ開始 (%s) \n\x1b[m", g_Counter.mCounter0, actorname);
+        OS_REPORT("\x1b[34m%06d: event: ä»®æƒ³ãƒ‡ãƒ¢é–‹å§‹ (%s) \n\x1b[m", g_Counter.mCounter0, actorname);
     }
     #endif
     return 1;
@@ -490,13 +490,13 @@ int dEvt_control_c::potentialCheck(dEvt_order_c* order) {
 
 int dEvt_control_c::doorCheck(dEvt_order_c* order) {
     // "door demo check start!!"
-    OS_REPORT("ドアデモのチェック開始!!\n");
+    OS_REPORT("ãƒ‰ã‚¢ãƒ‡ãƒ¢ã®ãƒã‚§ãƒƒã‚¯é–‹å§‹!!\n");
 
     if (commonCheck(order, dEvtCnd_CANDOOR_e, dEvtCmd_INDOOR_e)) {
         #if DEBUG
         if (event_debug_evnt()) {
             // "door demo  actor1 = %x  actor2 = %x"
-            OS_REPORT("ドアデモへ actor1 = %x  actor2 = %x\n", order->mpRequestActor, order->mpTargetActor);
+            OS_REPORT("ãƒ‰ã‚¢ãƒ‡ãƒ¢ã¸ actor1 = %x  actor2 = %x\n", order->mpRequestActor, order->mpTargetActor);
         }
         #endif
 
@@ -538,7 +538,7 @@ int dEvt_control_c::itemCheck(dEvt_order_c* order) {
     if (commonCheck(order, dEvtCnd_CANGETITEM_e, dEvtCmd_INGETITEM_e)) {
         #if DEBUG
         if (event_debug_evnt()) {
-            OS_REPORT("アイテムデモへ actor1 = %x  actor2 = %x\n", order->mpRequestActor, order->mpTargetActor);
+            OS_REPORT("ã‚¢ã‚¤ãƒ†ãƒ ãƒ‡ãƒ¢ã¸ actor1 = %x  actor2 = %x\n", order->mpRequestActor, order->mpTargetActor);
         }
         #endif
 
@@ -546,7 +546,7 @@ int dEvt_control_c::itemCheck(dEvt_order_c* order) {
         mEventId = dComIfGp_getEventManager().getEventIdx(eventname, 0xFF, -1);
         if (!dComIfGp_getEventManager().order(mEventId)) {
             // "specified event %d not ordered!!"
-            OS_REPORT("指定イベント %s が無い!!\n", eventname);
+            OS_REPORT("æŒ‡å®šã‚¤ãƒ™ãƒ³ãƒˆ %s ãŒç„¡ã„!!\n", eventname);
             JUT_ASSERT(817, FALSE);
         }
         return 1;
@@ -558,7 +558,7 @@ int dEvt_control_c::itemCheck(dEvt_order_c* order) {
 int dEvt_control_c::endProc() {
     #if DEBUG
     if (event_debug_evnt()) {
-        OS_REPORT("\x1b[34m%06d: event: イベントが終了しました mMode = %d \n\x1b[m", g_Counter.mCounter0, mMode);
+        OS_REPORT("\x1b[34m%06d: event: ã‚¤ãƒ™ãƒ³ãƒˆãŒçµ‚äº†ã—ã¾ã—ãŸ mMode = %d \n\x1b[m", g_Counter.mCounter0, mMode);
     }
     #endif
 
@@ -611,7 +611,7 @@ int dEvt_control_c::change() {
 int dEvt_control_c::entry() {
     if (mNum != 0) {
         // "%06d: event: %d event requests!!"
-        OS_REPORT("\x1b[34m%06d: event: %d個のイベント要求!!\n\x1b[m", g_Counter.mCounter0, mNum);
+        OS_REPORT("\x1b[34m%06d: event: %då€‹ã®ã‚¤ãƒ™ãƒ³ãƒˆè¦æ±‚!!\n\x1b[m", g_Counter.mCounter0, mNum);
 
         s8 orderIdx = mOrderIdx;
         mNum = 0;
@@ -643,7 +643,7 @@ int dEvt_control_c::entry() {
                 #if DEBUG
                 if (event_debug_evnt()) {
                     // "%06d: event: player initiated demo start"
-                    OS_REPORT("\x1b[34m%06d: event: プレーヤ主導デモ開始\n\x1b[m", g_Counter.mCounter0);
+                    OS_REPORT("\x1b[34m%06d: event: ãƒ—ãƒ¬ãƒ¼ãƒ¤ä¸»å°Žãƒ‡ãƒ¢é–‹å§‹\n\x1b[m", g_Counter.mCounter0);
                 }
                 #endif
 
@@ -681,7 +681,7 @@ int dEvt_control_c::entry() {
         #if DEBUG
         if (event_debug_evnt()) {
             // "%06d: event: check failed or change"
-            OS_REPORT("\x1b[34m%06d: event: チェック失敗 or チェンジ\n\x1b[m", g_Counter.mCounter0);
+            OS_REPORT("\x1b[34m%06d: event: ãƒã‚§ãƒƒã‚¯å¤±æ•— or ãƒã‚§ãƒ³ã‚¸\n\x1b[m", g_Counter.mCounter0);
         }
         #endif
     }
@@ -728,7 +728,7 @@ void dEvt_control_c::clearSkipSystem() {
 
 int dEv_defaultSkipProc(void* actor, int parameter) {
     // "%06d: event: skip event!!!"
-    OS_REPORT("\x1b[34m%06d: event: スキップ event!!!\n\x1b[m", g_Counter.mCounter0);
+    OS_REPORT("\x1b[34m%06d: event: ã‚¹ã‚­ãƒƒãƒ— event!!!\n\x1b[m", g_Counter.mCounter0);
     dEvt_control_c* event = dComIfGp_getEvent();
 
     event->reset(actor);
@@ -737,7 +737,7 @@ int dEv_defaultSkipProc(void* actor, int parameter) {
 
 int dEv_defaultSkipZev(void* actor, int parameter) {
     // "%06d: event: skip ZEV event!!!"
-    OS_REPORT("\x1b[34m%06d: event: スキップ ZEV event!!!\n\x1b[m", g_Counter.mCounter0);
+    OS_REPORT("\x1b[34m%06d: event: ã‚¹ã‚­ãƒƒãƒ— ZEV event!!!\n\x1b[m", g_Counter.mCounter0);
     dEvt_control_c* event = dComIfGp_getEvent();
 
     s16 eventID = -1;
@@ -756,7 +756,7 @@ int dEv_defaultSkipZev(void* actor, int parameter) {
     char* skipName;
     switch (parameter) {
     case 0:
-        strcpy(eventName, data->data.event_name);
+        SAFE_STRCPY(eventName, data->data.event_name);
         strcat(eventName, "$0");
         eventID = dComIfGp_getEventManager().getEventIdx(eventName, 0xFF, -1);
         OS_REPORT("%06d: event:   [%d] %s!\n", g_Counter.mCounter0, eventID, eventName);
@@ -785,7 +785,7 @@ int dEv_defaultSkipZev(void* actor, int parameter) {
 }
 
 int dEv_defaultSkipStb(void* actor, int parameter) {
-    OS_REPORT("\x1b[34m%06d: event: スキップ STB event!!!\n\x1b[m", g_Counter.mCounter0);
+    OS_REPORT("\x1b[34m%06d: event: ã‚¹ã‚­ãƒƒãƒ— STB event!!!\n\x1b[m", g_Counter.mCounter0);
     dEvt_control_c* event = dComIfGp_getEvent();
 
     s16 eventID = -1;
@@ -804,7 +804,7 @@ int dEv_defaultSkipStb(void* actor, int parameter) {
     char* skipName;
     switch (parameter) {
     case 0:
-        strcpy(eventName, data->data.event_name);
+        SAFE_STRCPY(eventName, data->data.event_name);
         strcat(eventName, "$0");
         eventID = dComIfGp_getEventManager().getEventIdx(eventName, 0xFF, -1);
         OS_REPORT("%06d: event:   [%d] %s!\n", g_Counter.mCounter0, eventID, eventName);
@@ -851,7 +851,7 @@ void dEvt_control_c::setSkipProc(void* skipActor, dEvt_SkipCb skipCb, int skipPa
 
 void dEvt_control_c::setSkipZev(void* skipActor, char* eventName) {
     setSkipProc(skipActor, dEv_defaultSkipZev, 1);
-    strcpy(mSkipEventName, eventName);
+    SAFE_STRCPY(mSkipEventName, eventName);
 }
 
 void dEvt_control_c::onSkipFade() {
@@ -993,7 +993,7 @@ int dEvt_control_c::Step() {
 
     if (mEventStatus == 2) {
         // "%06d: event: end (%d)"
-        OS_REPORT("\x1b[36m%06d: event: 終了 (%d)\n\x1b[m", g_Counter.mCounter0, prevEvId);
+        OS_REPORT("\x1b[36m%06d: event: çµ‚äº† (%d)\n\x1b[m", g_Counter.mCounter0, prevEvId);
 
         evtMng->cancelStaff("ALL");
         evtMng->setCameraPlay(0);
@@ -1027,7 +1027,7 @@ int dEvt_control_c::Step() {
         mEventStatus = 2;
 
         // "%06d: event: order info (%d)"
-        OS_REPORT("\x1b[36m%06d: event: オーダー受付 (%d)\n\x1b[m", g_Counter.mCounter0, prevEvId);
+        OS_REPORT("\x1b[36m%06d: event: ã‚ªãƒ¼ãƒ€ãƒ¼å—ä»˜ (%d)\n\x1b[m", g_Counter.mCounter0, prevEvId);
     } else if (mEventStatus == 5 && (chkFlag2(2) || mSkipTimer < 0)) {
         clear_tmpflag_for_message();
     }
@@ -1036,7 +1036,7 @@ int dEvt_control_c::Step() {
         #if DEBUG
         if (event_debug_evnt()) {
             // "%06d: event: event change"
-            OS_REPORT("\x1b[34m%06d: event: イベント変更\n\x1b[m", g_Counter.mCounter0);
+            OS_REPORT("\x1b[34m%06d: event: ã‚¤ãƒ™ãƒ³ãƒˆå¤‰æ›´\n\x1b[m", g_Counter.mCounter0);
         }
         #endif
 
@@ -1094,7 +1094,7 @@ int dEvt_control_c::Step() {
         }
 
         // "%06d: event: start (%d=%s[%d]) %s"
-        OS_REPORT("\x1b[36m%06d: event: 開始 (%d=%s[%d]) %s\n\x1b[m", g_Counter.mCounter0, mEventId,
+        OS_REPORT("\x1b[36m%06d: event: é–‹å§‹ (%d=%s[%d]) %s\n\x1b[m", g_Counter.mCounter0, mEventId,
                   mEventId == -1 ? "PROGRAM" : basename[mEventId >> 8], mEventId & 0xFF, eventname);
         prevEvId = -99;
         #endif

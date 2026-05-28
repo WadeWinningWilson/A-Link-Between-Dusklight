@@ -1,4 +1,4 @@
-//
+﻿//
 // Door Shutter
 //
 
@@ -65,10 +65,10 @@ char* daDoor20_c::getBmdName() {
     case 10:
     case 12:
     default:
-        sprintf(bmdName, "door-shutter_%02d.bmd", door_param2_c::getDoorModel(this));
+        SAFE_SPRINTF(bmdName, "door-shutter_%02d.bmd", door_param2_c::getDoorModel(this));
         break;
     case 9:
-        sprintf(bmdName, "door-knob_%02d.bmd", door_param2_c::getDoorModel(this));
+        SAFE_SPRINTF(bmdName, "door-knob_%02d.bmd", door_param2_c::getDoorModel(this));
         break;
     }
     return bmdName;
@@ -1394,7 +1394,7 @@ int daDoor20_c::createKey() {
                                              &cStack_28, roomNo, &cStack_30, &scale, -1, 0);
             break;
         default:
-            OSReport_Error("シャッタードア：鍵タイプが不明です\n"); // Shutter door: key type unknown
+            OSReport_Error("ã‚·ãƒ£ãƒƒã‚¿ãƒ¼ãƒ‰ã‚¢ï¼šéµã‚¿ã‚¤ãƒ—ãŒä¸æ˜Žã§ã™\n"); // Shutter door: key type unknown
             // fallthrough
         case 0:
             if (door_param2_c::getFrontOption(this) == 2) {

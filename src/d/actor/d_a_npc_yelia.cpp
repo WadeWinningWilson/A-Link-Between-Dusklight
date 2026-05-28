@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file d_a_npc_yelia.cpp
  * 
 */
@@ -400,7 +400,7 @@ cPhs_Step daNpc_Yelia_c::create() {
 
 #if DEBUG
         mpHIO = &l_HIO;
-        mpHIO->entryHIO("イリア");
+        mpHIO->entryHIO("ã‚¤ãƒªã‚¢");
 #endif
 
         reset();
@@ -1137,7 +1137,7 @@ BOOL daNpc_Yelia_c::cutTakeWoodStatue(int i_staffId) {
             mItemId = fpcM_ERROR_PROCESS_ID_e;
             mEventTimer = timer;
             Z2GetAudioMgr()->muteSceneBgm(90, 0.0f);
-            strcpy(name, l_evtList[EVENT_TAKE_WOODSTATUE].eventName);
+            SAFE_STRCPY(name, l_evtList[EVENT_TAKE_WOODSTATUE].eventName);
             strcat(name, "@");
             dComIfGp_getEvent()->setSkipZev(this, name);
             dComIfGp_getEvent()->onSkipFade();

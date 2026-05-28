@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file d_a_bg_obj.cpp
  * 
 */
@@ -19,10 +19,10 @@ static const char* getBmdName(int param_0, int param_1) {
 
     switch (param_1) {
     case 0:
-        sprintf(l_bmdName, "model%d.bmd", param_0);
+        SAFE_SPRINTF(l_bmdName, "model%d.bmd", param_0);
         break;
     default:
-        sprintf(l_bmdName, "model%d_%d.bmd", param_0, param_1);
+        SAFE_SPRINTF(l_bmdName, "model%d_%d.bmd", param_0, param_1);
         break;
     }
 
@@ -34,10 +34,10 @@ static const char* getBtkName(int param_0, int param_1) {
 
     switch (param_1) {
     case 0:
-        sprintf(l_btkName, "model%d.btk", param_0);
+        SAFE_SPRINTF(l_btkName, "model%d.btk", param_0);
         break;
     default:
-        sprintf(l_btkName, "model%d_%d.btk", param_0, param_1);
+        SAFE_SPRINTF(l_btkName, "model%d_%d.btk", param_0, param_1);
         break;
     }
 
@@ -49,10 +49,10 @@ static const char* getBrkName(int param_0, int param_1) {
 
     switch (param_1) {
     case 0:
-        sprintf(l_brkName, "model%d.brk", param_0);
+        SAFE_SPRINTF(l_brkName, "model%d.brk", param_0);
         break;
     default:
-        sprintf(l_brkName, "model%d_%d.brk", param_0, param_1);
+        SAFE_SPRINTF(l_brkName, "model%d_%d.brk", param_0, param_1);
         break;
     }
 
@@ -62,7 +62,7 @@ static const char* getBrkName(int param_0, int param_1) {
 static const char* getDzbName(int param_0) {
     static char l_dzbName[16];
 
-    sprintf(l_dzbName, "model%d.dzb", param_0);
+    SAFE_SPRINTF(l_dzbName, "model%d.dzb", param_0);
     return l_dzbName;
 }
 
@@ -95,12 +95,12 @@ u8* daBgObj_c::spec_data_c::initTexShareBlock(u8* i_dataPtr) {
     u8* dataPos = i_dataPtr + 8;
 
     for (; i < mTexShareNum; i++) {
-        strcpy(sp48, (char*)dataPos);
+        SAFE_STRCPY(sp48, (char*)dataPos);
         int len = strlen((char*)dataPos);
 
         dataPos += len + 1;
         if (*dataPos != 0) {
-            strcpy(sp8, (char*)dataPos);
+            SAFE_STRCPY(sp8, (char*)dataPos);
             dataPos += strlen((char*)dataPos) + 1;
         } else if (*dataPos == 0 && dataPos[1] == 1) {
             dataPos += 2;
@@ -142,7 +142,7 @@ bool daBgObj_c::spec_data_c::Set(void* i_ptr) {
                 break;
             default:
                 // Invalid data block type
-                OS_REPORT_ERROR("データブロックタイプが不正です<%d>\n", block_type);
+                OS_REPORT_ERROR("ãƒ‡ãƒ¼ã‚¿ãƒ–ãƒ­ãƒƒã‚¯ã‚¿ã‚¤ãƒ—ãŒä¸æ­£ã§ã™<%d>\n", block_type);
                 JUT_ASSERT(527, FALSE);
             }
 
@@ -183,7 +183,7 @@ bool daBgObj_c::spec_data_c::Set(void* i_ptr) {
                 break;
             default:
                 // Invalid data block type
-                OS_REPORT_ERROR("データブロックタイプが不正です<%d>\n", block_type);
+                OS_REPORT_ERROR("ãƒ‡ãƒ¼ã‚¿ãƒ–ãƒ­ãƒƒã‚¯ã‚¿ã‚¤ãƒ—ãŒä¸æ­£ã§ã™<%d>\n", block_type);
                 JUT_ASSERT(570, FALSE);
             }
 
@@ -224,7 +224,7 @@ bool daBgObj_c::spec_data_c::Set(void* i_ptr) {
                 break;
             default:
                 // "Data Block type invalid<%d>\n"
-                OSReport_Error("データブロックタイプが不正です<%d>\n", block_type);
+                OSReport_Error("ãƒ‡ãƒ¼ã‚¿ãƒ–ãƒ­ãƒƒã‚¯ã‚¿ã‚¤ãƒ—ãŒä¸æ­£ã§ã™<%d>\n", block_type);
                 JUT_ASSERT(619, FALSE);
                 break;
             }
@@ -239,7 +239,7 @@ bool daBgObj_c::spec_data_c::Set(void* i_ptr) {
     }
     default:
         // Terrain unit MoveBG: performance undefined error<%d>!!!
-        OS_REPORT_ERROR("地形ユニットMoveBG : 性能未定義エラー！！！<%d>\n\n", mSpecType);
+        OS_REPORT_ERROR("åœ°å½¢ãƒ¦ãƒ‹ãƒƒãƒˆMoveBG : æ€§èƒ½æœªå®šç¾©ã‚¨ãƒ©ãƒ¼ï¼ï¼ï¼<%d>\n\n", mSpecType);
         return 0;
     }
 
@@ -324,7 +324,7 @@ void daBgObj_c::initAtt() {
         setAttentionInfo(actor);
     } else {
         // Failed to generate focus actor
-        OS_REPORT_ERROR("「注目点」生成失敗！！！\n");
+        OS_REPORT_ERROR("ã€Œæ³¨ç›®ç‚¹ã€ç”Ÿæˆå¤±æ•—ï¼ï¼ï¼\n");
     }
 
     mAttnActorID = fopAcM_GetID(actor);
@@ -646,14 +646,14 @@ void daBgObj_c::doShareTexture() {
     u8* spec_res_name = mSpecData.mpTexShareBlock + 8;
 
     for (int i = 0; i < mSpecData.mTexShareNum; i++) {
-        strcpy(res_name, (char*)spec_res_name);
+        SAFE_STRCPY(res_name, (char*)spec_res_name);
         spec_res_name += strlen((char*)spec_res_name) + 1;
 
         J3DModelData* modelData =
             (J3DModelData*)dComIfG_getObjectRes(daSetBgObj_c::getArcName(this), res_name);
 
         if (*spec_res_name != 0) {
-            strcpy(share_res_name, (char*)spec_res_name);
+            SAFE_STRCPY(share_res_name, (char*)spec_res_name);
             spec_res_name += strlen((char*)spec_res_name) + 1;
 
             J3DModelData* shareModelData =
@@ -932,7 +932,7 @@ void daBgObj_c::setParticle() {
                     break;
                 default:
                     // Multi MoveBG: Particle model number is invalid <%d>
-                    OS_REPORT_ERROR("マルチMoveBG：パーティクルモデル番号が不正<%d>\n", modelNumber);
+                    OS_REPORT_ERROR("ãƒžãƒ«ãƒMoveBGï¼šãƒ‘ãƒ¼ãƒ†ã‚£ã‚¯ãƒ«ãƒ¢ãƒ‡ãƒ«ç•ªå·ãŒä¸æ­£<%d>\n", modelNumber);
                     JUT_ASSERT(1689, FALSE);
                     break;
             }

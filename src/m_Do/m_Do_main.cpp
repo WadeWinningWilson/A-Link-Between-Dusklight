@@ -1,4 +1,4 @@
-/**
+﻿/**
  * m_Do_main.cpp
  * Main Initialization
  * PC Port Version - based on Aurora integration from Vorversion
@@ -146,7 +146,7 @@ s32 LOAD_COPYDATE(void*) {
         memcpy(buffer, readBuf, readLen);
         buffer[readLen] = '\0';
     } else {
-        strcpy(buffer, "PC PORT BUILD");
+        SAFE_STRCPY(buffer, "PC PORT BUILD");
         DuskLog.warn("COPYDATE file not found at {}", COPYDATE_PATH);
     }
 
@@ -279,10 +279,10 @@ void main01(void) {
         dusk::ui::update();
 
 // ============================================
-// NEW CODE — ALBW Port
+// NEW CODE â€” ALBW Port
 // Render the rental shop ImGui window once per presented frame.
-// This must live here — after aurora_begin_frame() (which calls
-// ImGui::NewFrame) and before aurora_end_frame() (ImGui::Render) — so
+// This must live here â€” after aurora_begin_frame() (which calls
+// ImGui::NewFrame) and before aurora_end_frame() (ImGui::Render) â€” so
 // that ImGui::Begin/End are submitted in a valid frame context.
 // Calling this from actor Execute() caused flickering because the
 // sim-tick loop can run Execute() 0 times on interpolated frames,

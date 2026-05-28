@@ -1,4 +1,4 @@
-#include "d/dolzel.h" // IWYU pragma: keep
+﻿#include "d/dolzel.h" // IWYU pragma: keep
 
 #include "d/d_menu_dmap.h"
 #include "JSystem/J2DGraph/J2DAnmLoader.h"
@@ -116,9 +116,9 @@ dMenu_DmapBg_c::dMenu_DmapBg_c(JKRExpHeap* i_heap, STControl* i_stick) {
     mapScreenInit();
 
     char archive_path[32];
-    strcpy(archive_path, "/res/FieldMap/D_MN10.arc");
+    SAFE_STRCPY(archive_path, "/res/FieldMap/D_MN10.arc");
     char stage_name[8];
-    strcpy(stage_name, dComIfGp_getStartStageName());
+    SAFE_STRCPY(stage_name, dComIfGp_getStartStageName());
     archive_path[18] = stage_name[4];
     archive_path[19] = stage_name[5];
 
@@ -392,7 +392,7 @@ void dMenu_DmapBg_c::setAButtonString(u32 i_msgNo) {
     };
     for (int i = 0; i < 5; i++) {
         if (i_msgNo == 0) {
-            strcpy(((J2DTextBox*)mButtonScreen->search(cont_at[i]))->getStringPtr(), "");
+            SAFE_STRCPY(((J2DTextBox*)mButtonScreen->search(cont_at[i]))->getStringPtr(), "");
         } else {
             dMeter2Info_getStringKanji(i_msgNo, ((J2DTextBox*)mButtonScreen->search(cont_at[i]))->getStringPtr(), NULL);
         }
@@ -409,7 +409,7 @@ void dMenu_DmapBg_c::setBButtonString(u32 i_msgNo) {
     };
     for (int i = 0; i < 5; i++) {
         if (i_msgNo == 0) {
-            strcpy(((J2DTextBox*)mButtonScreen->search(cont_bt[i]))->getStringPtr(), "");
+            SAFE_STRCPY(((J2DTextBox*)mButtonScreen->search(cont_bt[i]))->getStringPtr(), "");
         } else {
             dMeter2Info_getStringKanji(i_msgNo, ((J2DTextBox*)mButtonScreen->search(cont_bt[i]))->getStringPtr(), NULL);
         }
@@ -441,7 +441,7 @@ void dMenu_DmapBg_c::setCButtonString(u32 i_msgNo) {
 
     if (msgNo == 0) {
         for (i = 0; i < 2; i++) {
-            strcpy(((J2DTextBox*)mButtonScreen->search(c_tag[i]))->getStringPtr(), "");
+            SAFE_STRCPY(((J2DTextBox*)mButtonScreen->search(c_tag[i]))->getStringPtr(), "");
         }
         mpCButton->setAlphaRate(0.5f);
     } else {
@@ -1764,8 +1764,8 @@ void dMenu_Dmap_c::floorChangeMode() {
 
 void dMenu_Dmap_c::_create() {
     u32 sp30 = field_0xe8->getTotalFreeSize();
-    OS_REPORT("MenuDmap create前 最大===========> %d bytes max\n", field_0xe8->getFreeSize());
-    OS_REPORT("MenuDmap create前================> %d bytes remain\n", sp30);
+    OS_REPORT("MenuDmap createå‰ æœ€å¤§===========> %d bytes max\n", field_0xe8->getFreeSize());
+    OS_REPORT("MenuDmap createå‰================> %d bytes remain\n", sp30);
 
     mDmapHeap = JKRCreateExpHeap(field_0xe8->getFreeSize() - 0x10, field_0xe8, false);
     JUT_ASSERT(3732, mDmapHeap != NULL);

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * d_event_manager.cpp
  * Event System Manager
  */
@@ -227,7 +227,7 @@ void* dEvent_manager_c::getSubstance(dEvDtData_c* evData, int type) {
         return getBase().getSDataP(evData->getIndex());
     default:
         // "dEvent_manager_c::getSubstance unsupported type %d"
-        OS_REPORT("dEvent_manager_c::getSubstance 未対応タイプ %d\n", evData->getType());
+        OS_REPORT("dEvent_manager_c::getSubstance æœªå¯¾å¿œã‚¿ã‚¤ãƒ— %d\n", evData->getType());
         JUT_ASSERT(403, FALSE);
     }
 
@@ -266,7 +266,7 @@ int dEvent_manager_c::create() {
     int i;
 
     // "event manager: Stage Data init!!"
-    OS_REPORT("event manager: \x1b[31mステージデータ初期化！！\n\x1b[m");
+    OS_REPORT("event manager: \x1b[31mã‚¹ãƒ†ãƒ¼ã‚¸ãƒ‡ãƒ¼ã‚¿åˆæœŸåŒ–ï¼ï¼\n\x1b[m");
     for (i = BASE_ROOM0; i <= BASE_ROOM5; i++) {
         mEventList[i].init();
     }
@@ -277,10 +277,10 @@ int dEvent_manager_c::create() {
 #if DEBUG
     if (res != NULL) {
         // "event manager: BASE_SCENE loaded (%d)"
-        OS_REPORT("event manager: BASE_SCENEを読み込んだ (%d)\n", base_status);
+        OS_REPORT("event manager: BASE_SCENEã‚’èª­ã¿è¾¼ã‚“ã  (%d)\n", base_status);
     } else {
         // "event manager: BASE_SCENE couldn't be loaded"
-        OS_REPORT("event manager: BASE_SCENEは読み込めなかった\n");
+        OS_REPORT("event manager: BASE_SCENEã¯èª­ã¿è¾¼ã‚ãªã‹ã£ãŸ\n");
     }
 #endif
 
@@ -292,10 +292,10 @@ int dEvent_manager_c::create() {
     #if DEBUG
     if (base_status) {
         // "event manager: BASE_KEEP loaded (%d)"
-        OS_REPORT("event manager: BASE_KEEPを読み込んだ (%d)\n", base_status);
+        OS_REPORT("event manager: BASE_KEEPã‚’èª­ã¿è¾¼ã‚“ã  (%d)\n", base_status);
     } else {
         // "event manager: BASE_KEEP couldn't be loaded"
-        OS_REPORT("event manager: BASE_KEEPは読み込めなかった\n");
+        OS_REPORT("event manager: BASE_KEEPã¯èª­ã¿è¾¼ã‚ãªã‹ã£ãŸ\n");
     }
     #endif
 
@@ -304,12 +304,12 @@ int dEvent_manager_c::create() {
 #if DEBUG
     if (l_HIO.field_0x004 < 0) {
         // "Event Manager"
-        l_HIO.field_0x004 = mDoHIO_CREATE_CHILD("イベントマネージャ", &l_HIO);
+        l_HIO.field_0x004 = mDoHIO_CREATE_CHILD("ã‚¤ãƒ™ãƒ³ãƒˆãƒžãƒãƒ¼ã‚¸ãƒ£", &l_HIO);
     }
 
     if (mDoCPd_c::getHoldL(PAD_2)) {
         // "event: file priority mode ON!!"
-        OS_REPORT("event: 常駐優先モード ON!!\n");
+        OS_REPORT("event: å¸¸é§å„ªå…ˆãƒ¢ãƒ¼ãƒ‰ ON!!\n");
         l_HIO.m_prioritize_file = true;
     }
 
@@ -321,7 +321,7 @@ int dEvent_manager_c::create() {
 
     if (l_HIO.m_evm_debug && res == NULL) {
         // "!!\n!!\n!!\nEvent List not found!!\n!!\n!!\n"
-        OS_REPORT("!!\n!!\n!!\nイベントリスト見つからず!!\n!!\n!!\n");
+        OS_REPORT("!!\n!!\n!!\nã‚¤ãƒ™ãƒ³ãƒˆãƒªã‚¹ãƒˆè¦‹ã¤ã‹ã‚‰ãš!!\n!!\n!!\n");
     }
 #endif
 
@@ -338,10 +338,10 @@ bool dEvent_manager_c::setObjectArchive(char* arcname) {
         #if DEBUG
         if (base_status) {
             // "event manager: BASE_ACTOR loaded (%d)"
-            OS_REPORT("event manager: BASE_ACTORを読み込んだ (%d)\n", base_status);
+            OS_REPORT("event manager: BASE_ACTORã‚’èª­ã¿è¾¼ã‚“ã  (%d)\n", base_status);
         } else {
             // "event manager: BASE_ACTOR couldn't be loaded"
-            OS_REPORT("event manager: BASE_ACTORは読み込めなかった\n");
+            OS_REPORT("event manager: BASE_ACTORã¯èª­ã¿è¾¼ã‚ãªã‹ã£ãŸ\n");
         }
         #endif
     } else {
@@ -354,7 +354,7 @@ bool dEvent_manager_c::setObjectArchive(char* arcname) {
 void dEvent_manager_c::demoInit() {
     if (!mDataLoaded) {
         // "event manager: init demo data!!"
-        OS_REPORT("event manager: \x1b[31mデモデータ初期化！！\n\x1b[m");
+        OS_REPORT("event manager: \x1b[31mãƒ‡ãƒ¢ãƒ‡ãƒ¼ã‚¿åˆæœŸåŒ–ï¼ï¼\n\x1b[m");
 
         char* demo_arcname = dStage_roomControl_c::getDemoArcName();
         if (demo_arcname[0] != '\0') {
@@ -364,15 +364,15 @@ void dEvent_manager_c::demoInit() {
             #if DEBUG
             if (base_status) {
                 // "event manager: BASE_DEMO loaded (%d)"
-                OS_REPORT("event manager: BASE_DEMO[%s]を読み込んだ (%d)\n", demo_arcname, base_status);
+                OS_REPORT("event manager: BASE_DEMO[%s]ã‚’èª­ã¿è¾¼ã‚“ã  (%d)\n", demo_arcname, base_status);
             } else {
                 // "event manager: BASE_DEMO couldn't be loaded"
-                OS_REPORT("event manager: BASE_DEMO[%s]は読み込めなかった\n", demo_arcname);
+                OS_REPORT("event manager: BASE_DEMO[%s]ã¯èª­ã¿è¾¼ã‚ãªã‹ã£ãŸ\n", demo_arcname);
             }
             #endif
         } else {
             // "event manager: BASE_DEMO not available."
-            OS_REPORT("event manager: BASE_DEMOはありません。\n");
+            OS_REPORT("event manager: BASE_DEMOã¯ã‚ã‚Šã¾ã›ã‚“ã€‚\n");
         }
 
         mDataLoaded = true;
@@ -381,14 +381,14 @@ void dEvent_manager_c::demoInit() {
 
 void dEvent_manager_c::roomInit(int roomNo) {
     // "event manager: room data init!! (%d)"
-    OS_REPORT("event manager: \x1b[31m部屋データ初期化！！(%d)\n\x1b[m", roomNo);
+    OS_REPORT("event manager: \x1b[31méƒ¨å±‹ãƒ‡ãƒ¼ã‚¿åˆæœŸåŒ–ï¼ï¼(%d)\n\x1b[m", roomNo);
 
     if (roomNo == -1) {
         roomNo = dComIfGp_roomControl_getStayNo();
     }
 
     char arcname[8];
-    strcpy(arcname, dComIfG_getRoomArcName(roomNo));
+    SAFE_STRCPY(arcname, dComIfG_getRoomArcName(roomNo));
     char* res = (char*)dComIfG_getStageRes(arcname, DataFileName);
 
     int i;
@@ -415,13 +415,13 @@ void dEvent_manager_c::roomInit(int roomNo) {
 #if DEBUG
     if (room_idx == -1) {
         // "event manager: BASE_ROOM no free space."
-        OS_REPORT("event manager: BASE_ROOM空きがなかった。\n");
+        OS_REPORT("event manager: BASE_ROOMç©ºããŒãªã‹ã£ãŸã€‚\n");
     } else if (base_status != 0) {
         // "event manager: BASE_ROOM:%d[%s] loaded (%d)"
-        OS_REPORT("event manager: BASE_ROOM:%d[%s]を読み込んだ (%d)\n", room_idx, arcname, base_status);
+        OS_REPORT("event manager: BASE_ROOM:%d[%s]ã‚’èª­ã¿è¾¼ã‚“ã  (%d)\n", room_idx, arcname, base_status);
     } else {
         // "event manager: BASE_ROOM[%s] couldn't be loaded"
-        OS_REPORT("event manager: BASE_ROOM[%s]は読み込めなかった\n", arcname);
+        OS_REPORT("event manager: BASE_ROOM[%s]ã¯èª­ã¿è¾¼ã‚ãªã‹ã£ãŸ\n", arcname);
     }
 #endif
 }
@@ -431,7 +431,7 @@ void dEvent_manager_c::roomFinish(int roomNo) {
     for (i = BASE_ROOM0; i <= BASE_ROOM5; i++) {
         if (mEventList[i].getHeaderP() != NULL && roomNo == mEventList[i].roomNo()) {
             // "event manager: BASE_ROOM:%d[%s] delete."
-            OS_REPORT("event manager: BASE_ROOM:%d[%s]削除。\n", i, dComIfG_getRoomArcName(roomNo));
+            OS_REPORT("event manager: BASE_ROOM:%d[%s]å‰Šé™¤ã€‚\n", i, dComIfG_getRoomArcName(roomNo));
             mEventList[i].init();
         }
     }
@@ -515,7 +515,7 @@ void dEvent_manager_c::startProc(dEvDtEvent_c* event) {
     #if DEBUG
     if (l_HIO.m_evm_debug) {
         // "event manager: event %s started!!"
-        OS_REPORT("\x1b[34m%06d: event manager: %sのイベント開始!!\n\x1b[m", g_Counter.mCounter0, event->getName());
+        OS_REPORT("\x1b[34m%06d: event manager: %sã®ã‚¤ãƒ™ãƒ³ãƒˆé–‹å§‹!!\n\x1b[m", g_Counter.mCounter0, event->getName());
     }
     #endif
 
@@ -532,7 +532,7 @@ void dEvent_manager_c::startProc(dEvDtEvent_c* event) {
             #if DEBUG
             if (l_HIO.m_evm_debug) {
                 // "participant %s"
-                OS_REPORT("参加者 %s\n", staff->getName());
+                OS_REPORT("å‚åŠ è€… %s\n", staff->getName());
             }
             #endif
 
@@ -544,12 +544,12 @@ void dEvent_manager_c::startProc(dEvDtEvent_c* event) {
             if (event_actor_p != NULL) {
                 fopAcM_OnStatus(event_actor_p, fopAcStts_STAFF_PRIMARY_e);
                 // "event manager: C:Staff ON %s!!"
-                OS_REPORT("\x1B[34m%06d: event manager: Ｃ：スタッフ　ON　%s!!\n\x1B[m", g_Counter.mCounter0, dStage_getName(fopAcM_GetProfName(event_actor_p), -1));
+                OS_REPORT("\x1B[34m%06d: event manager: ï¼£ï¼šã‚¹ã‚¿ãƒƒãƒ•ã€€ONã€€%s!!\n\x1B[m", g_Counter.mCounter0, dStage_getName(fopAcM_GetProfName(event_actor_p), -1));
             } else {
                 #if DEBUG
                 if (l_HIO.m_evm_debug) {
                     // "No actor for demo!! Name<%s>"
-                    OS_REPORT("デモの出演者がいません！！ 名前<%s>\n", staff->getName());
+                    OS_REPORT("ãƒ‡ãƒ¢ã®å‡ºæ¼”è€…ãŒã„ã¾ã›ã‚“ï¼ï¼ åå‰<%s>\n", staff->getName());
                 }
                 #endif
             }
@@ -559,7 +559,7 @@ void dEvent_manager_c::startProc(dEvDtEvent_c* event) {
             #if DEBUG
             if (l_HIO.m_evm_debug) {
                 // "bystander %s"
-                OS_REPORT("傍観者 %s\n", staff->getName());
+                OS_REPORT("å‚è¦³è€… %s\n", staff->getName());
             }
             #endif
 
@@ -581,7 +581,7 @@ void dEvent_manager_c::endProc(s16 evId, BOOL isClose) {
     #if DEBUG
     if (l_HIO.m_evm_debug) {
         // "event manager: evId = %d event end process!!"
-        OS_REPORT("\x1b[34m%06d: event manager: evId = %d の イベント終了処理!! \n\x1b[m", g_Counter.mCounter0, evId);
+        OS_REPORT("\x1b[34m%06d: event manager: evId = %d ã® ã‚¤ãƒ™ãƒ³ãƒˆçµ‚äº†å‡¦ç†!! \n\x1b[m", g_Counter.mCounter0, evId);
     }
     #endif
 
@@ -591,7 +591,7 @@ void dEvent_manager_c::endProc(s16 evId, BOOL isClose) {
         #if DEBUG
         if (l_HIO.m_evm_debug) {
             // "event manager: event not found!!"
-            OS_REPORT("\x1b[31mイベントが見つからない!!\n\x1b[m");
+            OS_REPORT("\x1b[31mã‚¤ãƒ™ãƒ³ãƒˆãŒè¦‹ã¤ã‹ã‚‰ãªã„!!\n\x1b[m");
         }
         #endif
         return;
@@ -605,7 +605,7 @@ void dEvent_manager_c::endProc(s16 evId, BOOL isClose) {
         #if DEBUG
         if (l_HIO.m_evm_debug) {
             // "%s(%d) event not in end state!! state = %d"
-            OS_REPORT("%s(%d) イベントが終了条件でない!! state = %d\n", getBase().getEventName(evId), evId, event->mEventState);
+            OS_REPORT("%s(%d) ã‚¤ãƒ™ãƒ³ãƒˆãŒçµ‚äº†æ¡ä»¶ã§ãªã„!! state = %d\n", getBase().getEventName(evId), evId, event->mEventState);
         }
         #endif
         return;
@@ -836,7 +836,7 @@ s16 dEvent_manager_c::getEventIdx(const char* eventName, u8 mapToolID, s32 roomN
             case dStage_MapEvent_dt_TYPE_STB:
                 return getEventIdx(mapdata->data.event_name, 0xFF, roomNo);
             case dStage_MapEvent_dt_TYPE_MAPTOOLCAMERA:
-                sprintf(map_tool_name, "MapToolCamera%d", mapToolID);
+                SAFE_SPRINTF(map_tool_name, "MapToolCamera%d", mapToolID);
                 return getEventIdx(map_tool_name, 0xFF, roomNo);
             default:
                 JUT_ASSERT(1278, FALSE);
@@ -876,7 +876,7 @@ s16 dEvent_manager_c::getEventIdx(fopAc_ac_c* actor, u8 mapToolID) {
         case dStage_MapEvent_dt_TYPE_STB:
             return getEventIdx(actor, mapdata->data.event_name, 0xFF);
         case dStage_MapEvent_dt_TYPE_MAPTOOLCAMERA:
-            sprintf(map_tool_name, "MapToolCamera%d", mapToolID);
+            SAFE_SPRINTF(map_tool_name, "MapToolCamera%d", mapToolID);
             return getEventIdx(actor, map_tool_name, 0xFF);
         default:
             JUT_ASSERT(1341, FALSE);
@@ -901,7 +901,7 @@ s16 dEvent_manager_c::getEventIdx(fopAc_ac_c* actor, const char* eventName, u8 m
             case dStage_MapEvent_dt_TYPE_STB:
                 return getEventIdx(actor, mapdata->data.event_name, 0xFF);
             case dStage_MapEvent_dt_TYPE_MAPTOOLCAMERA:
-                sprintf(map_tool_name, "MapToolCamera%d", mapToolID);
+                SAFE_SPRINTF(map_tool_name, "MapToolCamera%d", mapToolID);
                 return getEventIdx(actor, map_tool_name, 0xFF);
             default:
                 JUT_ASSERT(1376, FALSE);
@@ -961,7 +961,7 @@ int dEvent_manager_c::order(s16 evCompositId) {
     #if DEBUG
     if (l_HIO.m_evm_debug) {
         // "event manager: event(%d) ready!!"
-        OS_REPORT("\x1b[34m%06d: event manager: イベント(%d)準備状態!! \n\x1b[m", g_Counter.mCounter0, evCompositId);
+        OS_REPORT("\x1b[34m%06d: event manager: ã‚¤ãƒ™ãƒ³ãƒˆ(%d)æº–å‚™çŠ¶æ…‹!! \n\x1b[m", g_Counter.mCounter0, evCompositId);
     }
     #endif
 
@@ -1040,7 +1040,7 @@ int dEvent_manager_c::getMyStaffId(const char* staffName, fopAc_ac_c* actor, int
             dEvDtStaff_c* staff = getBase().getStaffP(staff_id);
             if (staff->getType() != dEvDtStaff_c::TYPE_ALL) {
                 char buf[20];
-                strcpy(buf, staff->getName());
+                SAFE_STRCPY(buf, staff->getName());
 
                 char* ptr = NULL;
                 if (!hasDp) {
@@ -1087,7 +1087,7 @@ int dEvent_manager_c::getIsAddvance(int staffId) {
     if (dComIfGp_getEvent()->getMode() == dEvt_mode_WAIT_e) {
         if (OREG_F(8)) {
             // "%s: %d: events not running so don't call."
-            OS_REPORT("%s: %d: イベント走ってないので呼ばないでください。\n", __FILE__, 1672);
+            OS_REPORT("%s: %d: ã‚¤ãƒ™ãƒ³ãƒˆèµ°ã£ã¦ãªã„ã®ã§å‘¼ã°ãªã„ã§ãã ã•ã„ã€‚\n", __FILE__, 1672);
         }
         return 0;
     } else if (staffId == -1) {
@@ -1125,7 +1125,7 @@ int dEvent_manager_c::getMyActIdx(int staffId, const char* const* action, int n_
     if (dComIfGp_getEvent()->getMode() == dEvt_mode_WAIT_e) {
         if (OREG_F(8)) {
             // "%s: %d: events not running so don't call."
-            OS_REPORT("%s: %d: イベント走ってないので呼ばないでください。\n", __FILE__, 1733);
+            OS_REPORT("%s: %d: ã‚¤ãƒ™ãƒ³ãƒˆèµ°ã£ã¦ãªã„ã®ã§å‘¼ã°ãªã„ã§ãã ã•ã„ã€‚\n", __FILE__, 1733);
         }
         return 0;
     } else if (staffId == -1) {
@@ -1141,7 +1141,7 @@ int dEvent_manager_c::getMyActIdx(int staffId, const char* const* action, int n_
         }
     } else {
         // "event: getMyActIdx(): staff ID %d data not found."
-        OS_REPORT_ERROR("event: getMyActIdx(): スタッフＩＤ %d のデータが見つかりません。\n", staffId);
+        OS_REPORT_ERROR("event: getMyActIdx(): ã‚¹ã‚¿ãƒƒãƒ•ï¼©ï¼¤ %d ã®ãƒ‡ãƒ¼ã‚¿ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚\n", staffId);
         return -1;
     }
 
@@ -1150,7 +1150,7 @@ int dEvent_manager_c::getMyActIdx(int staffId, const char* const* action, int n_
     if (nowCutName == NULL) {
         staff->field_0x3c = -1;
         // "event: getMyActIdx(): staff %s is not an active participant."
-        OS_REPORT_ERROR("event: getMyActIdx(): スタッフ %s はアクティブな参加者ではありません。\n", staff->getName());
+        OS_REPORT_ERROR("event: getMyActIdx(): ã‚¹ã‚¿ãƒƒãƒ• %s ã¯ã‚¢ã‚¯ãƒ†ã‚£ãƒ–ãªå‚åŠ è€…ã§ã¯ã‚ã‚Šã¾ã›ã‚“ã€‚\n", staff->getName());
         return -1;
     }
 
@@ -1174,7 +1174,7 @@ int dEvent_manager_c::getMyActIdx(int staffId, const char* const* action, int n_
 
     if (!param_3) {
         // "event: getMyActIdx(): action %s not found. current action %s"
-        OS_REPORT_ERROR("event: getMyActIdx(): 動作 %s が見つかりません。現在の動作 %s\n", nowCutName, staff->getName());
+        OS_REPORT_ERROR("event: getMyActIdx(): å‹•ä½œ %s ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚ç¾åœ¨ã®å‹•ä½œ %s\n", nowCutName, staff->getName());
     }
 
     return 0;
@@ -1197,7 +1197,7 @@ char* dEvent_manager_c::getMyNowCutNameStr(int staffId) {
     if (dComIfGp_getEvent()->getMode() == dEvt_mode_WAIT_e) {
         if (OREG_F(8)) {
             // "%s: %d: events not running so don't call."
-            OS_REPORT("%s: %d: イベント走ってないので呼ばないでください。\n", __FILE__, 1856);
+            OS_REPORT("%s: %d: ã‚¤ãƒ™ãƒ³ãƒˆèµ°ã£ã¦ãªã„ã®ã§å‘¼ã°ãªã„ã§ãã ã•ã„ã€‚\n", __FILE__, 1856);
         }
         return NULL;
     } else if (staffId == -1) {
@@ -1218,7 +1218,7 @@ dEvDtData_c* dEvent_manager_c::getMyDataP(int staffId, const char* dataname, BOO
     if (dComIfGp_getEvent()->getMode() == dEvt_mode_WAIT_e) {
         if (OREG_F(8)) {
             // "%s: %d: events not running so don't call."
-            OS_REPORT("%s: %d: イベント走ってないので呼ばないでください。\n", __FILE__, 1886);
+            OS_REPORT("%s: %d: ã‚¤ãƒ™ãƒ³ãƒˆèµ°ã£ã¦ãªã„ã®ã§å‘¼ã°ãªã„ã§ãã ã•ã„ã€‚\n", __FILE__, 1886);
         }
         return NULL;
     } else if (staffId == -1) {
@@ -1268,7 +1268,7 @@ void dEvent_manager_c::cutEnd(int staffId) {
     if (dComIfGp_getEvent()->getMode() == dEvt_mode_WAIT_e) {
         if (OREG_F(8)) {
             // "%s: %d: events not running so don't call."
-            OS_REPORT("%s: %d: イベント走ってないので呼ばないでください。\n", __FILE__, 1984);
+            OS_REPORT("%s: %d: ã‚¤ãƒ™ãƒ³ãƒˆèµ°ã£ã¦ãªã„ã®ã§å‘¼ã°ãªã„ã§ãã ã•ã„ã€‚\n", __FILE__, 1984);
         }
         return;
     } else if (staffId == -1) {
@@ -1310,7 +1310,7 @@ void dEvent_manager_c::issueStaff(const char* staffname) {
         fopAcM_Search((fopAcIt_JudgeFunc)extraOnObjectCallBack, NULL);
     } else {
         char nameBuf[32];
-        strcpy(nameBuf, staffname);
+        SAFE_STRCPY(nameBuf, staffname);
         fopAc_ac_c* actor = fopAcM_searchFromName4Event(nameBuf, -1);
         fopAcM_OnStatus(actor, fopAcStts_STAFF_EXTRA_e);
     }
@@ -1321,7 +1321,7 @@ void dEvent_manager_c::cancelStaff(const char* staffname) {
         fopAcM_Search((fopAcIt_JudgeFunc)extraOffObjectCallBack, NULL);
     } else {
         char nameBuf[32];
-        strcpy(nameBuf, staffname);
+        SAFE_STRCPY(nameBuf, staffname);
         fopAc_ac_c* actor = fopAcM_searchFromName4Event(nameBuf, -1);
         fopAcM_OffStatus(actor, fopAcStts_STAFF_EXTRA_e);
     }

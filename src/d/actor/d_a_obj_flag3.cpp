@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file d_a_obj_flag3.cpp
  * 
 */
@@ -21,17 +21,17 @@ public:
     void default_set() { mAttr = daObjFlag3_c::M_attr; }
 
     void genMessage(JORMContext* ctx) {
-        ctx->genLabel("§ 旗オブジェパラメータ設定  §\n", 0);
-        ctx->genSlider("重力", &mAttr.mGravity, -10.0f, 0.0f);
-        ctx->genSlider("バネ係数", &mAttr.mSpringCoeeficient, 0.0f, 10.0f);
-        ctx->genSlider("減衰率", &mAttr.mDecayRate, 0.0f, 1.0f);
-        ctx->genSlider("風係数", &mAttr.mWindCoefficient, 0.0f, 100.0f);
-        ctx->genSlider("竜巻", &mAttr.mTornado, 0.0f, 500.0f);
+        ctx->genLabel("Â§ æ——ã‚ªãƒ–ã‚¸ã‚§ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿è¨­å®š  Â§\n", 0);
+        ctx->genSlider("é‡åŠ›", &mAttr.mGravity, -10.0f, 0.0f);
+        ctx->genSlider("ãƒãƒä¿‚æ•°", &mAttr.mSpringCoeeficient, 0.0f, 10.0f);
+        ctx->genSlider("æ¸›è¡°çŽ‡", &mAttr.mDecayRate, 0.0f, 1.0f);
+        ctx->genSlider("é¢¨ä¿‚æ•°", &mAttr.mWindCoefficient, 0.0f, 100.0f);
+        ctx->genSlider("ç«œå·»", &mAttr.mTornado, 0.0f, 500.0f);
     }
 
     void ct() {
         if (mCount++ == 0) {
-            daObj::HioVarious_c::init(this, "四角旗"); // Four cornered Flag
+            daObj::HioVarious_c::init(this, "å››è§’æ——"); // Four cornered Flag
         }
     }
 
@@ -299,7 +299,7 @@ int daObjFlag3_c::createHeap() {
     s8 flagNum = (u8)shape_angle.x;
     if (mFlagValid) {
         char acStack_40[16];
-        sprintf(acStack_40, "flag%02d.bti", flagNum);
+        SAFE_SPRINTF(acStack_40, "flag%02d.bti", flagNum);
         shape_angle.setall(0);
         current.angle.setall(0);
         ResTIMG* image = (ResTIMG*)dComIfG_getObjectRes(mFlagName, "flag.bti");
@@ -486,7 +486,7 @@ int daObjFlag3_c::create() {
         mFlagValid = false;
     } else {
         mFlagValid = true;
-        sprintf(mFlagName, "FlagObj%02d", flagNum);
+        SAFE_SPRINTF(mFlagName, "FlagObj%02d", flagNum);
         int rv = dComIfG_resLoad(&mFlagPhase, mFlagName);
         if (rv != cPhs_COMPLEATE_e) {
             return rv;
