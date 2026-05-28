@@ -13,6 +13,8 @@
 #include "SSystem/SComponent/c_counter.h"
 #include <cstring>
 
+#include "dusk/string.hpp"
+
 namespace {
 static u8 event_debug_evnt() {
 #if DEBUG
@@ -757,7 +759,7 @@ int dEv_defaultSkipZev(void* actor, int parameter) {
     switch (parameter) {
     case 0:
         SAFE_STRCPY(eventName, data->data.event_name);
-        strcat(eventName, "$0");
+        SAFE_STRCAT(eventName, "$0");
         eventID = dComIfGp_getEventManager().getEventIdx(eventName, 0xFF, -1);
         OS_REPORT("%06d: event:   [%d] %s!\n", g_Counter.mCounter0, eventID, eventName);
         break;
@@ -805,7 +807,7 @@ int dEv_defaultSkipStb(void* actor, int parameter) {
     switch (parameter) {
     case 0:
         SAFE_STRCPY(eventName, data->data.event_name);
-        strcat(eventName, "$0");
+        SAFE_STRCAT(eventName, "$0");
         eventID = dComIfGp_getEventManager().getEventIdx(eventName, 0xFF, -1);
         OS_REPORT("%06d: event:   [%d] %s!\n", g_Counter.mCounter0, eventID, eventName);
         break;

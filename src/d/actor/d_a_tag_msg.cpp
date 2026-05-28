@@ -11,6 +11,8 @@
 #include "d/d_debug_viewer.h"
 #include <cstring>
 
+#include "dusk/string.hpp"
+
 static int createHeapCallBack(fopAc_ac_c* i_this) {
     daTag_Msg_c* msg = (daTag_Msg_c*)i_this;
     return msg->createHeap();

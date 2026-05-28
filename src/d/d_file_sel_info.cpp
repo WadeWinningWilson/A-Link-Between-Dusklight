@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "dusk/string.hpp"
 #include "dusk/version.hpp"
 
 dFile_info_c::dFile_info_c(JKRArchive* i_archive, u8 param_1) {
@@ -80,9 +81,11 @@ void dFile_info_c::screenSet() {
     info_text[2] = (J2DTextBox*)mFileInfo.Scr->search(MULTI_CHAR('w_time01'));
     info_text[3] = (J2DTextBox*)mFileInfo.Scr->search(MULTI_CHAR('w_ptim01'));
 
+#define INFO_TEXT_SIZE 0x40
+
     for (int i = 0; i < 4; i++) {
         info_text[i]->setFont(mFileInfo.mFont);
-        info_text[i]->setString(0x40, "");
+        info_text[i]->setString(INFO_TEXT_SIZE, "");
     }
     mPlayerName = info_text[0]->getStringPtr();
     mSaveStatus = info_text[1]->getStringPtr();

@@ -533,7 +533,7 @@ void crashRegs(void* ucv, uintptr_t& pc, uintptr_t& lr, uintptr_t& fp) {
     fp = static_cast<uintptr_t>(uc->uc_mcontext.regs[29]);
 #elif defined(__x86_64__)
     pc = static_cast<uintptr_t>(uc->uc_mcontext.gregs[REG_RIP]);
-    fp = static_cast<uintptr_t>(uc->uc_mcontext.gregs[REG_EBP]);
+    fp = static_cast<uintptr_t>(uc->uc_mcontext.gregs[REG_RBP]);
 #elif defined(__arm__)
     pc = static_cast<uintptr_t>(uc->uc_mcontext.arm_pc);
     lr = static_cast<uintptr_t>(uc->uc_mcontext.arm_lr);
@@ -545,7 +545,7 @@ void crashRegs(void* ucv, uintptr_t& pc, uintptr_t& lr, uintptr_t& fp) {
 #elif defined(__linux__)
 #if defined(__x86_64__)
     pc = static_cast<uintptr_t>(uc->uc_mcontext.gregs[REG_RIP]);
-    fp = static_cast<uintptr_t>(uc->uc_mcontext.gregs[REG_EBP]);
+    fp = static_cast<uintptr_t>(uc->uc_mcontext.gregs[REG_RBP]);
 #elif defined(__aarch64__)
     pc = static_cast<uintptr_t>(uc->uc_mcontext.pc);
     lr = static_cast<uintptr_t>(uc->uc_mcontext.regs[30]);

@@ -761,7 +761,7 @@ namespace dusk {
         ImGui::SameLine();
         char nameBuffer[8];
         snprintf(nameBuffer, sizeof(nameBuffer), "%s", returnPlace.mName);
-        if (ImGui::InputText("##SaveStageNameInput", nameBuffer, 8)) {
+        if (ImGui::InputText("##SaveStageNameInput", nameBuffer, sizeof(nameBuffer))) {
             SAFE_STRCPY(returnPlace.mName, nameBuffer);
         }
 
@@ -803,7 +803,7 @@ namespace dusk {
         ImGui::SameLine();
         char horseStageBuffer[8];
         snprintf(horseStageBuffer, sizeof(horseStageBuffer), "%s", horsePlace.mName);
-        if (ImGui::InputText("##HorseStageNameInput", horseStageBuffer, 8)) {
+        if (ImGui::InputText("##HorseStageNameInput", horseStageBuffer, sizeof(horseStageBuffer))) {
             SAFE_STRCPY(horsePlace.mName, horseStageBuffer);
         }
 

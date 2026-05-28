@@ -2548,7 +2548,7 @@ void dMeter2Draw_c::drawButtonXY(int i_no, u8 i_itemNo, u8 i_action, bool param_
 
         for (int i = 0; i < 5; i++) {
             SAFE_STRCPY(static_cast<J2DTextBox*>(mpXYText[i][i_no]->getPanePtr())->getStringPtr(),
-                        mp_string);
+                   mp_string);
         }
 
         if (i_no == SELECT_X_e) {

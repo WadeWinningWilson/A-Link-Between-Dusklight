@@ -15,6 +15,8 @@
 
 #include <cstring>
 
+#include "dusk/string.hpp"
+
 enum ITEMICON_RES_FILE_ID {
     ITEMICON_BTI_ARI_MESU_00=0x3,
     ITEMICON_BTI_ARI_OSU_00=0x4,
@@ -668,7 +670,7 @@ void dMeter2Info_c::resetMeterString() {
 
 void dMeter2Info_c::setWarpInfo(const char* i_stageName, const cXyz& i_position, s16 i_angle,
                                 u8 i_roomNo, u8 param_4, u8 i_warpPlayerNo) {
-    strcpy(mWarpInfo.mStageName, i_stageName);
+    SAFE_STRCPY(mWarpInfo.mStageName, i_stageName);
     mWarpInfo.mPosition = i_position;
     mWarpInfo.mAngle = (s16)i_angle;
     mWarpInfo.mRoomNo = (u8)i_roomNo;
@@ -1592,7 +1594,7 @@ void dMeter2Info_c::setMiniGameCount(s8 i_count) {
 }
 
 void dMeter2Info_c::setSaveStageName(const char* i_stageName) {
-    strcpy(mSaveStageName, i_stageName);
+    SAFE_STRCPY(mSaveStageName, i_stageName);
 }
 
 s16 dMeter2Info_getNowLifeGauge() {

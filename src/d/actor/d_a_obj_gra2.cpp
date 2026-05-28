@@ -5,13 +5,14 @@
 
 #include "d/dolzel_rel.h" // IWYU pragma: keep
 
-#include "d/actor/d_a_obj_gra2.h"
 #include "d/actor/d_a_npc4.h"
+#include "d/actor/d_a_obj_gra2.h"
 #include "d/actor/d_a_tag_gra.h"
 #include "d/d_bg_w.h"
 #include "d/d_cc_uty.h"
-#include "d/d_com_inf_game.h"
 #include "d/d_com_inf_actor.h"
+#include "d/d_com_inf_game.h"
+#include "dusk/string.hpp"
 #if DEBUG
 #include "d/d_debug_viewer.h"
 #endif

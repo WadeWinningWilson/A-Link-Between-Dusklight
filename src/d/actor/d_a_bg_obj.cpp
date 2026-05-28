@@ -5,14 +5,15 @@
 
 #include "d/dolzel_rel.h" // IWYU pragma: keep
 
-#include "d/actor/d_a_bg_obj.h"
-#include "JSystem/J3DGraphBase/J3DMaterial.h"
 #include <cstdio>
-#include <os.h>
 #include <cstring>
+#include <os.h>
+#include "JSystem/J3DGraphBase/J3DMaterial.h"
+#include "SSystem/SComponent/c_math.h"
+#include "d/actor/d_a_bg_obj.h"
 #include "d/actor/d_a_set_bgobj.h"
 #include "d/d_s_play.h"
-#include "SSystem/SComponent/c_math.h"
+#include "dusk/string.hpp"
 
 static const char* getBmdName(int param_0, int param_1) {
     static char l_bmdName[16];

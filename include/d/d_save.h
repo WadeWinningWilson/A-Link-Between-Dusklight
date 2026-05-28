@@ -505,8 +505,6 @@ public:
     }
 #if TARGET_PC
     u16 getDeathCount() const { return mDeathCount; }
-#endif
-#if TARGET_PC
     TEXT_SPAN getPlayerName() const { return const_cast<char(&)[17]>(mPlayerName); }
 #else
     char* getPlayerName() const { return const_cast<char*>(mPlayerName); }
