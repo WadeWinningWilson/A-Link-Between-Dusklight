@@ -461,6 +461,16 @@ if(ANDROID)
     list(APPEND GAME_COMPILE_DEFS TARGET_ANDROID=1)
 endif ()
 
+set(DUSK_ENABLE_CODE_MODS_DEFAULT OFF)
+option(DUSK_ENABLE_CODE_MODS "Enable code mods" ${DUSK_ENABLE_CODE_MODS_DEFAULT})
+if (DUSK_ENABLE_CODE_MODS)
+    if (NOT ANDROID AND NOT IOS AND NOT TVOS)
+        list(APPEND GAME_COMPILE_DEFS DUSK_CODE_MODS=1)
+    else ()
+        message(FATAL_ERROR "Code mods not supported on the target platform!")
+    endif ()
+endif ()
+
 # game_debug is for game code files that we know work when compiled with DEBUG=1
 # Of course, if building a release build, this distinction is irrelevant
 set(GAME_DEBUG_FILES

@@ -412,6 +412,11 @@ static bool checkDuplicateMod(const ModMetadata& metadata, const std::vector<Loa
 }
 
 bool ModLoader::tryLoadNativeMod(LoadedMod& mod) {
+    if (!EnableCodeMods) {
+        DuskLog.error("Code mods are not available in this build");
+        return false;
+    }
+
     namespace fs = std::filesystem;
 
     auto [dllEntry, dllFallback] = LocateDllInBundle(*mod.bundle);

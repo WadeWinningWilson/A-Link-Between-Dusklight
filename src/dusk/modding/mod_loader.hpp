@@ -3,7 +3,17 @@
 #include <filesystem>
 #include "miniz.h"
 
+#if __APPLE__
+#include <TargetConditionals.h>
+#endif
+
 namespace dusk::modding {
+
+#if DUSK_CODE_MODS
+constexpr bool EnableCodeMods = true;
+#else
+constexpr bool EnableCodeMods = false;
+#endif
 
 class ModBundle {
 public:
