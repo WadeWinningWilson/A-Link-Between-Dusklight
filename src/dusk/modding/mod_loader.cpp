@@ -121,7 +121,7 @@ static bool checkDuplicateMod(const ModMetadata& metadata, const std::vector<Loa
 
 bool ModLoader::tryLoadNativeMod(LoadedMod& mod) {
     if (!EnableCodeMods) {
-        DuskLog.error("Code mods are not available in this build");
+        Log.error("Code mods are not available in this build");
         return false;
     }
 
@@ -133,8 +133,8 @@ bool ModLoader::tryLoadNativeMod(LoadedMod& mod) {
     }
 
     if (dllEntry.empty()) {
-        DuskLog.error(
-            "ModLoader: no *{} found in {} — skipping", NativeModule::LibraryExtension, mod.metadata.id);
+        Log.error(
+            "no *{} found in {} — skipping", NativeModule::LibraryExtension, mod.metadata.id);
         return false;
     }
 
@@ -148,15 +148,15 @@ bool ModLoader::tryLoadNativeMod(LoadedMod& mod) {
     try {
         dllData = mod.bundle->readFile(dllEntry);
     } catch (const std::runtime_error& e) {
-        DuskLog.error(
-            "ModLoader: failed to extract {} from {}", dllEntry, mod.metadata.id);
+        Log.error(
+            "failed to extract {} from {}", dllEntry, mod.metadata.id);
         return false;
     }
 
     {
         std::ofstream out(dllCachePath, std::ios::binary | std::ios::out);
         if (!out) {
-            DuskLog.error("ModLoader: failed to write {}", io::fs_path_to_string(dllCachePath));
+            Log.error("failed to write {}", io::fs_path_to_string(dllCachePath));
             return false;
         }
 
@@ -169,13 +169,13 @@ bool ModLoader::tryLoadNativeMod(LoadedMod& mod) {
     try {
         nativeMod->handle = std::make_unique<NativeModule>(dllCachePath);
     } catch (const std::runtime_error& e) {
-        DuskLog.error("ModLoader: failed to open {}: {}", io::fs_path_to_string(dllCachePath), e.what());
+        Log.error("failed to open {}: {}", io::fs_path_to_string(dllCachePath), e.what());
         return false;
     }
 
     const auto mod_api_ver = nativeMod->handle->LookupSymbol<uint32_t*>("mod_api_version");
     if (mod_api_ver && *mod_api_ver != DUSK_MOD_API_VERSION) {
-        DuskLog.error("ModLoader: {} expects API v{} but engine is v{}, skipping",
+        Log.error("{} expects API v{} but engine is v{}, skipping",
             io::fs_path_to_string(fs::path(dllEntry).filename()), *mod_api_ver, DUSK_MOD_API_VERSION);
         return false;
     }
@@ -185,7 +185,7 @@ bool ModLoader::tryLoadNativeMod(LoadedMod& mod) {
     nativeMod->fn_cleanup = nativeMod->handle->LookupSymbol<NativeMod::FnCleanup>("mod_cleanup");
 
     if (!nativeMod->fn_init || !nativeMod->fn_tick) {
-        DuskLog.error("ModLoader: {} missing mod_init or mod_tick — skipping",
+        Log.error("{} missing mod_init or mod_tick — skipping",
             io::fs_path_to_string(fs::path(dllEntry).filename()));
         return false;
     }
@@ -213,13 +213,13 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
     }
     catch (const std::runtime_error& e) {
         Log.error(
-            "ModLoader: bad mod.json in {}: {}", io::fs_path_to_string(modPath.filename()), e.what());
+            "bad mod.json in {}: {}", io::fs_path_to_string(modPath.filename()), e.what());
         return;
     }
 
     if (checkDuplicateMod(metadata, m_mods)) {
         Log.error(
-            "ModLoader: mod with id '{}' already exists, not loading {}",
+            "mod with id '{}' already exists, not loading {}",
             metadata.id,
             io::fs_path_to_string(modPath.filename()));
         return;
@@ -236,8 +236,8 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
 
     const auto& inserted = m_mods.emplace_back(std::move(mod));
 
-    DuskLog.info(
-        "ModLoader: found '{}' ('{}') v{} by {} ({})",
+    Log.info(
+        "found '{}' ('{}') v{} by {} ({})",
         inserted.metadata.name,
         inserted.metadata.id,
         inserted.metadata.version,
@@ -253,8 +253,8 @@ void ModLoader::init() {
 
     namespace fs = std::filesystem;
     if (!fs::is_directory(m_modsDir)) {
-        DuskLog.info(
-            "ModLoader: mods directory '{}' not found — mod loading skipped", io::fs_path_to_string(m_modsDir));
+        Log.info(
+            "mods directory '{}' not found — mod loading skipped", io::fs_path_to_string(m_modsDir));
         return;
     }
 
@@ -278,13 +278,13 @@ void ModLoader::init() {
     }
 
     if (m_mods.empty()) {
-        DuskLog.info("ModLoader: no mods found");
+        Log.info("no mods found");
         return;
     }
 
     initOverlayFiles();
 
-    DuskLog.info("ModLoader: initializing {} mod(s)...", m_mods.size());
+    Log.info("initializing {} mod(s)...", m_mods.size());
     for (auto& mod : m_mods) {
         if (mod.native) {
             buildAPI(mod);
@@ -301,20 +301,20 @@ void ModLoader::init() {
             mod.native->fn_init(&mod.native->api);
             if (!mod.load_failed) {
                 mod.active = true;
-                DuskLog.info("ModLoader: '{}' initialized", mod.metadata.id);
+                Log.info("'{}' initialized", mod.metadata.id);
             } else {
-                DuskLog.error("ModLoader: '{}' failed to load due to hook conflicts", mod.metadata.id);
+                Log.error("'{}' failed to load due to hook conflicts", mod.metadata.id);
             }
         } catch (const std::exception& e) {
-            DuskLog.error("ModLoader: exception in {}.mod_init(): {}", mod.metadata.id, e.what());
+            Log.error("exception in {}.mod_init(): {}", mod.metadata.id, e.what());
         } catch (...) {
-            DuskLog.error("ModLoader: unknown exception in {}.mod_init()", mod.metadata.id);
+            Log.error("unknown exception in {}.mod_init()", mod.metadata.id);
         }
     }
 
     auto active =
         std::count_if(m_mods.begin(), m_mods.end(), [](const LoadedMod& m) { return m.active; });
-    DuskLog.info("ModLoader: {}/{} mod(s) active", active, m_mods.size());
+    Log.info("{}/{} mod(s) active", active, m_mods.size());
 }
 
 void ModLoader::tick() {
@@ -326,11 +326,11 @@ void ModLoader::tick() {
         try {
             mod.native->fn_tick(&mod.native->api);
         } catch (const std::exception& e) {
-            DuskLog.error(
-                "ModLoader: exception in {}.mod_tick(): {} — disabling", mod.metadata.id, e.what());
+            Log.error(
+                "exception in {}.mod_tick(): {} — disabling", mod.metadata.id, e.what());
             mod.active = false;
         } catch (...) {
-            DuskLog.error("ModLoader: unknown exception in {}.mod_tick() — disabling", mod.metadata.id);
+            Log.error("unknown exception in {}.mod_tick() — disabling", mod.metadata.id);
             mod.active = false;
         }
     }
@@ -349,7 +349,7 @@ void ModLoader::shutdown() {
     }
     m_mods.clear();
     g_services.clear();
-    DuskLog.info("ModLoader: all mods unloaded");
+    Log.info("all mods unloaded");
 }
 
 }  // namespace dusk
