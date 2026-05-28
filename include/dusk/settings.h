@@ -209,6 +209,7 @@ struct UserSettings {
         ConfigVar<bool> debugFlyCam;
         ConfigVar<bool> debugFlyCamLockEvents;
         ConfigVar<bool> allowBackgroundInput;
+        std::array<ConfigVar<bool>, 4> enableLED;
         ConfigVar<bool> swapDirectSelect;
 
         // Cheats

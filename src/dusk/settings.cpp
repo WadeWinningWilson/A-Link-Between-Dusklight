@@ -97,6 +97,12 @@ UserSettings g_userSettings = {
         .debugFlyCam {"game.debugFlyCam", false},
         .debugFlyCamLockEvents {"game.debugFlyCamLockEvents", true},
         .allowBackgroundInput {"game.allowBackgroundInput", true},
+        .enableLED {
+            ConfigVar<bool>{"game.enableLED_port0", true},
+            ConfigVar<bool>{"game.enableLED_port1", true},
+            ConfigVar<bool>{"game.enableLED_port2", true},
+            ConfigVar<bool>{"game.enableLED_port3", true},
+        },
         .swapDirectSelect {"game.swapDirectSelect", false},
 
         // Cheats
@@ -289,6 +295,10 @@ void registerSettings() {
     Register(g_userSettings.game.debugFlyCam);
     Register(g_userSettings.game.debugFlyCamLockEvents);
     Register(g_userSettings.game.allowBackgroundInput);
+    Register(g_userSettings.game.enableLED[0]);
+    Register(g_userSettings.game.enableLED[1]);
+    Register(g_userSettings.game.enableLED[2]);
+    Register(g_userSettings.game.enableLED[3]);
     Register(g_userSettings.game.swapDirectSelect);
 
     Register(g_userSettings.backend.isoPath);
