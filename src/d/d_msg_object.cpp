@@ -1737,8 +1737,8 @@ void dMsgObject_c::changeGroupLocal(s16 param_1) {
 }
 
 bool dMsgObject_c::getStringLocal(u32 param_1, J2DTextBox* param_2, J2DTextBox* param_3,
-                                  JUTFont* param_4, COutFont_c* param_5, char* param_6,
-                                  char* param_7, char* param_8, s16* param_9) {
+                                  JUTFont* param_4, COutFont_c* param_5, TEXT_SPAN param_6,
+                                  TEXT_SPAN param_7, TEXT_SPAN param_8, s16* param_9) {
     if (field_0x4cd == 0) {
         if (getStatusLocal() == 1) {
             s16 groupID = getMessageGroup(param_1);
@@ -2309,8 +2309,8 @@ void dMsgObject_c::changeGroup(s16 param_0) {
 }
 
 bool dMsgObject_c::getString(u32 param_0, J2DTextBox* param_1, J2DTextBox* param_2,
-                             JUTFont* param_3, COutFont_c* param_4, char* param_5, char* param_6,
-                             char* param_7, s16* param_8) {
+                             JUTFont* param_3, COutFont_c* param_4, TEXT_SPAN param_5, TEXT_SPAN param_6,
+                             TEXT_SPAN param_7, s16* param_8) {
     return dMsgObject_getMsgObjectClass()->getStringLocal(
         param_0, param_1, param_2, param_3, param_4, param_5, param_6, param_7, param_8);
 }

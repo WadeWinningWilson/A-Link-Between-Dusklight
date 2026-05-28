@@ -42,7 +42,7 @@ dMsgUnit_c::dMsgUnit_c() {}
 dMsgUnit_c::~dMsgUnit_c() {}
 
 #if REGION_JPN
-void dMsgUnit_c::setTag(int i_type, int i_value, char* o_buffer, bool param_4) {
+void dMsgUnit_c::setTag(int i_type, int i_value, TEXT_SPAN o_buffer, bool param_4) {
     *o_buffer = 0;
     bool stack9 = false;
     bool stack8 = false;
@@ -207,7 +207,7 @@ void dMsgUnit_c::setTag(int i_type, int i_value, char* o_buffer, bool param_4) {
     }
 }
 #else
-void dMsgUnit_c::setTag(int i_type, int i_value, char* o_buffer, bool param_4) {
+void dMsgUnit_c::setTag(int i_type, int i_value, TEXT_SPAN o_buffer, bool param_4) {
     *o_buffer = 0;
     bool stack9 = false;
     bool stack8 = false;
