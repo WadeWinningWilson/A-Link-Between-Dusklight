@@ -135,7 +135,7 @@ static const ALBWRentalEntry kItems[] = {
     // NEW CODE ENDS HERE
     // ============================================
 };
-static constexpr int kItemCount = 13;
+static constexpr int kItemCount = sizeof(kItems) / sizeof(kItems[0]);
 
 // ============================================
 // Timing constants (framerate-independent)
@@ -209,6 +209,18 @@ static bool sJustClosed = false;
 static bool sJustEnteredGreeting  = false;  // → MOT_HELLO + Z2SE_POST_V_APPEAR
 static bool sJustEnteredShop      = false;  // → MOT_WAIT_A (explicit idle lock-in)
 static bool sJustEnteredFarewell  = false;  // → MOT_BYE   + Z2SE_POST_V_FANFARE
+// ============================================
+// NEW CODE — ALBW Port (Native Dialogue)
+// Set to true on the frame that native dialogue flow completes (mFlow.checkEndFlow()).
+// Read and cleared by dALBWRental_tick() STATE_SHOP to absorb the A-press that
+// dismissed the dialogue box.
+// ============================================
+#if TARGET_PC_NATIVE_UI
+static bool sNativeDialogueJustDismissed = false;
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 // ============================================
 // NEW CODE — ALBW Port (Purchase Sound)
 // Set true by tryPurchase() on a successful rental; consumed once by
@@ -424,12 +436,23 @@ void dALBWRental_open() {
           "It seems to me that this is your first time using our services, browse away and keep us in mind. "
           "You may never know when something slips off your person!";
 
+// ============================================
+// NEW CODE — ALBW Port (Native Dialogue)
+// Native dialogue: initTalk() is called from evtTalk() when sJustEnteredGreeting fires.
+// ============================================
+#if TARGET_PC_NATIVE_UI
+    (void)greeting;
+#else
     dusk::ui::push_toast({
         .type     = "npc-dialogue",
         .title    = "Postman's Lending Service",
         .content  = greeting,
         .duration = kGreetingDuration,
     });
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
     sDialogueOpenTime    = clock::now();
     sState               = STATE_GREETING;
@@ -458,12 +481,23 @@ void dALBWRental_close() {
         : "My friend do not shed a tear, save up and return. "
           "Even I can't leave this town yet without a rupee or two more in the bank!";
 
+// ============================================
+// NEW CODE — ALBW Port (Native Dialogue)
+// Native dialogue: initTalk() is called from evtTalk() when sJustEnteredFarewell fires.
+// ============================================
+#if TARGET_PC_NATIVE_UI
+    (void)farewell;
+#else
     dusk::ui::push_toast({
         .type     = "npc-dialogue",
         .title    = "Postman's Lending Service",
         .content  = farewell,
         .duration = kFarewellDuration,
     });
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
     sDialogueOpenTime    = clock::now();
     sState               = STATE_FAREWELL;
@@ -490,8 +524,13 @@ void dALBWRental_tick() {
     const auto elapsed = clock::now() - sDialogueOpenTime;
 
     // ---- STATE_GREETING ----
-    // RmlUI toast is visible. Only A/B advances to the shop.
+    // Toast (or native dialogue) is visible. Only A/B advances to the shop.
     if (sState == STATE_GREETING) {
+// ============================================
+// NEW CODE — ALBW Port (Native Dialogue)
+// In native mode evtTalk drives the transition via dALBWRental_advanceToShop().
+// ============================================
+#if !TARGET_PC_NATIVE_UI
         if (elapsed >= kDialogueGrace) {
             if (mDoCPd_c::getTrigA(PAD_1) || mDoCPd_c::getTrigB(PAD_1)) {
                 // Expire the toast immediately so it fades out instead of
@@ -504,12 +543,21 @@ void dALBWRental_tick() {
                 sJustEnteredShop = true;  // signals Execute() to lock in MOT_WAIT_A
             }
         }
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
         return;
     }
 
     // ---- STATE_FAREWELL ----
-    // RmlUI toast is visible. A/B dismisses it and releases the event lock.
+    // Toast (or native dialogue) is visible. A/B dismisses it and releases the event lock.
     if (sState == STATE_FAREWELL) {
+// ============================================
+// NEW CODE — ALBW Port (Native Dialogue)
+// In native mode evtTalk drives the transition via dALBWRental_advanceToClosed().
+// ============================================
+#if !TARGET_PC_NATIVE_UI
         // Safety auto-close: once the 20 s toast expires the player can
         // no longer read it.  Signal evtTalk() to end the event so Link
         // doesn't stay locked with no visible UI.
@@ -534,10 +582,29 @@ void dALBWRental_tick() {
                 sState      = STATE_CLOSED;
             }
         }
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
         return;
     }
 
     // ---- STATE_SHOP ----
+
+// ============================================
+// NEW CODE — ALBW Port (Native Dialogue)
+// Absorb the A-press that dismissed the native greeting dialogue so it does not
+// immediately trigger a purchase on the first frame in STATE_SHOP.
+// ============================================
+#if TARGET_PC_NATIVE_UI
+    if (sNativeDialogueJustDismissed) {
+        sNativeDialogueJustDismissed = false;
+        return;
+    }
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
     // Clear status message once its display window has expired.
     if (sStatusMsg != nullptr && clock::now() >= sStatusExpiry) {
@@ -757,6 +824,49 @@ void dALBWRental_imguiDraw() {
 // NEW CODE ENDS HERE
 // ============================================
 
+// ============================================
+// NEW CODE — ALBW Port (Native UI)
+// dALBWRental_getVisibleList()
+// Returns a snapshot of the current visible list for dALBWShop_c to render.
+// The returned pointer is valid until the next call to this function.
+// ============================================
+const dALBWVisibleEntry* dALBWRental_getVisibleList(int* outCount) {
+    static dALBWVisibleEntry sPubList[sizeof(kItems)/sizeof(kItems[0])];
+    for (int i = 0; i < sVisibleCount; ++i) {
+        const ALBWRentalEntry& e = kItems[sVisibleList[i].kItemsIdx];
+        sPubList[i].name        = e.name;
+        sPubList[i].price       = e.price;
+        sPubList[i].purchasable = sVisibleList[i].purchasable;
+    }
+    *outCount = sVisibleCount;
+    return sPubList;
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
+// ============================================
+// NEW CODE — ALBW Port (Native Dialogue)
+// dALBWRental_advanceToShop() / dALBWRental_advanceToClosed()
+// Called from daNpc_Post_c::evtTalk() once native talkProc completes to drive
+// state transitions that are normally driven by A/B button polling.
+// ============================================
+#if TARGET_PC_NATIVE_UI
+void dALBWRental_advanceToShop() {
+    if (sState == STATE_GREETING) {
+        sState                       = STATE_SHOP;
+        sJustEnteredShop             = true;
+        sNativeDialogueJustDismissed = true;
+    }
+}
+
+void dALBWRental_advanceToClosed() {
+    if (sState == STATE_FAREWELL) {
+        sJustClosed = true;
+        sState      = STATE_CLOSED;
+    }
+}
+#endif  // TARGET_PC_NATIVE_UI
 // ============================================
 // NEW CODE ENDS HERE
 // ============================================

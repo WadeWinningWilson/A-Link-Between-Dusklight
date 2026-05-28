@@ -44,6 +44,20 @@ bool dALBWRental_justEnteredFarewell(); // Execute() — play MOT_BYE   + FACE_M
 bool dALBWRental_justPurchased();       // Execute() — play Z2SE_POST_V_FANFARE congratulatory fanfare
 bool dALBWRental_justFailedPurchase();  // Execute() — play Z2SE_POST_V_RUN_HIGH insufficient rupees
 // ============================================
+// NEW CODE — ALBW Port (Native UI)
+// Visible item list — consumed by dALBWShop_c to populate the shop window.
+// ============================================
+struct dALBWVisibleEntry {
+    const char* name;
+    int         price;
+    bool        purchasable;
+};
+const dALBWVisibleEntry* dALBWRental_getVisibleList(int* outCount);
+#if TARGET_PC_NATIVE_UI
+void dALBWRental_advanceToShop();
+void dALBWRental_advanceToClosed();
+#endif
+// ============================================
 // NEW CODE ENDS HERE
 // ============================================
 #endif
