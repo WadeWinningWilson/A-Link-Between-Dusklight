@@ -13,7 +13,6 @@
 #include "dusk/imgui/ImGuiEngine.hpp"
 #include "dusk/io.hpp"
 #include "dusk/livesplit.h"
-#include "dusk/main.h"
 #include "dusk/discord_presence.hpp"
 #include "graphics_tuner.hpp"
 #include "m_Do/m_Do_main.h"
@@ -376,6 +375,8 @@ const Rml::String kDepthOfFieldHelpText =
 const Rml::String kUnlockFramerateHelpText =
     "<br/>Uses inter-frame interpolation to enable higher frame rates.<br/><br/>May introduce minor "
     "visual artifacts or animation glitches.";
+const Rml::String kTextureReplacementHelpText =
+    "Enable installed texture replacements.";
 
 int float_setting_percent(ConfigVar<float>& var) {
     return static_cast<int>(var.getValue() * 100.0f + 0.5f);
@@ -859,12 +860,17 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             mPrelaunch);
 
         leftPane.add_section("Rendering");
-        config_bool_select(leftPane, rightPane, getSettings().game.enableTextureReplacements,
-            {
-                .key = "Use Texture Pack",
-                .helpText = "Enable installed texture replacements.",
-                .onChange = [](bool value) { aurora_set_texture_replacements_enabled(value); },
-            });
+        graphics_tuner_control(*this, leftPane, rightPane,
+            getSettings().game.enableTextureReplacements,
+            GraphicsTunerProps{
+                .option = GraphicsOption::TextureReplacements,
+                .title = "Enable Texture Replacements",
+                .helpText = kTextureReplacementHelpText,
+                .valueMin = static_cast<int>(false),
+                .valueMax = static_cast<int>(true),
+                .defaultValue = static_cast<int>(false),
+            },
+            mPrelaunch);
         leftPane.register_control(
             leftPane.add_select_button({
                 .key = "Unlock Framerate",
