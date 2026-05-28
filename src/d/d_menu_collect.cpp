@@ -2326,7 +2326,7 @@ void dMenu_Collect2D_c::setAButtonString(u16 i_stringID) {
             }
         } else {
             for (int i = 0; i < 5; i++) {
-                char* stringPtr =
+                TEXT_SPAN stringPtr =
                     static_cast<J2DTextBox*>(mpScreenIcon->search(text_a_tag[i]))->getStringPtr();
                 dMeter2Info_getStringKanji(i_stringID, stringPtr, NULL);
             }
@@ -2350,7 +2350,7 @@ void dMenu_Collect2D_c::setBButtonString(u16 i_stringID) {
             }
         } else {
             for (int i = 0; i < 5; i++) {
-                char* stringPtr =
+                TEXT_SPAN stringPtr =
                     static_cast<J2DTextBox*>(mpScreenIcon->search(text_b_tag[i]))->getStringPtr();
                 dMeter2Info_getStringKanji(i_stringID, stringPtr, NULL);
             }
@@ -2379,7 +2379,7 @@ void dMenu_Collect2D_c::setItemNameString(u8 param_0, u8 param_1) {
             stringPtr = static_cast<J2DTextBox*>(mpScreen->search(MULTI_CHAR('item_n03')))->getStringPtr();
             dMeter2Info_getStringKanji(uVar6, stringPtr, NULL);
 #else
-            char* stringPtr =
+            TEXT_SPAN stringPtr =
                 static_cast<J2DTextBox*>(mpScreen->search(MULTI_CHAR('item_n04')))->getStringPtr();
             dMeter2Info_getStringKanji(uVar6, stringPtr, NULL);
             stringPtr = static_cast<J2DTextBox*>(mpScreen->search(MULTI_CHAR('item_n05')))->getStringPtr();

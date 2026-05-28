@@ -707,7 +707,7 @@ void jmessage_tReference::inputNumber() {
     getObjectPtr()->setInputValue(new_input_val);
 }
 
-char* jmessage_tReference::getWord(int i_no) {
+TEXT_SPAN jmessage_tReference::getWord(int i_no) {
     if (i_no >= 10) {
         JUT_WARN(1093, "%s", "message stack over!!");
         JUT_ASSERT(1094, i_no < (10));
@@ -3751,7 +3751,7 @@ void jmessage_tRenderingProcessor::do_rubyset(void const* i_data, u32 i_size) {
     }
 }
 
-void jmessage_tRenderingProcessor::do_rubystrcat(char* i_src, char* i_dst, f32 i_charSpace, f32 param_4) {
+void jmessage_tRenderingProcessor::do_rubystrcat(char* i_src, TEXT_SPAN i_dst, f32 i_charSpace, f32 param_4) {
     jmessage_tReference* pReference = (jmessage_tReference*)getReference();
     if (pReference->isCharSend()) {
         if (0.0f != param_4) {
