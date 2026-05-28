@@ -11,12 +11,12 @@
 
 #include "dusk/randomizer/game/verify_item_functions.h"
 
-static int l_bmdData[2][2] = {
+static DUSK_CONSTEXPR int l_bmdData[2][2] = {
     {35, 1},
     {18, 2},
 };
 
-static daNpcT_evtData_c l_evtList[5] = {
+static DUSK_CONSTEXPR daNpcT_evtData_c l_evtList[5] = {
     {"", 0},
     {"DEFAULT_GETITEM", 0},
     {"NO_RESPONSE", 0},
@@ -24,23 +24,23 @@ static daNpcT_evtData_c l_evtList[5] = {
     {"YM_LOOK", 2},
 };
 
-static char* l_resNameList[3] = {
+static DUSK_CONSTEXPR char DUSK_CONST* l_resNameList[3] = {
     "",
     "Kkri",
     "Kkri_TW",
 };
 
-static s8 l_loadResPtrn0[] = {1, -1};
+static DUSK_CONSTEXPR s8 l_loadResPtrn0[] = {1, -1};
 
-static s8 l_loadResPtrn1[] = {1, 2, -1};
+static DUSK_CONSTEXPR s8 l_loadResPtrn1[] = {1, 2, -1};
 
-static s8* l_loadResPtrnList[3] = {
+static DUSK_CONSTEXPR s8 DUSK_CONST* l_loadResPtrnList[3] = {
     l_loadResPtrn0,
     l_loadResPtrn1,
     l_loadResPtrn1,
 };
 
-static daNpcT_faceMotionAnmData_c l_faceMotionAnmData[15] = {
+static DUSK_CONSTEXPR daNpcT_faceMotionAnmData_c l_faceMotionAnmData[15] = {
     {-1, 0, 0, 44, 2, 1, 1},
     {13, 0, 1, 44, 2, 1, 1},
     {11, 0, 1, 50, 0, 1, 0},
@@ -58,7 +58,7 @@ static daNpcT_faceMotionAnmData_c l_faceMotionAnmData[15] = {
     {8, 0, 2, 26, 0, 2, 0},
 };
 
-static daNpcT_motionAnmData_c l_motionAnmData[21] = {
+static DUSK_CONSTEXPR daNpcT_motionAnmData_c l_motionAnmData[21] = {
     {30, 2, 1, 38, 0, 1, 1, 0},
     {31, 2, 1, 38, 0, 1, 1, 0},
     {28, 2, 1, 38, 0, 1, 1, 0},
@@ -82,7 +82,7 @@ static daNpcT_motionAnmData_c l_motionAnmData[21] = {
     {13, 0, 2, 38, 0, 1, 1, 0},
 };
 
-static daNpcT_MotionSeqMngr_c::sequenceStepData_c l_faceMotionSequenceData[60] = {
+static DUSK_CONSTEXPR daNpcT_MotionSeqMngr_c::sequenceStepData_c l_faceMotionSequenceData[60] = {
     {1, -1, 1},
     {-1, 0, 0},
     {-1, 0, 0},
@@ -145,7 +145,7 @@ static daNpcT_MotionSeqMngr_c::sequenceStepData_c l_faceMotionSequenceData[60] =
     {-1, 0, 0},
 };
 
-static daNpcT_MotionSeqMngr_c::sequenceStepData_c l_motionSequenceData[76] = {
+static DUSK_CONSTEXPR daNpcT_MotionSeqMngr_c::sequenceStepData_c l_motionSequenceData[76] = {
     {1, -1, 0},
     {-1, 0, 0},
     {-1, 0, 0},
@@ -224,13 +224,13 @@ static daNpcT_MotionSeqMngr_c::sequenceStepData_c l_motionSequenceData[76] = {
     {-1, 0, 0},
 };
 
-char* daNpc_Kkri_c::mCutNameList[3] = {
+char DUSK_CONST* DUSK_CONST daNpc_Kkri_c::mCutNameList[3] = {
     "",
     "CONVERSATION_ABOUT_SOUP",
     "YM_LOOK",
 };
 
-int (daNpc_Kkri_c::*daNpc_Kkri_c::mCutList[])(int) = {
+int (daNpc_Kkri_c::* DUSK_CONST daNpc_Kkri_c::mCutList[])(int) = {
     NULL,
     &daNpc_Kkri_c::cutConversationAboutSoup,
     &daNpc_Kkri_c::cutYmLook,
@@ -1249,7 +1249,7 @@ static int daNpc_Kkri_IsDelete(void* i_this) {
     return 1;
 }
 
-static actor_method_class daNpc_Kkri_MethodTable = {
+static DUSK_CONST actor_method_class daNpc_Kkri_MethodTable = {
     (process_method_func)daNpc_Kkri_Create,
     (process_method_func)daNpc_Kkri_Delete,
     (process_method_func)daNpc_Kkri_Execute,
@@ -1257,7 +1257,7 @@ static actor_method_class daNpc_Kkri_MethodTable = {
     (process_method_func)daNpc_Kkri_Draw,
 };
 
-actor_process_profile_definition g_profile_NPC_KKRI = {
+DUSK_PROFILE actor_process_profile_definition DUSK_CONST g_profile_NPC_KKRI = {
     /* Layer ID     */ fpcLy_CURRENT_e,
     /* List ID      */ 7,
     /* List Prio    */ fpcPi_CURRENT_e,
