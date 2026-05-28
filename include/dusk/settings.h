@@ -204,7 +204,8 @@ struct UserSettings {
         ConfigVar<bool> invertFirstPersonYAxis;
         ConfigVar<bool> invertAirSwimX;
         ConfigVar<bool> invertAirSwimY;
-        ConfigVar<float> freeCameraSensitivity;
+        ConfigVar<float> freeCameraXSensitivity;
+        ConfigVar<float> freeCameraYSensitivity;
         ConfigVar<bool> debugFlyCam;
         ConfigVar<bool> debugFlyCamLockEvents;
         ConfigVar<bool> allowBackgroundInput;

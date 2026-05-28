@@ -92,7 +92,8 @@ UserSettings g_userSettings = {
         .invertFirstPersonYAxis {"game.invertFirstPersonYAxis", false},
         .invertAirSwimX {"game.invertAirSwimX", false},
         .invertAirSwimY {"game.invertAirSwimY", false},
-        .freeCameraSensitivity {"game.freeCameraSensitivity", 1.0f},
+        .freeCameraXSensitivity {"game.freeCameraXSensitivity", 1.0f},
+        .freeCameraYSensitivity {"game.freeCameraYSensitivity", 1.0f},
         .debugFlyCam {"game.debugFlyCam", false},
         .debugFlyCamLockEvents {"game.debugFlyCamLockEvents", true},
         .allowBackgroundInput {"game.allowBackgroundInput", true},
@@ -224,7 +225,8 @@ void registerSettings() {
     Register(g_userSettings.game.invertFirstPersonYAxis);
     Register(g_userSettings.game.invertAirSwimX);
     Register(g_userSettings.game.invertAirSwimY);
-    Register(g_userSettings.game.freeCameraSensitivity);
+    Register(g_userSettings.game.freeCameraXSensitivity);
+    Register(g_userSettings.game.freeCameraYSensitivity);
     Register(g_userSettings.game.minimalHUD);
     Register(g_userSettings.game.pauseOnFocusLost);
     Register(g_userSettings.game.enableDiscordPresence);
