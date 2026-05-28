@@ -5,6 +5,7 @@
 #include "d/d_kankyo.h"
 #include "d/d_kankyo_data.h"
 #include "dusk/offset_ptr.h"
+#include "dusk/string.hpp"
 #include "f_op/f_op_actor_mng.h"
 #include "global.h"
 #include "os_report.h"
@@ -1225,7 +1226,7 @@ public:
 #endif
     }
     static JKRExpHeap* getMemoryBlockHeap(int i_no) { return mMemoryBlock[i_no]; }
-    static char* getDemoArcName() { return mDemoArcName; }
+    static TEXT_SPAN getDemoArcName() { return mDemoArcName; }
     static void offNoChangeRoom() { mNoChangeRoom = false; }
     static void onNoChangeRoom() { mNoChangeRoom = true; }
 
