@@ -3,6 +3,8 @@
 #include <filesystem>
 #include "miniz.h"
 
+#include "dusk/mod_loader.hpp"
+
 #if __APPLE__
 #include <TargetConditionals.h>
 #endif
@@ -50,5 +52,26 @@ private:
     [[nodiscard]] std::filesystem::path toRealPath(const std::string& fileName) const;
     std::filesystem::path root_path;
 };
+
+
+extern thread_local LoadedMod* g_currentMod;
+extern std::unordered_map<std::string, void*> g_services;
+
+extern thread_local void* g_dusk_hook_current_mod;
+
+struct ModGuard {
+    explicit ModGuard(dusk::LoadedMod* m) {
+        g_currentMod = m;
+        g_dusk_hook_current_mod = m;
+    }
+    ~ModGuard() {
+        g_currentMod = nullptr;
+        g_dusk_hook_current_mod = nullptr;
+    }
+};
+
+inline const char* modName() {
+    return g_currentMod ? g_currentMod->metadata.id.c_str() : "mod";
+}
 
 }  // namespace dusk::modding

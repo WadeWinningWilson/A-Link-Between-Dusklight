@@ -10,7 +10,9 @@
 
 namespace dusk {
 
-extern thread_local void* g_dusk_hook_current_mod;
+namespace modding {
+    extern thread_local void* g_dusk_hook_current_mod;
+}
 
 struct PreHookFn {
     void* mod;
@@ -55,8 +57,8 @@ static void* resolveImportThunk(void* addr) {
 
 struct ModGuard {
     void* prev;
-    explicit ModGuard(void* mod) : prev(g_dusk_hook_current_mod) { g_dusk_hook_current_mod = mod; }
-    ~ModGuard() { g_dusk_hook_current_mod = prev; }
+    explicit ModGuard(void* mod) : prev(modding::g_dusk_hook_current_mod) { modding::g_dusk_hook_current_mod = mod; }
+    ~ModGuard() { modding::g_dusk_hook_current_mod = prev; }
 };
 
 void hookInstallByAddr(void* fn_addr, void* tramp_fn, void** orig_store) {
