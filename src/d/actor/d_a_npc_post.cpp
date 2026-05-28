@@ -22,6 +22,23 @@
 #include "dusk/ui/ui.hpp"
 #include "Z2AudioLib/Z2SceneMgr.h"
 #include <chrono>
+#if TARGET_PC_NATIVE_UI
+#include "d/d_albw_shop.h"
+#endif
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
+// ============================================
+// NEW CODE — ALBW Port (Native Shop Window)
+// File-scope static so both Create() and Delete() can access the shop object.
+// Guarded by TARGET_PC so it compiles away in non-PC builds.
+// ============================================
+#if TARGET_PC
+#if TARGET_PC_NATIVE_UI
+static dALBWShop_c* s_pALBWShop = nullptr;
+#endif
 #endif
 // ============================================
 // NEW CODE ENDS HERE
@@ -451,6 +468,16 @@ cPhs_Step daNpc_Post_c::create() {
             Z2GetSceneMgr()->loadSeWave(0x4B);
             field_0x1014 = 0;  // no pending voice yet
             field_0x1015 = 0;  // BGM not playing yet
+// ============================================
+// NEW CODE — ALBW Port (Native Shop Window)
+// Allocate the shop window object once when the ALBW postman actor is created.
+// ============================================
+#if TARGET_PC_NATIVE_UI
+            if (!s_pALBWShop) s_pALBWShop = JKR_NEW dALBWShop_c();
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
         }
 #endif
         // ============================================
@@ -580,6 +607,16 @@ int daNpc_Post_c::Delete() {
             mDoAud_subBgmStop();
             field_0x1015 = 0;
         }
+// ============================================
+// NEW CODE — ALBW Port (Native Shop Window)
+// Release the shop window object when the ALBW postman actor is destroyed.
+// ============================================
+#if TARGET_PC_NATIVE_UI
+        JKR_DELETE(s_pALBWShop); s_pALBWShop = nullptr;
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
     }
 #endif
     // ============================================
@@ -611,6 +648,16 @@ int daNpc_Post_c::Execute() {
 // ============================================
 #if TARGET_PC
     if (getBitSW() == 0x42) {
+// ============================================
+// NEW CODE — ALBW Port (Native Shop Window)
+// Drive async archive load each Execute() tick.
+// ============================================
+#if TARGET_PC_NATIVE_UI
+        if (s_pALBWShop) s_pALBWShop->update();
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
         dALBWRental_tick();
 
         // ============================================
@@ -720,6 +767,21 @@ int daNpc_Post_c::Draw() {
         J3DModelData* modelData = mpMorf[0]->getModel()->getModelData();
         modelData->getMaterialNodePointer(getEyeballMaterialNo())->setMaterialAnm(mpMatAnm[0]);
     }
+
+// ============================================
+// NEW CODE — ALBW Port (Native Shop Window)
+// Register the shop for 2D opaque drawing this frame while the rental is open.
+// ============================================
+#if TARGET_PC
+#if TARGET_PC_NATIVE_UI
+    if (getBitSW() == 0x42 && s_pALBWShop && dALBWRental_isOpen()) {
+        s_pALBWShop->registerDraw();
+    }
+#endif
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
     return draw(NpcT_CHK_ACTION(daNpc_Post_c), FALSE, mRealShadowSize, NULL, 100.0f, 0, 0, 0);
 }
@@ -931,6 +993,46 @@ BOOL daNpc_Post_c::evtTalk() {
 // ============================================
 #if TARGET_PC
     if (getBitSW() == 0x42) {
+// ============================================
+// NEW CODE — ALBW Port (Native Dialogue)
+// Drive greeting and farewell via initTalk/talkProc rather than push_toast.
+// Flow 0x14 = vanilla letter delivery text (placeholder until custom BMG added via BenzCM).
+// Flow 0x13 = vanilla post-delivery text (placeholder for farewell).
+// ============================================
+#if TARGET_PC_NATIVE_UI
+        {
+            static bool sNativeGreetingActive  = false;
+            static bool sNativeFarewellActive  = false;
+
+            if (dALBWRental_justEnteredGreeting()) {
+                sNativeGreetingActive = true;
+                initTalk(0x14, NULL);
+            }
+            if (sNativeGreetingActive) {
+                if (talkProc(NULL, FALSE, NULL, FALSE) && mFlow.checkEndFlow()) {
+                    sNativeGreetingActive = false;
+                    dALBWRental_advanceToShop();
+                }
+                return TRUE;
+            }
+
+            if (dALBWRental_justEnteredFarewell()) {
+                sNativeFarewellActive = true;
+                initTalk(0x13, NULL);
+            }
+            if (sNativeFarewellActive) {
+                if (talkProc(NULL, FALSE, NULL, FALSE) && mFlow.checkEndFlow()) {
+                    sNativeFarewellActive = false;
+                    dALBWRental_advanceToClosed();
+                }
+                return TRUE;
+            }
+        }
+#endif  // TARGET_PC_NATIVE_UI
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
         // Shop just finished — close the event to release Link's lock.
         // sJustClosed is set by dALBWRental_tick() when STATE_CLOSED is
         // entered; it reads and clears in one call so this fires only once.

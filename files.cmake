@@ -170,6 +170,7 @@ set(DOLZEL_FILES
         src/d/d_shop_system.cpp
         src/d/d_gameover.cpp
         src/d/d_albw_rental.cpp
+        src/d/d_albw_shop.cpp
         src/d/d_albw_hp_mult.cpp
         src/d/d_kankyo.cpp
         src/d/d_kyeff.cpp
