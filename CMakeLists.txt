@@ -135,13 +135,6 @@ set(AURORA_ENABLE_RMLUI ON CACHE BOOL "Enable RmlUi UI support" FORCE)
 add_subdirectory(extern/aurora EXCLUDE_FROM_ALL)
 target_compile_definitions(aurora_mtx PRIVATE MTX_USE_PS=1)
 
-# rmlui_core uses its own PCH which creates a duplicate PCH marker symbol when linked
-# Disabling rmlui's PCH removes the conflicting marker and lets the link succeed
-if (MSVC AND TARGET rmlui_core)
-    set_target_properties(rmlui_core PROPERTIES DISABLE_PRECOMPILE_HEADERS ON)
-endif ()
-
-
 add_subdirectory(libs/freeverb)
 
 option(DUSK_BUILD_WARNINGS "Enable compiler warnings (off by default)")
@@ -528,9 +521,15 @@ if(ANDROID)
 elseif(WIN32)
     add_library(dusklight_game SHARED ${DUSK_FILES})
     set_target_properties(dusklight_game PROPERTIES
-            WINDOWS_EXPORT_ALL_SYMBOLS ON
+            WINDOWS_EXPORT_ALL_SYMBOLS ${DUSK_ENABLE_CODE_MODS}
             OUTPUT_NAME dusklight
             PDB_NAME dusklight_game)
+
+    # rmlui_core uses its own PCH which creates a duplicate PCH marker symbol when linked
+    # Disabling rmlui's PCH removes the conflicting marker and lets the link succeed
+    if (MSVC AND TARGET rmlui_core AND DUSK_ENABLE_CODE_MODS)
+        set_target_properties(rmlui_core PROPERTIES DISABLE_PRECOMPILE_HEADERS ON)
+    endif ()
 
     add_executable(dusklight WIN32 src/dusk/launcher_win32.cpp)
     target_link_libraries(dusklight PRIVATE dusklight_game)
@@ -794,4 +793,6 @@ foreach (target IN LISTS BINARY_TARGETS)
     endforeach ()
 endforeach ()
 
-add_subdirectory(tools/mod_test)
+if (DUSK_ENABLE_CODE_MODS)
+    add_subdirectory(tools/mod_test)
+endif ()

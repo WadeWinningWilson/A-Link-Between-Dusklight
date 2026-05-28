@@ -225,7 +225,7 @@ int main(int argc, char* argv[]) {
 
 #if _WIN32
 // Entry point called by the launcher executable.
-extern "C" int WINAPI dusk_WinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
+int __declspec(dllexport) dusk_WinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     return RunWindowsGuiEntryPoint();
 }
 #endif

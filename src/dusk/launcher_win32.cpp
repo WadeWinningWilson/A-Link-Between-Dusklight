@@ -8,7 +8,7 @@
 #include <Windows.h>
 
 // see src/dusk/main.cpp
-extern "C" int WINAPI dusk_WinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR cmd, int show);
+int dusk_WinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR cmd, int show);
 
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR cmd, int show) {
     return dusk_WinMain(hInst, hPrev, cmd, show);
