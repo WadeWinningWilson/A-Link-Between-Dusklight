@@ -115,7 +115,9 @@ void ModLoader::initOverlayFiles() {
     std::vector<AuroraOverlayFile> files;
 
     for (auto& mod : m_mods) {
-        findOverlayFiles(files, mod);
+        if (mod.active) {
+            findOverlayFiles(files, mod);
+        }
     }
 
     Log.debug("Found {} overlay files.", files.size());

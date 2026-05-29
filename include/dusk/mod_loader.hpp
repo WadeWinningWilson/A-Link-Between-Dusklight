@@ -45,6 +45,41 @@ struct NativeMod {
     FnCleanup fn_cleanup = nullptr;
 };
 
+enum class NativeModStatus : u8 {
+    /**
+     * Mod does not have native code included.
+     */
+    None,
+
+    /**
+     * Native code mod loaded successfully.
+     *
+     * Note that this only indicates load status of the native library. If the native lib throws in
+     * its init function, it will still be disabled!
+     */
+    Loaded,
+
+    /**
+     * This build was compiled without native mod support!
+     */
+    BuildDisabled,
+
+    /**
+     * Mod does not have a native library suitable for this build's platform.
+     */
+    ModMissingPlatform,
+
+    /**
+     * Mod is built for a different API version than this build of the game.
+     */
+    ApiVersionMismatch,
+
+    /**
+     * Unknown error loading the native mod.
+     */
+    Unknown,
+};
+
 struct LoadedMod {
     ModMetadata metadata;
     std::string mod_path;
@@ -53,7 +88,9 @@ struct LoadedMod {
     bool active = false;
     bool load_failed = false;
 
+    NativeModStatus native_status = NativeModStatus::None;
     std::unique_ptr<NativeMod> native;
+
     std::unique_ptr<modding::ModBundle> bundle;
 
     std::vector<RmlTabContentCallback> tab_content;
@@ -77,7 +114,7 @@ private:
     bool m_initialized = false;
 
     void tryLoadDusk(const std::filesystem::path& modPath, bool fromDir);
-    bool tryLoadNativeMod(LoadedMod& mod);
+    void tryLoadNativeMod(LoadedMod& mod);
     void buildAPI(LoadedMod& mod);
     void initOverlayFiles();
 };

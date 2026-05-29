@@ -119,10 +119,11 @@ static bool checkDuplicateMod(const ModMetadata& metadata, const std::vector<Loa
     });
 }
 
-bool ModLoader::tryLoadNativeMod(LoadedMod& mod) {
+void ModLoader::tryLoadNativeMod(LoadedMod& mod) {
     if (!EnableCodeMods) {
         Log.error("Code mods are not available in this build");
-        return false;
+        mod.native_status = NativeModStatus::BuildDisabled;
+        return;
     }
 
     namespace fs = std::filesystem;
@@ -135,7 +136,8 @@ bool ModLoader::tryLoadNativeMod(LoadedMod& mod) {
     if (dllEntry.empty()) {
         Log.error(
             "no *{} found in {} — skipping", NativeModule::LibraryExtension, mod.metadata.id);
-        return false;
+        mod.native_status = NativeModStatus::ModMissingPlatform;
+        return;
     }
 
     const fs::path cacheDir = m_modsDir / ".cache" / mod.metadata.id;
@@ -150,14 +152,14 @@ bool ModLoader::tryLoadNativeMod(LoadedMod& mod) {
     } catch (const std::runtime_error& e) {
         Log.error(
             "failed to extract {} from {}", dllEntry, mod.metadata.id);
-        return false;
+        return;
     }
 
     {
         std::ofstream out(dllCachePath, std::ios::binary | std::ios::out);
         if (!out) {
             Log.error("failed to write {}", io::fs_path_to_string(dllCachePath));
-            return false;
+            return;
         }
 
         out.write(
@@ -170,14 +172,15 @@ bool ModLoader::tryLoadNativeMod(LoadedMod& mod) {
         nativeMod->handle = std::make_unique<NativeModule>(dllCachePath);
     } catch (const std::runtime_error& e) {
         Log.error("failed to open {}: {}", io::fs_path_to_string(dllCachePath), e.what());
-        return false;
+        return;
     }
 
     const auto mod_api_ver = nativeMod->handle->LookupSymbol<uint32_t*>("mod_api_version");
     if (mod_api_ver && *mod_api_ver != DUSK_MOD_API_VERSION) {
         Log.error("{} expects API v{} but engine is v{}, skipping",
             io::fs_path_to_string(fs::path(dllEntry).filename()), *mod_api_ver, DUSK_MOD_API_VERSION);
-        return false;
+        mod.native_status = NativeModStatus::ApiVersionMismatch;
+        return;
     }
 
     nativeMod->fn_init = nativeMod->handle->LookupSymbol<NativeMod::FnInit>("mod_init");
@@ -187,12 +190,12 @@ bool ModLoader::tryLoadNativeMod(LoadedMod& mod) {
     if (!nativeMod->fn_init || !nativeMod->fn_tick) {
         Log.error("{} missing mod_init or mod_tick — skipping",
             io::fs_path_to_string(fs::path(dllEntry).filename()));
-        return false;
+        return;
     }
 
     mod.dir = io::fs_path_to_string(fs::absolute(cacheDir));
     mod.native = std::move(nativeMod);
-    return true;
+    mod.native_status = NativeModStatus::Loaded;
 }
 
 void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) {
@@ -226,12 +229,21 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
     }
 
     LoadedMod mod;
+    mod.active = true;
     mod.mod_path = io::fs_path_to_string(fs::absolute(modPath));
     mod.metadata = std::move(metadata);
     mod.bundle = std::move(bundle);
 
-    if (mod.metadata.hasCode && !tryLoadNativeMod(mod)) {
-        return;
+    if (mod.metadata.hasCode) {
+        mod.native_status = NativeModStatus::Unknown;
+        tryLoadNativeMod(mod);
+        // Native mod lod failure DOES NOT block insertion into m_mods.
+        // We still want to be able to present the failed load in the UI!
+
+        if (mod.native_status != NativeModStatus::Loaded) {
+            Log.error("Native mod '{}' failed to load, disabling", metadata.id);
+            mod.active = false;
+        }
     }
 
     const auto& inserted = m_mods.emplace_back(std::move(mod));
@@ -282,35 +294,40 @@ void ModLoader::init() {
         return;
     }
 
-    initOverlayFiles();
 
     Log.info("initializing {} mod(s)...", m_mods.size());
     for (auto& mod : m_mods) {
-        if (mod.native) {
+        if (mod.native && mod.active) {
             buildAPI(mod);
         }
     }
 
     for (auto& mod : m_mods) {
-        if (!mod.native) {
+        if (!mod.native || !mod.active) {
             continue;
         }
+
+        Log.debug("Initializing '{}'", mod.metadata.id);
 
         ModGuard guard(&mod);
         try {
             mod.native->fn_init(&mod.native->api);
             if (!mod.load_failed) {
-                mod.active = true;
                 Log.info("'{}' initialized", mod.metadata.id);
             } else {
+                mod.active = false;
                 Log.error("'{}' failed to load due to hook conflicts", mod.metadata.id);
             }
         } catch (const std::exception& e) {
+            mod.active = false;
             Log.error("exception in {}.mod_init(): {}", mod.metadata.id, e.what());
         } catch (...) {
+            mod.active = false;
             Log.error("unknown exception in {}.mod_init()", mod.metadata.id);
         }
     }
+
+    initOverlayFiles();
 
     auto active =
         std::count_if(m_mods.begin(), m_mods.end(), [](const LoadedMod& m) { return m.active; });
