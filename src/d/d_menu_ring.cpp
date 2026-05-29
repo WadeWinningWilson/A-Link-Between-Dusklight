@@ -35,6 +35,7 @@
 
 #if TARGET_PC
 #include "dusk/game_clock.h"
+#include "dusk/settings.h"
 #endif
 
 typedef void (dMenu_Ring_c::*initFunc)();
@@ -354,11 +355,33 @@ dMenu_Ring_c::dMenu_Ring_c(JKRExpHeap* i_heap, STControl* i_stick, CSTControl* i
     }
     for (i = 0; i < 5; i++) {
 #if VERSION == VERSION_GCN_JPN
+    #if TARGET_PC
+        J2DTextBox* fc_TextBox;
+        if (dusk::getSettings().game.swapDirectSelect) {
+            fc_TextBox = (J2DTextBox*)mpScreen->search(c_text1[i]);
+            mpScreen->search(fc_text1[i])->hide();
+        } else {
+            fc_TextBox = (J2DTextBox*)mpScreen->search(c_text[i]);
+            mpScreen->search(fc_text[i])->hide();
+        }
+    #else
         J2DTextBox* fc_TextBox = (J2DTextBox*)mpScreen->search(c_text[i]);
         mpScreen->search(fc_text[i])->hide();
+    #endif
 #else
+    #if TARGET_PC
+        J2DTextBox* fc_TextBox;
+        if (dusk::getSettings().game.swapDirectSelect) {
+            fc_TextBox = (J2DTextBox*)mpScreen->search(fc_text1[i]);
+            mpScreen->search(c_text1[i])->hide();
+        } else {
+            fc_TextBox = (J2DTextBox*)mpScreen->search(fc_text[i]);
+            mpScreen->search(c_text[i])->hide();
+        }
+    #else
         J2DTextBox* fc_TextBox = (J2DTextBox*)mpScreen->search(fc_text[i]);
         mpScreen->search(c_text[i])->hide();
+    #endif
 #endif
         fc_TextBox->setFont(mDoExt_getMesgFont());
         fc_TextBox->setString(0x40, "");
@@ -366,11 +389,33 @@ dMenu_Ring_c::dMenu_Ring_c(JKRExpHeap* i_heap, STControl* i_stick, CSTControl* i
     }
     for (i = 0; i < 5; i++) {
 #if VERSION == VERSION_GCN_JPN
+    #if TARGET_PC
+        J2DTextBox* fc1_TextBox;
+        if (dusk::getSettings().game.swapDirectSelect) {
+            fc1_TextBox = (J2DTextBox*)mpScreen->search(c_text[i]);
+            mpScreen->search(fc_text[i])->hide();
+        } else {
+            fc1_TextBox = (J2DTextBox*)mpScreen->search(c_text1[i]);
+            mpScreen->search(fc_text1[i])->hide();
+        }
+    #else
         J2DTextBox* fc1_TextBox = (J2DTextBox*)mpScreen->search(c_text1[i]);
         mpScreen->search(fc_text1[i])->hide();
+    #endif
 #else
+    #if TARGET_PC
+        J2DTextBox* fc1_TextBox;
+        if (dusk::getSettings().game.swapDirectSelect) {
+            fc1_TextBox = (J2DTextBox*)mpScreen->search(fc_text[i]);
+            mpScreen->search(c_text[i])->hide();
+        } else {
+            fc1_TextBox = (J2DTextBox*)mpScreen->search(fc_text1[i]);
+            mpScreen->search(c_text1[i])->hide();
+        }
+    #else
         J2DTextBox* fc1_TextBox = (J2DTextBox*)mpScreen->search(fc_text1[i]);
         mpScreen->search(c_text1[i])->hide();
+    #endif
 #endif
         fc1_TextBox->setFont(mDoExt_getMesgFont());
         fc1_TextBox->setString(0x40, "");
@@ -862,7 +907,12 @@ u8 dMenu_Ring_c::getStickInfo(STControl* i_stick) {
         }
 
         if (mCurrentSlot != val2) {
+            #ifdef TARGET_PC
+            if ((mDoCPd_c::getHoldL(PAD_1) && !dusk::getSettings().game.swapDirectSelect) ||
+                (!mDoCPd_c::getHoldL(PAD_1) && dusk::getSettings().game.swapDirectSelect)) {
+            #else
             if (mDoCPd_c::getHoldL(PAD_1)) {
+            #endif
                 mDirectSelectCursorPos.x = mItemSlotPosX[mCurrentSlot];
                 mDirectSelectCursorPos.z = mItemSlotPosY[mCurrentSlot];
                 mCurrentSlot = val2;
@@ -1456,7 +1506,12 @@ void dMenu_Ring_c::drawItem2() {
 }
 
 void dMenu_Ring_c::stick_wait_init() {
+    #ifdef TARGET_PC
+    if ((mDoCPd_c::getHoldL(PAD_1) && !dusk::getSettings().game.swapDirectSelect) ||
+        (!mDoCPd_c::getHoldL(PAD_1) && dusk::getSettings().game.swapDirectSelect)) {
+    #else
     if (mDoCPd_c::getHoldL(PAD_1) != 0) {
+    #endif
         if (mDirectSelectActive) {
             mWaitFrames = g_ringHIO.mDirectSelectWaitFrames;
         } else {

@@ -13,7 +13,7 @@
 #include "dusk/randomizer/game/verify_item_functions.h"
 #endif
 
-static cull_box l_cull_box = {{-200.0f, 0.0f, -200.0f}, {200.0f, 100.0f, 200.0f}};
+static DUSK_CONSTEXPR cull_box l_cull_box = {{-200.0f, 0.0f, -200.0f}, {200.0f, 100.0f, 200.0f}};
 
 void daObjSword_c::initBaseMtx() {
     mpModel->setBaseScale(scale);
@@ -156,13 +156,13 @@ static int daObjSword_Create(daObjSword_c* param_0) {
     return param_0->create();
 }
 
-static actor_method_class l_daObjSword_Method = {
+static DUSK_CONST actor_method_class l_daObjSword_Method = {
     (process_method_func)daObjSword_Create,  (process_method_func)daObjSword_Delete,
     (process_method_func)daObjSword_Execute, 0,
     (process_method_func)daObjSword_Draw,
 };
 
-actor_process_profile_definition g_profile_Obj_Sword = {
+DUSK_PROFILE actor_process_profile_definition DUSK_CONST g_profile_Obj_Sword = {
     /* Layer ID     */ fpcLy_CURRENT_e,
     /* List ID      */ 7,
     /* List Prio    */ fpcPi_CURRENT_e,
