@@ -12,8 +12,9 @@
 #include <system_error>
 #include <string>
 
-#include "dusk/main.h"
 #include "dusk/action_bindings.h"
+#include "dusk/logging.h"
+#include "dusk/main.h"
 
 using namespace dusk::config;
 
@@ -23,8 +24,9 @@ using json = nlohmann::json;
 
 aurora::Module DuskConfigLog("dusk::config");
 
-static absl::flat_hash_map<std::string_view, ConfigVarBase*> RegisteredConfigVars;
-static bool RegistrationDone = false;
+static absl::flat_hash_map<std::string, ConfigVarBase*> RegisteredConfigVars;
+static absl::flat_hash_map<std::string, nlohmann::json> UnregisteredConfigVars;
+static absl::flat_hash_map<std::string, std::string> UnregisteredConfigVarOverrides;
 
 static std::filesystem::path GetConfigJsonPath() {
     return dusk::ConfigPath / ConfigFileName;
@@ -46,15 +48,21 @@ static void ReplaceFile(const std::filesystem::path& source, const std::filesyst
     }
 }
 
-ConfigVarBase::ConfigVarBase(const char* name, const ConfigImplBase* impl) : name(name), registered(false), layer(ConfigVarLayer::Default), impl(impl) {
+ConfigVarBase::ConfigVarBase(std::string name, const ConfigImplBase* impl) : name(std::move(name)), registered(false), layer(ConfigVarLayer::Default), impl(impl) {
 }
 
 const char* ConfigVarBase::getName() const noexcept {
-    return name;
+    return name.c_str();
 }
 
 const ConfigImplBase* ConfigVarBase::getImpl() const noexcept {
     return impl;
+}
+
+ConfigVarBase::~ConfigVarBase() {
+    if (registered) {
+        DuskLog.fatal("CVar '{}' was destroyed while still registered!", name);
+    }
 }
 
 template <typename T>
@@ -200,17 +208,37 @@ namespace dusk::config {
 }
 
 void dusk::config::Register(ConfigVarBase& configVar) {
-    const auto& name = configVar.getName();
-    if (RegistrationDone) {
-        DuskConfigLog.fatal("Tried to register CVar {} after registrations closed!", name);
-    }
-
+    const std::string_view name = configVar.getName();
     if (RegisteredConfigVars.contains(name)) {
         DuskConfigLog.fatal("Tried to register CVar {} twice!", name);
     }
 
     RegisteredConfigVars[name] = &configVar;
     configVar.markRegistered();
+
+    const auto unregPair = UnregisteredConfigVars.find(name);
+    if (unregPair != UnregisteredConfigVars.end()) {
+        const auto value = std::move(unregPair->second);
+        UnregisteredConfigVars.erase(name);
+
+        try {
+            configVar.getImpl()->loadFromJson(configVar, value);
+        } catch (std::exception& e) {
+            DuskConfigLog.error("Failed to load key '{}' from config value: {}", name, e.what());
+        }
+    }
+
+    const auto overridePair = UnregisteredConfigVarOverrides.find(name);
+    if (overridePair != UnregisteredConfigVarOverrides.end()) {
+        const auto value = std::move(overridePair->second);
+        UnregisteredConfigVars.erase(name);
+
+        try {
+            configVar.getImpl()->loadFromArg(configVar, value);
+        } catch (std::exception& e) {
+            DuskConfigLog.error("Failed to load key '{}' from override arg: {}", name, e.what());
+        }
+    }
 }
 
 void ConfigVarBase::markRegistered() {
@@ -220,8 +248,11 @@ void ConfigVarBase::markRegistered() {
     registered = true;
 }
 
-void dusk::config::FinishRegistration() {
-    RegistrationDone = true;
+void ConfigVarBase::unmarkRegistered() {
+    if (!registered)
+        abort();
+
+    registered = false;
 }
 
 void dusk::config::LoadFromUserPreferences() {
@@ -242,11 +273,16 @@ static void LoadFromPath(const char* path) {
         return;
     }
 
+    UnregisteredConfigVars.clear();
+
     for (const auto& el : j.items()) {
         const auto& key = el.key();
         auto configVar = RegisteredConfigVars.find(key);
         if (configVar == RegisteredConfigVars.end()) {
-            DuskConfigLog.error("Unknown key '{}' found in config!", key);
+            DuskConfigLog.debug(
+                "Unknown key '{}' found in config! If this gets registered later, that's acceptable!",
+                key);
+            UnregisteredConfigVars.emplace(key, el.value());
             continue;
         }
 
@@ -259,10 +295,6 @@ static void LoadFromPath(const char* path) {
 }
 
 void dusk::config::LoadFromFileName(const char* path) {
-    if (!RegistrationDone) {
-        DuskConfigLog.fatal("Registration not finished yet!");
-    }
-
     DuskConfigLog.info("Loading config from '{}'", path);
 
     try {
@@ -277,6 +309,20 @@ void dusk::config::LoadFromFileName(const char* path) {
         DuskConfigLog.error("Failed to parse config JSON, staying with defaults: {}", e.what());
     } catch (const std::exception& e) {
         DuskConfigLog.error("Failed to load from config, staying with defaults: {}", e.what());
+    }
+}
+
+void dusk::config::LoadArgOverride(std::string_view name, std::string_view value) {
+    const auto cVar = GetConfigVar(name);
+    if (!cVar) {
+        UnregisteredConfigVarOverrides.emplace(name, name);
+        return;
+    }
+
+    try {
+        cVar->getImpl()->loadFromArg(*cVar, value);
+    } catch (const std::exception& e) {
+        DuskLog.fatal("Unable to parse: '{}': {}", value, e.what());
     }
 }
 
@@ -298,6 +344,10 @@ void dusk::config::Save() {
         if (layer == ConfigVarLayer::Value || layer == ConfigVarLayer::Speedrun) {
             j[pair.first] = pair.second->getImpl()->dumpToJson(*pair.second);
         }
+    }
+
+    for (const auto& pair : UnregisteredConfigVars) {
+        j[pair.first] = pair.second;
     }
 
     try {
@@ -329,4 +379,14 @@ void dusk::config::EnumerateRegistered(std::function<void(ConfigVarBase&)> callb
     for (auto& pair : RegisteredConfigVars) {
         callback(*pair.second);
     }
+}
+
+void dusk::config::Shutdown() {
+    for (auto& pair : RegisteredConfigVars) {
+        pair.second->unmarkRegistered();
+    }
+
+    RegisteredConfigVars.clear();
+    UnregisteredConfigVars.clear();
+    UnregisteredConfigVarOverrides.clear();
 }

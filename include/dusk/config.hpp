@@ -90,15 +90,14 @@ public:
 void Register(ConfigVarBase& configVar);
 
 /**
- * \brief Indicate that all registrations have happened and everything should lock in.
- */
-void FinishRegistration();
-
-/**
  * \brief Load config from the standard user preferences location.
  */
 void LoadFromUserPreferences();
 void LoadFromFileName(const char* path);
+
+void LoadArgOverride(std::string_view name, std::string_view value);
+
+void Shutdown();
 
 /**
  * \brief Save the config to file.

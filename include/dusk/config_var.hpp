@@ -68,7 +68,7 @@ protected:
     /**
      * The name of this CVar, used in the configuration file.
      */
-    const char* name;
+    std::string name;
 
     /**
      * Whether this CVar has been registered with the global managing logic.
@@ -86,8 +86,10 @@ protected:
      */
     const ConfigImplBase* impl;
 
-    ConfigVarBase(const char* name, const ConfigImplBase* impl);
-    virtual ~ConfigVarBase() = default;
+    // The configuration system stores a direct pointer to the ConfigVar instance.
+    // It is not legal to move or copy it.
+    ConfigVarBase(const ConfigVarBase&) = delete;
+    ConfigVarBase(std::string name, const ConfigImplBase* impl);
 
     /**
      * Check that the CVar is registered, aborting if this is not the case.
@@ -98,6 +100,8 @@ protected:
     }
 
 public:
+    virtual ~ConfigVarBase();
+
     /**
      * Get the name of this CVar, used in the configuration file.
      */
@@ -120,6 +124,7 @@ public:
      * This is necessary to make it legal to access.
      */
     void markRegistered();
+    void unmarkRegistered();
 
     /**
      * Clear a speedrun-mode override if one is active on this CVar.
@@ -185,9 +190,11 @@ public:
      * @param arg Arguments to forward to construct the default value.
      */
     template <typename... Args>
-    ConfigVar(const char* name, Args&&... arg)
-        : ConfigVarBase(name, GetConfigImpl<T>()), defaultValue(std::forward<Args>(arg)...),
+    ConfigVar(std::string name, Args&&... arg)
+        : ConfigVarBase(std::move(name), GetConfigImpl<T>()), defaultValue(std::forward<Args>(arg)...),
         value(), overrideValue() {}
+
+    ConfigVar(ConfigVar const&) = delete;
 
     /**
      * \brief Get the current value of the CVar.

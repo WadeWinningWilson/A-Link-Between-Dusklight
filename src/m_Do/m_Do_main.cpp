@@ -416,16 +416,7 @@ static void ApplyCVarOverrides(const cxxopts::OptionValue& option) {
         const auto name = std::string_view(cvarArg).substr(0, sep);
         const auto value = std::string_view(cvarArg).substr(sep + 1);
 
-        const auto cVar = dusk::config::GetConfigVar(name);
-        if (!cVar) {
-            DuskLog.fatal("Unknown --cvar name: '{}'", name);
-        }
-
-        try {
-            cVar->getImpl()->loadFromArg(*cVar, value);
-        } catch (const std::exception& e) {
-            DuskLog.fatal("Unable to parse: '{}': {}", value, e.what());
-        }
+        dusk::config::LoadArgOverride(name, value);
     }
 }
 
@@ -504,7 +495,6 @@ int game_main(int argc, char* argv[]) {
     mainCalled = true;
 
     dusk::registerSettings();
-    dusk::config::FinishRegistration();
 
     cxxopts::ParseResult parsed_arg_options;
 
@@ -796,6 +786,8 @@ int game_main(int argc, char* argv[]) {
     dusk::discord::shutdown();
 #endif
     dusk::ui::shutdown();
+
+    dusk::config::Shutdown();
     aurora_shutdown();
 
     return 0;
