@@ -268,17 +268,7 @@ FetchContent_Declare(json
     URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
-message(STATUS "dusk: Fetching zlib")
-FetchContent_Declare(zlib
-    URL https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz
-    URL_HASH SHA256=bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-)
-FetchContent_MakeAvailable(cxxopts json zlib)
-
-if (NOT TARGET zlibstatic)
-    set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-endif ()
+FetchContent_MakeAvailable(cxxopts json)
 
 if (DUSK_ENABLE_SENTRY_NATIVE)
     message(STATUS "dusklight: Fetching sentry-native")
@@ -360,10 +350,7 @@ set(GAME_INCLUDE_DIRS
 find_package(Threads REQUIRED)
 set(GAME_LIBS aurora::core aurora::gx aurora::gd aurora::si aurora::vi aurora::pad aurora::mtx aurora::os aurora::dvd
     aurora::card freeverb cxxopts::cxxopts absl::flat_hash_map nlohmann_json::nlohmann_json TracyClient fmt::fmt
-    Threads::Threads)
-
-list(APPEND GAME_LIBS libzstd_static)
-list(APPEND GAME_LIBS zlibstatic)
+    Threads::Threads libzstd_static ZLIB::ZLIB)
 
 if (DUSK_ENABLE_SENTRY_NATIVE)
     list(APPEND GAME_LIBS sentry)
