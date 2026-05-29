@@ -5,10 +5,6 @@
 
 #include "dusk/mod_loader.hpp"
 
-#if __APPLE__
-#include <TargetConditionals.h>
-#endif
-
 namespace dusk::modding {
 
 #if DUSK_CODE_MODS
