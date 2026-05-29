@@ -3,8 +3,10 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+#include <ranges>
 
 #include "dusk/mod_api.h"
+#include "dusk/config_var.hpp"
 
 namespace dusk::modding {
 class ModBundle;
@@ -85,6 +87,8 @@ struct LoadedMod {
     std::string mod_path;
     std::string dir;
 
+    std::unique_ptr<ConfigVar<bool>> cvarIsEnabled;
+
     bool active = false;
     bool load_failed = false;
 
@@ -106,10 +110,16 @@ public:
     void tick();
     void shutdown();
 
-    const std::vector<LoadedMod>& mods() const { return m_mods; }
+    [[nodiscard]] auto mods() const {
+        return m_mods | std::views::transform([](const auto& m) -> LoadedMod& { return *m; });
+    }
+
+    [[nodiscard]] auto active_mods() const {
+        return mods() | std::views::filter([](const auto& m) { return m.active; });
+    }
 
 private:
-    std::vector<LoadedMod> m_mods;
+    std::vector<std::unique_ptr<LoadedMod>> m_mods;
     std::filesystem::path m_modsDir;
     bool m_initialized = false;
 

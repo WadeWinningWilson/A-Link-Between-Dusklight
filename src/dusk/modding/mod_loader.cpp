@@ -9,6 +9,7 @@
 #include <string>
 
 #include "aurora/dvd.h"
+#include "dusk/config.hpp"
 #include "dusk/io.hpp"
 #include "miniz.h"
 #include "native_module.hpp"
@@ -31,6 +32,10 @@ static constexpr std::string_view k_archSuffix = ""sv;
 #endif
 
 static dusk::ModLoader g_modLoader;
+
+// We cannot delete config vars registered by mods until the game shuts down fully.
+// Therefore, orphan them during shutdown.
+static std::vector<std::unique_ptr<dusk::ConfigVarBase>> OrphanedConfigVars;
 
 namespace dusk {
 
@@ -134,10 +139,11 @@ static ModMetadata loadMetadata(const std::filesystem::path& modPath, ModBundle&
     };
 }
 
-static bool checkDuplicateMod(const ModMetadata& metadata, const std::vector<LoadedMod>& mods) {
-    return std::ranges::any_of(mods, [&](const LoadedMod& mod) {
-        return mod.metadata.id == metadata.id;
-    });
+template <std::ranges::input_range TIter>
+bool checkDuplicateMod(
+    const ModMetadata& metadata, TIter mods) {
+    return std::ranges::any_of(mods,
+        [&](const LoadedMod& mod) { return mod.metadata.id == metadata.id; });
 }
 
 void ModLoader::tryLoadNativeMod(LoadedMod& mod) {
@@ -219,6 +225,29 @@ void ModLoader::tryLoadNativeMod(LoadedMod& mod) {
     mod.native_status = NativeModStatus::Loaded;
 }
 
+static std::string escapeModIdForConfig(std::string_view const id) {
+    std::string buf;
+
+    // Simple escaping. All characters in mod IDs literal, except for '.' and '_'.
+    // '.' -> '_', '_' -> '__'
+    for (char const chr : id) {
+        if (chr == '.') {
+            buf.push_back('_');
+        } else if (chr == '_') {
+            buf.push_back('_');
+            buf.push_back('_');
+        } else {
+            buf.push_back(chr);
+        }
+    }
+
+    return buf;
+}
+
+static std::string modEnabledCVarName(std::string_view const id) {
+    return fmt::format("mod.{}.enabled", escapeModIdForConfig(id));
+}
+
 void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) {
     namespace fs = std::filesystem;
 
@@ -241,7 +270,7 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
         return;
     }
 
-    if (checkDuplicateMod(metadata, m_mods)) {
+    if (checkDuplicateMod(metadata, mods())) {
         Log.error(
             "mod with id '{}' already exists, not loading {}",
             metadata.id,
@@ -249,11 +278,14 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
         return;
     }
 
-    LoadedMod mod;
+    const auto& inserted = m_mods.emplace_back(std::make_unique<LoadedMod>());
+
+    auto& mod = *inserted;
     mod.active = true;
     mod.mod_path = io::fs_path_to_string(fs::absolute(modPath));
     mod.metadata = std::move(metadata);
     mod.bundle = std::move(bundle);
+    mod.cvarIsEnabled = std::make_unique<ConfigVar<bool>>(modEnabledCVarName(mod.metadata.id), true);
 
     if (mod.metadata.hasCode) {
         mod.native_status = NativeModStatus::Unknown;
@@ -267,14 +299,13 @@ void ModLoader::tryLoadDusk(const std::filesystem::path& modPath, bool fromDir) 
         }
     }
 
-    const auto& inserted = m_mods.emplace_back(std::move(mod));
 
     Log.info(
         "found '{}' ('{}') v{} by {} ({})",
-        inserted.metadata.name,
-        inserted.metadata.id,
-        inserted.metadata.version,
-        inserted.metadata.author,
+        mod.metadata.name,
+        mod.metadata.id,
+        mod.metadata.version,
+        mod.metadata.author,
         io::fs_path_to_string(modPath.filename()));
 }
 
@@ -317,14 +348,23 @@ void ModLoader::init() {
 
 
     Log.info("initializing {} mod(s)...", m_mods.size());
-    for (auto& mod : m_mods) {
-        if (mod.native && mod.active) {
+    for (auto& mod : mods()) {
+        Register(*mod.cvarIsEnabled);
+
+        if (!mod.cvarIsEnabled->getValue()) {
+            Log.info("Mod '{}' is disabled by config", mod.metadata.id);
+            mod.active = false;
+        }
+    }
+
+    for (auto& mod : active_mods()) {
+        if (mod.native) {
             buildAPI(mod);
         }
     }
 
-    for (auto& mod : m_mods) {
-        if (!mod.native || !mod.active) {
+    for (auto& mod : active_mods()) {
+        if (!mod.native) {
             continue;
         }
 
@@ -350,22 +390,20 @@ void ModLoader::init() {
 
     initOverlayFiles();
 
-    auto active =
-        std::count_if(m_mods.begin(), m_mods.end(), [](const LoadedMod& m) { return m.active; });
+    auto active = std::ranges::count_if(mods(), [](const LoadedMod& m) { return m.active; });
     Log.info("{}/{} mod(s) active", active, m_mods.size());
 }
 
 void ModLoader::tick() {
-    for (auto& mod : m_mods) {
-        if (!mod.active || !mod.native) {
+    for (auto& mod : active_mods()) {
+        if (!mod.native) {
             continue;
         }
         ModGuard guard(&mod);
         try {
             mod.native->fn_tick(&mod.native->api);
         } catch (const std::exception& e) {
-            Log.error(
-                "exception in {}.mod_tick(): {} — disabling", mod.metadata.id, e.what());
+            Log.error("exception in {}.mod_tick(): {} — disabling", mod.metadata.id, e.what());
             mod.active = false;
         } catch (...) {
             Log.error("unknown exception in {}.mod_tick() — disabling", mod.metadata.id);
@@ -375,7 +413,7 @@ void ModLoader::tick() {
 }
 
 void ModLoader::shutdown() {
-    for (auto& mod : m_mods) {
+    for (auto& mod : mods()) {
         hookClearMod(&mod);
         if (mod.native && mod.native->fn_cleanup) {
             ModGuard guard(&mod);
@@ -384,7 +422,10 @@ void ModLoader::shutdown() {
             } catch (...) {
             }
         }
+
+        OrphanedConfigVars.emplace_back(std::move(mod.cvarIsEnabled));
     }
+
     m_mods.clear();
     g_services.clear();
     Log.info("all mods unloaded");
