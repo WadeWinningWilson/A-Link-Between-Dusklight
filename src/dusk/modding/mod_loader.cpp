@@ -79,6 +79,28 @@ public:
     explicit InvalidModDataException(const char* msg) : runtime_error(msg) {}
 };
 
+static void validateModId(std::string_view const str) {
+    if (str.empty()) {
+        throw InvalidModDataException("Missing ID value in mod metadata!");
+    }
+
+    for (auto const chr : str) {
+        if (chr == '.' || chr == '_')
+            continue;
+
+        if (chr >= '0' && chr <= '9')
+            continue;
+
+        if (chr >= 'a' && chr <= 'z')
+            continue;
+
+        if (chr >= 'A' && chr <= 'Z')
+            continue;
+
+        throw InvalidModDataException(fmt::format("Invalid character '{}' in mod ID. Valid characters are period, underscore, and alphanumerics.", chr));
+    }
+}
+
 static ModMetadata loadMetadata(const std::filesystem::path& modPath, ModBundle& bundle) {
     const auto metaJson = bundle.readFile("mod.json");
     auto j = nlohmann::json::parse(metaJson);
@@ -90,9 +112,8 @@ static ModMetadata loadMetadata(const std::filesystem::path& modPath, ModBundle&
     std::string metaDescription = j.value("description", "");
     const bool hasCode = j.value("has_code", false);
 
-    if (metaId.empty()) {
-        throw InvalidModDataException("Missing ID value in mod metadata!");
-    }
+    validateModId(metaId);
+
     if (metaName.empty()) {
         metaName = io::fs_path_to_string(modPath.stem());
     }
