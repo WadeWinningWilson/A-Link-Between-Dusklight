@@ -477,9 +477,12 @@ void registerHdTexturesForArc(std::vector<u8>& arcBytes,
             const u32 newImgOff = 0x20 + i * 0x20;
             timg->imageOffset = static_cast<s32>(newImgOff);
             const u8 hdMips = static_cast<u8>(std::clamp<u32>(s.mipCount, 1u, 13u));
-            timg->mipmapEnabled = 1;
+            timg->mipmapEnabled = hdMips > 1;
             timg->mipmapCount = hdMips;
             timg->maxLOD = static_cast<s8>((hdMips - 1) * 8);
+            if (timg->mipmapEnabled) {
+                timg->minFilter = GX_LIN_MIP_LIN;
+            }
             timg->maxAnisotropy = GX_ANISO_4;
             registerHdSurface(*m, s,
                               arcBytes.data() + f.dataOffset + btiAbs + newImgOff,
@@ -513,9 +516,12 @@ void registerHdTexturesForArc(std::vector<u8>& arcBytes,
         auto* timg = reinterpret_cast<ResTIMG*>(arcBytes.data() + f.dataOffset);
         timg->imageOffset = 0x20;
         const u8 hdMips = static_cast<u8>(std::clamp<u32>(s.mipCount, 1u, 13u));
-        timg->mipmapEnabled = 1;
+        timg->mipmapEnabled = hdMips > 1;
         timg->mipmapCount = hdMips;
         timg->maxLOD = static_cast<s8>((hdMips - 1) * 8);
+        if (timg->mipmapEnabled) {
+            timg->minFilter = GX_LIN_MIP_LIN;
+        }
         timg->maxAnisotropy = GX_ANISO_4;
         registerHdSurface(*m, s, arcBytes.data() + f.dataOffset + 0x20,
                           gtx->name, 0);
