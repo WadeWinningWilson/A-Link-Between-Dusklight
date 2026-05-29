@@ -4,6 +4,8 @@
 
 #include <vector>
 
+#include "dusk/mod_loader.hpp"
+
 namespace dusk::ui {
 
 class ModsWindow : public Window {
@@ -17,7 +19,7 @@ private:
         bool load_failed;
     };
     std::vector<ModSnapshot> mSnapshot;
-    int mActiveModIndex = 0;
+    ModIndex mActiveModIndex = 0;
 };
 
 }  // namespace dusk::ui

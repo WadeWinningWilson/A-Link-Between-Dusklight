@@ -129,4 +129,6 @@ private:
     void initOverlayFiles();
 };
 
+using ModIndex = std::ranges::range_difference_t<decltype(std::declval<ModLoader>().mods())>;
+
 }  // namespace dusk

@@ -59,7 +59,7 @@ ModsWindow::ModsWindow() {
         return;
     }
 
-    for (size_t i = 0; i < mods.size(); ++i) {
+    for (ModIndex i = 0; i < mods.size(); ++i) {
         mSnapshot.push_back({mods[i].active, mods[i].load_failed});
 
         add_tab(mods[i].metadata.name, [this, i](Rml::Element* content) {
@@ -95,7 +95,7 @@ void ModsWindow::update() {
 
     bool dirty = mods.size() != mSnapshot.size();
     if (!dirty) {
-        for (size_t i = 0; i < mods.size(); ++i) {
+        for (ModIndex i = 0; i < mods.size(); ++i) {
             if (mods[i].active != mSnapshot[i].active ||
                 mods[i].load_failed != mSnapshot[i].load_failed)
             {
