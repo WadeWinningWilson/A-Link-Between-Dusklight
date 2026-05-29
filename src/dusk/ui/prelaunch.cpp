@@ -50,14 +50,14 @@ const Rml::String kDocumentSource = R"RML(
             </hero>
             <div id="menu-list" />
         </menu>
-        <disc-info class="intro-item delay-4">
+        <disc-info class="intro-item delay-5">
             <div id="disc-status">
                 <icon />
                 <span id="disc-status-label" />
             </div>
             <span id="disc-version" class="detail" />
         </disc-info>
-        <version-info class="intro-item delay-5">
+        <version-info class="intro-item delay-6">
             <div class="version">Version <span id="version-text"></span></div>
             <div id="update-status" class="update">
                 <span id="update-message"></span>
