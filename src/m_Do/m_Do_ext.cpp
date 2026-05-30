@@ -2225,6 +2225,13 @@ void mDoExt_invJntPacket::draw() {
             JUT_ASSERT(5011, shapePkt != NULL);
             shapePkt->getShape()->loadPreDrawSetting();
 
+#if DUSK_TPHD
+            {
+                const auto* offs = sp18->getMaterial()->getPEBlock()->getPolygonOffset();
+                GX2SetPolygonOffset(offs->mFrontOffset, offs->mFrontScale, offs->mBackOffset, offs->mBackScale, offs->mClamp);
+            }
+#endif
+
             do {
                 if (!shapePkt->getShape()->checkFlag(1)) {
                     if (shapePkt->getDisplayListObj() != NULL) {

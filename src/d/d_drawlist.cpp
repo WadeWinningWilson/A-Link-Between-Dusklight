@@ -1128,7 +1128,14 @@ void dDlst_shadowReal_c::draw() {
     {
         GXLoadTexMtxImm(mReceiverProjMtx, GX_TEXMTX0, GX_MTX3x4);
     }
+
+#ifdef DUSK_TPHD
+    GX2SetPolygonOffset(-10.0f, -10.0f, -10.0f, -10.0f, 0);
+#endif
     mShadowRealPoly.draw();
+#ifdef DUSK_TPHD
+    GX2SetPolygonOffset(0.0f, 0.0f, 0.0f, 0.0f, 0);
+#endif
 }
 
 static int psdRealCallBack(cBgS_ShdwDraw* param_0, cBgD_Vtx_t* param_1, int param_2,
