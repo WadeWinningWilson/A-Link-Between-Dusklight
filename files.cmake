@@ -246,18 +246,6 @@ set(DOLZEL_FILES
 if(DEBUG)
     list(APPEND DOLZEL_FILES src/d/d_event_debug.cpp)
 endif(DEBUG)
-if (DUSK_TPHD)
-    list(APPEND DOLZEL_FILES
-        src/dusk/tphd/TphdPack.hpp
-        src/dusk/tphd/TphdPack.cpp
-        src/dusk/tphd/GtxParser.hpp
-        src/dusk/tphd/GtxParser.cpp
-        src/dusk/tphd/AddrLib.hpp
-        src/dusk/tphd/AddrLib.cpp
-        src/dusk/tphd/HdAssetLayer.hpp
-        src/dusk/tphd/HdAssetLayer.cpp
-    )
-endif(DUSK_TPHD)
 
 set(Z2AUDIOLIB_FILES
         src/Z2AudioLib/Z2Calc.cpp
@@ -1541,6 +1529,14 @@ set(DUSK_FILES
         src/dusk/discord_presence.cpp
         src/dusk/version.cpp
         src/dusk/action_bindings.cpp
+        src/dusk/tphd/TphdPack.hpp
+        src/dusk/tphd/TphdPack.cpp
+        src/dusk/tphd/GtxParser.hpp
+        src/dusk/tphd/GtxParser.cpp
+        src/dusk/tphd/AddrLib.hpp
+        src/dusk/tphd/AddrLib.cpp
+        src/dusk/tphd/HdAssetLayer.hpp
+        src/dusk/tphd/HdAssetLayer.cpp
 )
 
 set(DUSK_HTTP_BACKEND_FILES

@@ -818,10 +818,12 @@ int mDoMch_Create() {
     // pushes stage BMDs past 8 MB and Link's Kmdl past 5 MB). Parent arena is
     // 1 GB on PC, distribute generously across every heap that holds model
     // or animation data at runtime.
-    archiveHeapSize     += 0x08000000;  // +128 MB  (large RARCs)
-    gameHeapSize        += 0x10000000;  // +256 MB  (parent of per-actor heaps like "Alink original")
-    j2dHeapSize         += 0x01000000;  // +16  MB  (UI textures)
-    dynamicLinkHeapSize += 0x01000000;  // +16  MB
+    if (dusk::tphd_active()) {
+        archiveHeapSize     += 0x08000000;  // +128 MB  (large RARCs)
+        gameHeapSize        += 0x10000000;  // +256 MB  (parent of per-actor heaps like "Alink original")
+        j2dHeapSize         += 0x01000000;  // +16  MB  (UI textures)
+        dynamicLinkHeapSize += 0x01000000;  // +16  MB
+    }
 #endif
 
     #if !DEBUG
@@ -870,13 +872,11 @@ int mDoMch_Create() {
 #if DEBUG
     dynamicLinkHeapSize *= 2;
 #endif
-    archiveHeapSize *= 2;
-    j2dHeapSize *= 2;
-#if DUSK_TPHD
-    gameHeapSize *= 2;
-#else
-    gameHeapSize *= 20; // NOTE: increased from 2 to 20 to try to solve heap alloc crashes. maybe do a better fix later
-#endif
+    if (!dusk::tphd_active()) {
+        archiveHeapSize *= 2;
+        j2dHeapSize *= 2;
+        gameHeapSize *= 20; // NOTE: increased from 2 to 20 to try to solve heap alloc crashes. maybe do a better fix later
+    }
 #endif
 
     JFWSystem::setSysHeapSize(arenaSize);

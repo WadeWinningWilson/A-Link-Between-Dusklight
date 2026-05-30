@@ -88,9 +88,7 @@
 #include "dusk/io.hpp"
 #include "dusk/version.hpp"
 #include "dusk/discord_presence.hpp"
-#if DUSK_TPHD
 #include "dusk/tphd/HdAssetLayer.hpp"
-#endif
 #include "tracy/Tracy.hpp"
 #include "f_pc/f_pc_draw.h"
 #include "tracy/Tracy.hpp"
@@ -573,7 +571,8 @@ int game_main(int argc, char* argv[]) {
         const auto cachePathString = dusk::CachePath.u8string();
         AuroraConfig config{};
         config.appName = dusk::AppName;
-
+        config.userPath = reinterpret_cast<const char*>(userPathString.c_str());
+        config.cachePath = reinterpret_cast<const char*>(cachePathString.c_str());
         config.vsync = dusk::getSettings().video.enableVsync;
         config.startFullscreen = dusk::getSettings().video.enableFullscreen;
         config.windowPosX = -1;
@@ -583,7 +582,11 @@ int game_main(int argc, char* argv[]) {
         config.desiredBackend = ResolveDesiredBackend(parsed_arg_options);
         config.logCallback = &aurora_log_callback;
         config.logLevel = startupLogLevel;
-        config.mem1Size = 1024 * 1024 * 1024;
+        if (dusk::tphd_active()) {
+            config.mem1Size = 512 * 1024 * 1024;
+        } else {
+            config.mem1Size = 256 * 1024 * 1024;
+        }
         config.mem2Size = 24 * 1024 * 1024;
         config.allowJoystickBackgroundEvents = dusk::getSettings().game.allowBackgroundInput;
         config.pauseOnFocusLost = dusk::getSettings().game.pauseOnFocusLost;
