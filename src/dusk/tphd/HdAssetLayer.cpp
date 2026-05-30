@@ -73,7 +73,6 @@ struct HdOverlayEntry {
     std::filesystem::path arcPath;
     std::filesystem::path packPath;
     size_t size = 0;
-    s32 overlayEntryNum = -1;
 };
 
 std::list<HdOverlayEntry>& g_overlayEntries() {
@@ -721,7 +720,7 @@ void ensure_overlay_callbacks_registered() {
 void rebuild_hd_overlay_locked() {
     if (g_contentPath.empty()) {
         if (g_overlayCallbacksRegistered) {
-            aurora_dvd_overlay_files(nullptr, 0);
+            aurora_dvd_overlay_files(nullptr, 0, nullptr);
         }
         return;
     }
@@ -742,8 +741,6 @@ void rebuild_hd_overlay_locked() {
     ensure_overlay_callbacks_registered();
 
     std::vector<AuroraOverlayFile> overlayFiles;
-    s32 nextEntryNum = baseEntryCount;
-
     for (std::filesystem::recursive_directory_iterator it(resRoot, ec), end;
          !ec && it != end; it.increment(ec)) {
         const bool regularFile = it->is_regular_file(ec);
@@ -774,25 +771,24 @@ void rebuild_hd_overlay_locked() {
         entry.packPath = arcPath;
         entry.packPath.replace_extension(".pack.gz");
         entry.size = *fileSize;
-        entry.overlayEntryNum = nextEntryNum++;
 
         overlayFiles.push_back({
             .fileName = entry.dvdPath.c_str(),
             .userData = &entry,
             .size = entry.size,
-            .entryNum = entry.overlayEntryNum,
         });
     }
 
-    aurora_dvd_overlay_files(overlayFiles.data(), overlayFiles.size());
+    std::vector overlayEntryNums(overlayFiles.size(), -1);
+    aurora_dvd_overlay_files(overlayFiles.data(), overlayFiles.size(), overlayEntryNums.data());
 
-    for (auto& entry : g_overlayEntries()) {
-        const s32 entryNum = DVDConvertPathToEntrynum(entry.dvdPath.c_str());
-        if (entryNum < 0) {
-            HdLog.warn("HD overlay entry was not accepted by DVD FST: {}", entry.dvdPath);
+    auto entryIt = g_overlayEntries().begin();
+    for (size_t i = 0; i < overlayEntryNums.size() && entryIt != g_overlayEntries().end(); ++i, ++entryIt) {
+        if (overlayEntryNums[i] < 0) {
+            HdLog.warn("HD overlay entry was not accepted by DVD FST: {}", entryIt->dvdPath);
             continue;
         }
-        g_entryNumToOverlay()[entryNum] = &entry;
+        g_entryNumToOverlay()[overlayEntryNums[i]] = &*entryIt;
     }
 
     HdLog.info("HD DVD overlay registered {} arcs from {}",
