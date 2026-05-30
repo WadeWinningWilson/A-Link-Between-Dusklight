@@ -1660,7 +1660,37 @@ void dMsgObject_c::readMessageGroupLocal(mDoDvdThd_mountXArchive_c** p_arcMount)
 #if TARGET_PC
     // Original game UB
 
-    if (dusk::version::isRegionPal()) {
+    if (dusk::tphd_active()) {
+        switch (dComIfGs_getPalLanguage()) {
+        case dSv_player_config_c::LANGUAGE_GERMAN:
+            snprintf(arcName, sizeof(arcName), "/res/Msgde/bmgres%d.arc", msgGroup);
+            break;
+        case dSv_player_config_c::LANGUAGE_FRENCH:
+            if (dusk::version::isRegionPal()) {
+                snprintf(arcName, sizeof(arcName), "/res/Msgfr/bmgres%d.arc", msgGroup);
+            }
+            else {
+                snprintf(arcName, sizeof(arcName), "/res/Msgusfr/bmgres%d.arc", msgGroup);
+            }
+            break;
+        case dSv_player_config_c::LANGUAGE_SPANISH:
+            if (dusk::version::isRegionPal()) {
+                snprintf(arcName, sizeof(arcName), "/res/Msgsp/bmgres%d.arc", msgGroup);
+            } else {
+                snprintf(arcName, sizeof(arcName), "/res/Msgussp/bmgres%d.arc", msgGroup);
+            }
+            break;
+        case dSv_player_config_c::LANGUAGE_ITALIAN:
+            snprintf(arcName, sizeof(arcName), "/res/Msgit/bmgres%d.arc", msgGroup);
+            break;
+        default:
+            if (dusk::version::isRegionPal()) {
+                snprintf(arcName, sizeof(arcName), "/res/Msguk/bmgres%d.arc", msgGroup);
+            } else {
+                snprintf(arcName, sizeof(arcName), "/res/Msgus/bmgres%d.arc", msgGroup);
+            }
+        }
+    } else if (dusk::version::isRegionPal()) {
         switch (dComIfGs_getPalLanguage()) {
         case dSv_player_config_c::LANGUAGE_GERMAN:
             snprintf(arcName, sizeof(arcName), "/res/Msgde/bmgres%d.arc", msgGroup);

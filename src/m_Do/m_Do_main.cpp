@@ -469,9 +469,9 @@ u8 OSGetLanguage() {
 }
 
 static void LanguageInit() {
-    // Keep language at 0 (English) if not on a PAL disc.
+    // Keep language at 0 (English) if not on a PAL disc and if TPHD is unloaded.
     // Doubt this matters, but avoid funky shit.
-    if (!dusk::version::isRegionPal()) {
+    if (!dusk::version::isRegionPal() && !dusk::tphd_active()) {
         return;
     }
 
