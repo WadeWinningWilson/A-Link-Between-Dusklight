@@ -48,9 +48,12 @@ Currently, only the GameCube USA and EUR releases are supported. Support for oth
 
 # PC features
 
-### ALBW item rental (experimental)
+### ALBW mod ([ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight))
 
-The PC build can include an [ALBW-style Postman rental shop](docs/albw-port.md): native letter-select UI, 13-item catalog, death-strip integration, and optional ImGui fallback. Enable with the CMake option `TARGET_PC_NATIVE_UI=ON` (see the port doc for gameplay and file map).
+WIP mod by WadeWinningWilson: ALBW energy meter, death-strip rental, Ordon Postman shop, and related PC hooks. In this tree, the rental shop can use **native TP UI** (letter-select + message windows) or ImGui fallback.
+
+- **Docs:** [docs/albw-port.md](docs/albw-port.md) — features, `TARGET_PC_NATIVE_UI`, file map, footer/maintainer notes  
+- **Windows exe (local build):** `build/windows-msvc-relwithdebinfo/dusklight.exe` after `cmake --build --preset windows-msvc-relwithdebinfo`
 
 # Building
 
