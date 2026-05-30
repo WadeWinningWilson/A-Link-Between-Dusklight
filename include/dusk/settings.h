@@ -2,6 +2,7 @@
 #define DUSK_CONFIG_H
 
 #include <array>
+#include <filesystem>
 
 #include "dusk/config_var.hpp"
 
@@ -274,6 +275,7 @@ struct UserSettings {
 
 UserSettings& getSettings();
 
+std::filesystem::path tphd_content_path();
 bool tphd_active();
 
 void registerSettings();

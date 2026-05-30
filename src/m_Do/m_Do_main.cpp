@@ -740,7 +740,7 @@ int game_main(int argc, char* argv[]) {
 
 #if DUSK_TPHD
     {
-        const std::string& hdPath = dusk::getSettings().backend.hdContentPath;
+        const auto hdPath = dusk::tphd_content_path();
         if (!hdPath.empty()) {
             dusk::tphd::set_hd_content_path(hdPath);
         }

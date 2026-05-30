@@ -1,5 +1,8 @@
 #include "dusk/settings.h"
 #include "dusk/config.hpp"
+#include "dusk/main.h"
+
+#include <system_error>
 
 namespace dusk {
 
@@ -189,9 +192,26 @@ UserSettings& getSettings() {
     return g_userSettings;
 }
 
-bool tphd_active() {
+std::filesystem::path tphd_content_path() {
+#if DUSK_TPHD
     const std::string& hdPath = g_userSettings.backend.hdContentPath;
-    return !hdPath.empty();
+    if (!hdPath.empty()) {
+        return hdPath;
+    }
+
+    if (!ConfigPath.empty()) {
+        std::error_code ec;
+        auto localPath = ConfigPath / "tphd" / "content";
+        if (std::filesystem::is_directory(localPath, ec)) {
+            return localPath;
+        }
+    }
+#endif
+    return {};
+}
+
+bool tphd_active() {
+    return !tphd_content_path().empty();
 }
 
 void registerSettings() {
