@@ -280,16 +280,20 @@ void main01(void) {
         dusk::ui::update();
 
 // ============================================
-// NEW CODE â€” ALBW Port
+// NEW CODE — ALBW Port
 // Render the rental shop ImGui window once per presented frame.
-// This must live here â€” after aurora_begin_frame() (which calls
-// ImGui::NewFrame) and before aurora_end_frame() (ImGui::Render) â€” so
+// This must live here — after aurora_begin_frame() (which calls
+// ImGui::NewFrame) and before aurora_end_frame() (ImGui::Render) — so
 // that ImGui::Begin/End are submitted in a valid frame context.
 // Calling this from actor Execute() caused flickering because the
 // sim-tick loop can run Execute() 0 times on interpolated frames,
 // leaving the window unsubmitted and invisible for that render pass.
+//
+// In TARGET_PC_NATIVE_UI builds the ImGui shop is replaced by dALBWShop_c
+// (a native TP J2D window).  Skip the ImGui draw entirely so both
+// windows do not appear simultaneously.
 // ============================================
-#if TARGET_PC
+#if TARGET_PC && !TARGET_PC_NATIVE_UI
         dALBWRental_imguiDraw();
 #endif
 // ============================================

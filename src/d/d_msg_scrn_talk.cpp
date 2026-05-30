@@ -5,6 +5,9 @@
 #include "d/dolzel.h" // IWYU pragma: keep
 
 #include "d/d_msg_scrn_talk.h"
+#if TARGET_PC
+#include "d/d_albw_rental.h"
+#endif
 #include "d/d_msg_scrn_light.h"
 #include "d/d_msg_scrn_arrow.h"
 #include "d/d_msg_scrn_3select.h"
@@ -359,10 +362,20 @@ void dMsgScrnTalk_c::drawSelf() {
             }
         }
     }
-    drawOutFont(0.0f, 0.0f, 1.0f);
+#if TARGET_PC
+    if (!dALBWRental_shouldSuppressVanillaTalkMsg())
+#endif
+    {
+        drawOutFont(0.0f, 0.0f, 1.0f);
+    }
     mpTxScreen->draw(0.0f, 0.0f, grafContext[0]);
-    if (mpSelect_c != NULL) {
-        mpSelect_c->draw(0.0f, 0.0f);
+#if TARGET_PC
+    if (!dALBWRental_shouldSuppressVanillaTalkMsg())
+#endif
+    {
+        if (mpSelect_c != NULL) {
+            mpSelect_c->draw(0.0f, 0.0f);
+        }
     }
     mpArrow_c->draw();
 }

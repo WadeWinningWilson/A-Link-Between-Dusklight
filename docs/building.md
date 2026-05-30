@@ -149,6 +149,10 @@ Recommended IDEs:
 * [CLion](https://www.jetbrains.com/clion/)
 * [Visual Studio Code](https://code.visualstudio.com/download/)
 
+### Optional: ALBW native UI (PC)
+
+To build with the experimental native rental shop and Postman dialogue (instead of ImGui for those screens), add `-DTARGET_PC_NATIVE_UI=ON` to your CMake configure line. See [ALBW port](albw-port.md) for gameplay and source layout.
+
 ## Building
 
 * Clone and initialize the Dusklight repository:

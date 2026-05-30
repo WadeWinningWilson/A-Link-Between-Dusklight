@@ -6,7 +6,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
-            "args": ["-l", "1", "--dvd", "${workspaceRoot}/orig/GZ2E01/GZ2E01.iso", "--console"],
+            "args": ["-l", "1", "--dvd", "D:\\Taking a Dumpy\\Minerva_Myrient\\Redump\\Nintendo - GameCube - NKit RVZ [zstd-19-128k]\\Legend of Zelda, The - Twilight Princess (USA).iso", "--console"],
             "MIMode": "gdb",
             "miDebuggerPath": "gdb",
             "symbolSearchPath": "${command:cmake.launchTargetPath}",

@@ -43,7 +43,6 @@
 #include "d/d_meter2_info.h"
 #include "dusk/ui/ui.hpp"
 #include "m_Do/m_Do_controller_pad.h"
-
 // ============================================
 // Internal types and item table
 // ============================================
@@ -72,7 +71,7 @@ struct ALBWRentalEntry {
 
 // All rentable ALBW items in ascending price order.
 // slotNo values match the strip logic in d_gameover.cpp _create().
-// desc is placeholder text — to be finalised during deliberation.
+// desc — shown in the right parchment panel when the entry is purchasable.
 static const ALBWRentalEntry kItems[] = {
     { "Slingshot",
       (u8)dItemNo_PACHINKO_e,     SLOT_23, 15,
@@ -85,10 +84,10 @@ static const ALBWRentalEntry kItems[] = {
       "Standard-issue explosives, handle with care" },
     { "Bomblings",
       (u8)dItemNo_POKE_BOMB_e,    SLOT_17, 50,
-      "These little fellows roll themselves…why did my boss bring these here" },
+      "These little fellows roll themselves...why did my boss bring these here" },
     { "Water Bombs",
       (u8)dItemNo_BOMB_BAG_LV2_e, SLOT_16, 100,
-      "Specially sealed for aquatic demolition…" },
+      "Specially sealed for aquatic demolition..." },
     { "Dominion Rod",
       (u8)dItemNo_COPY_ROD_e,     SLOT_8,  100,
       "Bring to life statues of old...no refunds if broken on transit" },
@@ -97,7 +96,7 @@ static const ALBWRentalEntry kItems[] = {
       "Long gone are the days of single hook traversal" },
     { "Bow",
       (u8)dItemNo_BOW_e,           SLOT_4,  150,
-      "A sacred treasure, moisturize properly to undo wood warping" },
+      "A sacred treasure, moistuerize properly to undo wood warping" },
     { "Double Clawshot",
       (u8)dItemNo_W_HOOKSHOT_e,   SLOT_10, 200,
       "Double the traversal....I need a pair like these" },
@@ -211,12 +210,19 @@ static bool sJustEnteredShop      = false;  // → MOT_WAIT_A (explicit idle loc
 static bool sJustEnteredFarewell  = false;  // → MOT_BYE   + Z2SE_POST_V_FANFARE
 // ============================================
 // NEW CODE — ALBW Port (Native Dialogue)
-// Set to true on the frame that native dialogue flow completes (mFlow.checkEndFlow()).
-// Read and cleared by dALBWRental_tick() STATE_SHOP to absorb the A-press that
-// dismissed the dialogue box.
+// sNativeDialogueJustDismissed: set by advanceToShop() so the first tick of
+// STATE_SHOP skips A-press checks (absorbs the button that dismissed greeting).
+// sGreetingText / sFarewellText: pointers to the string literals chosen in
+// dALBWRental_open() / dALBWRental_close(); consumed by dALBWDialogue_c.
 // ============================================
 #if TARGET_PC_NATIVE_UI
-static bool sNativeDialogueJustDismissed = false;
+static bool        sNativeDialogueJustDismissed = false;
+static const char* sGreetingText                = "";
+static const char* sGreetingPage2               = nullptr;  // null for one-page greetings
+static const char* sGreetingPage3               = nullptr;
+static const char* sFarewellText                = "";
+// Analog-stick repeat cooldown — counts down in tick(); reset in open().
+static int         sStickNavCooldown            = 0;
 #endif
 // ============================================
 // NEW CODE ENDS HERE
@@ -231,6 +237,9 @@ static bool sNativeDialogueJustDismissed = false;
 // ============================================
 static bool sJustPurchased        = false;  // → Z2SE_POST_V_FANFARE congratulatory fanfare
 static bool sJustFailedPurchase   = false;  // → Z2SE_POST_V_RUN_HIGH insufficient rupees
+#if TARGET_PC
+static bool sHideVanillaTalkMsg = false;
+#endif
 // ============================================
 // NEW CODE ENDS HERE
 // ============================================
@@ -269,7 +278,7 @@ static void rebuildVisibleList() {
         // ============================================
         // MODIFIED CODE ENDS HERE
         // ============================================
-        const bool owned    = dComIfGs_isItemFirstBit(entry.itemNo);
+        const bool owned    = dMeter2_playerOwnsRentalItem(entry.itemNo);
         if (eligible && owned) {
             continue;  // hidden — player already owns this item
         }
@@ -335,6 +344,7 @@ bool dALBWRental_justClosed() {
     }
     return false;
 }
+
 // ============================================
 // NEW CODE ENDS HERE
 // ============================================
@@ -426,21 +436,34 @@ void dALBWRental_open() {
     sJustEnteredFarewell  = false;
     sJustFailedPurchase   = false;
     sScrollToSelected     = false;
+#if TARGET_PC_NATIVE_UI
+    sStickNavCooldown     = 0;
+#endif
     rebuildVisibleList();
 
-    // Greeting A — returning customer (items stripped at least once).
-    // Greeting B — first visit (nothing has ever been stripped yet).
-    const char* greeting = hasAnyEligible()
+    // Greeting A — returning customer (items stripped at least once).  One page.
+    // Greeting B — first visit.  Three native boxes: intro, then one sentence each.
+    const bool returning = hasAnyEligible();
+    const char* greeting = returning
         ? "Greetings! Lost your treasured possessions? Never fear, I have a new shipment for you! All for a.....small fee!"
-        : "Greetings! As an ever dutiful Junior mail carrier I return all that is lost or misplaced! "
-          "It seems to me that this is your first time using our services, browse away and keep us in mind. "
-          "You may never know when something slips off your person!";
+        : "Greetings! As an ever dutiful Junior mail carrier I return all that is lost or misplaced!";
 
 // ============================================
 // NEW CODE — ALBW Port (Native Dialogue)
-// Native dialogue: initTalk() is called from evtTalk() when sJustEnteredGreeting fires.
+// Store the chosen greeting text for dALBWDialogue_c to read via
+// dALBWRental_getGreetingText(). The pointer is valid for the duration of
+// the talk event because greeting points to a string literal.
 // ============================================
 #if TARGET_PC_NATIVE_UI
+    if (returning) {
+        sGreetingText  = greeting;
+        sGreetingPage2 = nullptr;
+    } else {
+        sGreetingText  = greeting;
+        sGreetingPage2 =
+            "It seems to me that this is your first time using our services, browse away and keep us in mind. "
+            "You may never know when something slips off your person!";
+    }
     (void)greeting;
 #else
     dusk::ui::push_toast({
@@ -457,6 +480,9 @@ void dALBWRental_open() {
     sDialogueOpenTime    = clock::now();
     sState               = STATE_GREETING;
     sJustEnteredGreeting = true;  // signals Execute() to play MOT_HELLO
+#if TARGET_PC
+    sHideVanillaTalkMsg  = true;
+#endif
 // ============================================
 // NEW CODE — ALBW Port
 // Note: we intentionally do NOT call dComIfGp_onPauseFlag() here.
@@ -483,9 +509,11 @@ void dALBWRental_close() {
 
 // ============================================
 // NEW CODE — ALBW Port (Native Dialogue)
-// Native dialogue: initTalk() is called from evtTalk() when sJustEnteredFarewell fires.
+// Store the chosen farewell text for dALBWDialogue_c to read via
+// dALBWRental_getFarewellText(). Pointer is valid for the talk-event duration.
 // ============================================
 #if TARGET_PC_NATIVE_UI
+    sFarewellText = farewell;
     (void)farewell;
 #else
     dusk::ui::push_toast({
@@ -507,6 +535,24 @@ void dALBWRental_close() {
 bool dALBWRental_isOpen() {
     return sState != STATE_CLOSED;
 }
+
+#if TARGET_PC
+void dALBWRental_armVanillaTalkSuppress() {
+    sHideVanillaTalkMsg = true;
+}
+
+void dALBWRental_clearVanillaTalkSuppress() {
+    sHideVanillaTalkMsg = false;
+}
+
+bool dALBWRental_shouldSuppressVanillaTalkMsg() {
+    // Rental closed but suppress was never cleared — broke all NPC dialogue globally.
+    if (sState == STATE_CLOSED) {
+        sHideVanillaTalkMsg = false;
+    }
+    return sHideVanillaTalkMsg || dALBWRental_isOpen();
+}
+#endif
 
 // ============================================
 // NEW CODE — ALBW Port
@@ -564,6 +610,9 @@ void dALBWRental_tick() {
         if (elapsed >= kFarewellDuration) {
             sJustClosed = true;
             sState      = STATE_CLOSED;
+#if TARGET_PC
+            dALBWRental_clearVanillaTalkSuppress();
+#endif
             return;
         }
         if (elapsed >= kDialogueGrace) {
@@ -580,6 +629,9 @@ void dALBWRental_tick() {
                 // cleanly end the event and release Link's movement lock.
                 sJustClosed = true;
                 sState      = STATE_CLOSED;
+#if TARGET_PC
+                dALBWRental_clearVanillaTalkSuppress();
+#endif
             }
         }
 #endif
@@ -632,6 +684,34 @@ void dALBWRental_tick() {
             tryPurchase(sSelectedIdx);
         }
     }
+
+// ============================================
+// NEW CODE — ALBW Port (Analog Stick Navigation)
+// Left-stick Y navigation for the native J2D shop window.
+// getStickY > 0 = stick pushed up   → navigate up   (sSelectedIdx--)
+// getStickY < 0 = stick pushed down → navigate down (sSelectedIdx++)
+// sStickNavCooldown prevents continuous scrolling while the stick is held;
+// it is also reset to 0 when the shop opens so there is no startup lag.
+// 12 frames ≈ 0.2 s at 60 Hz — snappy but not runaway.
+// ============================================
+#if TARGET_PC_NATIVE_UI
+    if (sStickNavCooldown > 0) --sStickNavCooldown;
+    if (sStatusMsg == nullptr && sVisibleCount > 0 && sStickNavCooldown == 0) {
+        const f32 stickY = mDoCPd_c::getStickY(PAD_1);
+        if (stickY < -0.5f && sSelectedIdx < sVisibleCount - 1) {
+            sSelectedIdx++;
+            sScrollToSelected  = true;
+            sStickNavCooldown  = 12;
+        } else if (stickY > 0.5f && sSelectedIdx > 0) {
+            sSelectedIdx--;
+            sScrollToSelected  = true;
+            sStickNavCooldown  = 12;
+        }
+    }
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 }
 // ============================================
 // NEW CODE ENDS HERE
@@ -829,6 +909,9 @@ void dALBWRental_imguiDraw() {
 // dALBWRental_getVisibleList()
 // Returns a snapshot of the current visible list for dALBWShop_c to render.
 // The returned pointer is valid until the next call to this function.
+// dALBWRental_getSelectedIdx()
+// Returns the currently highlighted row index so dALBWShop_c can draw a
+// ">" cursor prefix and scroll its 6-row viewport to keep it visible.
 // ============================================
 const dALBWVisibleEntry* dALBWRental_getVisibleList(int* outCount) {
     static dALBWVisibleEntry sPubList[sizeof(kItems)/sizeof(kItems[0])];
@@ -837,9 +920,15 @@ const dALBWVisibleEntry* dALBWRental_getVisibleList(int* outCount) {
         sPubList[i].name        = e.name;
         sPubList[i].price       = e.price;
         sPubList[i].purchasable = sVisibleList[i].purchasable;
+        sPubList[i].desc        = sVisibleList[i].purchasable ? e.desc : nullptr;
+        sPubList[i].itemNo      = e.itemNo;
     }
     *outCount = sVisibleCount;
     return sPubList;
+}
+
+int dALBWRental_getSelectedIdx() {
+    return sSelectedIdx;
 }
 // ============================================
 // NEW CODE ENDS HERE
@@ -866,6 +955,23 @@ void dALBWRental_advanceToClosed() {
         sState      = STATE_CLOSED;
     }
 }
+
+bool dALBWRental_isShopState() {
+    return sState == STATE_SHOP;
+}
+
+bool dALBWRental_isGreetingState() {
+    return sState == STATE_GREETING;
+}
+
+bool dALBWRental_isFarewellState() {
+    return sState == STATE_FAREWELL;
+}
+
+const char* dALBWRental_getGreetingText()  { return sGreetingText; }
+const char* dALBWRental_getGreetingPage2() { return sGreetingPage2; }
+const char* dALBWRental_getGreetingPage3() { return sGreetingPage3; }
+const char* dALBWRental_getFarewellText()  { return sFarewellText; }
 #endif  // TARGET_PC_NATIVE_UI
 // ============================================
 // NEW CODE ENDS HERE

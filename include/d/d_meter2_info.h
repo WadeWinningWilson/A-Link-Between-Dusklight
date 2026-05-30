@@ -904,6 +904,9 @@ void dMeter2_addALBWFraction(int numerator, int denominator);
 void dMeter2_fillALBWMeter();
 void dMeter2_onALBWRentalEligible(u8 itemNo);
 bool dMeter2_isALBWRentalEligible(u8 itemNo);
+bool dMeter2_playerOwnsRentalItem(u8 itemNo);
+void dMeter2_stripRentalItemOnDeath(u8 itemNo);
+void dMeter2_stripAllALBWInventoryOnDeath();
 // ============================================
 // NEW CODE — ALBW Port
 // Sword attack and agility drain API.
