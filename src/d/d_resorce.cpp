@@ -25,7 +25,6 @@
 #include "dusk/logging.h"
 #if DUSK_TPHD
 #include "dusk/tphd/HdAssetLayer.hpp"
-#include <aurora/hd_texture.hpp>
 #endif
 #endif
 
@@ -652,8 +651,8 @@ int dRes_info_c::setRes() {
         // registered arc-range size; getSize() would return 0/undefined.
         void* mArcHdr = ((JKRMemArchive*)mArchive)->mArcHeader;
         size_t arcSize = 0;
-        if (size_t hdRem = 0; aurora::gfx::hd_find_arc_range(mArcHdr, &hdRem)) {
-            arcSize = hdRem;
+        if (auto hdRem = dusk::tphd::find_registered_hd_archive_remaining(mArcHdr)) {
+            arcSize = *hdRem;
         } else {
             arcSize = JKRGetRootHeap()->getSize(mArcHdr);
         }
@@ -1040,7 +1039,7 @@ int dRes_control_c::setObjectRes(char const* i_arcName, void* i_archiveRes, u32 
 #if DUSK_TPHD
     // HD hook for second JKRMemArchive constructor (see below)    
     const std::string hdPath = std::format("/res/Object/{}.arc", i_arcName);
-    if (auto hd = dusk::tphd::tryLoadHdArchive(hdPath)) {
+    if (auto hd = dusk::tphd::try_load_hd_archive(hdPath)) {
         DuskLog.info("[TPHD] setObjectRes redirect: {} -> HD ({} bytes)",
                      i_arcName, (*hd)->size());
         i_archiveRes = const_cast<u8*>((*hd)->data());

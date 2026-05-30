@@ -18,15 +18,6 @@ JKRMemArchive::JKRMemArchive(s32 entryNum, JKRArchive::EMountDirection mountDire
     : JKRArchive(entryNum, MOUNT_MEM) {
     mIsMounted = false;
     mMountDirection = mountDirection;
-#if DUSK_TPHD
-    // TPHD arc redirect by entrynum.
-    if (const auto* hd = dusk::tphd::getHdBytesForEntryNum(entryNum)) {
-        if (!open(const_cast<u8*>(hd->data()), static_cast<u32>(hd->size()),
-                  JKRMEMBREAK_FLAG_UNKNOWN0)) {
-            return;
-        }
-    } else
-#endif
     if (!open(entryNum, mMountDirection)) {
         return;
     }
@@ -80,8 +71,13 @@ bool JKRMemArchive::open(s32 entryNum, JKRArchive::EMountDirection mountDirectio
     mIsOpen = false;
     mMountDirection = mountDirection;
 
+#ifdef TARGET_PC
+    u32 loadedSize = 0;
+#endif
     if (mMountDirection == JKRArchive::MOUNT_DIRECTION_HEAD) {
+#ifndef TARGET_PC
         u32 loadedSize;
+#endif
         mArcHeader = (SArcHeader *)JKRDvdToMainRam(
             entryNum, NULL, EXPAND_SWITCH_UNKNOWN1, 0, mHeap, JKRDvdRipper::ALLOC_DIRECTION_FORWARD,
             0, (int *)&mCompression, &loadedSize);
@@ -90,7 +86,9 @@ bool JKRMemArchive::open(s32 entryNum, JKRArchive::EMountDirection mountDirectio
         }
     }
     else {
+#ifndef TARGET_PC
         u32 loadedSize;
+#endif
         mArcHeader = (SArcHeader *)JKRDvdToMainRam(
             entryNum, NULL, EXPAND_SWITCH_UNKNOWN1, 0, mHeap,
             JKRDvdRipper::ALLOC_DIRECTION_BACKWARD, 0, (int *)&mCompression, &loadedSize);
@@ -103,6 +101,9 @@ bool JKRMemArchive::open(s32 entryNum, JKRArchive::EMountDirection mountDirectio
         mMountMode = UNKNOWN_MOUNT_MODE;
     }
     else {
+#if DUSK_TPHD
+        dusk::tphd::register_mounted_hd_archive(entryNum, mArcHeader, loadedSize);
+#endif
         JUT_ASSERT(438, mArcHeader->signature == 'RARC');
         mArcInfoBlock = (SArcDataInfo *)((u8 *)mArcHeader + mArcHeader->header_length);
         mNodes = (SDIDirEntry *)((u8 *)&mArcInfoBlock->num_nodes + mArcInfoBlock->node_offset);

@@ -9,10 +9,6 @@
 #include "JSystem/JKernel/JKRMemArchive.h"
 #include "JSystem/JUtility/JUTAssert.h"
 
-#if TARGET_PC && DUSK_TPHD
-#include "dusk/tphd/HdAssetLayer.hpp"
-#endif
-
 JKRArchive* JKRArchive::check_mount_already(s32 entryNum, JKRHeap* heap) {
     if (heap == NULL) {
         heap = JKRGetCurrentHeap();
@@ -33,15 +29,6 @@ JKRArchive* JKRArchive::check_mount_already(s32 entryNum, JKRHeap* heap) {
 
 JKRArchive* JKRArchive::mount(const char* path, EMountMode mountMode, JKRHeap* heap,
                               EMountDirection mountDirection) {
-#if TARGET_PC && DUSK_TPHD
-    // TPHD arc redirect.
-    if (path != NULL) {
-        if (auto hdBuf = dusk::tphd::tryLoadHdArchive(path)) {
-            return mount((*hdBuf)->data(), heap, mountDirection);
-        }
-    }
-#endif
-
     s32 entryNum = DVDConvertPathToEntrynum(path);
     if (entryNum < 0)
         return NULL;

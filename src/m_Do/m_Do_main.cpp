@@ -84,12 +84,12 @@
 #include "dusk/config.hpp"
 #include "dusk/speedrun.h"
 #include "dusk/settings.h"
+#include "dusk/texture_replacements.hpp"
 #include "dusk/io.hpp"
 #include "dusk/version.hpp"
 #include "dusk/discord_presence.hpp"
 #if DUSK_TPHD
 #include "dusk/tphd/HdAssetLayer.hpp"
-#include "dusk/tphd/TphdPack.hpp"
 #endif
 #include "tracy/Tracy.hpp"
 #include "f_pc/f_pc_draw.h"
@@ -583,19 +583,11 @@ int game_main(int argc, char* argv[]) {
         config.desiredBackend = ResolveDesiredBackend(parsed_arg_options);
         config.logCallback = &aurora_log_callback;
         config.logLevel = startupLogLevel;
-        // 256 MB is GC-sized. HD-asset injection (HD BMDs + HD pixel buffers
-        // registered via aurora::gfx::hd_register_replacement) blows past
-        // that for stages+Link, so bump to 1 GB when TPHD is on.
-#if DUSK_TPHD
         config.mem1Size = 1024 * 1024 * 1024;
-#elif TARGET_PC
-        config.mem1Size = 256 * 1024 * 1024;
-#endif
         config.mem2Size = 24 * 1024 * 1024;
         config.allowJoystickBackgroundEvents = dusk::getSettings().game.allowBackgroundInput;
         config.pauseOnFocusLost = dusk::getSettings().game.pauseOnFocusLost;
         config.imGuiInitCallback = &aurora_imgui_init_callback;
-        config.allowTextureReplacements = dusk::getSettings().game.enableTextureReplacements;
         config.allowTextureDumps = false;
         auroraInfo = aurora_initialize(argc, argv, &config);
     }
@@ -645,6 +637,7 @@ int game_main(int argc, char* argv[]) {
         return 0;
     }
 
+    dusk::texture_replacements::reload();
     dusk::ui::initialize();
     dusk::ui::push_document(std::make_unique<dusk::ui::Overlay>(), true, true);
     dusk::ui::push_document(std::make_unique<dusk::ui::MenuBar>(), false);
@@ -742,6 +735,15 @@ int game_main(int argc, char* argv[]) {
         dusk::IsGameLaunched = true;
     }
 
+#if DUSK_TPHD
+    {
+        const std::string& hdPath = dusk::getSettings().backend.hdContentPath;
+        if (!hdPath.empty()) {
+            dusk::tphd::set_hd_content_path(hdPath);
+        }
+    }
+#endif
+
 #if DUSK_ENABLE_SENTRY_NATIVE
     if (dusk::crash_reporting::get_consent() == dusk::crash_reporting::Consent::Unknown) {
         dusk::ui::push_document(std::make_unique<dusk::ui::CrashReportWindow>());
@@ -756,15 +758,6 @@ int game_main(int argc, char* argv[]) {
     LanguageInit();
 
     OSInit();
-
-#if DUSK_TPHD
-    {
-        const std::string& hdPath = dusk::getSettings().backend.hdContentPath;
-        if (!hdPath.empty()) {
-            dusk::tphd::setHdContentPath(hdPath);
-        }
-    }
-#endif
 
     mDoMain::sPowerOnTime = OSGetTime();
 
@@ -802,6 +795,7 @@ int game_main(int argc, char* argv[]) {
     dusk::discord::shutdown();
 #endif
     dusk::ui::shutdown();
+    dusk::texture_replacements::shutdown();
     aurora_shutdown();
 
     return 0;

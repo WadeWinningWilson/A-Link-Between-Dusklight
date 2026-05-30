@@ -16,10 +16,6 @@
 #include "m_Do/m_Do_ext.h"
 #include "os_report.h"
 
-#if DUSK_TPHD
-#include "dusk/tphd/HdAssetLayer.hpp"
-#endif
-
 s32 mDoDvdThd::main(void* param_0) {
     JKRThread(OSGetCurrentThread(), 0);
 #if TARGET_PC
@@ -109,14 +105,6 @@ static s32 my_DVDConvertPathToEntrynum(char const* path) {
         BOOL connected = mDoCPd_c::isConnect(2);
         if (connected) {
             JUT_WARN(437, "can\'t open:[%s]\n", path);
-        }
-    }
-#endif
-#if DUSK_TPHD
-    // TPHD arc redirect: cache HD bytes by entry number.
-    if (entrynum >= 0 && path != NULL) {
-        if (auto hdBytes = dusk::tphd::tryLoadHdArchive(path)) {
-            dusk::tphd::registerHdBytesForEntryNum(entrynum, *hdBytes);
         }
     }
 #endif

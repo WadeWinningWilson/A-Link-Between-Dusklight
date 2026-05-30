@@ -13,17 +13,21 @@ namespace dusk::tphd {
 // Configure the base directory for HD asset overrides. `contentPath` should
 // point at a Wii-U `content/` directory (the parent of `res/`). Empty path
 // disables HD overrides.
-void setHdContentPath(std::filesystem::path contentPath);
+void set_hd_content_path(std::filesystem::path contentPath);
 
-// Returns a pointer to the cached HD archive bytes if an HD variant exists
-// for the requested GC path, or std::nullopt otherwise. Caller must not
-// outlive the next setHdContentPath() call.
-std::optional<std::vector<u8>*> tryLoadHdArchive(std::string_view gcPath);
+// Returns a pointer to cached HD archive bytes for packed sub-archives that
+// are mounted from an already-loaded RARC rather than through the DVD layer.
+// Caller must not outlive the next setHdContentPath() call.
+std::optional<std::vector<u8>*> try_load_hd_archive(std::string_view gcPath);
 
-// HD bytes lookup by DVD entry number, used by JKRMemArchive's entryNum
-// constructor to substitute HD content.
-void registerHdBytesForEntryNum(s32 entryNum, const std::vector<u8>* bytes);
-const std::vector<u8>* getHdBytesForEntryNum(s32 entryNum);
+// Called after JKRMemArchive has loaded an overlaid DVD archive into its final
+// heap address so HD texture replacements can be registered against the
+// pointers the game will actually use.
+void register_mounted_hd_archive(s32 entryNum, void* arcBytes, size_t arcSize);
+
+// Returns bytes remaining in a registered HD archive range that contains ptr.
+// Used for debug heap accounting because some HD buffers are not JKR-owned.
+std::optional<size_t> find_registered_hd_archive_remaining(const void* ptr);
 
 }
 

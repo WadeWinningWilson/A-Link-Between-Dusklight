@@ -1,23 +1,30 @@
 #include "HdAssetLayer.hpp"
 
 #include <algorithm>
-#include <cstdio>
+#include <cstdint>
 #include <cstring>
 #include <list>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <span>
+#include <string>
+#include <system_error>
 #include <unordered_map>
 #include <vector>
 
-#include <aurora/hd_texture.hpp>
+#include <aurora/dvd.h>
+#include <aurora/texture.hpp>
 #include <dolphin/dvd.h>
+#include <SDL3/SDL_error.h>
+#include <SDL3/SDL_iostream.h>
 
 #include "JSystem/J3DGraphLoader/J3DModelLoader.h"
 #include "JSystem/JKernel/JKRArchive.h"
 #include "JSystem/JKernel/JKRDecomp.h"
 #include "JSystem/JUtility/JUTTexture.h"
 #include "dusk/endian.h"
+#include "dusk/io.hpp"
 #include "dusk/logging.h"
 #include "AddrLib.hpp"
 #include "GtxParser.hpp"
@@ -39,14 +46,94 @@ std::list<std::vector<u8>>& g_mountBuffers() {
     static auto* p = new std::list<std::vector<u8>>{};
     return *p;
 }
-std::unordered_map<s32, const std::vector<u8>*>& g_entryNumToBytes() {
-    static auto* p = new std::unordered_map<s32, const std::vector<u8>*>{};
+
+std::list<std::vector<u8>>& g_textureBuffers() {
+    static auto* p = new std::list<std::vector<u8>>{};
     return *p;
+}
+
+aurora::texture::ReplacementGroup& g_textureReplacementGroup() {
+    static auto* p = new aurora::texture::ReplacementGroup{};
+    return *p;
+}
+
+struct HdArcRange {
+    const void* begin = nullptr;
+    size_t size = 0;
+    std::string label;
+};
+
+std::vector<HdArcRange>& g_arcRanges() {
+    static auto* p = new std::vector<HdArcRange>{};
+    return *p;
+}
+
+struct HdOverlayEntry {
+    std::string dvdPath;
+    std::filesystem::path arcPath;
+    std::filesystem::path packPath;
+    size_t size = 0;
+    s32 overlayEntryNum = -1;
+};
+
+std::list<HdOverlayEntry>& g_overlayEntries() {
+    static auto* p = new std::list<HdOverlayEntry>{};
+    return *p;
+}
+
+std::unordered_map<s32, HdOverlayEntry*>& g_entryNumToOverlay() {
+    static auto* p = new std::unordered_map<s32, HdOverlayEntry*>{};
+    return *p;
+}
+
+bool g_overlayCallbacksRegistered = false;
+
+void clear_hd_texture_registrations_locked() {
+    aurora::texture::unregister_replacements(g_textureReplacementGroup());
+    g_textureReplacementGroup().registrations.clear();
+    g_textureBuffers().clear();
+}
+
+void register_hd_arc_range_locked(const void* begin, size_t size, std::string_view label) {
+    if (begin == nullptr || size == 0) return;
+    g_arcRanges().push_back({
+        .begin = begin,
+        .size = size,
+        .label = std::string(label),
+    });
 }
 
 bool endsWithSuffix(std::string_view s, std::string_view suffix) {
     return s.size() >= suffix.size() &&
            s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+struct SDL_IODeleter {
+    void operator()(SDL_IOStream* io) const {
+        if (io != nullptr) {
+            SDL_CloseIO(io);
+        }
+    }
+};
+
+using IOStream = std::unique_ptr<SDL_IOStream, SDL_IODeleter>;
+
+IOStream open_stream(const std::filesystem::path& path) {
+    const auto pathString = io::fs_path_to_string(path);
+    return IOStream{SDL_IOFromFile(pathString.c_str(), "rb")};
+}
+
+std::optional<size_t> get_file_size(const std::filesystem::path& path) {
+    auto stream = open_stream(path);
+    if (stream == nullptr) {
+        return std::nullopt;
+    }
+
+    const Sint64 size = SDL_GetIOSize(stream.get());
+    if (size < 0) {
+        return std::nullopt;
+    }
+    return size;
 }
 
 // On-disk Yaz0 file header.
@@ -72,18 +159,36 @@ std::optional<std::vector<u8>> tryDecodeYaz0(std::span<const u8> bytes) {
     return decoded;
 }
 
-std::optional<std::vector<u8>> readWholeFile(const std::filesystem::path& path) {
-    std::FILE* f = std::fopen(path.string().c_str(), "rb");
-    if (!f) return std::nullopt;
-    std::fseek(f, 0, SEEK_END);
-    long len = std::ftell(f);
-    std::fseek(f, 0, SEEK_SET);
-    if (len < 0) { std::fclose(f); return std::nullopt; }
-    std::vector<u8> buf(static_cast<size_t>(len));
-    size_t got = std::fread(buf.data(), 1, buf.size(), f);
-    std::fclose(f);
-    if (got != buf.size()) return std::nullopt;
+std::optional<std::vector<u8>> read_file(const std::filesystem::path& path) {
+    auto stream = open_stream(path);
+    if (stream == nullptr) {
+        return std::nullopt;
+    }
+    const Sint64 len = SDL_GetIOSize(stream.get());
+    if (len < 0) {
+        return std::nullopt;
+    }
+    std::vector<u8> buf(len);
+    size_t total = 0;
+    while (total < buf.size()) {
+        const size_t got = SDL_ReadIO(stream.get(), buf.data() + total, buf.size() - total);
+        if (got == 0) {
+            break;
+        }
+        total += got;
+    }
+    if (total != buf.size() || SDL_GetIOStatus(stream.get()) == SDL_IO_STATUS_ERROR) {
+        return std::nullopt;
+    }
     return buf;
+}
+
+std::optional<TphdPack> load_pack_from_file(const std::filesystem::path& path) {
+    auto raw = read_file(path);
+    if (!raw) {
+        return std::nullopt;
+    }
+    return TphdPack::loadFromMemory(*raw);
 }
 
 // Extract the path portion under "res/" from JSystem's absolute path.
@@ -318,13 +423,26 @@ void registerHdSurface(const Gx2FormatMapping& m, const GtxSurface& s,
                decoded.mipCount, s.mipCount, decoded.bytes.size(),
                gtxName, surfaceIdx);
 
-    aurora::gfx::HdReplacement r;
-    r.bytes    = std::move(decoded.bytes);
-    r.width    = s.width;
-    r.height   = s.height;
-    r.gxFormat = m.newGxFormat;
-    r.mipCount = std::max(decoded.mipCount, 1u);
-    aurora::gfx::hd_register_replacement(pixelPtr, std::move(r));
+    if (decoded.bytes.empty() || pixelPtr == nullptr) {
+        return;
+    }
+
+    std::lock_guard lk{g_cacheMutex};
+    g_textureBuffers().emplace_back(std::move(decoded.bytes));
+    const auto& bytes = g_textureBuffers().back();
+    auto registration = aurora::texture::register_replacement(
+        aurora::texture::TexturePointerKey{.data = pixelPtr},
+        aurora::texture::RawTextureReplacement{
+            .bytes = {bytes.data(), bytes.size()},
+            .width = s.width,
+            .height = s.height,
+            .mipCount = std::max(decoded.mipCount, 1u),
+            .gxFormat = m.newGxFormat,
+            .label = gtxName,
+        });
+    if (registration.id != 0) {
+        g_textureReplacementGroup().registrations.push_back(std::move(registration));
+    }
 }
 
 // Lightweight RARC walker that returns per-file offsets without copying
@@ -431,12 +549,10 @@ u32 bmdSlotBtiOffset(std::span<const u8> bmd, u32 slotIdx) {
 // HD surface, and register the decoded bytes with aurora under the absolute
 // pointer that GXInitTexObj will later receive.
 //
-// arcBytes must be the STABLE cache vector — its data() must not move after
-// this call, or aurora's pointer lookups will miss.
-void registerHdTexturesForArc(std::vector<u8>& arcBytes,
-                              const std::vector<ArcFileInfo>& files,
-                              const TphdPack& pack,
-                              std::string_view arcLabel) {
+// arcBytes must point at the mounted archive bytes the game will later use;
+// aurora's pointer lookups depend on those addresses staying valid.
+void register_hd_textures_for_arc(std::span<u8> arcBytes, const std::vector<ArcFileInfo>& files,
+    const TphdPack& pack, std::string_view arcLabel) {
     ZoneScoped;
     ZoneText(arcLabel.data(), arcLabel.size());
     size_t bmdReg = 0;
@@ -526,21 +642,8 @@ void registerHdTexturesForArc(std::vector<u8>& arcBytes,
                arcLabel, bmdReg, btiReg);
 }
 
-}
-
-void setHdContentPath(std::filesystem::path contentPath) {
-    g_contentPath = std::move(contentPath);
-    std::lock_guard lk(g_cacheMutex);
-    g_mountBuffers().clear();
-    g_entryNumToBytes().clear();
-    aurora::gfx::hd_clear_replacements();
-    aurora::gfx::hd_clear_arc_ranges();
-    HdLog.info("HD content path set to: {}",
-               g_contentPath.empty() ? "(disabled)" : g_contentPath.string());
-}
-
 // HD arcs whose Wii-U layouts don't match the GC UI pipeline.
-static constexpr std::string_view kHdSkipList[] = {
+constexpr std::string_view kHdSkipList[] = {
     "res/Object/LogoUs.arc",
     "res/Object/balloon2D.arc",
     "res/Object/Coach2D.arc",
@@ -556,20 +659,181 @@ static constexpr std::string_view kHdSkipList[] = {
     "res/FieldMap/res-d.arc",
 };
 
-std::optional<std::vector<u8>*> tryLoadHdArchive(std::string_view gcPath) {
+bool is_skipped_path(std::string_view resPath) {
+    // Skip incompatible TPHD layout archives
+    if (resPath.starts_with("res/Layout/") ||
+        resPath.starts_with("res/LayoutRevo/")) {
+        return true;
+    }
+    for (auto skip : kHdSkipList) {
+        if (resPath == skip) return true;
+    }
+    return false;
+}
+
+void* overlay_open(void* userData) {
+    auto* entry = static_cast<HdOverlayEntry*>(userData);
+    if (entry == nullptr) return nullptr;
+
+    SDL_IOStream* stream = open_stream(entry->arcPath).release();
+    if (stream == nullptr) {
+        HdLog.warn("HD overlay open failed: {} ({})",
+                   entry->arcPath.string(), SDL_GetError());
+        return nullptr;
+    }
+
+    return stream;
+}
+
+void overlay_close(void* handle) {
+    auto* stream = static_cast<SDL_IOStream*>(handle);
+    if (stream == nullptr) return;
+    SDL_CloseIO(stream);
+}
+
+int64_t overlay_read(void* handle, uint8_t* buf, size_t len) {
+    auto* stream = static_cast<SDL_IOStream*>(handle);
+    if (stream == nullptr || buf == nullptr) {
+        return -1;
+    }
+    if (len == 0) {
+        return 0;
+    }
+    const size_t got = SDL_ReadIO(stream, buf, len);
+    if (got == 0 && SDL_GetIOStatus(stream) == SDL_IO_STATUS_ERROR) {
+        return -1;
+    }
+    return static_cast<int64_t>(got);
+}
+
+int64_t overlay_seek(void* handle, int64_t offset, int32_t whence) {
+    auto* stream = static_cast<SDL_IOStream*>(handle);
+    if (stream == nullptr) {
+        return -1;
+    }
+    const Sint64 pos = SDL_SeekIO(stream, offset, static_cast<SDL_IOWhence>(whence));
+    return pos < 0 ? -1 : static_cast<int64_t>(pos);
+}
+
+void ensure_overlay_callbacks_registered() {
+    if (g_overlayCallbacksRegistered) {
+        return;
+    }
+    static constexpr AuroraOverlayCallbacks callbacks{
+        .open = overlay_open,
+        .close = overlay_close,
+        .read = overlay_read,
+        .seek = overlay_seek,
+    };
+    aurora_dvd_overlay_callbacks(&callbacks);
+    g_overlayCallbacksRegistered = true;
+}
+
+void rebuild_hd_overlay_locked() {
+    if (g_contentPath.empty()) {
+        if (g_overlayCallbacksRegistered) {
+            aurora_dvd_overlay_files(nullptr, 0);
+        }
+        return;
+    }
+
+    std::error_code ec;
+    const auto resRoot = g_contentPath / "res";
+    if (!std::filesystem::is_directory(resRoot, ec)) {
+        HdLog.warn("HD content path has no res directory: {}", g_contentPath.string());
+        return;
+    }
+
+    const s32 baseEntryCount = aurora_dvd_base_entry_count();
+    if (baseEntryCount <= 0) {
+        HdLog.warn("DVD overlay skipped because no base DVD FST is loaded yet");
+        return;
+    }
+
+    ensure_overlay_callbacks_registered();
+
+    std::vector<AuroraOverlayFile> overlayFiles;
+    s32 nextEntryNum = baseEntryCount;
+
+    for (std::filesystem::recursive_directory_iterator it(resRoot, ec), end;
+         !ec && it != end; it.increment(ec)) {
+        const bool regularFile = it->is_regular_file(ec);
+        if (ec) {
+            ec.clear();
+            continue;
+        }
+        if (!regularFile) continue;
+
+        const auto& arcPath = it->path();
+        const std::string filename = arcPath.filename().string();
+        if (!endsWithSuffixCI(filename, ".arc")) continue;
+
+        const auto rel = arcPath.lexically_relative(g_contentPath);
+        const std::string resPath = rel.generic_string();
+        if (resPath.empty() || is_skipped_path(resPath)) continue;
+
+        const auto fileSize = get_file_size(arcPath);
+        if (!fileSize.has_value()) {
+            HdLog.warn("HD overlay file size failed: {} ({})",
+                       arcPath.string(), SDL_GetError());
+            continue;
+        }
+
+        auto& entry = g_overlayEntries().emplace_back();
+        entry.dvdPath = "/" + resPath;
+        entry.arcPath = arcPath;
+        entry.packPath = arcPath;
+        entry.packPath.replace_extension(".pack.gz");
+        entry.size = *fileSize;
+        entry.overlayEntryNum = nextEntryNum++;
+
+        overlayFiles.push_back({
+            .fileName = entry.dvdPath.c_str(),
+            .userData = &entry,
+            .size = entry.size,
+            .entryNum = entry.overlayEntryNum,
+        });
+    }
+
+    aurora_dvd_overlay_files(overlayFiles.data(), overlayFiles.size());
+
+    for (auto& entry : g_overlayEntries()) {
+        const s32 entryNum = DVDConvertPathToEntrynum(entry.dvdPath.c_str());
+        if (entryNum < 0) {
+            HdLog.warn("HD overlay entry was not accepted by DVD FST: {}", entry.dvdPath);
+            continue;
+        }
+        g_entryNumToOverlay()[entryNum] = &entry;
+    }
+
+    HdLog.info("HD DVD overlay registered {} arcs from {}",
+               overlayFiles.size(), g_contentPath.string());
+}
+
+}
+
+void set_hd_content_path(std::filesystem::path contentPath) {
+    g_contentPath = std::move(contentPath);
+    std::lock_guard lk{g_cacheMutex};
+    clear_hd_texture_registrations_locked();
+    g_mountBuffers().clear();
+    g_overlayEntries().clear();
+    g_entryNumToOverlay().clear();
+    g_arcRanges().clear();
+    rebuild_hd_overlay_locked();
+    HdLog.info("HD content path set to: {}",
+               g_contentPath.empty() ? "(disabled)" : g_contentPath.string());
+}
+
+std::optional<std::vector<u8>*> try_load_hd_archive(std::string_view gcPath) {
     if (g_contentPath.empty()) return std::nullopt;
 
     std::string_view resPath = extractResPath(gcPath);
     if (resPath.empty()) return std::nullopt;
 
-    for (auto skip : kHdSkipList) {
-        if (resPath == skip) return std::nullopt;
-    }
+    if (is_skipped_path(resPath)) return std::nullopt;
 
     std::filesystem::path hdArcPath = g_contentPath / std::string(resPath);
-    if (!std::filesystem::exists(hdArcPath)) {
-        return std::nullopt;  // no HD override — vanilla GC path
-    }
     ZoneScoped;
 #ifdef TRACY_ENABLE
     {
@@ -578,9 +842,8 @@ std::optional<std::vector<u8>*> tryLoadHdArchive(std::string_view gcPath) {
     }
 #endif
 
-    auto hdBytesOpt = readWholeFile(hdArcPath);
+    auto hdBytesOpt = read_file(hdArcPath);
     if (!hdBytesOpt) {
-        HdLog.warn("HD arc read failed: {}", hdArcPath.string());
         return std::nullopt;
     }
 
@@ -597,44 +860,70 @@ std::optional<std::vector<u8>*> tryLoadHdArchive(std::string_view gcPath) {
     auto hdPackPath = hdArcPath;
     hdPackPath.replace_extension(".pack.gz");
     std::optional<TphdPack> hdPack;
-    if (std::filesystem::exists(hdPackPath)) {
-        hdPack = TphdPack::loadFromFile(hdPackPath);
-        if (!hdPack) HdLog.warn("HD pack failed to load: {}", hdPackPath.string());
-    }
+    hdPack = load_pack_from_file(hdPackPath);
 
     // std::list keeps element addresses stable for aurora's pointer map.
     std::vector<u8>* mountBytes;
     std::string filename = hdArcPath.filename().string();
     {
-        std::lock_guard lk(g_cacheMutex);
+        std::lock_guard lk{g_cacheMutex};
         g_mountBuffers().emplace_back(std::move(*hdBytesOpt));
         mountBytes = &g_mountBuffers().back();
+        register_hd_arc_range_locked(mountBytes->data(), mountBytes->size(), filename);
     }
 
     HdLog.info("HD arc mount buffer allocated: {} at {} ({} bytes, pack.gz={})",
                filename, static_cast<const void*>(mountBytes->data()),
                mountBytes->size(), hdPack ? "yes" : "no");
 
-    aurora::gfx::hd_register_arc_range(mountBytes->data(), mountBytes->size(),
-                                       filename);
     if (hdPack) {
-        registerHdTexturesForArc(*mountBytes, hdFiles, *hdPack, filename);
+        register_hd_textures_for_arc(*mountBytes, hdFiles, *hdPack, filename);
     }
 
     return mountBytes;
 }
 
-void registerHdBytesForEntryNum(s32 entryNum, const std::vector<u8>* bytes) {
-    if (entryNum < 0 || bytes == nullptr) return;
-    std::lock_guard lk(g_cacheMutex);
-    g_entryNumToBytes()[entryNum] = bytes;
+void register_mounted_hd_archive(s32 entryNum, void* arcBytes, size_t arcSize) {
+    if (entryNum < 0 || arcBytes == nullptr || arcSize == 0) return;
+
+    std::filesystem::path packPath;
+    std::string label;
+    {
+        std::lock_guard lk{g_cacheMutex};
+        auto it = g_entryNumToOverlay().find(entryNum);
+        if (it == g_entryNumToOverlay().end()) return;
+        packPath = it->second->packPath;
+        label = it->second->arcPath.filename().string();
+    }
+
+    auto arcSpan = std::span{static_cast<uint8_t*>(arcBytes), arcSize};
+    {
+        std::lock_guard lk{g_cacheMutex};
+        register_hd_arc_range_locked(arcSpan.data(), arcSpan.size(), label);
+    }
+
+    auto hdPack = load_pack_from_file(packPath);
+    if (!hdPack) {
+        return;
+    }
+
+    auto hdFiles = parseRarcFiles(std::span<const u8>(arcSpan.data(), arcSpan.size()));
+    register_hd_textures_for_arc(arcSpan, hdFiles, *hdPack, label);
 }
 
-const std::vector<u8>* getHdBytesForEntryNum(s32 entryNum) {
-    if (entryNum < 0) return nullptr;
-    std::lock_guard lk(g_cacheMutex);
-    auto it = g_entryNumToBytes().find(entryNum);
-    return (it != g_entryNumToBytes().end()) ? it->second : nullptr;
+std::optional<size_t> find_registered_hd_archive_remaining(const void* ptr) {
+    if (ptr == nullptr) return std::nullopt;
+
+    const auto p = reinterpret_cast<uintptr_t>(ptr);
+    std::lock_guard lk{g_cacheMutex};
+    for (const auto& range : g_arcRanges()) {
+        const auto begin = reinterpret_cast<uintptr_t>(range.begin);
+        const auto end = begin + range.size;
+        if (p >= begin && p < end) {
+            return end - p;
+        }
+    }
+    return std::nullopt;
 }
 
 }
