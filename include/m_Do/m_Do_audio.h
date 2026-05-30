@@ -398,4 +398,7 @@ inline int mDoAud_monsSeStart(u32 i_soundId, const Vec* i_pos, u32 i_actorId, u3
                                     0);
 }
 
+#if TARGET_PC
+mDoAud_zelAudio_c& mDoAud_getZelAudio();
+#endif
 #endif /* M_DO_M_DO_AUDIO_H */
