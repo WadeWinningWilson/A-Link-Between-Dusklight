@@ -149,18 +149,27 @@ Recommended IDEs:
 * [CLion](https://www.jetbrains.com/clion/)
 * [Visual Studio Code](https://code.visualstudio.com/download/)
 
+### ALBW-Dusklight mod (PC)
+
+If you are building **[ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight)**, use that repo’s [README](../README.md) — clone it with `--recursive`, then configure with `-DTARGET_PC_NATIVE_UI=ON` for the native rental shop UI. See [ALBW port](albw-port.md) for gameplay details.
+
 ### Optional: ALBW native UI (PC)
 
-To build with the experimental native rental shop and Postman dialogue (instead of ImGui for those screens), add `-DTARGET_PC_NATIVE_UI=ON` to your CMake configure line. See [ALBW port](albw-port.md) for gameplay and source layout.
+Add `-DTARGET_PC_NATIVE_UI=ON` to your CMake configure line for native rental shop and Postman dialogue (instead of ImGui). Default is OFF.
 
 ## Building
 
-* Clone and initialize the Dusklight repository:
+* Clone and initialize the repository (ALBW mod or vanilla Dusklight):
 
 ```sh
-git clone --recursive https://github.com/TwilitRealm/dusklight.git
-git pull
-cd dusklight
+# ALBW mod (recommended for this fork):
+git clone --recursive https://github.com/WadeWinningWilson/ALBW-Dusklight.git
+cd ALBW-Dusklight
+
+# Or vanilla Dusklight only:
+# git clone --recursive https://github.com/TwilitRealm/dusklight.git
+# cd dusklight
+
 git submodule update --init --recursive
 ```
 

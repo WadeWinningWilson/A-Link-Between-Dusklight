@@ -2,68 +2,124 @@
   <img src="res/logo.png" alt="Logo" width="640">
 
   <p align="center">
-    <a href="https://twilitrealm.dev">Official Website</a>
-    •
-    <a href="https://discord.gg/6NpMhefCK9">Discord</a>
+    <a href="https://github.com/WadeWinningWilson/ALBW-Dusklight">ALBW-Dusklight on GitHub</a>
   </p>
 </div>
 
-# Overview
+# ALBW-Dusklight
 
-Dusklight is a reverse-engineered reimplementation of Twilight Princess.
+A work-in-progress mod for [Dusklight](https://github.com/TwilitRealm/dusklight) — the open-source PC reimplementation of _The Legend of Zelda: Twilight Princess_ — that adds an _A Link Between Worlds_–style **energy meter**, **death item strip**, and **Postman rental shop** (native in-game UI on PC when built with the option below).
 
-It aims to be as accurate as possible to the original while also providing new options, enhancements, and tools to customize your experience.
+> **You must provide your own legal copy of the game.** This repository does not include copyrighted assets.
 
-# Setup
+Inspired by CaptainKittyCa2’s ALBW meter work. Base game by [TwilitRealm](https://twilitrealm.dev).
 
-> [!IMPORTANT]
-> Dusklight does *not* provide any copyrighted assets. You must provide your own copy of the original game.
+## Features (summary)
 
-> [!IMPORTANT]
-> At a minimum, Dusklight requires a GPU with support for either D3D12, Vulkan, or Metal. Your experience with specific hardware, operating systems, and drivers may vary. In particular, older Intel iGPUs have a high likelihood of incompatibility. We are also aware of a number of issues on devices with Adreno GPUs and are working to resolve them.
+| Feature | Status |
+|--------|--------|
+| ALBW energy meter HUD | ✅ |
+| Meter drain (sword, agility, hidden skills) | ✅ |
+| Death strip + 13-item rental shop | ✅ |
+| Native TP shop & Postman dialogue (`TARGET_PC_NATIVE_UI=ON`) | ✅ (footer polish WIP) |
+| ImGui shop/dialogue fallback (`TARGET_PC_NATIVE_UI=OFF`) | ✅ |
+| Wolf form unaffected by meter | ✅ |
+| Colossal Wallet / final pricing pass | ⏳ |
 
-### 1. Dump your game
+Full gameplay and file list: **[docs/albw-port.md](docs/albw-port.md)**.
 
-You must dump your own copy of the game, please see [this article](https://wiki.dolphin-emu.org/index.php?title=Ripping_Games) for instructions. After dumping, you can use a program like [Dolphin](https://dolphin-emu.org/) or [nodtool](https://github.com/encounter/nod/releases) to convert the `.iso` to a `.rvz` to save space.
+---
 
-Currently, only the GameCube USA and EUR releases are supported. Support for other versions of the game is planned in the future.
+## Build the mod yourself (Windows)
 
-### 2. Download [Dusklight](https://github.com/TwilitRealm/dusklight/releases)
+### 1. Prerequisites
 
-### 3. Setup the game
-**Windows / macOS / Linux**
-- Extract the .zip file
-- Launch Dusklight
-- Press **Select Disc Image** and provide the path to your supported game dump
-- Press **Play**!
+- [CMake 3.25+](https://cmake.org) and **Visual Studio 2022** (or 2026) with **Desktop development with C++**, **CMake Tools**, and **Windows SDK**
+- [Python 3](https://www.python.org/) on your `PATH`
+- [Git](https://git-scm.com/)
 
-**iOS**
-- Follow the [iOS setup guide](docs/ios-install-altstore.md)
+More detail: [docs/building.md](docs/building.md).
 
-**Android**
-- Install the Dusklight APK
-- Launch Dusklight
-- Press **Select Disc Image** and provide the path to your supported game dump
-- Press **Play**!
+### 2. Clone this repository
 
-# PC features
+```powershell
+git clone --recursive https://github.com/WadeWinningWilson/ALBW-Dusklight.git
+cd ALBW-Dusklight
+git submodule update --init --recursive
+```
 
-### ALBW mod ([ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight))
+Use `--recursive` on clone (or run `submodule update` after) — required for Aurora and other deps.
 
-WIP mod by WadeWinningWilson: ALBW energy meter, death-strip rental, Ordon Postman shop, and related PC hooks. In this tree, the rental shop can use **native TP UI** (letter-select + message windows) or ImGui fallback.
+### 3. Configure and build
 
-- **Docs:** [docs/albw-port.md](docs/albw-port.md) — features, `TARGET_PC_NATIVE_UI`, file map, footer/maintainer notes  
-- **Windows exe (local build):** `build/windows-msvc-relwithdebinfo/dusklight.exe` after `cmake --build --preset windows-msvc-relwithdebinfo`
+**Recommended** (native letter-select shop + message-window dialogue):
 
-# Building
+```powershell
+cmake --preset windows-msvc-relwithdebinfo -DTARGET_PC_NATIVE_UI=ON
+cmake --build --preset windows-msvc-relwithdebinfo
+```
 
-If you'd like to build Dusklight from source, please read the [build instructions](docs/building.md).
+**Without** native UI (ImGui shop + toasts for greet/farewell):
 
-Pull requests are welcomed! Note that we do not accept contributions that are primarily AI-generated and will close your PR if we suspect as much. Please also see the [code conventions](docs/code-conventions.md).
+```powershell
+cmake --preset windows-msvc-relwithdebinfo
+cmake --build --preset windows-msvc-relwithdebinfo
+```
+
+First build can take a long time.
+
+### 4. Run
+
+Executable:
+
+`build\windows-msvc-relwithdebinfo\dusklight.exe`
+
+Launch from the repo root (or pass your disc image as in [docs/building.md](docs/building.md#running)):
+
+```powershell
+.\build\windows-msvc-relwithdebinfo\dusklight.exe --dvd "C:\path\to\your\game.iso"
+```
+
+In-game: use the launcher to pick your dump, or use `--dvd` as above.
+
+### 5. Rebuild after code changes
+
+```powershell
+cmake --build --preset windows-msvc-relwithdebinfo
+```
+
+Re-run `cmake --preset ...` only when you change CMake options (e.g. toggling `TARGET_PC_NATIVE_UI`).
+
+---
+
+## Game setup
+
+1. Dump a supported **GameCube USA or EUR** Twilight Princess image ([Dolphin ripping guide](https://wiki.dolphin-emu.org/index.php?title=Ripping_Games)).
+2. Point Dusklight at that file on first run (**Select Disc Image**) or via `--dvd`.
+
+GPU: D3D12, Vulkan, or Metal capable card recommended (see upstream Dusklight notes for older iGPUs).
+
+---
+
+## Building on macOS / Linux
+
+The **ALBW mod code is PC-only** (`#if TARGET_PC`). You can still build vanilla Dusklight from this tree using the presets in [docs/building.md](docs/building.md); the meter and rental systems will not be included on those platforms.
+
+---
+
+# Upstream Dusklight
+
+This repo is a full Dusklight source tree with the ALBW mod integrated. For vanilla Dusklight releases, documentation, and community links:
+
+- [TwilitRealm/dusklight](https://github.com/TwilitRealm/dusklight)
+- [Official site](https://twilitrealm.dev) · [Discord](https://discord.gg/6NpMhefCK9)
 
 # Credits
 
-Special thanks to the [TP decompilation](https://github.com/zeldaret/tp) team, the GC/Wii decompilation community, the [Aurora](https://github.com/encounter/aurora) developers, the [TP speedrunning community](https://zsrtp.link), and all [contributors](https://github.com/TwilitRealm/dusklight/graphs/contributors).
+- **Mod:** WadeWinningWilson — [ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight)
+- **Inspired by:** CaptainKittyCa2
+- **Dusklight:** [TwilitRealm](https://github.com/TwilitRealm/dusklight) and [contributors](https://github.com/TwilitRealm/dusklight/graphs/contributors)
+- **Decomp / Aurora / community:** see upstream [README](https://github.com/TwilitRealm/dusklight/blob/main/README.md) credits
 
 <br/>
 <div align="center">
