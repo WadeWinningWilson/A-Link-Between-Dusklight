@@ -40,6 +40,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <bit>
 
 namespace dusk::tphd::addrlib {
 
@@ -68,6 +69,16 @@ static u32 Log2(u32 v) {
     u32 r = 0;
     while (v > 1) { v >>= 1; ++r; }
     return r;
+}
+
+static constexpr bool IsPow2(u32 v) { return v != 0 && (v & (v - 1)) == 0; }
+
+
+static constexpr u32 NextPow2(u32 v) {
+    return v <= 1 ? 1u : std::bit_ceil(v);
+}
+static constexpr u32 PowTwoAlign(u32 v, u32 align) {
+    return (v + align - 1) & ~(align - 1);
 }
 
 // ---- Tile-mode classification ---------------------------------------------
@@ -430,6 +441,251 @@ std::vector<u8> deswizzle(const SurfaceDesc& desc, std::span<const u8> tiledByte
         }
     }
     return linear;
+}
+
+// R600AddrLib::ConvertToNonBankSwappedMode (r600addrlib.cpp:355)
+static TileMode ConvertToNonBankSwappedMode(TileMode tm) {
+    switch (tm) {
+    case TileMode::Tiled2BThin1: return TileMode::Tiled2DThin1;
+    case TileMode::Tiled2BThin2: return TileMode::Tiled2DThin2;
+    case TileMode::Tiled2BThin4: return TileMode::Tiled2DThin4;
+    case TileMode::Tiled2BThick: return TileMode::Tiled2DThick;
+    case TileMode::Tiled3BThin1: return TileMode::Tiled3DThin1;
+    case TileMode::Tiled3BThick: return TileMode::Tiled3DThick;
+    default:                     return tm;
+    }
+}
+
+// R600AddrLib::ComputeSurfaceMipLevelTileMode (r600addrlib.cpp:544). 
+static TileMode ComputeSurfaceMipLevelTileMode(TileMode baseTileMode,
+                                               u32 bpp,
+                                               u32 level,
+                                               u32 width,
+                                               u32 height,
+                                               u32 numSamples,
+                                               bool noRecursive) {
+    // ComputeSurfaceTileSlices == 1 for our case (numSamples=1, thin).
+    // HwlDegradeThickTileMode is identity for thin tiles.
+    TileMode tileMode = baseTileMode;
+
+    const u32 rotation = ComputeSurfaceRotationFromTileMode(tileMode);
+    if ((rotation % kPipes) == 0) {
+        switch (tileMode) {
+        case TileMode::Tiled3DThin1: tileMode = TileMode::Tiled2DThin1; break;
+        case TileMode::Tiled3DThick: tileMode = TileMode::Tiled2DThick; break;
+        case TileMode::Tiled3BThin1: tileMode = TileMode::Tiled2BThin1; break;
+        case TileMode::Tiled3BThick: tileMode = TileMode::Tiled2BThick; break;
+        default: break;
+        }
+    }
+
+    if (noRecursive || level == 0) {
+        return tileMode;
+    }
+
+    if (bpp == 96 || bpp == 48 || bpp == 24) bpp /= 3;
+
+    width  = NextPow2(width);
+    height = NextPow2(height);
+
+    tileMode = ConvertToNonBankSwappedMode(tileMode);
+
+    const u32 thickness        = ComputeSurfaceThickness(tileMode);
+    const u32 microTileBytes   = BITS_TO_BYTES(thickness * bpp * 64);
+    const u32 widthAlignFactor = (microTileBytes <= kPipeInterleaveBytes)
+                                 ? (kPipeInterleaveBytes / microTileBytes) : 1u;
+
+    u32 macroTileWidth  = 8 * kBanks;
+    u32 macroTileHeight = 8 * kPipes;
+
+    switch (tileMode) {
+    case TileMode::Tiled2DThin1:
+    case TileMode::Tiled3DThin1:
+        if (width < widthAlignFactor * macroTileWidth || height < macroTileHeight) {
+            tileMode = TileMode::Tiled1DThin1;
+        }
+        break;
+    case TileMode::Tiled2DThin2:
+        macroTileWidth >>= 1; macroTileHeight *= 2;
+        if (width < widthAlignFactor * macroTileWidth || height < macroTileHeight) {
+            tileMode = TileMode::Tiled1DThin1;
+        }
+        break;
+    case TileMode::Tiled2DThin4:
+        macroTileWidth >>= 2; macroTileHeight *= 4;
+        if (width < widthAlignFactor * macroTileWidth || height < macroTileHeight) {
+            tileMode = TileMode::Tiled1DThin1;
+        }
+        break;
+    case TileMode::Tiled2DThick:
+    case TileMode::Tiled3DThick:
+        if (width < widthAlignFactor * macroTileWidth || height < macroTileHeight) {
+            tileMode = TileMode::Tiled1DThick;
+        }
+        break;
+    default: break;
+    }
+
+    // numSlices < 4 collapse — our textures are all 2D (slices=1), so the
+    // Thick→Thin demote always fires when we hit a thick mode. 
+    if (tileMode == TileMode::Tiled1DThick)      tileMode = TileMode::Tiled1DThin1;
+    else if (tileMode == TileMode::Tiled2DThick) tileMode = TileMode::Tiled2DThin1;
+    else if (tileMode == TileMode::Tiled3DThick) tileMode = TileMode::Tiled3DThin1;
+
+    return ComputeSurfaceMipLevelTileMode(tileMode, bpp, level, width, height,
+                                          numSamples, /*noRecursive*/ true);
+}
+
+// R600AddrLib::ComputeSurfaceAlignmentsMicrotiled (r600addrlib.cpp:714).
+static void ComputeAlignmentsMicroTiled(TileMode tileMode, u32 bpp, u32 numSamples,
+                                        u32& pitchAlign, u32& heightAlign) {
+    if (bpp == 96 || bpp == 48 || bpp == 24) bpp /= 3;
+    const u32 thickness     = ComputeSurfaceThickness(tileMode);
+    const u32 pitchAlignment = kPipeInterleaveBytes / bpp / numSamples / thickness;
+    pitchAlign  = std::max<u32>(8u, pitchAlignment);
+    heightAlign = 8;
+    // AdjustPitchAlignment is no-op without flags.display.
+}
+
+// R600AddrLib::ComputeSurfaceAlignmentsMacrotiled (r600addrlib.cpp:805).
+static void ComputeAlignmentsMacroTiled(TileMode tileMode, u32 bpp, u32 numSamples,
+                                        u32& pitchAlign, u32& heightAlign,
+                                        u32& macroTileWidth, u32& macroTileHeight) {
+    const u32 aspectRatio = (tileMode == TileMode::Tiled2DThin2 ||
+                             tileMode == TileMode::Tiled2BThin2) ? 2u
+                          : (tileMode == TileMode::Tiled2DThin4 ||
+                             tileMode == TileMode::Tiled2BThin4) ? 4u : 1u;
+    const u32 thickness = ComputeSurfaceThickness(tileMode);
+    if (bpp == 96 || bpp == 48 || bpp == 24) bpp /= 3;
+    if (bpp == 3) bpp = 1;
+
+    macroTileWidth  = 8 * kBanks / aspectRatio;
+    macroTileHeight = aspectRatio * 8 * kPipes;
+    pitchAlign  = std::max<u32>(macroTileWidth,
+                                macroTileWidth * (kPipeInterleaveBytes / bpp / (8 * thickness) / numSamples));
+    heightAlign = macroTileHeight;
+    // IsDualBaseAlignNeeded is R6XX-only -> false here; baseAlign branch skipped.
+}
+
+// AddrLib::PadDimensions (addrlib.cpp:433), simplified: no cube, no slice padding.
+static void PadDimensions(TileMode /*tm*/, u32& pitch, u32 pitchAlign,
+                          u32& height, u32 heightAlign, u32 padDims) {
+    if (padDims == 0) padDims = 3;
+    if (IsPow2(pitchAlign)) {
+        pitch = PowTwoAlign(pitch, pitchAlign);
+    } else {
+        pitch = ((pitch + pitchAlign - 1) / pitchAlign) * pitchAlign;
+    }
+    if (padDims > 1) {
+        height = PowTwoAlign(height, heightAlign);
+    }
+}
+
+// R600AddrLib::ComputeSurfaceInfoMicroTiled (r600addrlib.cpp:969).
+static void ComputeSurfaceInfoMicroTiled(u32 width, u32 height, u32 numSamples, u32 bpp,
+                                         TileMode tileMode, u32 mipLevel, SurfaceInfoOut& out) {
+    u32 pitch  = width;
+    u32 h      = height;
+    if (mipLevel) {
+        pitch = NextPow2(pitch);
+        h     = NextPow2(h);
+        // numSlices < 4 / thick collapse: no thick at this point for our flow.
+    }
+    u32 pitchAlign = 0, heightAlign = 0;
+    ComputeAlignmentsMicroTiled(tileMode, bpp, numSamples, pitchAlign, heightAlign);
+    PadDimensions(tileMode, pitch, pitchAlign, h, heightAlign, /*padDims*/ 0);
+    out.pitch         = pitch;
+    out.height        = height;
+    out.heightAligned = h;
+    out.tileMode      = tileMode;
+}
+
+// R600AddrLib::ComputeSurfaceInfoMacroTiled (r600addrlib.cpp:1198).
+static void ComputeSurfaceInfoMacroTiled(u32 width, u32 height, u32 numSamples, u32 bpp,
+                                         TileMode tileMode, TileMode baseTileMode,
+                                         u32 mipLevel, SurfaceInfoOut& out) {
+    u32 pitch = width;
+    u32 h     = height;
+    if (mipLevel) {
+        pitch = NextPow2(pitch);
+        h     = NextPow2(h);
+    }
+    u32 pitchAlignBase = 0, heightAlignBase = 0, mwBase = 0, mhBase = 0;
+    if (tileMode != baseTileMode && mipLevel != 0 &&
+        IsThickMacroTiled(baseTileMode) && !IsThickMacroTiled(tileMode)) {
+        ComputeAlignmentsMacroTiled(baseTileMode, bpp, numSamples,
+                                    pitchAlignBase, heightAlignBase, mwBase, mhBase);
+        const u32 pitchAlignFactor = std::max<u32>(1u, (kPipeInterleaveBytes >> 3) / bpp);
+        if (pitch < (pitchAlignBase * pitchAlignFactor) || h < heightAlignBase) {
+            ComputeSurfaceInfoMicroTiled(width, height, numSamples, bpp,
+                                         TileMode::Tiled1DThin1, mipLevel, out);
+            return;
+        }
+    }
+
+    u32 pitchAlign = 0, heightAlign = 0, macroWidth = 0, macroHeight = 0;
+    ComputeAlignmentsMacroTiled(tileMode, bpp, numSamples,
+                                pitchAlign, heightAlign, macroWidth, macroHeight);
+    const u32 bankSwappedWidth = ComputeSurfaceBankSwappedWidth(tileMode, bpp, numSamples, pitch);
+    pitchAlign = std::max(pitchAlign, bankSwappedWidth);
+    // IsDualPitchAlignNeeded is R6XX-only -> false here.
+    PadDimensions(tileMode, pitch, pitchAlign, h, heightAlign, /*padDims*/ 0);
+    out.pitch         = pitch;
+    out.height        = height;
+    out.heightAligned = h;
+    out.tileMode      = tileMode;
+}
+
+void computeSurfaceInfo(const SurfaceInfoIn& in, SurfaceInfoOut& out) {
+    // AddrLib::ComputeMipLevel + R600AddrLib::HwlComputeMipLevel: align BCN
+    // base dims to 4 pixels; for mipLevel>0, reduce dims and NextPow2 them.
+    u32 width  = in.width;
+    u32 height = in.height;
+    if (in.isBcn && in.mipLevel == 0) {
+        width  = PowTwoAlign(width, 4u);
+        height = PowTwoAlign(height, 4u);
+    }
+    if (in.mipLevel > 0) {
+        width  = std::max(1u, width  >> in.mipLevel);
+        height = std::max(1u, height >> in.mipLevel);
+        width  = NextPow2(width);
+        height = NextPow2(height);
+    }
+
+    if (in.isBcn) {
+        width  = (width  + 3) / 4;
+        height = (height + 3) / 4;
+    }
+
+    const u32 numSamples = 1;
+    const TileMode demoted = ComputeSurfaceMipLevelTileMode(in.tileMode, in.bpp,
+                                                            in.mipLevel, width, height,
+                                                            numSamples, /*noRecursive*/ false);
+    out.width  = width;
+    out.height = height;
+    out.tileMode = demoted;
+
+    switch (demoted) {
+    case TileMode::LinearGeneral:
+    case TileMode::LinearAligned: {
+        // ComputeSurfaceInfoLinear
+        const u32 pa = std::max<u32>(64u, kPipeInterleaveBytes / in.bpp / numSamples);
+        u32 pitch = width, h = height;
+        if (in.mipLevel) { pitch = NextPow2(pitch); h = NextPow2(h); }
+        PadDimensions(demoted, pitch, pa, h, 1u, /*padDims*/ 0);
+        out.pitch = pitch; out.heightAligned = h;
+        break;
+    }
+    case TileMode::Tiled1DThin1:
+    case TileMode::Tiled1DThick:
+        ComputeSurfaceInfoMicroTiled(width, height, numSamples, in.bpp,
+                                     demoted, in.mipLevel, out);
+        break;
+    default:
+        ComputeSurfaceInfoMacroTiled(width, height, numSamples, in.bpp,
+                                     demoted, in.tileMode, in.mipLevel, out);
+        break;
+    }
 }
 
 }  // namespace dusk::tphd::addrlib

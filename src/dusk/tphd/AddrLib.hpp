@@ -52,6 +52,27 @@ struct SurfaceDesc {
 // Deswizzle a single surface mip level into a row-major linear buffer.
 std::vector<u8> deswizzle(const SurfaceDesc& desc, std::span<const u8> tiledBytes);
 
+struct SurfaceInfoIn {
+    u32 width;        // pixels at mip 0 (caller supplies surface base dims)
+    u32 height;       // pixels at mip 0
+    u32 bpp;          // bits per pixel (e.g. 32 for RGBA8). For BCN, bits per
+                      // 4x4 block (64 for BC1, 128 for BC3/5).
+    u32 mipLevel;     // 0 = base, 1..N = mip
+    TileMode tileMode;
+    bool isBcn;
+};
+
+struct SurfaceInfoOut {
+    u32 width;        // possibly NextPow2'd / block-converted dim used for
+                      // the address computation (BCN blocks if isBcn)
+    u32 height;       // similar
+    u32 pitch;        // aligned pitch used by deswizzle (block units if BCN)
+    u32 heightAligned;
+    TileMode tileMode; // possibly demoted (2D→1D for small mips)
+};
+
+void computeSurfaceInfo(const SurfaceInfoIn& in, SurfaceInfoOut& out);
+
 }  // namespace dusk::tphd::addrlib
 
 #endif

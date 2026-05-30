@@ -324,36 +324,25 @@ MipLevelDesc mipLevelDesc(const GtxSurface& s, u32 level, bool isBcn, u32 bpp) {
     MipLevelDesc d{};
     d.width    = std::max(1u, s.width  >> level);
     d.height   = std::max(1u, s.height >> level);
-    d.tileMode = static_cast<addrlib::TileMode>(s.tileMode);
 
     if (level == 0) {
-        d.pitch = s.pitch;
+        d.pitch    = s.pitch;
+        d.tileMode = static_cast<addrlib::TileMode>(s.tileMode);
         return d;
     }
 
-    // Mirror decaf's widthAlignFactor: when one microtile is smaller than
-    // the pipe interleave (256 B), the demote threshold scales up.
-    const u32 microTileBytes = (bpp * 64u) / 8u;
-    const u32 widthAlignFactor = (microTileBytes <= 256u) ? (256u / microTileBytes) : 1u;
-
-    if (d.tileMode == addrlib::TileMode::Tiled2DThin1 ||
-        d.tileMode == addrlib::TileMode::Tiled2BThin1) {
-        const u32 demoteWidth  = widthAlignFactor * 32u;
-        const u32 wElem = isBcn ? (d.width  + 3u) / 4u : d.width;
-        const u32 hElem = isBcn ? (d.height + 3u) / 4u : d.height;
-        if (wElem < demoteWidth || hElem < 16u) {
-            d.tileMode = addrlib::TileMode::Tiled1DThin1;
-        }
-    }
-
-    const bool is1D = (d.tileMode == addrlib::TileMode::Tiled1DThin1 ||
-                       d.tileMode == addrlib::TileMode::Tiled1DThick);
-    const u32 alignment = is1D ? (8u * widthAlignFactor) : 32u;
-
-    const u32 pixelsPerBlock = isBcn ? 4u : 1u;
-    const u32 widthInBlock  = (d.width + pixelsPerBlock - 1u) / pixelsPerBlock;
-    u32 levelPitch = ((widthInBlock + alignment - 1u) / alignment) * alignment;
-    d.pitch = std::max(1u, levelPitch);
+    const addrlib::SurfaceInfoIn si{
+        .width    = s.width,
+        .height   = s.height,
+        .bpp      = bpp,
+        .mipLevel = level,
+        .tileMode = static_cast<addrlib::TileMode>(s.tileMode),
+        .isBcn    = isBcn,
+    };
+    addrlib::SurfaceInfoOut so{};
+    addrlib::computeSurfaceInfo(si, so);
+    d.pitch    = so.pitch;     // block units for BCN, pixel units for plain.
+    d.tileMode = so.tileMode;
     return d;
 }
 
