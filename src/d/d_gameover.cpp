@@ -193,70 +193,7 @@ int dGameover_c::_create() {
             // preserved — only the current value is restored.
             // ============================================
             if (dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625])) {
-                struct ALBWItem { u8 itemNo; int slotNo; };
-                static const ALBWItem kALBWItems[] = {
-                    { (u8)dItemNo_BOOMERANG_e,    SLOT_0  },
-                    { (u8)dItemNo_SPINNER_e,      SLOT_2  },
-                    { (u8)dItemNo_BOW_e,          SLOT_4  },
-                    { (u8)dItemNo_IRONBALL_e,     SLOT_6  },
-                    { (u8)dItemNo_COPY_ROD_e,     SLOT_8  },
-                    { (u8)dItemNo_HOOKSHOT_e,     SLOT_9  },
-                    { (u8)dItemNo_W_HOOKSHOT_e,   SLOT_10 },
-                    { (u8)dItemNo_BOMB_BAG_LV1_e, SLOT_15 },
-                    { (u8)dItemNo_BOMB_BAG_LV2_e, SLOT_16 },
-                    { (u8)dItemNo_POKE_BOMB_e,    SLOT_17 },
-                    { (u8)dItemNo_PACHINKO_e,     SLOT_23 },
-                };
-                for (int i = 0; i < 11; i++) {
-                    u8  itemNo = kALBWItems[i].itemNo;
-                    int slotNo = kALBWItems[i].slotNo;
-                    // ============================================
-                    // MODIFIED CODE — ALBW Port
-                    // Also check the inventory slot directly, not just isItemFirstBit.
-                    // The save editor (and similar tools) restore items into the slot
-                    // without setting the ownership bit, so the old bit-only check
-                    // silently skipped those items on death. Checking both ensures
-                    // save-editor-restored items are stripped and their eligibility
-                    // bits written correctly on the next death.
-                    // ============================================
-                    bool inBit  = dComIfGs_isItemFirstBit(itemNo);
-                    // Use i_checkCombo=false to read mItems[slotNo] directly.
-                    // Passing true can return a remapped combo-item ID instead
-                    // of the raw slot value, causing the comparison to miss
-                    // items that were restored via the save editor (which only
-                    // calls dComIfGs_setItem and never sets the ownership bit).
-                    bool inSlot = (dComIfGs_getItem(slotNo, false) == itemNo);
-                    if (inBit || inSlot) {
-                        dMeter2_onALBWRentalEligible(itemNo);
-                        dComIfGs_offItemFirstBit(itemNo);
-                        dComIfGs_setItem(slotNo, dItemNo_NONE_e);
-                    }
-                    // ============================================
-                    // MODIFIED CODE ENDS HERE
-                    // ============================================
-                }
-                // Magic Armor: clothing equip, not an inventory slot
-                if (dComIfGs_isItemFirstBit((u8)dItemNo_ARMOR_e)) {
-                    dMeter2_onALBWRentalEligible((u8)dItemNo_ARMOR_e);
-                    dComIfGs_offItemFirstBit((u8)dItemNo_ARMOR_e);
-                    if (dComIfGs_getSelectEquipClothes() == (u8)dItemNo_ARMOR_e) {
-                        dComIfGs_setSelectEquipClothes((u8)dItemNo_WEAR_KOKIRI_e);
-                    }
-                }
-                // ============================================
-                // NEW CODE — ALBW Port
-                // Deity Armor: ability flag only (no inventory slot, no
-                // eligibility save bit — its re-display in the shop is gated
-                // by Magic Armor eligibility + Colossal Wallet, not its own
-                // save bit).  Just clear the ownership bit on death so the
-                // ability deactivates and the shop can re-list it.
-                // ============================================
-                if (dComIfGs_isItemFirstBit((u8)dItemNo_DEITY_ARMOR_e)) {
-                    dComIfGs_offItemFirstBit((u8)dItemNo_DEITY_ARMOR_e);
-                }
-                // ============================================
-                // NEW CODE ENDS HERE
-                // ============================================
+                dMeter2_stripAllALBWInventoryOnDeath();
                 dMeter2_fillALBWMeter();
             }
             // ============================================

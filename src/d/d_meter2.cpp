@@ -25,6 +25,7 @@
 #include <cstring>
 
 #if TARGET_PC
+#include "d/d_albw_rental.h"
 #include "dusk/memory.h"
 #include "dusk/settings.h"
 #include <chrono>
@@ -416,6 +417,105 @@ bool dMeter2_isALBWRentalEligible(u8 itemNo) {
     }
     return false;
 }
+
+static void dMeter2_clearItemFromAllSlots(u8 itemNo) {
+    for (int slot = SLOT_0; slot <= SLOT_23; slot++) {
+        if (dComIfGs_getItem(slot, false) == itemNo) {
+            dComIfGs_setItem(slot, dItemNo_NONE_e);
+        }
+    }
+}
+
+static bool dMeter2_slotHasPossessionForm(u8 rentalItemNo) {
+    if (dComIfGs_isItemFirstBit(rentalItemNo)) {
+        return true;
+    }
+    for (int slot = SLOT_0; slot <= SLOT_23; slot++) {
+        if (dComIfGs_getItem(slot, false) == rentalItemNo) {
+            return true;
+        }
+    }
+    if (rentalItemNo == (u8)dItemNo_BOMB_BAG_LV1_e) {
+        for (int slot = SLOT_0; slot <= SLOT_23; slot++) {
+            if (dComIfGs_getItem(slot, false) == (u8)dItemNo_NORMAL_BOMB_e) {
+                return true;
+            }
+        }
+    } else if (rentalItemNo == (u8)dItemNo_BOMB_BAG_LV2_e) {
+        for (int slot = SLOT_0; slot <= SLOT_23; slot++) {
+            if (dComIfGs_getItem(slot, false) == (u8)dItemNo_WATER_BOMB_e) {
+                return true;
+            }
+        }
+    } else if (rentalItemNo == (u8)dItemNo_COPY_ROD_e) {
+        for (int slot = SLOT_0; slot <= SLOT_23; slot++) {
+            if (dComIfGs_getItem(slot, false) == (u8)dItemNo_COPY_ROD_2_e) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static void dMeter2_clearAllPossessionForms(u8 rentalItemNo) {
+    dMeter2_clearItemFromAllSlots(rentalItemNo);
+    dComIfGs_offItemFirstBit(rentalItemNo);
+    switch (rentalItemNo) {
+    case (u8)dItemNo_BOMB_BAG_LV1_e:
+        dMeter2_clearItemFromAllSlots((u8)dItemNo_NORMAL_BOMB_e);
+        dComIfGs_offItemFirstBit((u8)dItemNo_NORMAL_BOMB_e);
+        break;
+    case (u8)dItemNo_BOMB_BAG_LV2_e:
+        dMeter2_clearItemFromAllSlots((u8)dItemNo_WATER_BOMB_e);
+        dComIfGs_offItemFirstBit((u8)dItemNo_WATER_BOMB_e);
+        break;
+    case (u8)dItemNo_COPY_ROD_e:
+        dMeter2_clearItemFromAllSlots((u8)dItemNo_COPY_ROD_2_e);
+        dComIfGs_offItemFirstBit((u8)dItemNo_COPY_ROD_2_e);
+        break;
+    default:
+        break;
+    }
+}
+
+bool dMeter2_playerOwnsRentalItem(u8 itemNo) {
+    if (itemNo == (u8)dItemNo_ARMOR_e &&
+        dComIfGs_getSelectEquipClothes() == itemNo) {
+        return true;
+    }
+    return dMeter2_slotHasPossessionForm(itemNo);
+}
+
+void dMeter2_stripRentalItemOnDeath(u8 itemNo) {
+    if (!dMeter2_playerOwnsRentalItem(itemNo)) {
+        return;
+    }
+    dMeter2_onALBWRentalEligible(itemNo);
+    if (itemNo == (u8)dItemNo_ARMOR_e) {
+        dComIfGs_offItemFirstBit(itemNo);
+        if (dComIfGs_getSelectEquipClothes() == itemNo) {
+            dComIfGs_setSelectEquipClothes((u8)dItemNo_WEAR_KOKIRI_e);
+        }
+        return;
+    }
+    dMeter2_clearAllPossessionForms(itemNo);
+}
+
+void dMeter2_stripAllALBWInventoryOnDeath() {
+    for (int i = 0; i < 12; i++) {
+        dMeter2_stripRentalItemOnDeath(sALBWItemNos[i]);
+    }
+
+    if (dComIfGs_isItemFirstBit((u8)dItemNo_DEITY_ARMOR_e)) {
+        dComIfGs_offItemFirstBit((u8)dItemNo_DEITY_ARMOR_e);
+    }
+}
+
+#if TARGET_PC
+static bool dMeter2_hideHudForALBWShop() {
+    return dALBWRental_isOpen();
+}
+#endif
 // ============================================
 // NEW CODE ENDS HERE
 // ============================================
@@ -3548,13 +3648,18 @@ void dMeter2_c::movePachinkoNum() {
 }
 
 void dMeter2_c::alphaAnimeLife() {
+#if TARGET_PC
+    const bool hideHudForALBWShop = dALBWRental_isOpen();
+#else
+    const bool hideHudForALBWShop = false;
+#endif
     if ((mStatus & 0x4000) ||
         ((mStatus & 0x40) && dComIfGp_event_checkHind(0x10) &&
          !dComIfGp_checkPlayerStatus1(0, 0x2000)) ||
         ((daPy_getPlayerActorClass()->getSumouMode() != 0) || (mStatus & 0x100000) ||
          (mStatus & 0x80000000) || (mStatus & 8) || (mStatus & 0x10) || (mStatus & 0x01000000) ||
          (mStatus & 0x20) || (mStatus & 0x04000000) || (mStatus & 0x08000000) ||
-         (mStatus & 0x10000000)))
+         (mStatus & 0x10000000)) || hideHudForALBWShop)
     {
         mpMeterDraw->setAlphaLifeAnimeMin();
     } else {
@@ -3663,7 +3768,7 @@ void dMeter2_c::alphaAnimeKantera() {
         // changes. Wolf Link sections are already gameplay-unaffected per
         // the "not touching Wolf Link with ALBW meter" constraint.
         // ============================================
-        dMeter2_isWolfForm())
+        dMeter2_isWolfForm() || dMeter2_hideHudForALBWShop())
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================

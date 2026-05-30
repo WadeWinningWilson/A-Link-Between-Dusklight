@@ -31,6 +31,7 @@
 #include "m_Do/m_Do_lib.h"
 
 #if TARGET_PC
+#include "d/d_albw_rental.h"
 #include "dusk/settings.h"
 #include <vector>
 #include <array>
@@ -542,6 +543,20 @@ int dMsgObject_c::_execute() {
 }
 
 int dMsgObject_c::_draw() {
+#if TARGET_PC
+    if (dALBWRental_shouldSuppressVanillaTalkMsg()) {
+        if (mpOutFont != NULL) {
+            mpOutFont->setAlphaRatio(0.0f);
+        }
+        if (mpScrnDraw != NULL) {
+            mpScrnDraw->setString("", "");
+            mpScrnDraw->setRubyString("");
+            mpScrnDraw->setSelectString("", "", "");
+            mpScrnDraw->setSelectRubyString("", "", "");
+        }
+        return 1;
+    }
+#endif
     u16 sVar7 = getStatusLocal();
     if (sVar7 != 0 && sVar7 != 1 && sVar7 != 0xb) {
         if (isDraw()) {
@@ -558,12 +573,19 @@ int dMsgObject_c::_draw() {
         }
     }
     if (mpScrnDraw != NULL) {
-        if (dComIfGp_isPauseFlag()) {
-            dComIfGd_set2DOpaTop(mpScrnDraw);
-        } else {
-            dComIfGd_set2DOpa(mpScrnDraw);
+#if TARGET_PC
+        // Rental postman uses dALBWDialogue_c / dALBWShop_c — skip vanilla talk
+        // screen so "No response..." and the 3-choice bar never appear underneath.
+        if (!dALBWRental_shouldSuppressVanillaTalkMsg())
+#endif
+        {
+            if (dComIfGp_isPauseFlag()) {
+                dComIfGd_set2DOpaTop(mpScrnDraw);
+            } else {
+                dComIfGd_set2DOpa(mpScrnDraw);
+            }
+            mpScrnDraw->multiDraw();
         }
-        mpScrnDraw->multiDraw();
     }
     return 1;
 }

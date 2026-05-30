@@ -24,6 +24,7 @@
 #include <chrono>
 #if TARGET_PC_NATIVE_UI
 #include "d/d_albw_shop.h"
+#include "d/d_albw_dialogue.h"
 #endif
 #endif
 // ============================================
@@ -31,13 +32,19 @@
 // ============================================
 
 // ============================================
-// NEW CODE — ALBW Port (Native Shop Window)
-// File-scope static so both Create() and Delete() can access the shop object.
-// Guarded by TARGET_PC so it compiles away in non-PC builds.
+// NEW CODE — ALBW Port (Native UI)
+// File-scope statics for native shop window and greeting/farewell dialogue boxes.
+// All three are guarded by TARGET_PC_NATIVE_UI and owned by the ALBW postman actor.
 // ============================================
 #if TARGET_PC
 #if TARGET_PC_NATIVE_UI
-static dALBWShop_c* s_pALBWShop = nullptr;
+static dALBWShop_c*     s_pALBWShop      = nullptr;
+// Single persistent dialogue window. BLOs are loaded once and reused for both
+// greeting and farewell — no per-dialogue new/delete to avoid archive corruption.
+static dALBWDialogue_c* s_pALBWDialogue  = nullptr;
+// Prevents dALBWRental_open() from firing again after farewell on the same talk event.
+static bool             s_rentalEvtStarted   = false;
+static u8               s_greetStep = 0;  // 0=page1, 1=page2, 2=page3
 #endif
 #endif
 // ============================================
@@ -473,7 +480,8 @@ cPhs_Step daNpc_Post_c::create() {
 // Allocate the shop window object once when the ALBW postman actor is created.
 // ============================================
 #if TARGET_PC_NATIVE_UI
-            if (!s_pALBWShop) s_pALBWShop = JKR_NEW dALBWShop_c();
+            // Shop is allocated on first talk (letres.arc mount is heavy); dialogue is light.
+            if (!s_pALBWDialogue) s_pALBWDialogue = JKR_NEW dALBWDialogue_c();
 #endif
 // ============================================
 // NEW CODE ENDS HERE
@@ -601,6 +609,7 @@ int daNpc_Post_c::Delete() {
     // ============================================
 #if TARGET_PC
     if (getBitSW() == 0x42) {
+        dALBWRental_clearVanillaTalkSuppress();
         Z2GetSceneMgr()->eraseSeWave(0x4B);
         // Safety: stop BGM if actor is destroyed mid-interaction.
         if (field_0x1015) {
@@ -608,11 +617,13 @@ int daNpc_Post_c::Delete() {
             field_0x1015 = 0;
         }
 // ============================================
-// NEW CODE — ALBW Port (Native Shop Window)
-// Release the shop window object when the ALBW postman actor is destroyed.
+// NEW CODE — ALBW Port (Native UI)
+// Release all native UI objects when the ALBW postman actor is destroyed.
 // ============================================
 #if TARGET_PC_NATIVE_UI
-        JKR_DELETE(s_pALBWShop); s_pALBWShop = nullptr;
+        JKR_DELETE(s_pALBWShop);     s_pALBWShop     = nullptr;
+        JKR_DELETE(s_pALBWDialogue); s_pALBWDialogue = nullptr;
+        s_greetStep = 0;
 #endif
 // ============================================
 // NEW CODE ENDS HERE
@@ -649,11 +660,24 @@ int daNpc_Post_c::Execute() {
 #if TARGET_PC
     if (getBitSW() == 0x42) {
 // ============================================
-// NEW CODE — ALBW Port (Native Shop Window)
+// NEW CODE — ALBW Port (Native Shop Window + Dialogue)
 // Drive async archive load each Execute() tick.
+// The dialogue text screen loads from getMsgCommonArchive() (never cleared)
+// independently of the shop; tryCreate() is a no-op once the text screen is
+// ready.  The frame screen is loaded fresh on each showWithText() call.
 // ============================================
 #if TARGET_PC_NATIVE_UI
-        if (s_pALBWShop) s_pALBWShop->update();
+        if (dALBWRental_isOpen()) {
+            if (!s_pALBWShop) {
+                s_pALBWShop = JKR_NEW dALBWShop_c();
+            }
+            if (s_pALBWShop) {
+                s_pALBWShop->update();
+            }
+        }
+        if (dALBWRental_isOpen() && s_pALBWDialogue && !s_pALBWDialogue->isReady()) {
+            s_pALBWDialogue->tryCreate();
+        }
 #endif
 // ============================================
 // NEW CODE ENDS HERE
@@ -700,9 +724,18 @@ int daNpc_Post_c::Execute() {
             mFaceMotionSeqMngr.setNo(FACE_MOT_NONE_2, -1.0f, FALSE, 0);
             mMotionSeqMngr.setNo(MOT_WAIT_A, -1.0f, FALSE, 0);
         } else if (dALBWRental_justEnteredFarewell()) {
+            OSReport("ALBW Post: justEnteredFarewell — setting MOT_BYE animation\n");
             mFaceMotionSeqMngr.setNo(FACE_MOT_BYE, -1.0f, FALSE, 0);
+            OSReport("ALBW Post: faceMotion set OK\n");
             mMotionSeqMngr.setNo(MOT_BYE, -1.0f, FALSE, 0);
-            field_0x1014 = 2;  // pending: Z2SE_POST_V_THEME
+            OSReport("ALBW Post: bodyMotion MOT_BYE set OK\n");
+            // NOTE: Z2SE_POST_V_THEME (0x500F5) is NOT a creature voice squeak —
+            // it may be a BGM-class sound that crashes startCreatureVoice().
+            // Leaving field_0x1014 = 0 (no sound) for farewell until the correct
+            // voice ID is confirmed.  The BGM postman theme still plays from the
+            // greeting entry above.
+            field_0x1014 = 0;  // no pending voice for farewell (safe)
+            OSReport("ALBW Post: justEnteredFarewell — done\n");
         } else if (dALBWRental_justPurchased()) {
             // ============================================
             // NEW CODE — ALBW Port (Purchase Sound)
@@ -769,13 +802,19 @@ int daNpc_Post_c::Draw() {
     }
 
 // ============================================
-// NEW CODE — ALBW Port (Native Shop Window)
-// Register the shop for 2D opaque drawing this frame while the rental is open.
+// NEW CODE — ALBW Port (Native UI)
+// Register native UI objects for 2D-opaque drawing this frame.
+//   Shop window  — only while the rental state machine is open.
+//   Dialogue     — greeting and farewell windows; live only between state
+//                  transitions, so at most one of the three is non-null at
+//                  any given frame.
 // ============================================
 #if TARGET_PC
 #if TARGET_PC_NATIVE_UI
-    if (getBitSW() == 0x42 && s_pALBWShop && dALBWRental_isOpen()) {
-        s_pALBWShop->registerDraw();
+    if (getBitSW() == 0x42) {
+        if (s_pALBWShop && dALBWRental_isShopState())  s_pALBWShop->registerDraw();
+        // Persistent dialogue window — registerDraw() checks visibility internally.
+        if (s_pALBWDialogue)                            s_pALBWDialogue->registerDraw();
     }
 #endif
 #endif
@@ -927,6 +966,11 @@ BOOL daNpc_Post_c::checkChangeEvt() {
         mPreItemNo = 0;
 
         if (dComIfGp_event_chkTalkXY()) {
+#if TARGET_PC
+            if (getBitSW() == 0x42) {
+                dALBWRental_armVanillaTalkSuppress();
+            }
+#endif
             if (dComIfGp_evmng_ChkPresentEnd()) {
                 mEvtNo = EVT_NO_RESPONSE;
                 evtChange();
@@ -992,41 +1036,79 @@ BOOL daNpc_Post_c::evtTalk() {
 //              push a single dismissal toast.
 // ============================================
 #if TARGET_PC
+    {
+        static bool s_evtTalkLogged = false;
+        if (!s_evtTalkLogged) {
+            s_evtTalkLogged = true;
+            OSReport("ALBW Post evtTalk: getBitSW=0x%02X mType=%d\n", (int)getBitSW(), (int)mType);
+        }
+    }
     if (getBitSW() == 0x42) {
+#if TARGET_PC
+        dALBWRental_armVanillaTalkSuppress();
+#endif
 // ============================================
 // NEW CODE — ALBW Port (Native Dialogue)
-// Drive greeting and farewell via initTalk/talkProc rather than push_toast.
-// Flow 0x14 = vanilla letter delivery text (placeholder until custom BMG added via BenzCM).
-// Flow 0x13 = vanilla post-delivery text (placeholder for farewell).
+// Greeting and farewell use dALBWDialogue_c — a persistent native TP
+// message window.  BLOs are loaded once in Create() and kept alive for the
+// entire actor lifetime; only the text and visibility change per-dialogue.
+// This avoids corrupting the message archive's resource table that would
+// happen if J2DScreens were new/deleted between dialogues.
+//
+// Lifecycle each frame:
+//   isGreeting/FarewellState() true → showWithText() if not yet visible
+//   dialogue visible              → registerDraw() from Draw(); poll A/B here
+//   checkDismiss() true           → hide(), advance rental state machine
 // ============================================
 #if TARGET_PC_NATIVE_UI
-        {
-            static bool sNativeGreetingActive  = false;
-            static bool sNativeFarewellActive  = false;
-
-            if (dALBWRental_justEnteredGreeting()) {
-                sNativeGreetingActive = true;
-                initTalk(0x14, NULL);
+        // ---- Greeting (3 boxes first visit, 1 for returning) ----
+        if (dALBWRental_isGreetingState()) {
+            if (s_pALBWDialogue && !s_pALBWDialogue->isVisible()) {
+                const char* text = nullptr;
+                switch (s_greetStep) {
+                case 0:
+                    text = dALBWRental_getGreetingText();
+                    break;
+                case 1:
+                    text = dALBWRental_getGreetingPage2();
+                    break;
+                case 2:
+                    text = dALBWRental_getGreetingPage3();
+                    break;
+                default:
+                    break;
+                }
+                if (text) {
+                    s_pALBWDialogue->showWithText(text);
+                }
             }
-            if (sNativeGreetingActive) {
-                if (talkProc(NULL, FALSE, NULL, FALSE) && mFlow.checkEndFlow()) {
-                    sNativeGreetingActive = false;
+            if (s_pALBWDialogue && s_pALBWDialogue->checkDismiss()) {
+                s_pALBWDialogue->hide();
+                if (s_greetStep == 0 && dALBWRental_getGreetingPage2()) {
+                    s_greetStep = 1;
+                } else if (s_greetStep == 1 && dALBWRental_getGreetingPage3()) {
+                    s_greetStep = 2;
+                } else {
+                    s_greetStep = 0;
                     dALBWRental_advanceToShop();
                 }
-                return TRUE;
             }
-
-            if (dALBWRental_justEnteredFarewell()) {
-                sNativeFarewellActive = true;
-                initTalk(0x13, NULL);
+            return TRUE;
+        }
+        // ---- Farewell ----
+        if (dALBWRental_isFarewellState()) {
+            if (s_pALBWDialogue && !s_pALBWDialogue->isVisible()) {
+                OSReport("ALBW Post evtTalk: farewell — calling showWithText\n");
+                s_pALBWDialogue->showWithText(dALBWRental_getFarewellText());
+                OSReport("ALBW Post evtTalk: farewell — showWithText returned\n");
             }
-            if (sNativeFarewellActive) {
-                if (talkProc(NULL, FALSE, NULL, FALSE) && mFlow.checkEndFlow()) {
-                    sNativeFarewellActive = false;
-                    dALBWRental_advanceToClosed();
-                }
-                return TRUE;
+            if (s_pALBWDialogue && s_pALBWDialogue->checkDismiss()) {
+                OSReport("ALBW Post evtTalk: farewell dismissed — advanceToClosed\n");
+                s_pALBWDialogue->hide();
+                dALBWRental_advanceToClosed();
+                OSReport("ALBW Post evtTalk: farewell — advanceToClosed returned\n");
             }
+            return TRUE;
         }
 #endif  // TARGET_PC_NATIVE_UI
 // ============================================
@@ -1037,6 +1119,10 @@ BOOL daNpc_Post_c::evtTalk() {
         // sJustClosed is set by dALBWRental_tick() when STATE_CLOSED is
         // entered; it reads and clears in one call so this fires only once.
         if (dALBWRental_justClosed()) {
+            s_rentalEvtStarted = false;
+#if TARGET_PC
+            dALBWRental_clearVanillaTalkSuppress();
+#endif
             mEvtNo = EVT_NO_RESPONSE;
             evtChange();
             return TRUE;
@@ -1048,6 +1134,9 @@ BOOL daNpc_Post_c::evtTalk() {
                 // End the talk event immediately so evtTalk() is not
                 // called again next frame (prevents toast spam).
                 mEvtNo = EVT_NO_RESPONSE;
+#if TARGET_PC
+                dALBWRental_clearVanillaTalkSuppress();
+#endif
                 evtChange();
                 dusk::ui::push_toast({
                     .title    = "",
@@ -1061,7 +1150,15 @@ BOOL daNpc_Post_c::evtTalk() {
                 // blocks D-pad sub-screens during normal NPC dialogue.
                 // evtTalk() returns TRUE every frame until justClosed fires.
                 mEvtNo = EVT_NO_RESPONSE;
-                dALBWRental_open();
+#if TARGET_PC_NATIVE_UI
+                if (!s_pALBWShop) {
+                    s_pALBWShop = JKR_NEW dALBWShop_c();
+                }
+#endif
+                if (!s_rentalEvtStarted) {
+                    dALBWRental_open();
+                    s_rentalEvtStarted = true;
+                }
             }
         }
         return TRUE;  // keep event alive → Link stays locked
@@ -1833,6 +1930,11 @@ int daNpc_Post_c::talk(void* param_1) {
             break;
 
         case MODE_EXIT:
+#if TARGET_PC
+            if (getBitSW() == 0x42) {
+                dALBWRental_clearVanillaTalkSuppress();
+            }
+#endif
             break;
     }
 

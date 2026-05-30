@@ -22,6 +22,11 @@
 void dALBWRental_open();
 void dALBWRental_close();
 bool dALBWRental_isOpen();
+// True while the rental postman talk event is active (includes the frame before
+// STATE_GREETING is entered) so vanilla "No response..." never draws underneath.
+void dALBWRental_armVanillaTalkSuppress();
+void dALBWRental_clearVanillaTalkSuppress();
+bool dALBWRental_shouldSuppressVanillaTalkMsg();
 bool dALBWRental_justClosed();          // evtTalk()  — true once after shop closes; triggers evtChange()
 void dALBWRental_tick();                // actor Execute() — input & state only
 void dALBWRental_imguiDraw();           // main loop — ImGui shop window only
@@ -51,11 +56,26 @@ struct dALBWVisibleEntry {
     const char* name;
     int         price;
     bool        purchasable;
+    const char* desc;   ///< description string (null when purchasable==false)
+    u8          itemNo; ///< wheel item id for row icon (letter icon when !purchasable)
 };
 const dALBWVisibleEntry* dALBWRental_getVisibleList(int* outCount);
 #if TARGET_PC_NATIVE_UI
-void dALBWRental_advanceToShop();
-void dALBWRental_advanceToClosed();
+void        dALBWRental_advanceToShop();
+void        dALBWRental_advanceToClosed();
+// True only while in STATE_SHOP (not GREETING or FAREWELL).
+// Used by d_a_npc_post Draw() to guard the shop window so it never
+// renders on top of the greeting or farewell dialogue.
+bool        dALBWRental_isShopState();
+bool        dALBWRental_isGreetingState();  // true while in STATE_GREETING
+bool        dALBWRental_isFarewellState();  // true while in STATE_FAREWELL
+// Text for the native dialogue windows (set during open/close, valid until next call).
+const char* dALBWRental_getGreetingText();   // page 1 of greeting
+const char* dALBWRental_getGreetingPage2();  // page 2 (null if one-pager)
+const char* dALBWRental_getGreetingPage3();  // page 3, first-visit only (null if done)
+const char* dALBWRental_getFarewellText();
+// Current selection index into the visible list — for dALBWShop_c to highlight.
+int         dALBWRental_getSelectedIdx();
 #endif
 // ============================================
 // NEW CODE ENDS HERE

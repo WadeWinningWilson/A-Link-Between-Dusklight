@@ -46,6 +46,12 @@ Currently, only the GameCube USA and EUR releases are supported. Support for oth
 - Press **Select Disc Image** and provide the path to your supported game dump
 - Press **Play**!
 
+# PC features
+
+### ALBW item rental (experimental)
+
+The PC build can include an [ALBW-style Postman rental shop](docs/albw-port.md): native letter-select UI, 13-item catalog, death-strip integration, and optional ImGui fallback. Enable with the CMake option `TARGET_PC_NATIVE_UI=ON` (see the port doc for gameplay and file map).
+
 # Building
 
 If you'd like to build Dusklight from source, please read the [build instructions](docs/building.md).
