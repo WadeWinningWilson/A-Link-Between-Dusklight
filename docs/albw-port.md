@@ -2,6 +2,37 @@
 
 Dusklight includes an experimental **A Link Between Worlds–style item rental** flow for the PC build. It reuses Twilight Princess native UI (J2D letter-select screens and message windows) instead of ImGui when enabled.
 
+This work is part of the **[ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight)** mod (energy meter, death strip, rental shop, Postman route). The mod is developed in a full [Dusklight](https://github.com/TwilitRealm/dusklight) tree; the GitHub mod repo may ship a subset of files for overlay installs—see that repo’s README for the meter-focused release layout.
+
+## Repository remotes (this workspace)
+
+| Remote | URL | Role |
+|--------|-----|------|
+| `origin` | `https://github.com/TwilitRealm/dusklight.git` | Upstream game |
+| `upstream` | `https://github.com/WadeWinningWilson/ALBW-Dusklight.git` | Mod / your GitHub |
+
+Push mod work to your repo, for example:
+
+```sh
+git push upstream main
+```
+
+Use a feature branch if `main` histories differ (`git push upstream HEAD:feature/native-ui`).
+
+## Windows build output
+
+After a successful build with the `windows-msvc-relwithdebinfo` preset:
+
+- **Executable:** `build/windows-msvc-relwithdebinfo/dusklight.exe`
+- Run from the repo root (or copy `res/` / assets as in [building.md](building.md)).
+
+Example configure + build (native shop UI):
+
+```sh
+cmake --preset windows-msvc-relwithdebinfo -DTARGET_PC_NATIVE_UI=ON
+cmake --build --preset windows-msvc-relwithdebinfo
+```
+
 ## Build flag
 
 Enable at configure time:
