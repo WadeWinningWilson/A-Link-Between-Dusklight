@@ -13,7 +13,7 @@
 #include "dusk/tphd/HdAssetLayer.hpp"
 
 namespace {
-void register_copied_hd_bti(
+void register_copied_hd_resource(
     JKRArchive* archive, JKRArchive::SDIFileEntry* fileEntry, void* buffer, u32 resourceSize) {
     if (archive == NULL || fileEntry == NULL || buffer == NULL || resourceSize == 0 ||
         archive->mStringTable == NULL)
@@ -21,7 +21,7 @@ void register_copied_hd_bti(
         return;
     }
 
-    dusk::tphd::register_copied_hd_bti(archive->mEntryNum,
+    dusk::tphd::register_copied_hd_resource(archive->mEntryNum,
         archive->mStringTable + fileEntry->getNameOffset(), buffer, resourceSize);
 }
 }  // namespace
@@ -215,7 +215,7 @@ u32 JKRArchive::readResource(void* buffer, u32 bufferSize, u32 type, const char*
         u32 resourceSize;
         fetchResource(buffer, bufferSize, fileEntry, &resourceSize);
 #if DUSK_TPHD
-        register_copied_hd_bti(this, fileEntry, buffer, resourceSize);
+        register_copied_hd_resource(this, fileEntry, buffer, resourceSize);
 #endif
         return resourceSize;
     }
@@ -236,7 +236,7 @@ u32 JKRArchive::readResource(void* buffer, u32 bufferSize, const char* path) {
         u32 resourceSize;
         fetchResource(buffer, bufferSize, fileEntry, &resourceSize);
 #if DUSK_TPHD
-        register_copied_hd_bti(this, fileEntry, buffer, resourceSize);
+        register_copied_hd_resource(this, fileEntry, buffer, resourceSize);
 #endif
         return resourceSize;
     }
@@ -251,7 +251,7 @@ u32 JKRArchive::readIdxResource(void* buffer, u32 bufferSize, u32 index) {
         u32 resourceSize;
         fetchResource(buffer, bufferSize, fileEntry, &resourceSize);
 #if DUSK_TPHD
-        register_copied_hd_bti(this, fileEntry, buffer, resourceSize);
+        register_copied_hd_resource(this, fileEntry, buffer, resourceSize);
 #endif
         return resourceSize;
     }
@@ -266,7 +266,7 @@ u32 JKRArchive::readResource(void* buffer, u32 bufferSize, u16 id) {
         u32 resourceSize;
         fetchResource(buffer, bufferSize, fileEntry, &resourceSize);
 #if DUSK_TPHD
-        register_copied_hd_bti(this, fileEntry, buffer, resourceSize);
+        register_copied_hd_resource(this, fileEntry, buffer, resourceSize);
 #endif
         return resourceSize;
     }

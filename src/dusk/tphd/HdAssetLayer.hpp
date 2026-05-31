@@ -25,10 +25,10 @@ std::optional<std::vector<u8>*> try_load_hd_archive(std::string_view gcPath);
 // pointers the game will actually use.
 void register_mounted_hd_archive(s32 entryNum, void* arcBytes, size_t arcSize);
 
-// Called after JKRArchive copies a BTI resource into caller-owned memory, such
-// as item icons read out of an ARAM-mounted archive.
-void register_copied_hd_bti(s32 entryNum, std::string_view resourceName, void* buffer,
-                            size_t resourceSize);
+// Called after JKRArchive copies a resource (BTI item icon, BMD/BDL item
+// model, etc.) into caller-owned memory. pp
+void register_copied_hd_resource(s32 entryNum, std::string_view resourceName, void* buffer,
+                                 size_t resourceSize);
 
 // Returns bytes remaining in a registered HD archive range that contains ptr.
 // Used for debug heap accounting because some HD buffers are not JKR-owned.

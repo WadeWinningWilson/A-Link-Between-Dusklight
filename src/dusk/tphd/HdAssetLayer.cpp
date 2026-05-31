@@ -510,6 +510,79 @@ bool register_hd_bti_replacement_for_buffer(const TphdPack& pack, std::string_vi
     return true;
 }
 
+// Absolute offset of slot `slotIdx`'s BTI header within a BMD's TEX1 block.
+// Returns 0 on failure (the TEX1 table never sits at offset 0, so 0 is a
+// safe sentinel).
+u32 bmdSlotBtiOffset(std::span<const u8> bmd, u32 slotIdx) {
+    constexpr size_t kBlocksOffset = offsetof(J3DModelFileData, mBlocks);  // = 0x20
+    if (bmd.size() < kBlocksOffset ||
+        std::memcmp(bmd.data(), "J3D2", 4) != 0) return 0;
+
+    const auto* fileData = reinterpret_cast<const J3DModelFileData*>(bmd.data());
+    const u32 numSections = fileData->mBlockNum;
+    size_t pos = kBlocksOffset;
+
+    for (u32 i = 0; i < numSections && pos + sizeof(J3DModelBlock) <= bmd.size(); ++i) {
+        const auto* blk = reinterpret_cast<const J3DModelBlock*>(bmd.data() + pos);
+        const u32 blockSize = blk->mBlockSize;
+        if (blk->mBlockType == 'TEX1') {
+            const auto* tex1 = reinterpret_cast<const J3DTextureBlock*>(bmd.data() + pos);
+            const u16 numTex = tex1->mTextureNum;
+            if (slotIdx >= numTex) return 0;
+            const size_t btiAbs = pos + static_cast<u32>(tex1->mpTextureRes) + slotIdx * 0x20;
+            if (btiAbs + 0x20 > bmd.size()) return 0;
+            return static_cast<u32>(btiAbs);
+        }
+        if (blockSize == 0) break;
+        pos += blockSize;
+    }
+    return 0;
+}
+
+size_t register_hd_bmd_textures_for_buffer(const TphdPack& pack, std::string_view resourceName,
+    void* buffer, size_t resourceSize, bool replaceExistingPointer) {
+    if (buffer == nullptr || resourceSize < 0x20) return 0;
+    if (!endsWithSuffixCI(resourceName, ".bmd") &&
+        !endsWithSuffixCI(resourceName, ".bdl")) return 0;
+
+    const TmpkEntry* gtx = findGtxBySuffix(pack, resourceName);
+    if (gtx == nullptr) return 0;
+
+    std::span<u8> bmdBytes(static_cast<u8*>(buffer), resourceSize);
+    auto surfaces = parseGtx(gtx->data);
+    size_t reg = 0;
+    for (u32 i = 0; i < surfaces.size(); ++i) {
+        const auto& s = surfaces[i];
+        if (s.baseData.empty()) continue;
+        const Gx2FormatMapping* m = findFormatMapping(s.format);
+        if (!m) continue;
+
+        // HD-stub BMDs collapse every BTI's imageOffset to the same
+        // pixel address. Rewrite each to be slot-unique so our pointer
+        // map doesn't overwrite.
+        const u32 btiAbs = bmdSlotBtiOffset(bmdBytes, i);
+        if (btiAbs == 0) continue;
+        auto* timg = reinterpret_cast<ResTIMG*>(bmdBytes.data() + btiAbs);
+        if (timg->imageOffset == 0) {
+            HdLog.debug("Skip cross-arc placeholder slot {} in {}: "
+                        "imageOffset==0",
+                        i, gtx->name);
+            continue;
+        }
+
+        const u32 newImgOff = 0x20 + i * 0x20;
+        timg->imageOffset = static_cast<s32>(newImgOff);
+        const u8 hdMips = static_cast<u8>(std::clamp<u32>(s.mipCount, 1u, 11u));
+        timg->mipmapCount = hdMips;
+        timg->maxLOD = static_cast<s8>((hdMips - 1) * 8);
+        timg->maxAnisotropy = GX_ANISO_4;
+        registerHdSurface(*m, s, bmdBytes.data() + btiAbs + newImgOff, gtx->name, i,
+                          replaceExistingPointer);
+        ++reg;
+    }
+    return reg;
+}
+
 // Lightweight RARC walker that returns per-file offsets without copying
 // arc bytes — we need absolute pointers into the cached HD arc bytes
 // (stable address) to match what the game later passes to GXInitTexObj.
@@ -581,35 +654,6 @@ std::vector<ArcFileInfo> parseRarcFiles(std::span<const u8> arc) {
     return out;
 }
 
-// Absolute offset of slot `slotIdx`'s BTI header within a BMD's TEX1 block.
-// Returns 0 on failure (the TEX1 table never sits at offset 0, so 0 is a
-// safe sentinel).
-u32 bmdSlotBtiOffset(std::span<const u8> bmd, u32 slotIdx) {
-    constexpr size_t kBlocksOffset = offsetof(J3DModelFileData, mBlocks);  // = 0x20
-    if (bmd.size() < kBlocksOffset ||
-        std::memcmp(bmd.data(), "J3D2", 4) != 0) return 0;
-
-    const auto* fileData = reinterpret_cast<const J3DModelFileData*>(bmd.data());
-    const u32 numSections = fileData->mBlockNum;
-    size_t pos = kBlocksOffset;
-
-    for (u32 i = 0; i < numSections && pos + sizeof(J3DModelBlock) <= bmd.size(); ++i) {
-        const auto* blk = reinterpret_cast<const J3DModelBlock*>(bmd.data() + pos);
-        const u32 blockSize = blk->mBlockSize;
-        if (blk->mBlockType == 'TEX1') {
-            const auto* tex1 = reinterpret_cast<const J3DTextureBlock*>(bmd.data() + pos);
-            const u16 numTex = tex1->mTextureNum;
-            if (slotIdx >= numTex) return 0;
-            const size_t btiAbs = pos + static_cast<u32>(tex1->mpTextureRes) + slotIdx * 0x20;
-            if (btiAbs + 0x20 > bmd.size()) return 0;
-            return static_cast<u32>(btiAbs);
-        }
-        if (blockSize == 0) break;
-        pos += blockSize;
-    }
-    return 0;
-}
-
 // Walk the HD arc, pair BMDs with their pack.gz GTX entries, deswizzle each
 // HD surface, and register the decoded bytes with aurora under the absolute
 // pointer that GXInitTexObj will later receive.
@@ -625,82 +669,16 @@ void register_hd_textures_for_arc(std::span<u8> arcBytes, const std::vector<ArcF
 
     // Phase A: per-slot textures inside BMD/BDL models.
     for (const auto& f : files) {
-        if (!endsWithSuffix(f.path, ".bmd") && !endsWithSuffix(f.path, ".bdl")) continue;
-
-        const TmpkEntry* gtx = findGtxBySuffix(pack, f.path);
-        if (!gtx) continue;
-
-        std::span<const u8> bmdBytes(arcBytes.data() + f.dataOffset, f.dataSize);
-        auto surfaces = parseGtx(gtx->data);
-
-        for (u32 i = 0; i < surfaces.size(); ++i) {
-            const auto& s = surfaces[i];
-            if (s.baseData.empty()) continue;
-
-            const Gx2FormatMapping* m = findFormatMapping(s.format);
-            if (!m) continue;
-
-            // HD-stub BMDs collapse every BTI's imageOffset to the same
-            // pixel address. Rewrite each to be slot-unique so our pointer
-            // map doesn't overwrite.
-            const u32 btiAbs = bmdSlotBtiOffset(bmdBytes, i);
-            if (btiAbs == 0) continue;
-
-            auto* timg = reinterpret_cast<ResTIMG*>(
-                arcBytes.data() + f.dataOffset + btiAbs);
-            if (timg->imageOffset == 0) {
-                HdLog.debug("Skip cross-arc placeholder slot {} in {}: "
-                            "imageOffset==0",
-                            i, gtx->name);
-                continue;
-            }
-
-            const u32 newImgOff = 0x20 + i * 0x20;
-            timg->imageOffset = static_cast<s32>(newImgOff);
-            const u8 hdMips = static_cast<u8>(std::clamp<u32>(s.mipCount, 1u, 11u));
-            timg->mipmapCount = hdMips;
-            timg->maxLOD = static_cast<s8>((hdMips - 1) * 8);
-            //timg->maxAnisotropy = 16;
-            //timg->LODBias  = -50;
-            registerHdSurface(*m, s,
-                              arcBytes.data() + f.dataOffset + btiAbs + newImgOff,
-                              gtx->name, i);
-            ++bmdReg;
-        }
+        bmdReg += register_hd_bmd_textures_for_buffer(pack, f.path, arcBytes.data() + f.dataOffset, f.dataSize, false);
     }
 
     // Phase B: standalone .bti files. Each BTI is its own arc entry; the
     // game loads it via JUTTexture (or similar) which calls GXInitTexObj
     // with `(u8*)resTIMG + imageOffset`. Register that exact pointer.
     for (const auto& f : files) {
-        if (!endsWithSuffix(f.path, ".bti")) continue;
-        if (f.dataSize < 0x20) continue;
-
-        const TmpkEntry* gtx = findGtxBySuffix(pack, f.path);
-        if (!gtx) continue;
-
-        auto surfaces = parseGtx(gtx->data);
-        if (surfaces.empty()) continue;
-        const auto& s = surfaces[0];
-        if (s.baseData.empty()) continue;
-
-        const Gx2FormatMapping* m = findFormatMapping(s.format);
-        if (!m) continue;
-
-        // HD-stub BTIs put garbage in imageOffset. Write 0x20 so BOTH
-        // consumer paths land on the same address (JUTTexture::storeTIMG and
-        // direct-access helpers like dKyr_set_btitex_common). Both compute
-        // i_img + 0x20, matching where we register below.
-        auto* timg = reinterpret_cast<ResTIMG*>(arcBytes.data() + f.dataOffset);
-        timg->imageOffset = 0x20;
-        const u8 hdMips = static_cast<u8>(std::clamp<u32>(s.mipCount, 1u, 11u));
-        timg->mipmapCount = hdMips;
-        timg->maxLOD = static_cast<s8>((hdMips - 1) * 8);
-        //timg->maxAnisotropy = 16;
-        //timg->LODBias  = -50;
-        registerHdSurface(*m, s, arcBytes.data() + f.dataOffset + 0x20,
-                          gtx->name, 0);
-        ++btiReg;
+        if (register_hd_bti_replacement_for_buffer(pack, f.path, arcBytes.data() + f.dataOffset, f.dataSize, false)) {
+            ++btiReg;
+        }
     }
 
     HdLog.info("registerHdTextures[{}]: {} BMD-slot, {} standalone-BTI replacements",
@@ -1020,12 +998,14 @@ void register_mounted_hd_archive(s32 entryNum, void* arcBytes, size_t arcSize) {
     register_hd_textures_for_arc(arcSpan, hdFiles, *hdPack, label);
 }
 
-void register_copied_hd_bti(s32 entryNum, std::string_view resourceName, void* buffer,
+void register_copied_hd_resource(s32 entryNum, std::string_view resourceName, void* buffer,
                             size_t resourceSize) {
-    if (entryNum < 0 || buffer == nullptr || resourceSize < 0x20 ||
-        !endsWithSuffixCI(resourceName, ".bti")) {
-        return;
-    }
+    if (entryNum < 0 || buffer == nullptr || resourceSize < 0x20) return;
+
+    const bool isBti = endsWithSuffixCI(resourceName, ".bti");
+    const bool isBmd = endsWithSuffixCI(resourceName, ".bmd") ||
+                       endsWithSuffixCI(resourceName, ".bdl");
+    if (!isBti && !isBmd) return;
 
     std::filesystem::path packPath;
     {
@@ -1042,7 +1022,11 @@ void register_copied_hd_bti(s32 entryNum, std::string_view resourceName, void* b
         return;
     }
 
-    register_hd_bti_replacement_for_buffer(*hdPack, resourceName, buffer, resourceSize, true);
+    if (isBti) {
+        register_hd_bti_replacement_for_buffer(*hdPack, resourceName, buffer, resourceSize, true);
+    } else {
+        register_hd_bmd_textures_for_buffer(*hdPack, resourceName, buffer, resourceSize, true);
+    }
 }
 
 std::optional<size_t> find_registered_hd_archive_remaining(const void* ptr) {
