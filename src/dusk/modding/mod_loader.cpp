@@ -89,8 +89,19 @@ static void validateModId(std::string_view const str) {
         throw InvalidModDataException("Missing ID value in mod metadata!");
     }
 
+    bool lastWasPeriod = false;
     for (auto const chr : str) {
-        if (chr == '.' || chr == '_')
+        if (chr == '.') {
+            if (lastWasPeriod) {
+                throw InvalidModDataException("Cannot have two consecutive periods in mod ID!");
+            }
+            lastWasPeriod = true;
+            continue;
+        }
+
+        lastWasPeriod = false;
+
+        if (chr == '_')
             continue;
 
         if (chr >= '0' && chr <= '9')
