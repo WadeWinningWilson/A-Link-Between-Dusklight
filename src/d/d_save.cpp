@@ -1423,7 +1423,8 @@ void dSv_event_c::onEventBit(u16 i_no) {
             case CLEARED_FARON_TWILIGHT:
                 // If we've already cleared Eldin Twilight, Lanayru Twilight, and MDH
                 if (dComIfGs_isEventBit(MIDNAS_DESPERATE_HOUR_COMPLETED)) {
-                    if (dComIfGs_getDarkClearLV() == 0x6) { // Eldin and Lanayru Twilights cleared
+                    // Eldin and Lanayru Twilights cleared
+                    if (dComIfGs_isDarkClearLV(2) && dComIfGs_isDarkClearLV(3)) {
                         // Set the flag for the last transformed twilight.
                         // Also puts Midna on the player's back
                         dComIfGs_onTransformLV(3);
@@ -1434,8 +1435,9 @@ void dSv_event_c::onEventBit(u16 i_no) {
 
             case CLEARED_ELDIN_TWILIGHT:
                 onEventBit(MAP_WARPING_UNLOCKED); // in glitched Logic, you can skip the gorge bridge.
-                if (dComIfGs_isEventBit(MIDNAS_DESPERATE_HOUR_COMPLETED)){
-                    if (dComIfGs_getDarkClearLV() == 0x5) { // Faron and Lanayru Twilights cleared
+                if (dComIfGs_isEventBit(MIDNAS_DESPERATE_HOUR_COMPLETED)) {
+                    // Faron and Lanayru Twilights cleared
+                    if (dComIfGs_isDarkClearLV(1) && dComIfGs_isDarkClearLV(3)) {
                         // Set the flag for the last transformed twilight.
                         // Also puts Midna on the player's back
                         dComIfGs_onTransformLV(3);
@@ -1446,7 +1448,8 @@ void dSv_event_c::onEventBit(u16 i_no) {
 
             case CLEARED_LANAYRU_TWILIGHT: // Cleared Lanayru Twilight
                 if (dComIfGs_isEventBit(MIDNAS_DESPERATE_HOUR_COMPLETED)) {
-                    if (dComIfGs_getDarkClearLV() == 0x3) { // Faron and Eldin Twilights Cleared
+                    // Faron and Eldin Twilights Cleared
+                    if (dComIfGs_isDarkClearLV(1) && dComIfGs_isDarkClearLV(2)) {
                         // Set the flag for the last transformed twilight.
                         // Also puts Midna on the player's back
                         dComIfGs_onTransformLV(3);
