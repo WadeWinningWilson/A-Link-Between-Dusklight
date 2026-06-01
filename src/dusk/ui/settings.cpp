@@ -46,6 +46,22 @@ constexpr std::array kLanguageNames = {
     "Italian",
 };
 
+constexpr std::array kLanguageNamesUS = {
+    "American English",
+    "German",
+    "Canadian French",
+    "Latin American Spanish",
+    "Italian",
+};
+
+constexpr std::array kLanguageNamesEU = {
+    "British English",
+    "German",
+    "European French",
+    "European Spanish",
+    "Italian",
+};
+
 constexpr std::array kCardFileTypes = {
     "Card Image",
     "GCI Folder",
@@ -557,7 +573,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                                  "Changes require a restart.");
                 });
                 
-#if DUSK_TPHD
+/*
             leftPane.register_control(
                 leftPane
                     .add_select_button({
@@ -588,7 +604,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                     pane.add_rml("Set the directory that Dusk loads eligible TPHD content from."
                                  "<br/><br/>Changes require a restart.");
                 });
-#endif
+*/
                 
 #if DUSK_CAN_CHANGE_DATA_FOLDER
             leftPane.register_control(
@@ -635,14 +651,24 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
 #endif
             leftPane.register_control(
                 leftPane.add_select_button({
-                    .key = "Language",
+                    .key = dusk::tphd_active() ? "Language (HD)" : "Language",
                     .getValue =
                         [] {
                             const auto& state = prelaunch_state();
-                            if (!state.configuredDiscCanLaunch || (!state.configuredDiscInfo.isPal && !dusk::tphd_active())) {
+                            if (!state.configuredDiscCanLaunch) {
                                 return kLanguageNames[0];
                             }
+
                             const u8 idx = static_cast<u8>(getSettings().game.language.getValue());
+
+                            if (dusk::tphd_active()) {
+                                if (state.configuredDiscInfo.isPal) {
+                                    return kLanguageNamesEU[idx];
+                                } else {
+                                    return kLanguageNamesUS[idx];
+                                }
+                            }
+
                             return kLanguageNames[idx];
                         },
                     .isDisabled =
@@ -658,9 +684,20 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                         },
                 }),
                 rightPane, [](Pane& pane) {
-                    for (int i = 0; i < kLanguageNames.size(); i++) {
+                    auto* languageNames = &kLanguageNames;
+                    auto& state = prelaunch_state();
+
+                    if (dusk::tphd_active()) {
+                        if (state.configuredDiscInfo.isPal) {
+                            languageNames = &kLanguageNamesEU;
+                        } else {
+                            languageNames = &kLanguageNamesUS;
+                        }
+                    }
+
+                    for (int i = 0; i < languageNames->size(); i++) {
                         pane.add_button({
-                                            .text = kLanguageNames[i],
+                                            .text = languageNames->data()[i],
                                             .isSelected =
                                                 [i] {
                                                     return getSettings().game.language.getValue() ==
