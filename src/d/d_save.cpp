@@ -1444,6 +1444,14 @@ void dSv_event_c::onEventBit(u16 i_no) {
                         dComIfGs_onDarkClearLV(3);
                     }
                 }
+                // Set flag for bridge between castle town and eldin field if skip bridge donation
+                // is on and both eldin and lanayru twilight are cleared
+                if (dComIfGs_isEventBit(CLEARED_LANAYRU_TWILIGHT) &&
+                    randomizer_GetContext().mSettings[RandomizerContext::SKIP_BRIDGE_DONATION] == RandomizerContext::ON)
+                {
+                    dComIfGs_onEventBit(BRIDGE_REPAIR_FUNDRAISING_COMPLETED);
+                    dComIfGs_onStageSwitch(6, 0x1B); // Bridge exists
+                }
                 break;
 
             case CLEARED_LANAYRU_TWILIGHT: // Cleared Lanayru Twilight
@@ -1455,6 +1463,14 @@ void dSv_event_c::onEventBit(u16 i_no) {
                         dComIfGs_onTransformLV(3);
                         dComIfGs_onDarkClearLV(3);
                     }
+                }
+                // Set flag for bridge between castle town and eldin field if skip bridge donation
+                // is on and both eldin and lanayru twilight are cleared
+                if (dComIfGs_isEventBit(CLEARED_ELDIN_TWILIGHT) &&
+                    randomizer_GetContext().mSettings[RandomizerContext::SKIP_BRIDGE_DONATION] == RandomizerContext::ON)
+                {
+                    dComIfGs_onEventBit(BRIDGE_REPAIR_FUNDRAISING_COMPLETED);
+                    dComIfGs_onStageSwitch(6, 0x1B); // Bridge exists
                 }
                 break;
 
