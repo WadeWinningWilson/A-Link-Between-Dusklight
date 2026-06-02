@@ -56,6 +56,7 @@
 #include "dusk/game_clock.h"
 #include "dusk/gyro.h"
 #include "dusk/game_combos.h"
+#include "dusk/mouse.h"
 #include "dusk/imgui/ImGuiConsole.hpp"
 #include "dusk/imgui/ImGuiEngine.hpp"
 #include "dusk/iso_validate.hpp"
@@ -170,6 +171,7 @@ bool launchUILoop() {
         while (event != nullptr && event->type != AURORA_NONE) {
             switch (event->type) {
             case AURORA_SDL_EVENT:
+                dusk::mouse::handle_event(event->sdl);
                 dusk::ui::handle_event(event->sdl);
                 dusk::g_imguiConsole.HandleSDLEvent(event->sdl);
                 break;
@@ -248,12 +250,15 @@ void main01(void) {
                 goto eventsDone;
             case AURORA_PAUSED:
                 dusk::audio::SetPaused(true);
+                dusk::mouse::onFocusLost();
                 break;
             case AURORA_UNPAUSED:
                 dusk::audio::SetPaused(false);
                 dusk::game_clock::reset_frame_timer();
+                dusk::mouse::onFocusGained();
                 break;
             case AURORA_SDL_EVENT:
+                dusk::mouse::handle_event(event->sdl);
                 dusk::ui::handle_event(event->sdl);
                 dusk::g_imguiConsole.HandleSDLEvent(event->sdl);
                 break;
@@ -290,6 +295,7 @@ void main01(void) {
                 for (int sim_tick = 0; sim_tick < pacing.sim_ticks_to_run; ++sim_tick) {
                     dusk::frame_interp::begin_sim_tick();
                     mDoCPd_c::read();
+                    dusk::mouse::read();
                     dusk::gyro::read(pacing.sim_pace);
                     dusk::processGameCombos();
                     fapGm_Execute();
@@ -310,6 +316,7 @@ void main01(void) {
         } else {
             // Game Inputs
             mDoCPd_c::read();
+            dusk::mouse::read();
             dusk::gyro::read(pacing.presentation_dt_seconds);
             dusk::processGameCombos();
 
