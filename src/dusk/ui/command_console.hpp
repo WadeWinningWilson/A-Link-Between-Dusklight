@@ -15,8 +15,11 @@ namespace dusk::ui {
 class CommandConsole : public Document {
 public:
     CommandConsole();
-    void show() override;
+
     void update() override;
+    void show() override;
+    bool focus() override;
+    void hide(bool close) override;
 
 private:
     struct OutputLine {
@@ -39,15 +42,12 @@ private:
     int mHistoryPos = -1;
     bool mInputActive = false;
     bool mScrollToBottom = false;
-    bool mPrevSlashState = false;
 
     CommandState mState;
 
     bool handle_nav_command(Rml::Event& event, NavCommand cmd) override;
 
     void ConsolePrint(std::string text);
-    void openInput();
-    void closeInput();
     void executeFromInput();
     void navigateHistory(int dir);
 };

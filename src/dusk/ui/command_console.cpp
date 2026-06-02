@@ -44,10 +44,6 @@ CommandConsole::CommandConsole() : Document(kDocumentSource) {
     auto* rawInput = mDocument ? mDocument->GetElementById("console-input") : nullptr;
     mInput = rmlui_dynamic_cast<Rml::ElementFormControlInput*>(rawInput);
 
-    if (mConsole != nullptr) {
-        mConsole->SetAttribute("hidden", "");
-    }
-
     listen(
         Rml::EventId::Keydown,
         [this](Rml::Event& event) {
@@ -59,7 +55,7 @@ CommandConsole::CommandConsole() : Document(kDocumentSource) {
                 executeFromInput();
                 event.StopImmediatePropagation();
             } else if (key == Rml::Input::KI_ESCAPE) {
-                closeInput();
+                hide(true);
                 event.StopImmediatePropagation();
             } else if (key == Rml::Input::KI_UP) {
                 navigateHistory(-1);
@@ -72,12 +68,6 @@ CommandConsole::CommandConsole() : Document(kDocumentSource) {
         true);
 }
 
-void CommandConsole::show() {
-    if (mDocument != nullptr) {
-        mDocument->Show(Rml::ModalFlag::None, Rml::FocusFlag::None, Rml::ScrollFlag::None);
-    }
-}
-
 bool CommandConsole::handle_nav_command(Rml::Event&, NavCommand) {
     return false;
 }
@@ -87,14 +77,6 @@ void CommandConsole::update() {
         return;
     }
 
-    int numKeys = 0;
-    const bool* keyState = SDL_GetKeyboardState(&numKeys);
-    const bool slashNow = SDL_SCANCODE_SLASH < numKeys && keyState[SDL_SCANCODE_SLASH];
-    if (!mInputActive && slashNow && !mPrevSlashState) {
-        openInput();
-    }
-    mPrevSlashState = slashNow;
-
     const float dt = std::max(ImGui::GetIO().DeltaTime, 0.0f);
     for (auto& line : mOutputLines) {
         line.remain -= dt;
@@ -103,13 +85,9 @@ void CommandConsole::update() {
         std::ranges::remove_if(mOutputLines, [](const OutputLine& l) { return l.remain <= 0.0f; });
     mOutputLines.erase(first, last);
 
-    if (mConsole != nullptr) {
-        if (!mOutputLines.empty() || mInputActive) {
-            mConsole->RemoveAttribute("hidden");
-        } else {
-            mConsole->SetAttribute("hidden", "");
-            return;
-        }
+    if (mOutputLines.empty() && !mInputActive) {
+        Document::hide(mPendingClose);
+        return;
     }
 
     if (mOutput == nullptr) {
@@ -143,21 +121,28 @@ void CommandConsole::update() {
     }
 }
 
-void CommandConsole::openInput() {
+void CommandConsole::show() {
+    if (mDocument != nullptr) {
+        mDocument->Show(Rml::ModalFlag::None, Rml::FocusFlag::None, Rml::ScrollFlag::None);
+    }
     mInputActive = true;
     mScrollToBottom = true;
     if (mConsole != nullptr) {
         mConsole->SetAttribute("open", "");
-        mConsole->RemoveAttribute("hidden");
     }
+    focus();
+}
+
+bool CommandConsole::focus() {
     if (mInput != nullptr) {
         mInput->SetValue("");
         aurora::rmlui::set_input_type(aurora::rmlui::InputType::Text);
-        mInput->Focus(true);
+        return mInput->Focus(true);
     }
+    return false;
 }
 
-void CommandConsole::closeInput() {
+void CommandConsole::hide(bool close) {
     mInputActive = false;
     mHistoryPos = -1;
     if (mConsole != nullptr) {
@@ -166,18 +151,19 @@ void CommandConsole::closeInput() {
     if (mInput != nullptr) {
         mInput->SetValue("");
     }
-    if (mDocument != nullptr) {
-        mDocument->Focus(false);
+    mPendingClose = close;
+    // Immediately refocus
+    if (auto* doc = top_document()) {
+        doc->focus();
     }
 }
 
 void CommandConsole::executeFromInput() {
     if (mInput == nullptr) {
-        closeInput();
         return;
     }
     const Rml::String value = mInput->GetValue();
-    closeInput();
+    hide(true);
     if (!value.empty()) {
         runCommand(value, mState, [this](std::string text) { ConsolePrint(std::move(text)); });
     }

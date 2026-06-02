@@ -11,6 +11,7 @@
 #include <ranges>
 
 #include "aurora/lib/window.hpp"
+#include "command_console.hpp"
 #include "dusk/io.hpp"
 #include "input.hpp"
 #include "prelaunch.hpp"
@@ -172,6 +173,19 @@ void handle_event(const SDL_Event& event) noexcept {
         sConnectedGamepads.erase(event.gdevice.which);
     }
     input::handle_event(event);
+    // TODO: don't overlap with PAD bindings?
+    if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_SLASH) {
+        bool found = false;
+        for (auto& doc : sDocumentStack) {
+            if (auto* console = dynamic_cast<CommandConsole*>(doc.get())) {
+                console->show();
+                found = true;
+            }
+        }
+        if (!found) {
+            push_document(std::make_unique<CommandConsole>(), true, false);
+        }
+    }
 }
 
 Document& push_document(std::unique_ptr<Document> doc, bool show, bool passive) noexcept {

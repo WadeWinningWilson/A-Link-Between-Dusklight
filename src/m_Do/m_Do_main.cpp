@@ -658,7 +658,6 @@ int game_main(int argc, char* argv[]) {
     dusk::texture_replacements::reload();
     dusk::ui::initialize();
     dusk::ui::push_document(std::make_unique<dusk::ui::Overlay>(), true, true);
-    dusk::ui::push_document(std::make_unique<dusk::ui::CommandConsole>(), true, true);
     dusk::ui::push_document(std::make_unique<dusk::ui::MenuBar>(), false);
 
     // Invalidate a bad saved isoPath so that Dusklight can't get blocked from starting up.

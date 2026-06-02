@@ -26,10 +26,6 @@ console {
     color: #FFFFFF;
 }
 
-console[hidden] {
-    display: none;
-}
-
 output {
     display: block;
     overflow: hidden;
