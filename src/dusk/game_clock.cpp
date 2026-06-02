@@ -16,8 +16,9 @@ clock::time_point s_current_snapshot_time{};
 
 std::unordered_map<uintptr_t, clock::time_point> s_interval_last_sample;
 
-constexpr clock::duration kSimPeriodDuration =
-    std::chrono::duration_cast<clock::duration>(std::chrono::duration<float>(sim_pace()));
+float s_sim_rate_hz = 30.0f;
+clock::duration s_sim_period_duration = std::chrono::duration_cast<clock::duration>(std::chrono::duration<float>(sim_pace()));
+
 constexpr clock::duration kAbnormalGapResetThreshold = std::chrono::milliseconds(250);
 constexpr int kMaxSimTicksPerFrame = 2;
 
@@ -32,7 +33,17 @@ void ensure_initialized() {
 
 void reset_frame_timer() {
     s_previous_sample = clock::now();
-    s_current_snapshot_time = s_previous_sample - kSimPeriodDuration;
+    s_current_snapshot_time = s_previous_sample - s_sim_period_duration;
+}
+
+void set_sim_rate(float hz) {
+    s_sim_rate_hz = std::max(1.0f, std::min(hz, 1000.0f));
+    s_sim_period_duration = std::chrono::duration_cast<clock::duration>(std::chrono::duration<float>(1.0f / s_sim_rate_hz));
+    reset_frame_timer();
+}
+
+float get_sim_rate() {
+    return s_sim_rate_hz;
 }
 
 MainLoopPacer advance_main_loop() {
@@ -45,12 +56,12 @@ MainLoopPacer advance_main_loop() {
 
     MainLoopPacer out{};
     out.presentation_dt_seconds = presentation_dt;
+    out.sim_pace = 1.0f / s_sim_rate_hz;
 
     const bool should_interpolate = dusk::getSettings().game.enableFrameInterpolation.getValue() !=
                                         dusk::FrameInterpMode::Off &&
                                     !dusk::getTransientSettings().skipFrameRateLimit;
     out.is_interpolating = should_interpolate;
-    out.sim_pace = sim_pace();
 
     if (!should_interpolate) {
         s_current_snapshot_time = now;
@@ -59,16 +70,16 @@ MainLoopPacer advance_main_loop() {
     }
 
     if (frame_gap > kAbnormalGapResetThreshold) {
-        s_current_snapshot_time = now - kSimPeriodDuration;
+        s_current_snapshot_time = now - s_sim_period_duration;
         out.sim_ticks_to_run = 0;
         return out;
     }
 
     int sim_ticks_to_run = 0;
     clock::time_point projected_snapshot_time = s_current_snapshot_time;
-    const clock::time_point render_time = now - kSimPeriodDuration;
+    const clock::time_point render_time = now - s_sim_period_duration;
     while (sim_ticks_to_run < kMaxSimTicksPerFrame && projected_snapshot_time < render_time) {
-        projected_snapshot_time += kSimPeriodDuration;
+        projected_snapshot_time += s_sim_period_duration;
         sim_ticks_to_run++;
     }
     out.sim_ticks_to_run = sim_ticks_to_run;
@@ -77,13 +88,13 @@ MainLoopPacer advance_main_loop() {
 
 void commit_sim_tick() {
     ensure_initialized();
-    s_current_snapshot_time += kSimPeriodDuration;
+    s_current_snapshot_time += s_sim_period_duration;
 }
 
 float sample_interpolation_step() {
     ensure_initialized();
     const float step =
-        std::chrono::duration<float>(clock::now() - s_current_snapshot_time).count() / sim_pace();
+        std::chrono::duration<float>(clock::now() - s_current_snapshot_time).count() / (1.0f / s_sim_rate_hz);
     return std::clamp(step, 0.0f, 1.0f);
 }
 

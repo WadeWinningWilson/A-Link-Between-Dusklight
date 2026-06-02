@@ -23,4 +23,8 @@ float sample_interpolation_step();
 
 float consume_interval(const void* consumer);
 
+// Runtime sim rate override (default 30 hz). Resets the frame timer.
+void set_sim_rate(float hz);
+float get_sim_rate();
+
 } // namespace dusk::game_clock

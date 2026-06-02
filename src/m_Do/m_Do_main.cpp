@@ -55,11 +55,13 @@
 #include "dusk/frame_interpolation.h"
 #include "dusk/game_clock.h"
 #include "dusk/gyro.h"
+#include "dusk/game_combos.h"
 #include "dusk/imgui/ImGuiConsole.hpp"
 #include "dusk/imgui/ImGuiEngine.hpp"
 #include "dusk/iso_validate.hpp"
 #include "dusk/logging.h"
 #include "dusk/main.h"
+#include "dusk/ui/command_console.hpp"
 #include "dusk/ui/menu_bar.hpp"
 #include "dusk/ui/overlay.hpp"
 #include "dusk/ui/prelaunch.hpp"
@@ -289,6 +291,7 @@ void main01(void) {
                     dusk::frame_interp::begin_sim_tick();
                     mDoCPd_c::read();
                     dusk::gyro::read(pacing.sim_pace);
+                    dusk::processGameCombos();
                     fapGm_Execute();
                     mDoAud_Execute();
                     dusk::game_clock::commit_sim_tick();
@@ -305,12 +308,13 @@ void main01(void) {
             dusk::frame_interp::end_presentation_camera();
             dusk::frame_interp::set_ui_tick_pending(false);
         } else {
-            dusk::frame_interp::begin_frame(dusk::FrameInterpMode::Off, true, 0.0f);
-            dusk::frame_interp::set_ui_tick_pending(true);
-
             // Game Inputs
             mDoCPd_c::read();
             dusk::gyro::read(pacing.presentation_dt_seconds);
+            dusk::processGameCombos();
+
+            dusk::frame_interp::begin_frame(dusk::FrameInterpMode::Off, true, 0.0f);
+            dusk::frame_interp::set_ui_tick_pending(true);
 
             // EXECUTE GAME LOGIC & RENDER
             // This calls mDoGph_Painter -> JFWDisplay -> GX Functions
@@ -332,6 +336,15 @@ void main01(void) {
 
             Limiter::duration_t sleepTime = main_loop_limiter.Sleep(target_ns);
             dusk::frameUsagePct = 100.0f * (1.0f - static_cast<float>(sleepTime) / static_cast<float>(target_ns));
+        } else if (!pacing.is_interpolating && !dusk::getTransientSettings().skipFrameRateLimit) {
+            // Non-interp: throttle display rate to the configured sim rate so /rate works
+            const double sim_fps = static_cast<double>(dusk::game_clock::get_sim_rate());
+            const Limiter::duration_t sim_target_ns = static_cast<Limiter::duration_t>(1'000'000'000.0 / sim_fps);
+            main_loop_limiter.Sleep(sim_target_ns);
+        } else if (dusk::getTransientSettings().skipFrameRateLimit) {
+            // Turbo: cap at 120 hz rather than running fully unlimited
+            constexpr Limiter::duration_t kTurboTargetNs = 1'000'000'000LL / 120LL;
+            main_loop_limiter.Sleep(kTurboTargetNs);
         } else {
             main_loop_limiter.Reset();
         }
@@ -638,6 +651,7 @@ int game_main(int argc, char* argv[]) {
     dusk::texture_replacements::reload();
     dusk::ui::initialize();
     dusk::ui::push_document(std::make_unique<dusk::ui::Overlay>(), true, true);
+    dusk::ui::push_document(std::make_unique<dusk::ui::CommandConsole>(), true, true);
     dusk::ui::push_document(std::make_unique<dusk::ui::MenuBar>(), false);
 
     // Invalidate a bad saved isoPath so that Dusklight can't get blocked from starting up.

@@ -243,12 +243,6 @@ namespace dusk {
         getTransientSettings().skipFrameRateLimit = getSettings().game.enableTurboKeybind &&
             (ImGui::IsKeyDown(ImGuiKey_Tab) || getActionBindHoldAnyPort(ActionBinds::TURBO_SPEED_BUTTON));
 
-        if (dusk::frame_interp::get_ui_tick_pending() && mDoMain::developmentMode == 1 && (mDoCPd_c::getHold(PAD_1) & (PAD_TRIGGER_R | PAD_TRIGGER_L)) == (PAD_TRIGGER_R | PAD_TRIGGER_L) && mDoCPd_c::getTrigY(PAD_1)) {
-            getTransientSettings().moveLinkActive = !getTransientSettings().moveLinkActive;
-        }
-        if (mDoMain::developmentMode != 1) {
-            getTransientSettings().moveLinkActive = false;
-        }
     }
 
     void ImGuiConsole::PreDraw() {

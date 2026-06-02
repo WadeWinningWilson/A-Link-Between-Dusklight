@@ -246,6 +246,8 @@ struct UserSettings {
         ConfigVar<bool> removeQuestMapMarkers;
         ConfigVar<bool> showInputViewer;
         ConfigVar<bool> showInputViewerGyro;
+        ConfigVar<bool> enableMoveLinkCombo;
+        ConfigVar<bool> enableTeleportCombo;
     } game;
 
     struct {
