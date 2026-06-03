@@ -49,6 +49,7 @@ void SelectButton::set_value_label(const Rml::String& value) {
             mValueElem->SetInnerRML(escape(value));
         }
         mProps.value = value;
+        mRoot->DispatchEvent(Rml::EventId::Change, {});
     }
 }
 
