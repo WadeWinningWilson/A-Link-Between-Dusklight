@@ -413,7 +413,7 @@ void dMeter2Draw_c::init() {
     }
 
     field_0x61c = 0.0f;
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < DUSK_IF_ELSE((dusk::tphd_active() ? 12 : 16), 16); i++) {
         field_0x62c[i] = 0.0f;
         field_0x66c[i] = 0.0f;
     }
@@ -636,7 +636,8 @@ void dMeter2Draw_c::draw() {
 
         if (field_0x756 >= 0) {
             var_f29 = g_drawHIO.mLightDrop.mDropPikariAnimSpeed_Completed;
-            int temp_r5_2 = g_drawHIO.mLightDrop.mPikariInterval * 15;
+            int temp_r5_2 = g_drawHIO.mLightDrop.mPikariInterval * DUSK_IF_ELSE((dusk::tphd_active() ? 11 : 15), 15);
+
 #ifdef TARGET_PC
             // FRAME INTERP NOTE: Set even if not advancing
             var_f28 = g_drawHIO.mLightDrop.mPikariScaleComplete;
@@ -657,12 +658,12 @@ void dMeter2Draw_c::draw() {
                     int temp_r5_3 = temp_r5_2 + 1;
 
                     if (field_0x756 == temp_r5_3) {
-                        if (field_0x62c[15] == 0.0f) {
+                        if (field_0x62c[DUSK_IF_ELSE((dusk::tphd_active() ? 11 : 15), 15)] == 0.0f) {
                             field_0x756++;
                         }
                         var_f28 = g_drawHIO.mLightDrop.mPikariScaleComplete;
                     } else if (field_0x756 >= g_drawHIO.mLightDrop.field_0x54 + temp_r5_3) {
-                        for (int i = 0; i < 16; i++) {
+                        for (int i = 0; i < DUSK_IF_ELSE((dusk::tphd_active() ? 12 : 16), 16); i++) {
                             field_0x62c[i] = 18.0f - var_f29;
                             field_0x66c[i] = 18.0f - g_drawHIO.mLightDrop.mPikariLoopAnimSpeed;
                         }
@@ -675,7 +676,7 @@ void dMeter2Draw_c::draw() {
             }
         }
 
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < DUSK_IF_ELSE((dusk::tphd_active() ? 12 : 16), 16); i++) {
             if (field_0x66c[i] > 0.0f) {
                 drawPikari(mpSIParts[i][1], &g_drawHIO.mLightDrop.mPikariLoopBackStopFrame,
                            g_drawHIO.mLightDrop.mPikariLoopBackScale,
@@ -700,7 +701,7 @@ void dMeter2Draw_c::draw() {
             }
         }
 
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < DUSK_IF_ELSE((dusk::tphd_active() ? 12 : 16), 16); i++) {
             if (field_0x62c[i] > 0.0f) {
                 drawPikari(mpSIParts[i][1], &field_0x62c[i], var_f28,
                            g_drawHIO.mLightDrop.mDropPikariFrontOuter,
@@ -1821,6 +1822,33 @@ void dMeter2Draw_c::setAlphaOxygenAnimeMax() {
 
 void dMeter2Draw_c::drawLightDrop(u8 i_num, u8 i_needNum, f32 i_posX, f32 i_posY, f32 i_vesselScale,
                                   f32 param_5, u8 param_6) {
+#if TARGET_PC
+    if (dusk::tphd_active()) {
+        static u64 const tuta_0[] = {
+            's_00',
+            's_01',
+            's_02',
+            's_03',
+            's_04',
+            's_05',
+            's_06',
+            's_07',
+            's_08',
+            's_09',
+            's_10',
+            's_11',
+            's_12',
+            's_13',
+            's_14',
+            's_15',
+        };
+
+        for (int i = 12; i < 16; i++) {
+            mpScreen->search(tuta_0[i])->hide();
+        }
+    }
+#endif
+
     for (int i = 0; i < 16; i++) {
         if (mpSIParts[i][0] != NULL) {
             mpSIParts[i][0]->scale(g_drawHIO.mLightDrop.mDropScale,
