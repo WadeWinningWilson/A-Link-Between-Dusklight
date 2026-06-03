@@ -305,6 +305,7 @@ static void mant_build_anchor_frame(const cXyz& anchor_a, const cXyz& anchor_b, 
 #endif
 
 void daMant_packet_c::draw() {
+    ZoneScoped;
 #if TARGET_PC
     void* image = l_Egnd_mantTEX;
     void* lut = l_Egnd_mantPAL;

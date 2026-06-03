@@ -2028,6 +2028,7 @@ void daAlink_blur_c::traceBlur(cXyz const* param_0, cXyz const* param_1, s16 par
 }
 
 void daAlink_blur_c::draw() {
+    ZoneScoped;
     j3dSys.reinitGX();
 
 #ifdef TARGET_PC
