@@ -392,6 +392,7 @@ static const u8* l_sightDL_get() {
 #endif
 
 void daPy_sightPacket_c::draw() {
+    ZoneScoped;
     TGXTexObj texObj;
 
     j3dSys.reinitGX();

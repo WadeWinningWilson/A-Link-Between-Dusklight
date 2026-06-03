@@ -2045,6 +2045,7 @@ static void dKr_cullVtx_Set(IF_DUSK(bool const vtxColor = false)) {
 }
 
 static void dKyr_draw_rev_moon(Mtx drawMtx, u8** tex) {
+    ZoneScoped;
     dKankyo_sun_Packet* sun_packet = g_env_light.mpSunPacket;
     dKankyo_sunlenz_Packet* lenz_packet = g_env_light.mpSunLenzPacket;
     camera_class* camera = (camera_class*)dComIfGp_getCamera(0);
@@ -2690,6 +2691,7 @@ void dKyr_drawSun(Mtx drawMtx, cXyz* ppos, GXColor& unused, u8** tex) {
 }
 
 void dKyr_drawLenzflare(Mtx drawMtx, cXyz* ppos, GXColor& param_2, u8** tex) {
+    ZoneScoped;
     dKankyo_sunlenz_Packet* lenz_packet = g_env_light.mpSunLenzPacket;
     dKankyo_sun_Packet* sun_packet = g_env_light.mpSunPacket;
     camera_class* camera = (camera_class*)dComIfGp_getCamera(0);
@@ -3388,6 +3390,7 @@ void dKyr_drawSibuki(Mtx drawMtx, u8** tex) {
 }
 
 void dKyr_drawHousi(Mtx drawMtx, u8** tex) {
+    ZoneScoped;
     dKankyo_housi_Packet* housi_packet = g_env_light.mpHousiPacket;
     static f32 rot = 0.0f;
 
@@ -3775,6 +3778,7 @@ void dKyr_drawHousi(Mtx drawMtx, u8** tex) {
 }
 
 void dKyr_drawSnow(Mtx drawMtx, u8** tex) {
+    ZoneScoped;
     camera_class* camera = (camera_class*)dComIfGp_getCamera(0);
     dKankyo_snow_Packet* snow_packet = g_env_light.mpSnowPacket;
 
@@ -4405,6 +4409,7 @@ void dKyr_drawStar(Mtx drawMtx, u8** tex) {
 }
 
 void drawCloudShadow(Mtx drawMtx, u8** tex) {
+    ZoneScoped;
     dScnKy_env_light_c* envlight = dKy_getEnvlight();
     dKankyo_cloud_Packet* cloud_packet = g_env_light.mpCloudPacket;
     camera_class* camera = (camera_class*)dComIfGp_getCamera(0);
@@ -5393,6 +5398,7 @@ void dKyr_odour_move() {
 }
 
 void dKyr_odour_draw(Mtx drawMtx, u8** tex) {
+    ZoneScoped;
     dScnKy_env_light_c* envlight = dKy_getEnvlight();
     dKankyo_odour_Packet* odour_packet = envlight->mOdourData.mpOdourPacket;
     camera_class* camera = (camera_class*)dComIfGp_getCamera(0);
@@ -5791,6 +5797,7 @@ void dKyr_mud_move() {
 }
 
 void dKyr_mud_draw(Mtx drawMtx, u8** tex) {
+    ZoneScoped;
     dKankyo_mud_Packet* mud_packet = g_env_light.mpMudPacket;
     dKankyo_sun_Packet* sun_packet = g_env_light.mpSunPacket;
 
@@ -6010,6 +6017,7 @@ void dKyr_evil_move() {
 }
 
 static void dKyr_evil_draw2(Mtx drawMtx, u8** tex) {
+    ZoneScoped;
     dScnKy_env_light_c* envlight = dKy_getEnvlight();
     dKankyo_evil_Packet* evil_packet = envlight->mpEvilPacket;
     camera_class* camera = (camera_class*)dComIfGp_getCamera(0);
@@ -6248,6 +6256,7 @@ static f32 dKyr_near_bosslight_check(cXyz pos) {
 }
 
 void dKyr_evil_draw(Mtx drawMtx, u8** tex) {
+    ZoneScoped;
     dScnKy_env_light_c* envlight = dKy_getEnvlight();
     dKankyo_evil_Packet* evil_packet = envlight->mpEvilPacket;
     camera_class* camera = (camera_class*)dComIfGp_getCamera(0);
