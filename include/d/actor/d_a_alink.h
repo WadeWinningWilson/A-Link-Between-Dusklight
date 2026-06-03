@@ -4557,7 +4557,7 @@ public:
 #if TARGET_PC
     void handleWolfHowl();
     void handleQuickTransform();
-    bool checkGyroAimContext();
+    bool checkAimContext();
 
     void onIronBallChainInterpCallback();
 
