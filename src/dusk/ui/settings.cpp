@@ -573,11 +573,10 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                                  "Changes require a restart.");
                 });
                 
-/*
             leftPane.register_control(
                 leftPane
                     .add_select_button({
-                        .key = "TPHD Content",
+                        .key = "TPHD Content Folder",
                         .getValue =
                             [] {
                                 const auto& path = prelaunch_state().configuredHdContentPath;
@@ -604,7 +603,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                     pane.add_rml("Set the directory that Dusk loads eligible TPHD content from."
                                  "<br/><br/>Changes require a restart.");
                 });
-*/
                 
 #if DUSK_CAN_CHANGE_DATA_FOLDER
             leftPane.register_control(
