@@ -419,15 +419,36 @@ void daMant_packet_c::draw() {
     GXSetTevKAlphaSel(GX_TEVSTAGE0, GX_TEV_KASEL_K3_A);
     GXSetAlphaCompare(GX_GREATER, 0, GX_AOP_OR, GX_GREATER, 0);
 
+#if TARGET_PC
+    static bool textureObjsInitialized = false;
+    static TGXTlutObj tlutObj;
+    static TGXTexObj mainTexObj;
+    static TGXTexObj undersideTexObj;
+    if (!textureObjsInitialized) {
+        GXInitTlutObj(&tlutObj, lut, GX_TL_RGB5A3, 0x100);
+        GXInitTexObjCI(&mainTexObj, image, 0x80, 0x80, GX_TF_C8, GX_CLAMP, GX_CLAMP, 0, 0);
+        GXInitTexObjLOD(&mainTexObj, GX_LINEAR, GX_LINEAR, 0.0, 0.0, 0.0, 0, 0, GX_ANISO_1);
+        GXInitTexObjCI(
+            &undersideTexObj, l_Egnd_mantTEX_U, 0x80, 0x80, GX_TF_C8, GX_CLAMP, GX_CLAMP, 0, 0);
+        GXInitTexObjLOD(&undersideTexObj, GX_LINEAR, GX_LINEAR, 0.0, 0.0, 0.0, 0, 0, GX_ANISO_1);
+        textureObjsInitialized = true;
+    }
+#else
     GXTlutObj GStack_80;
     GXInitTlutObj(&GStack_80, lut, GX_TL_RGB5A3, 0x100);
 
     TGXTexObj GStack_74;
     GXInitTexObjCI(&GStack_74, image, 0x80, 0x80, GX_TF_C8, GX_CLAMP, GX_CLAMP, 0, 0);
     GXInitTexObjLOD(&GStack_74, GX_LINEAR, GX_LINEAR, 0.0, 0.0, 0.0, 0, 0, GX_ANISO_1);
+#endif
 
-    GXLoadTlut(&GStack_80, 0);
+#if TARGET_PC
+    GXLoadTlut(&tlutObj, GX_TLUT0);
+    GXLoadTexObj(&mainTexObj, GX_TEXMAP0);
+#else
+    GXLoadTlut(&GStack_80, GX_TLUT0);
     GXLoadTexObj(&GStack_74, GX_TEXMAP0);
+#endif
 
     GXSetCullMode(GX_CULL_BACK);
 
@@ -443,12 +464,13 @@ void daMant_packet_c::draw() {
     GXLoadNrmMtxImm(MStack_54, GX_PNMTX0);
     GXCallDisplayList(l_Egnd_mantDL, 0x3e0);
 
-#ifdef TARGET_PC
-    GStack_74.reset();
-#endif
+#if TARGET_PC
+    GXLoadTexObj(&undersideTexObj, GX_TEXMAP0);
+#else
     GXInitTexObjCI(&GStack_74, l_Egnd_mantTEX_U, 0x80, 0x80, GX_TF_C8, GX_CLAMP, GX_CLAMP, 0, 0);
     GXInitTexObjLOD(&GStack_74, GX_LINEAR, GX_LINEAR, 0.0, 0.0, 0.0, 0, 0, GX_ANISO_1);
     GXLoadTexObj(&GStack_74, GX_TEXMAP0);
+#endif
 
     GXSetTevColor(GX_TEVREG0, COMPOUND_LITERAL(GXColor){0, 0, 0, 0});
     GXSetTevKColor(GX_KCOLOR0, COMPOUND_LITERAL(GXColor){0, 0, 0, 0});
