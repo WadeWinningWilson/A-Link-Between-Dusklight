@@ -887,6 +887,7 @@ void dMeter2_onALBWDoubleHookshot();
 void dMeter2_onALBWArmorHit();
 void dMeter2_onArmorEncounterHit(fpc_ProcID actorID, bool dealtHPDamage);
 void dMeter2_onArmorAttackHit(fpc_ProcID actorID);
+bool dMeter2_isInCombatEncounter();
 bool dMeter2_canALBWSling();
 bool dMeter2_canALBWBoom();
 bool dMeter2_canALBWArrow();
@@ -901,12 +902,21 @@ bool dMeter2_isALBWLocked();
 bool dMeter2_canALBWSpinner();
 bool dMeter2_canALBWDomRod();
 void dMeter2_addALBWFraction(int numerator, int denominator);
+void dMeter2_subALBWFraction(int numerator, int denominator);
+int dMeter2_getALBWMeterValue();
+int dMeter2_getALBWMaxValue();
 void dMeter2_fillALBWMeter();
 void dMeter2_onALBWRentalEligible(u8 itemNo);
 bool dMeter2_isALBWRentalEligible(u8 itemNo);
 bool dMeter2_playerOwnsRentalItem(u8 itemNo);
 void dMeter2_stripRentalItemOnDeath(u8 itemNo);
 void dMeter2_stripAllALBWInventoryOnDeath();
+bool dMeter2_isShieldItem(u8 itemNo);
+bool dMeter2_playerHasAnyShield();
+bool dMeter2_canAcquireShield(u8 itemNo);
+void dMeter2_onShieldDestroyedForRental(u8 itemNo);
+bool dMeter2_isShieldRentalEligible(u8 itemNo);
+void dMeter2_grantRentalShield(u8 itemNo);
 // ============================================
 // NEW CODE — ALBW Port
 // Sword attack and agility drain API.

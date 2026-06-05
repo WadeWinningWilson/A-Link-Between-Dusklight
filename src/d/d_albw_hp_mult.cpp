@@ -8,11 +8,8 @@
  * making the enemy effectively harder to kill without touching HP values
  * directly. The max(1,...) floor ensures no hit ever deals 0 damage.
  *
- * To exclude a misbehaving actor: add its fpcNm_*_e to sExcluded below
- * and rebuild. It will then pass through this function unchanged.
- *
- * Actor–boss mappings confirmed from "/* Proc Name *\/" entries in the
- * respective d_a_b_*.cpp / d_a_e_*.cpp actor source files.
+ * Actor IDs follow the game actor list (Proc Name in d_a_*.cpp).
+ * In-game names verified against actor-list spreadsheet + @brief headers.
  */
 
 #if TARGET_PC
@@ -28,60 +25,53 @@
 // ============================================
 
 // ---------------------------------------------------------------------------
-// Exclude list — actors that bypass the multiplier entirely.
-// Add fpcNm_*_e constants here for any actor that breaks under HP scaling.
-// ---------------------------------------------------------------------------
-static const s16 sExcluded[] = {
-    fpcNm_B_GND_e,   // Zant's Hand — light-arrow-immune; category TBD after testing
-};
-
-// ---------------------------------------------------------------------------
-// Mid-boss list — sub-bosses encountered between dungeons or as gatekeepers.
-// Note: Aeralfos and Darknut also appear as regular enemies; they are NOT
-// listed here so the normal-enemy slider governs all encounters of those
-// actor types. Move to sMidBoss if you want the mid-boss slider to apply.
+// Mid-boss list — gatekeepers and story minibosses (same tier everywhere).
 // ---------------------------------------------------------------------------
 static const s16 sMidBoss[] = {
-    fpcNm_B_DS_e,    // Death Sword           (Arbiter's Grounds)
-    fpcNm_B_ZANTM_e, // Phantom Zant          (Palace of Twilight)
-    fpcNm_E_MK_e,    // Ook                   (Forest Temple)
-    fpcNm_E_RDB_e,   // King Bulblin / Bullbo  (Bridge of Eldin, Gerudo Desert)
-    fpcNm_E_GOB_e,   // Dangoro               (Goron Mines)
-    fpcNm_E_YC_e,    // Twilit Carrier Kargarok (Lake Hylia)
-    fpcNm_E_SG_e,    // Skull Kid             (Sacred Grove)
-    fpcNm_E_DT_e,    // Deku Toad             (Lakebed Temple)
-    fpcNm_E_BS_e,    // Twilit Bloat          (Lake Hylia)
+    fpcNm_B_GG_e,     // 0x214 Aeralfos / Gargoyle
+    fpcNm_B_TN_e,     // 0x213 Darknut (Temple of Time)
+    fpcNm_B_ZANTM_e,  // Phantom Zant (magic attack actor)
+    fpcNm_E_DT_e,     // 0x200 Deku Toad
+    fpcNm_E_GOB_e,    // 0x1B1 Dangoro
+    fpcNm_E_MK_e,     // 0x1DC Ook
+    fpcNm_E_PM_e,     // 0x1D9 Skull Kid (Sacred Grove)
+    fpcNm_E_PZ_e,     // 0x1E4 Phantom Zant
+    fpcNm_E_RDB_e,    // 0x1D5 King Bulblin
+    fpcNm_E_TH_e,     // 0x1C2 Darkhammer
+    fpcNm_E_VT_e,     // 0x208 Death Sword
+    fpcNm_E_YC_e,     // 0x0F5 Twilit Carrier Kargarok
+    fpcNm_E_YMB_e,    // 0x1F6 Twilit Bloat
 };
 
 // ---------------------------------------------------------------------------
-// Dungeon boss list.
-// Sub-actors (tentacles, spiderlings, icicles, rider components) are included
-// so the entire boss encounter scales uniformly.
+// Dungeon boss list — main dungeon bosses + key sub-actors in those fights.
 // ---------------------------------------------------------------------------
 static const s16 sBoss[] = {
-    fpcNm_B_BQ_e,    // Twilit Parasite: Diababa     (Forest Temple)
-    fpcNm_B_BH_e,    // Diababa baba tentacles
-    fpcNm_B_GM_e,    // Twilit Igniter: Fyrus         (Goron Mines)
-    fpcNm_B_TN_e,    // Twilit Aquatic: Morpheel      (Lakebed Temple)
-    fpcNm_B_GG_e,    // Twilit Fossil: Stallord       (Arbiter's Grounds)
-    fpcNm_B_YO_e,    // Twilit Ice Mass: Blizzeta     (Snowpeak Ruins)
-    fpcNm_B_YOI_e,   // Blizzeta icicles
-    fpcNm_B_OB_e,    // Twilit Arachnid: Armogohma   (Temple of Time)
-    fpcNm_B_OH_e,    // Armogohma spiderlings
-    fpcNm_B_OH2_e,   // Armogohma eye (phase 2)
-    fpcNm_B_DR_e,    // Twilit Dragon: Argorok        (City in the Sky)
-    fpcNm_B_DRE_e,   // Argorok rider component
-    fpcNm_B_ZANT_e,  // Usurper King: Zant            (Palace of Twilight)
-    fpcNm_B_ZANTZ_e, // Zant battle mobile form
+    fpcNm_B_BQ_e,     // 0x20C Diababa
+    fpcNm_B_BH_e,     // 0x20B Diababa baba tentacles
+    fpcNm_B_DS_e,     // 0x0F6 Stallord
+    fpcNm_B_DR_e,     // 0x0F7 Argorok
+    fpcNm_B_DRE_e,    // Argorok child actor
+    fpcNm_B_GM_e,     // 0x20D Armogohma
+    fpcNm_B_OB_e,     // Morpheel body
+    fpcNm_B_OH_e,     // Morpheel head
+    fpcNm_B_OH2_e,    // Morpheel tentacle
+    fpcNm_B_YO_e,     // 0x211 Blizzeta
+    fpcNm_B_YOI_e,    // Blizzeta ice (phase 2)
+    fpcNm_B_ZANT_e,   // 0x0F9 Zant
+    fpcNm_B_ZANTS_e,  // Zant Goron Mines phase
+    fpcNm_B_ZANTZ_e,  // Zant mobile helmet
+    fpcNm_E_FM_e,     // 0x1D7 Fyrus (e_fm, not b_gm)
+    fpcNm_E_HZELDA_e, // 0x1CB Possessed Zelda (Hyrule Castle)
 };
 
 // ---------------------------------------------------------------------------
-// Final boss list — Hyrule Castle / Hyrule Field sequence.
+// Final boss list — Hyrule Castle / Hyrule Field finale.
+// Bespoke parry/durability rules for FINAL may come later; 2× durability now.
 // ---------------------------------------------------------------------------
 static const s16 sFinalBoss[] = {
-    fpcNm_B_GO_e,    // Dark Lord: Ganondorf          (Hyrule Castle rooftop)
-    fpcNm_B_GOS_e,   // Ganondorf sub-actor           (energy sphere etc.)
-    fpcNm_B_MGN_e,   // Dark Beast: Ganon             (Hyrule Field)
+    fpcNm_B_GND_e, // 0x20E Ganondorf (horseback)
+    fpcNm_B_MGN_e, // 0x216 Beast Ganon
 };
 
 // ---------------------------------------------------------------------------
@@ -89,7 +79,9 @@ static const s16 sFinalBoss[] = {
 // ---------------------------------------------------------------------------
 static bool inList(const s16* list, std::size_t count, s16 name) {
     for (std::size_t i = 0; i < count; ++i) {
-        if (list[i] == name) return true;
+        if (list[i] == name) {
+            return true;
+        }
     }
     return false;
 }
@@ -97,31 +89,67 @@ static bool inList(const s16* list, std::size_t count, s16 name) {
 #define IN(arr, name) inList(arr, std::size(arr), name)
 
 dAlbwHP_Category dAlbwHP_getCategory(s16 profName) {
-    if (IN(sExcluded,  profName)) return dAlbwHP_EXCLUDED;
-    if (IN(sFinalBoss, profName)) return dAlbwHP_FINAL;
-    if (IN(sBoss,      profName)) return dAlbwHP_BOSS;
-    if (IN(sMidBoss,   profName)) return dAlbwHP_MID_BOSS;
+    if (IN(sFinalBoss, profName)) {
+        return dAlbwHP_FINAL;
+    }
+    if (IN(sBoss, profName)) {
+        return dAlbwHP_BOSS;
+    }
+    if (IN(sMidBoss, profName)) {
+        return dAlbwHP_MID_BOSS;
+    }
     return dAlbwHP_NORMAL;
 }
 
 int dAlbwHP_applyMult(s16 profName, int attackPower) {
-    if (attackPower <= 0) return attackPower;
+    if (attackPower <= 0) {
+        return attackPower;
+    }
 
     dAlbwHP_Category cat = dAlbwHP_getCategory(profName);
-    if (cat == dAlbwHP_EXCLUDED) return attackPower;
+    if (cat == dAlbwHP_EXCLUDED) {
+        return attackPower;
+    }
 
     int mult = 1;
     const auto& g = dusk::getSettings().game;
     switch (cat) {
-    case dAlbwHP_NORMAL:   mult = g.hpMultNormal.getValue();   break;
-    case dAlbwHP_MID_BOSS: mult = g.hpMultMidBoss.getValue();  break;
-    case dAlbwHP_BOSS:     mult = g.hpMultBoss.getValue();     break;
-    case dAlbwHP_FINAL:    mult = g.hpMultFinalBoss.getValue(); break;
-    default:               break;
+    case dAlbwHP_NORMAL:
+        mult = g.hpMultNormal.getValue();
+        break;
+    case dAlbwHP_MID_BOSS:
+        mult = g.hpMultMidBoss.getValue();
+        break;
+    case dAlbwHP_BOSS:
+        mult = g.hpMultBoss.getValue();
+        break;
+    case dAlbwHP_FINAL:
+        mult = g.hpMultFinalBoss.getValue();
+        break;
+    default:
+        break;
     }
 
-    if (mult <= 1) return attackPower;  // 1× = off, no change
+    if (mult <= 1) {
+        return attackPower;
+    }
     return std::max(1, attackPower / mult);
+}
+
+u16 dAlbwHP_applyDurabilityMult(s16 profName, u16 damage) {
+    if (damage == 0) {
+        return 0;
+    }
+
+    switch (dAlbwHP_getCategory(profName)) {
+    case dAlbwHP_MID_BOSS:
+        return (u16)((damage * 150U + 99U) / 100U);
+    case dAlbwHP_BOSS:
+    case dAlbwHP_FINAL:
+        return (u16)(damage * 2U);
+    default:
+        return damage;
+    }
 }
 
 #undef IN

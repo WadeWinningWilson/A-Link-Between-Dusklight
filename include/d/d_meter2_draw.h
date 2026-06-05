@@ -67,6 +67,9 @@ public:
     // ============================================
     void setAlphaMagicAnimeMin();
     void setAlphaMagicAnimeMax();
+    void drawShieldDurabilityBelowAlbw();
+    bool getRupeeAnchorCenter(Vec* o_center) const;
+    f32 getRupeeHudReferenceSize() const;
     // ============================================
     // NEW CODE ENDS HERE
     // ============================================
@@ -376,6 +379,14 @@ private:
     /* 0x858 */ GXColor mButtonZTextColor;
     /* 0x85C */ GXColor mButtonXYTextColor;
     /* 0x860 */ u8 field_0x860[2];
+#if TARGET_PC
+    void applyMagicMeterSlot(u8 i_slot);
+    void layoutMagicMeterSlot(u8 i_slot, s16 i_max, s16 i_fill, f32 i_posX, f32 i_posY,
+                              f32 i_widthScale);
+    // Apply meter geometry without writing field_0x584[slot] (slot 1 is lantern; do not clobber).
+    void applyMagicMeterLayoutTransient(s16 i_max, s16 i_fill, f32 i_posX, f32 i_posY,
+                                        f32 i_widthScale, u8 i_alphaSlot);
+#endif
 };
 
 #endif /* D_METER_D_METER2_DRAW_H */

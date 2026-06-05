@@ -1718,6 +1718,17 @@ void dMeter2Info_setShield(u8 i_itemId, bool i_offItemBit) {
         i_offItemBit = false;
     }
 
+#if TARGET_PC
+    if (i_itemId != dItemNo_NONE_e && dMeter2_playerHasAnyShield() &&
+        dComIfGs_getSelectEquipShield() != i_itemId) {
+        dComIfGs_offItemFirstBit((u8)dItemNo_WOOD_SHIELD_e);
+        dComIfGs_offItemFirstBit((u8)dItemNo_SHIELD_e);
+        dComIfGs_offItemFirstBit((u8)dItemNo_HYLIA_SHIELD_e);
+        dComIfGs_setSelectEquipShield(dItemNo_NONE_e);
+        dComIfGp_setSelectEquipShield(dItemNo_NONE_e);
+    }
+#endif
+
     if (i_offItemBit && dComIfGs_getSelectEquipShield() != 0xFF) {
         dComIfGs_offItemFirstBit(dComIfGs_getSelectEquipShield());
     }

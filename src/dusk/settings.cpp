@@ -34,6 +34,9 @@ UserSettings g_userSettings = {
         .noReturnRupees {"game.noReturnRupees", false},
         .disableRupeeCutscenes {"game.disableRupeeCutscenes", false},
         .noSwordRecoil {"game.noSwordRecoil", false},
+        .manualShielding {"game.manualShielding", false},
+        .shieldParryCombat {"game.shieldParryCombat", true},
+        .shieldDurability {"game.shieldDurability", false},
         .damageMultiplier {"game.damageMultiplier", 1},
         .hpMultNormal     {"game.hpMultNormal",     1},
         .hpMultMidBoss    {"game.hpMultMidBoss",    1},
@@ -210,6 +213,9 @@ void registerSettings() {
     Register(g_userSettings.game.noReturnRupees);
     Register(g_userSettings.game.disableRupeeCutscenes);
     Register(g_userSettings.game.noSwordRecoil);
+    Register(g_userSettings.game.manualShielding);
+    Register(g_userSettings.game.shieldParryCombat);
+    Register(g_userSettings.game.shieldDurability);
     Register(g_userSettings.game.damageMultiplier);
     Register(g_userSettings.game.hpMultNormal);
     Register(g_userSettings.game.hpMultMidBoss);

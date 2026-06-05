@@ -19,6 +19,9 @@
 #include "dusk/extras.h"
 #include "dusk/string.hpp"
 #endif
+#if TARGET_PC
+#include "d/d_albw_death_rupee.h"
+#endif
 
 static int dScnRoom_Draw(room_of_scene_class* i_this) {
     fpc_ProcID id = fpcM_GetID(i_this);
@@ -247,6 +250,7 @@ static bool objectSetCheck(room_of_scene_class* i_this) {
 // toward the death-warp spawn so he is in Link's line of sight.
 // ============================================
 #if TARGET_PC
+            dALBWDeathRupees_trySpawnOrbInRoom(dComIfGp_getStartStageName(), roomNo);
             if (strcmp(dComIfGp_getStartStageName(), "F_SP103") == 0 &&
                 roomNo == 1 &&
                 dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625])) {

@@ -40,6 +40,7 @@
 #include "JSystem/JKernel/JKRAramArchive.h"
 
 #if TARGET_PC
+#include "d/d_albw_death_rupee.h"
 #include "dusk/autosave.h"
 #include "dusk/memory.h"
 #include "dusk/ui/ui.hpp"
@@ -735,6 +736,10 @@ static int dScnPly_Execute(dScnPly_c* i_this) {
 
     dStage_roomControl_c::offNoChangeRoom();
     dStage_roomControl_c::setRoomReadId(0xFF);
+
+#if TARGET_PC
+    dALBWDeathRupees_tickSpawn();
+#endif
 
     if (!fopOvlpM_IsPeek()) {
         if (mDoAud_zelAudio_c::isBgmSet()) {

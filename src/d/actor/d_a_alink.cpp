@@ -52,6 +52,7 @@
 #include "d/d_s_play.h"
 
 #if TARGET_PC
+#include "d/d_albw_shield.h"
 #include "dusk/action_bindings.h"
 #include "dusk/frame_interpolation.h"
 #include "dusk/settings.h"
@@ -6428,6 +6429,9 @@ void daAlink_c::setAtCollision() {
 
             dComIfG_Ccsp()->Set(&mGuardAtCps);
             dComIfG_Ccsp()->SetMass(&mGuardAtCps, 1);
+#if TARGET_PC
+            dShield_pollGuardAttackHit(this);
+#endif
         } else {
             mGuardAtCps.ResetAtHit();
         }
@@ -9361,6 +9365,37 @@ BOOL daAlink_c::spActionTrigger() {
     return itemTriggerCheck(BTN_R);
 }
 
+// ============================================
+// NEW CODE — ALBW Port (Phase 1 manual shield, Dawnlight 9ff9d35 / kamilink7)
+// ============================================
+BOOL daAlink_c::manualShieldButton() const {
+#if TARGET_PC
+    // ZR + shield equipped: raise guard without Z-target (settings toggle optional).
+    if (checkShieldGet()) {
+        return mDoCPd_c::getHoldLockR(PAD_1);
+    }
+    if (dusk::getSettings().game.manualShielding) {
+        return mDoCPd_c::getHoldLockR(PAD_1);
+    }
+#endif
+    return false;
+}
+
+BOOL daAlink_c::manualShieldAttackTrigger() {
+    return manualShieldButton() && itemTriggerCheck(BTN_B);
+}
+
+BOOL daAlink_c::manualShieldBlocksSwordInput() const {
+#if TARGET_PC
+    return dusk::getSettings().game.manualShielding && manualShieldButton();
+#else
+    return false;
+#endif
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
 BOOL daAlink_c::midnaTalkTrigger() const {
 #if TARGET_PC
     // If we have a custom bind for Midna, check that instead
@@ -9372,6 +9407,10 @@ BOOL daAlink_c::midnaTalkTrigger() const {
 }
 
 BOOL daAlink_c::swordSwingTrigger() {
+    if (manualShieldButton()) {
+        return false;
+    }
+
     return swordTrigger();
 }
 
@@ -11821,6 +11860,15 @@ BOOL daAlink_c::checkItemAction() {
             return procWolfDigInit();
         }
     } else {
+#if TARGET_PC
+        // Manual guard: B is shield bash only (no sword), no Ordon training flag required.
+        if (manualShieldAttackTrigger() && checkGuardActionChange()
+            && !checkUpperReadyThrowAnime() && !checkModeFlg(0x70C52) && checkShieldGet() && !checkNotBattleStage()
+            && (mLinkAcch.ChkGroundHit() || checkMagneBootsOn()))
+        {
+            return procGuardAttackInit();
+        }
+#endif
         if (mEquipItem == 0x103) {
             daPy_frameCtrl_c* frame_ctrl = &mUpperFrameCtrl[2];
 
@@ -11868,7 +11916,7 @@ BOOL daAlink_c::checkItemAction() {
                 return procCutTurnInit(1, 2);
             }
 
-            if (swordSwingTrigger() || checkComboReserb()) {
+            if ((swordSwingTrigger() || checkComboReserb()) && !manualShieldBlocksSwordInput()) {
                 if (checkNoResetFlg2(FLG2_COMBO_RESERB)) {
                     clearComboReserb();
 
@@ -16687,9 +16735,16 @@ int daAlink_c::procSideRoll() {
         if (mDemo.getDemoMode() == daPy_demo_c::DEMO_UNK_73_e) {
             dComIfGp_evmng_cutEnd(mAlinkStaffId);
         } else {
+#if TARGET_PC
+            if (!checkAttentionLock() &&
+                !manualShieldButton()) {
+                offNoResetFlg2(FLG2_UNK_8000000);
+            }
+#else
             if (!checkAttentionLock()) {
                 offNoResetFlg2(FLG2_UNK_8000000);
             }
+#endif
 
             checkNextAction(0);
         }
@@ -16839,9 +16894,16 @@ int daAlink_c::procBackJumpLand() {
         if (mDemo.getDemoMode() == daPy_demo_c::DEMO_UNK_16_e) {
             dComIfGp_evmng_cutEnd(mAlinkStaffId);
         } else {
+#if TARGET_PC
+            if (!checkAttentionLock() &&
+                !manualShieldButton()) {
+                offNoResetFlg2(FLG2_UNK_8000000);
+            }
+#else
             if (!checkAttentionLock()) {
                 offNoResetFlg2(FLG2_UNK_8000000);
             }
+#endif
             checkNextAction(0);
         }
     } else if (frameCtrl->getFrame() > mpHIO->mBackJump.m.mLandAnm.mCancelFrame) {
@@ -18751,6 +18813,11 @@ int daAlink_c::execute() {
                         field_0x2fcb--;
 
                         if (field_0x2fcb == 0) {
+#if TARGET_PC
+                            if (dComIfGs_isItemFirstBit(dItemNo_WOOD_SHIELD_e)) {
+                                dMeter2_onShieldDestroyedForRental((u8)dItemNo_WOOD_SHIELD_e);
+                            }
+#endif
                             dMeter2Info_setShield(dItemNo_NONE_e, true);
                             stickArrowIncrement(1);
                             setWoodShieldBurnOutEffect();

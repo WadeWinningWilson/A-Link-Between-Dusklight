@@ -169,11 +169,14 @@ set(DOLZEL_FILES
         src/d/d_shop_item_ctrl.cpp
         src/d/d_shop_system.cpp
         src/d/d_gameover.cpp
+        src/d/d_albw_oocoo.cpp
+        src/d/d_albw_death_rupee.cpp
         src/d/d_albw_rental.cpp
         src/d/d_albw_shop.cpp
         src/d/d_albw_dialogue.cpp
         src/d/d_albw_ui_text.cpp
         src/d/d_albw_hp_mult.cpp
+        src/d/d_albw_shield.cpp
         src/d/d_kankyo.cpp
         src/d/d_kyeff.cpp
         src/d/d_kyeff2.cpp

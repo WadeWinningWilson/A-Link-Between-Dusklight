@@ -11,6 +11,7 @@
 #ifdef TARGET_PC
 #include "d/actor/d_a_obj_carry.h"
 #include "dusk/achievements.h"
+#include "d/d_albw_shield.h"
 #endif
 
 #if DEBUG
@@ -704,6 +705,18 @@ BOOL daAlink_c::checkDamageAction() {
                 }
 
                 if (!armor_no_dmg) {
+#if TARGET_PC
+                    if (dShield_onShieldHit(this, at_spl, tghit_ac)) {
+                        return 0;
+                    }
+                    dShield_onFailedGuardBlock(tghit_ac);
+#endif
+#if TARGET_PC
+                    if (dShield_isDurabilityEnabled() && dShield_onBlockHit(this, at_spl, false, tghit_ac)) {
+                        dShield_destroyFromDurability(this);
+                        return 0;
+                    }
+#endif
                     if (var_r29->ChkTgShield()) {
                         if (checkHorseRide()) {
                             if ((checkLargeAttack(at_spl) || checkHugeAttack(at_spl)) && (!checkSpecialHorseRide())) {
@@ -711,6 +724,12 @@ BOOL daAlink_c::checkDamageAction() {
                             }
                         } else if (at_spl == 8 || checkModeFlg(0x70C52)) {
                             if (!checkModeFlg(0x400) && mEquipItem != dItemNo_IRONBALL_e) {
+#if TARGET_PC
+                                if (dShield_isDurabilityEnabled() && dShield_onSmallGuardHit(this, tghit_ac)) {
+                                    dShield_destroyFromDurability(this);
+                                    return 0;
+                                }
+#endif
                                 setSmallGuard(var_r29);
                             }
                         } else {

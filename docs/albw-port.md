@@ -67,7 +67,8 @@ Items appear in the shop only if they were **stripped on death** (ALBW rental el
 | Area | Files |
 |------|--------|
 | Rental state, catalog, input | `src/d/d_albw_rental.cpp`, `include/d/d_albw_rental.h` |
-| Native shop UI | `src/d/d_albw_shop.cpp`, `include/d/d_albw_shop.h` |
+| Native shop UI | `src/d/d_albw_shop.cpp`, `include/d/d_albw_shop.h` — see [albw-shop-icon-alignment.md](albw-shop-icon-alignment.md) |
+| Death rupee orb | `src/d/d_albw_death_rupee.cpp` — see [albw-death-recovery-orb-brief.md](albw-death-recovery-orb-brief.md) |
 | Native talk box | `src/d/d_albw_dialogue.cpp`, `include/d/d_albw_dialogue.h` |
 | Shared text helpers | `src/d/d_albw_ui_text.cpp`, `include/d/d_albw_ui_text.h` |
 | Postman hook | `src/d/actor/d_a_npc_post.cpp` |
@@ -98,3 +99,7 @@ With the shop open, the game may write `albw_shop_debug.txt` under the project o
 ## Local build script (optional)
 
 Some developers use a repo-root `build_run.bat` to configure with `TARGET_PC_NATIVE_UI=ON` and run ninja; it is not part of the upstream build docs and may be kept locally only.
+
+## Planned: shield combat
+
+**Manual shielding** (Dawnlight `9ff9d35`) and **ALBW recovery pause while guarding** are implemented — see **[shield-combat.md](shield-combat.md)**. **Next:** Phase 4 parry + bash charge economy (spec in shield-combat § Phase 4). Shield durability (Phase 2) follows.

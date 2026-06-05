@@ -22,7 +22,12 @@
 #include "d/d_pane_class.h"
 #include "dusk/frame_interpolation.h"
 #include "dusk/string.hpp"
+#include <cmath>
 #include <cstring>
+#if TARGET_PC
+#include "d/d_albw_shield.h"
+#include "JSystem/JUtility/TColor.h"
+#endif
 
 dMeter2Draw_c::dMeter2Draw_c(JKRExpHeap* mp_heap) {
     OS_REPORT("enter dMeter2Draw_c::dMeter2Draw_c(JKRExpHeap *mp_heap)\n");
@@ -594,6 +599,8 @@ void dMeter2Draw_c::draw() {
     // ============================================
     if (!dComIfGp_isPauseFlag() && dComIfGp_isHeapLockFlag() != 6) {
         drawKanteraScreen(0);
+        drawShieldDurabilityBelowAlbw();
+        dShield_drawBashCharges();
     }
     // ============================================
     // NEW CODE ENDS HERE
@@ -1647,6 +1654,95 @@ void dMeter2Draw_c::drawMagic(s16 i_max, s16 i_magic, f32 i_posX, f32 i_posY) {
     field_0x5f0[0] = i_posY;
 }
 
+#if TARGET_PC
+void dMeter2Draw_c::applyMagicMeterSlot(u8 i_slot) {
+    mpMagicMeter->resize(field_0x584[i_slot], field_0x590[i_slot]);
+    mpMagicFrameR->move(field_0x59c[i_slot], field_0x5a8[i_slot]);
+    mpMagicBase->resize(field_0x5b4[i_slot], field_0x5c0[i_slot]);
+    mpMagicParent->scale(field_0x5cc[i_slot], field_0x5d8[i_slot]);
+    mpMagicParent->paneTrans(field_0x5e4[i_slot], field_0x5f0[i_slot]);
+}
+
+void dMeter2Draw_c::applyMagicMeterLayoutTransient(s16 i_max, s16 i_fill, f32 i_posX, f32 i_posY,
+                                                   f32 i_widthScale, u8 i_alphaSlot) {
+    const f32 frameL = mpMagicFrameL->getInitPosX();
+    const f32 frameSpan = mpMagicFrameR->getInitPosX() - frameL;
+
+    f32 meterW = (f32)i_fill * mpMagicMeter->getInitSizeX() / 32.0f;
+    const f32 meterH = mpMagicMeter->getInitSizeY();
+    f32 frameR = frameSpan * ((f32)i_max / 32.0f) + frameL;
+    const f32 frameY = mpMagicFrameL->getInitPosY();
+    f32 baseW = (f32)i_max * mpMagicBase->getInitSizeX() / 32.0f;
+    const f32 baseH = mpMagicBase->getInitSizeY();
+    const f32 scale = g_drawHIO.mMagicMeterScale;
+
+    if (i_widthScale != 1.0f) {
+        baseW *= i_widthScale;
+        meterW *= i_widthScale;
+        frameR = frameL + (frameR - frameL) * i_widthScale;
+    }
+
+    mpMagicMeter->resize(meterW, meterH);
+    mpMagicFrameR->move(frameR, frameY);
+    mpMagicBase->resize(baseW, baseH);
+    mpMagicParent->scale(scale, scale);
+    mpMagicParent->paneTrans(i_posX, i_posY);
+    mpMagicParent->setAlphaRate(mMeterAlphaRate[i_alphaSlot]);
+}
+
+void dMeter2Draw_c::layoutMagicMeterSlot(u8 i_slot, s16 i_max, s16 i_fill, f32 i_posX, f32 i_posY,
+                                         f32 i_widthScale) {
+    const f32 frameL = mpMagicFrameL->getInitPosX();
+    const f32 frameSpan = mpMagicFrameR->getInitPosX() - frameL;
+
+    field_0x584[i_slot] = (f32)i_fill * mpMagicMeter->getInitSizeX() / 32.0f;
+    field_0x590[i_slot] = mpMagicMeter->getInitSizeY();
+    field_0x59c[i_slot] = frameSpan * ((f32)i_max / 32.0f) + frameL;
+    field_0x5a8[i_slot] = mpMagicFrameL->getInitPosY();
+    field_0x5b4[i_slot] = (f32)i_max * mpMagicBase->getInitSizeX() / 32.0f;
+    field_0x5c0[i_slot] = mpMagicBase->getInitSizeY();
+    field_0x5cc[i_slot] = g_drawHIO.mMagicMeterScale;
+    field_0x5d8[i_slot] = g_drawHIO.mMagicMeterScale;
+    field_0x5e4[i_slot] = i_posX;
+    field_0x5f0[i_slot] = i_posY;
+
+    if (i_widthScale != 1.0f) {
+        field_0x5b4[i_slot] *= i_widthScale;
+        field_0x584[i_slot] *= i_widthScale;
+        field_0x59c[i_slot] = frameL + (field_0x59c[i_slot] - frameL) * i_widthScale;
+    }
+}
+
+bool dMeter2Draw_c::getRupeeAnchorCenter(Vec* o_center) const {
+    if (o_center == NULL || mpRupeeParent[0] == NULL || mpRupeeParent[0]->getPanePtr() == NULL) {
+        return false;
+    }
+
+    *o_center = mpRupeeParent[0]->getGlobalVtxCenter(false, 0);
+    return true;
+}
+
+f32 dMeter2Draw_c::getRupeeHudReferenceSize() const {
+    if (mpRupeeParent[0] == NULL || mpRupeeParent[0]->getPanePtr() == NULL) {
+        return 0.0f;
+    }
+
+    Mtx m;
+    J2DPane* pane = mpRupeeParent[0]->getPanePtr();
+    const Vec v0 = mpRupeeParent[0]->getGlobalVtx(pane, &m, 0, false, 0);
+    const Vec v3 = mpRupeeParent[0]->getGlobalVtx(pane, &m, 3, false, 0);
+    const f32 w = std::fabs(v3.x - v0.x);
+    const f32 h = std::fabs(v3.y - v0.y);
+    if (h < 1.0f) {
+        return 0.0f;
+    }
+    if (w > h * 2.5f) {
+        return h;
+    }
+    return (w < h) ? w : h;
+}
+#endif
+
 void dMeter2Draw_c::setAlphaMagicChange(bool i_forceSet) {
     bool meter_parent_alpha_set = false;
     bool meter_alpha_set = false;
@@ -1792,6 +1888,61 @@ void dMeter2Draw_c::setAlphaMagicAnimeMax() {
         }
         mMeterAlphaRate[0] = (field_0x742[0] / 5.0f) * g_drawHIO.mParentAlpha;
     }
+}
+
+void dMeter2Draw_c::drawShieldDurabilityBelowAlbw() {
+    if (!dShield_shouldDrawDurabilityHud() || dShield_getDurabilityMax() == 0 ||
+        mMeterAlphaRate[0] <= 0.0f) {
+        return;
+    }
+
+    if (mpKanteraScreen == NULL || mpMagicBase == NULL || mpMagicParent == NULL ||
+        mpMagicMeter == NULL || mpMagicFrameL == NULL || mpMagicFrameR == NULL) {
+        return;
+    }
+
+    J2DGrafContext* graf_ctx = dComIfGp_getCurrentGrafPort();
+    if (graf_ctx == NULL) {
+        return;
+    }
+
+    const f32 albwX = field_0x5e4[0];
+    const f32 albwY = field_0x5f0[0];
+    const f32 albwScaleY = field_0x5d8[0];
+    const f32 shieldY = albwY + mpMagicBase->getInitSizeY() * albwScaleY + 8.0f;
+
+    const u16 cur = dShield_getDurability();
+    const u16 max = dShield_getDurabilityMax();
+    const s16 fill32 = (max > 0) ? (s16)((u32)cur * 32U / max) : 0;
+    const f32 widthScale = dShield_getDurabilityMeterWidthScale();
+
+    applyMagicMeterLayoutTransient(32, fill32, albwX, shieldY, widthScale, 0);
+
+    switch (dShield_getDurabilityTierStyle()) {
+    case 0:
+        mpMagicMeter->setBlackWhite(JUtility::TColor(70, 45, 20, 255),
+                                    JUtility::TColor(175, 120, 55, 255));
+        break;
+    case 1:
+        mpMagicMeter->setBlackWhite(JUtility::TColor(55, 58, 62, 255),
+                                    JUtility::TColor(185, 195, 210, 255));
+        break;
+    default:
+        mpMagicMeter->setBlackWhite(JUtility::TColor(30, 70, 140, 255),
+                                    JUtility::TColor(90, 160, 235, 255));
+        break;
+    }
+
+    setAlphaMagicChange(true);
+    mpKanteraScreen->draw(0.0f, 0.0f, graf_ctx);
+
+    JUtility::TColor black = mpMagicMeter->getInitBlack();
+    black.a = 255;
+    mpMagicMeter->setBlackWhite(black, mpMagicMeter->getInitWhite());
+
+    applyMagicMeterSlot(0);
+    mpMagicParent->setAlphaRate(mMeterAlphaRate[0]);
+    setAlphaMagicChange(true);
 }
 // ============================================
 // NEW CODE ENDS HERE

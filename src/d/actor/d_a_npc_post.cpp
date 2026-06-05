@@ -17,6 +17,7 @@
 // NEW CODE — ALBW Port
 // ============================================
 #if TARGET_PC
+#include "d/d_albw_oocoo.h"
 #include "d/d_albw_rental.h"
 #include "d/actor/d_a_player.h"
 #include "dusk/ui/ui.hpp"
@@ -1122,6 +1123,7 @@ BOOL daNpc_Post_c::evtTalk() {
             s_rentalEvtStarted = false;
 #if TARGET_PC
             dALBWRental_clearVanillaTalkSuppress();
+            dALBWOocoo_executePendingWarp();
 #endif
             mEvtNo = EVT_NO_RESPONSE;
             evtChange();

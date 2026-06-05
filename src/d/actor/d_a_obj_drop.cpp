@@ -16,11 +16,16 @@
 #include "d/d_tresure.h"
 #include "d/d_s_play.h"
 #include "m_Do/m_Do_graphic.h"
+#include "m_Do/m_Do_audio.h"
 #include "d/actor/d_a_e_ym.h"
 #include "d/actor/d_a_e_ymb.h"
 #include "f_op/f_op_camera_mng.h"
 
 #include "dusk/settings.h"
+
+#if TARGET_PC
+#include "d/d_albw_death_rupee.h"
+#endif
 
 #if DEBUG
 daObjDrop_HIO_c l_HIO;
@@ -81,21 +86,47 @@ int daObjDrop_c::Create() {
 int daObjDrop_c::create() {
     fopAcM_ct(this, daObjDrop_c);
 
-    if (dComIfGs_isTbox(getSave())) {
-        return cPhs_ERROR_e;
+#if TARGET_PC
+    const bool recoveryDrop = dALBWDeathRupees_allowOrbDropCreate();
+    if (!recoveryDrop)
+#endif
+    {
+        if (dComIfGs_isTbox(getSave())) {
+#if TARGET_PC
+            dALBWDeathRupees_onOrbDropCreateAborted();
+#endif
+            return cPhs_ERROR_e;
+        }
     }
 
     modeInit();
 
     if (!Create()) {
+#if TARGET_PC
+        dALBWDeathRupees_onOrbDropCreateAborted();
+#endif
         return cPhs_ERROR_e;
     }
 
     OS_REPORT("DROP PARAM %x\n", fopAcM_GetParam(this));
+
+#if TARGET_PC
+    if (recoveryDrop) {
+        dALBWDeathRupees_onOrbDropCreated(this);
+        dALBWDeathRupees_finishRecoveryDropSetup(this);
+    }
+#endif
+
     return cPhs_COMPLEATE_e;
 }
 
 void daObjDrop_c::dropGet() {
+#if TARGET_PC
+    if (dALBWDeathRupees_onOrbDropGet(this)) {
+        mSetCollectDrop = false;
+        return;
+    }
+#endif
     if (mSetCollectDrop) {
         dComIfGs_onTbox(getSave());
 
@@ -126,6 +157,16 @@ static f32 dummy() {
 BOOL daObjDrop_c::checkGetArea() {
     f32 dist_to_player = current.pos.abs(daPy_getPlayerActorClass()->current.pos);
 
+#if TARGET_PC
+    if (dALBWDeathRupees_isRecoveryOrbDrop(this)) {
+        const BOOL inRange = dist_to_player < 250.0f;
+        if (inRange) {
+            OS_REPORT("ALBW death orb: player in pickup range dist=%.1f\n", dist_to_player);
+        }
+        return inRange;
+    }
+#endif
+
     if ((daPy_getPlayerActorClass()->checkCargoCarry() &&
          strcmp(dComIfGp_getStartStageName(), "F_SP112") == 0) ||
         (dist_to_player < 250.0f && dComIfGs_isLightDropGetFlag(dComIfGp_getStartStageDarkArea())))
@@ -137,6 +178,13 @@ BOOL daObjDrop_c::checkGetArea() {
 }
 
 void daObjDrop_c::checkCompleteDemo() {
+#if TARGET_PC
+    if (dALBWDeathRupees_isRecoveryOrbDrop(this)) {
+        dALBWDeathRupees_onOrbDropGet(this);
+        mSetCollectDrop = false;
+        return;
+    }
+#endif
     u8 need_num = dComIfGp_getNeedLightDropNum();
     u8 num = dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea());
 
@@ -445,17 +493,33 @@ int daObjDrop_c::modeWait() {
         }
 
         if (mLineIsCross[0] || mLineIsCross[1] || mLineIsCross[2] || mDrawInTimer == 0) {
-            pplayer->onWolfLightDropGet();
-            removeLineEffect();
-            mDeleteTimer = 70;
-            checkCompleteDemo();
-            mModeAction = 5;
+#if TARGET_PC
+            // Recovery orb: skip wolf tear shader (locks Link glow in overworld).
+            if (dALBWDeathRupees_isRecoveryOrbDrop(this)) {
+                removeLineEffect();
+                mDeleteTimer = 70;
+                checkCompleteDemo();
+                mModeAction = 5;
+            } else
+#endif
+            {
+                pplayer->onWolfLightDropGet();
+                removeLineEffect();
+                mDeleteTimer = 70;
+                checkCompleteDemo();
+                mModeAction = 5;
+            }
         }
     } break;
     case 5:
         if (cLib_calcTimer<u8>(&mDeleteTimer) == 0) {
             mModeAction = 6;
 
+#if TARGET_PC
+            if (dALBWDeathRupees_isRecoveryOrbDrop(this)) {
+                fopAcM_delete(this);
+            } else
+#endif
             if (chkDemoMode() == DEMOMODE_COMPLETE_WAIT_e) {
                 fopAcM_delete(this);
             }
@@ -605,6 +669,21 @@ int daObjDrop_c::execute() {
 
     (this->*l_exeFunc[mMode])();
     (this->*l_completeDemoFunc[mDemoMode])();
+
+#if TARGET_PC
+    if (dALBWDeathRupees_isRecoveryOrbDrop(this) && mModeAction < 3) {
+        bool needBody = false;
+        for (int i = 0; i < 6; i++) {
+            if (mpBodyEffEmtrs[i] == NULL) {
+                needBody = true;
+                break;
+            }
+        }
+        if (needBody) {
+            createBodyEffect();
+        }
+    }
+#endif
 
     mSound.framework(0, dComIfGp_getReverb(fopAcM_GetRoomNo(this)));
     dTres_c::setLightDropPostion(getSave(), &current.pos);

@@ -1300,6 +1300,15 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Always collect Rupees even if your Wallet is too full.");
         addOption("No Sword Recoil", getSettings().game.noSwordRecoil,
             "Link will not recoil when his sword hits walls.");
+        addOption("Manual Shielding", getSettings().game.manualShielding,
+            "Hold ZR to raise your shield without Z-target lock-on; move freely while guarding. "
+            "Shield bash is ZR+B. Off preserves vanilla auto-guard on Z-target.");
+        addOption("Shield Parry & Bash Charges", getSettings().game.shieldParryCombat,
+            "Perfect-guard timing earns bash charges and ALBW meter. Failed blocks cost meter "
+            "and charges. Off uses traditional TP guard (no parry economy).");
+        addOption("Shield Durability", getSettings().game.shieldDurability,
+            "Shield HP by tier; failed blocks drain it. Hylian repairs on parry and takes more "
+            "damage per hit. Break at 0 uses guard break (replaces vanilla slip counter).");
         addOption("No 2nd Fish for Cat", getSettings().game.no2ndFishForCat,
             "Skip needing to catch a second fish for Sera's cat.");
         addOption("Show Poe Count on Map", getSettings().game.enhancedMapMenus,

@@ -27,6 +27,9 @@
 #include <cstring>
 
 #include "dusk/string.hpp"
+#if TARGET_PC
+#include "d/d_albw_shield.h"
+#endif
 
 void dComIfG_play_c::ct() {
     mWindowNum = 0;
@@ -1249,6 +1252,9 @@ BOOL dComIfG_resetToOpening(scene_class* i_scene) {
     #endif
 
     dComIfG_changeOpeningScene(i_scene, fpcNm_OPENING_SCENE_e);
+#if TARGET_PC
+    dShield_resetSession();
+#endif
     mDoAud_bgmStop(30);
     mDoAud_resetProcess();
     #if PLATFORM_WII || VERSION == VERSION_SHIELD_DEBUG

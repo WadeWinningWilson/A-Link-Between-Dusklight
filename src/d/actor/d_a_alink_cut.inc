@@ -549,7 +549,7 @@ void daAlink_c::setComboReserb() {
         field_0x307e = mpHIO->mCut.m.mComboDuration;
     }
 
-    if (mComboCutCount != 4 && field_0x2fce == 0 && swordSwingTrigger()) {
+    if (mComboCutCount != 4 && field_0x2fce == 0 && swordSwingTrigger() && !manualShieldBlocksSwordInput()) {
         onNoResetFlg2(FLG2_COMBO_RESERB);
     }
 }
@@ -745,7 +745,7 @@ int daAlink_c::checkCutAction() {
 }
 
 void daAlink_c::checkCutTurnCharge() {
-    if (swordButton()) {
+    if (swordButton() && !manualShieldBlocksSwordInput()) {
         if (mProcVar5.mCutTurnChargeCheckTimer < 3) {
             mProcVar5.mCutTurnChargeCheckTimer++;
         } else {

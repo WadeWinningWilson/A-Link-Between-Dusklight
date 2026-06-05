@@ -146,6 +146,16 @@ struct UserSettings {
         ConfigVar<bool> noReturnRupees;
         ConfigVar<bool> disableRupeeCutscenes;
         ConfigVar<bool> noSwordRecoil;
+        // ============================================
+        // NEW CODE — ALBW Port (Phase 1 manual shield, Dawnlight 9ff9d35 / kamilink7)
+        // ============================================
+        ConfigVar<bool> manualShielding;
+        // Phase 4: LoP-style parry, bash charges, ALBW rewards/penalties. Off = vanilla guard slip only.
+        ConfigVar<bool> shieldParryCombat;
+        ConfigVar<bool> shieldDurability;
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
         ConfigVar<int> damageMultiplier;
         // ============================================
         // NEW CODE — ALBW Port

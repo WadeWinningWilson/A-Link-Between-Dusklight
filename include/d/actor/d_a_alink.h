@@ -1584,6 +1584,9 @@ public:
     BOOL itemTrigger();
     BOOL spActionButton();
     BOOL spActionTrigger();
+    BOOL manualShieldButton() const;
+    BOOL manualShieldAttackTrigger();
+    BOOL manualShieldBlocksSwordInput() const;
     BOOL midnaTalkTrigger() const;
     BOOL swordSwingTrigger();
     void setItemActionButtonStatus(u8 i_status);
@@ -3225,6 +3228,7 @@ public:
         return mProcID == PROC_WOLF_SIDESTEP || mProcID == PROC_WOLF_JUMP_ATTACK;
     }
     virtual BOOL checkGuardBreakMode() const { return mProcID == PROC_GUARD_BREAK; }
+    virtual BOOL checkGuardSlipMode() const { return mProcID == PROC_GUARD_SLIP; }
     virtual bool checkLv3Slide() const {
         return mProcID == PROC_SLIDE && mProcVar3.field_0x300e != 0;
     }
@@ -3544,7 +3548,14 @@ public:
     int getStartRoomNo() { return fopAcM_GetParam(this) & 0x3F; }
     bool checkFisingRodLure() const { return mEquipItem == 0x105; }
     BOOL doTrigger() const { return mItemTrigger & BTN_A; }
-    BOOL swordTrigger() { return itemTriggerCheck(BTN_B); }
+    BOOL swordTrigger() {
+#if TARGET_PC
+        if (manualShieldBlocksSwordInput()) {
+            return false;
+        }
+#endif
+        return itemTriggerCheck(BTN_B);
+    }
     BOOL grassCancelTrigger() { return itemTriggerCheck(BTN_B); }
     BOOL arrowChangeTrigger() { return itemActionTrigger(); }
     BOOL peepSubjectCancelTrigger() { return itemTriggerCheck(BTN_B); }

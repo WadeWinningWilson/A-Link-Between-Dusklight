@@ -711,6 +711,10 @@ void item_func_BOMB_INSECT_30() {}
 
 void item_func_RECOVER_FAILY() {
     dComIfGp_setItemLifeCount(32.0f, 0);
+#if TARGET_PC
+    // Fairy revival: full ALBW meter refill (including expanded max).
+    dMeter2_fillALBWMeter();
+#endif
 }
 
 void item_func_TRIPLE_HEART() {}
@@ -766,11 +770,30 @@ void item_func_MASTER_SWORD() {
 }
 
 void item_func_WOOD_SHIELD() {
+#if TARGET_PC
+    if (dMeter2_playerHasAnyShield()) {
+        if (!dMeter2_canAcquireShield((u8)dItemNo_WOOD_SHIELD_e)) {
+            return;
+        }
+        dMeter2_grantRentalShield((u8)dItemNo_WOOD_SHIELD_e);
+        return;
+    }
+#endif
     dComIfGs_setCollectShield(COLLECT_WOODEN_SHIELD);
     dComIfGs_setSelectEquipShield(dItemNo_WOOD_SHIELD_e);
 }
 
-void item_func_SHIELD() {}
+void item_func_SHIELD() {
+    // Replacement / shop shield item (0x2B). Ordon quest uses item_func_WOOD_SHIELD (0x2A).
+#if TARGET_PC
+    if (dMeter2_playerHasAnyShield()) {
+        dMeter2_grantRentalShield((u8)dItemNo_SHIELD_e);
+        return;
+    }
+#endif
+    dComIfGs_setCollectShield(COLLECT_ORDON_SHIELD);
+    dComIfGs_setSelectEquipShield(dItemNo_SHIELD_e);
+}
 
 void item_func_HYLIA_SHIELD() {}
 

@@ -1,6 +1,9 @@
 #include "d/dolzel.h" // IWYU pragma: keep
 
 #include "d/d_gameover.h"
+#if TARGET_PC
+#include "d/d_albw_death_rupee.h"
+#endif
 #include "JSystem/J2DGraph/J2DScreen.h"
 #include "d/d_com_inf_game.h"
 #include "d/d_meter2_info.h"
@@ -17,6 +20,7 @@
 #include "dusk/gx_helper.h"
 #if TARGET_PC
 #include "d/d_item_data.h"
+#include "d/d_albw_oocoo.h"
 #include "dusk/ui/ui.hpp"
 #endif
 
@@ -175,6 +179,12 @@ int dGameover_c::_create() {
             mDoGph_gInf_c::setFadeColor(*(JUtility::TColor*)&g_blackColor);
             dComIfGs_addDeathCount();
 #if TARGET_PC
+            {
+                const char* deathStage = dComIfGp_getLastPlayStageName();
+                const bool diedInDungeon = deathStage[0] == 'D' && deathStage[1] == '_' &&
+                                           deathStage[2] == 'M' && deathStage[3] == 'N';
+                dALBWOocoo_onDeathWarpContext(deathStage, diedInDungeon);
+            }
             // ============================================
             // NEW CODE — ALBW Port
             // Strip all ALBW items from inventory on real player death,
@@ -193,6 +203,7 @@ int dGameover_c::_create() {
             // preserved — only the current value is restored.
             // ============================================
             if (dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625])) {
+                dALBWDeathRupees_applyHalvingOnDeath();
                 dMeter2_stripAllALBWInventoryOnDeath();
                 dMeter2_fillALBWMeter();
             }
@@ -429,6 +440,7 @@ void dGameover_c::saveClose_proc() {
             // so Link would arrive in Ordon at 0 HP and immediately die again.
             // Restore to full health here before the stage transition fires.
             dComIfGs_setLife(dComIfGs_getMaxLife());
+            dALBWOocoo_onWarpChoice(1);
             // Warp to Outside Link's House (F_SP103 room 1, spawn 0)
             dComIfGp_setNextStage("F_SP103", 0, 1, -1);
             dComIfGp_offPauseFlag();
@@ -522,6 +534,7 @@ void dGameover_c::warpChoice_proc() {
     }
 
     if (sALBWWarpChoice >= 0) {
+        dALBWOocoo_onWarpChoice(sALBWWarpChoice);
         mProc = PROC_SAVE_CLOSE;
     }
 }

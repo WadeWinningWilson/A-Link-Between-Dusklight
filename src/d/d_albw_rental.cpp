@@ -38,9 +38,10 @@
 #include <cstdio>
 #include <cstring>
 
+#include "d/d_albw_oocoo.h"
 #include "d/d_com_inf_game.h"
-#include "d/d_item_data.h"
 #include "d/d_meter2_info.h"
+#include "d/d_item_data.h"
 #include "dusk/ui/ui.hpp"
 #include "m_Do/m_Do_controller_pad.h"
 // ============================================
@@ -73,6 +74,20 @@ struct ALBWRentalEntry {
 // slotNo values match the strip logic in d_gameover.cpp _create().
 // desc — shown in the right parchment panel when the entry is purchasable.
 static const ALBWRentalEntry kItems[] = {
+    { "Ordon Shield",
+      (u8)dItemNo_WOOD_SHIELD_e,  -1,      50,
+      "A humble offering for the Princess' Royal Family. Do be more gentle with it now!",
+      []() -> bool { return dMeter2_isShieldRentalEligible((u8)dItemNo_WOOD_SHIELD_e); } },
+    { "Wooden Shield",
+      (u8)dItemNo_SHIELD_e,       -1,      150,
+      "A sturdier wooden shield with subtle metal reinforcements....sadly didn't stop me "
+      "from getting this nasty splinter.",
+      []() -> bool { return dMeter2_isShieldRentalEligible((u8)dItemNo_SHIELD_e); } },
+    { "Hylian Shield",
+      (u8)dItemNo_HYLIA_SHIELD_e, -1,      500,
+      "An expert duelists' shield of choice, passed down by the Hyrulean Royal family. A "
+      "small inscription along the border reads: \" May the Goddess reunite us \".",
+      []() -> bool { return dMeter2_isShieldRentalEligible((u8)dItemNo_HYLIA_SHIELD_e); } },
     { "Slingshot",
       (u8)dItemNo_PACHINKO_e,     SLOT_23, 15,
       "A child's reliable pellet launcher, perfect for tiny insects." },
@@ -169,12 +184,18 @@ static clock::time_point sDialogueOpenTime;   // when current dialogue state sta
 // Every entry the player can see in the table (eligible+owned items hidden).
 // purchasable == true  → eligible AND not owned → real name, can press A
 // purchasable == false → not eligible yet       → shown as "?????"
-struct VisibleEntry {
-    int  kItemsIdx;   // index into kItems[]
-    bool purchasable;
+enum VisibleKind {
+    VISIBLE_ITEM = 0,
+    VISIBLE_OOCOO,
 };
 
-static VisibleEntry sVisibleList[kItemCount];
+struct VisibleEntry {
+    VisibleKind kind;
+    int         kItemsIdx;   // index into kItems[] when kind == VISIBLE_ITEM
+    bool        purchasable;
+};
+
+static VisibleEntry sVisibleList[kItemCount + 1];
 static int          sVisibleCount     = 0;  // total rows shown (inc. ?????)
 static int          sAvailCount       = 0;  // purchasable rows only (for button state)
 static int          sSelectedIdx      = 0;
@@ -282,13 +303,25 @@ static void rebuildVisibleList() {
         if (eligible && owned) {
             continue;  // hidden — player already owns this item
         }
-        sVisibleList[sVisibleCount].kItemsIdx   = i;
+        sVisibleList[sVisibleCount].kind        = VISIBLE_ITEM;
+        sVisibleList[sVisibleCount].kItemsIdx    = i;
         sVisibleList[sVisibleCount].purchasable = eligible && !owned;
         if (sVisibleList[sVisibleCount].purchasable) {
             sAvailCount++;
         }
         sVisibleCount++;
+
+        // Oocoo's Return sits directly under the three shield rows (kItems[0..2]).
+        if (i == 2 && dALBWOocoo_canShowInShop() &&
+            sVisibleCount < (int)(sizeof(sVisibleList) / sizeof(sVisibleList[0]))) {
+            sVisibleList[sVisibleCount].kind        = VISIBLE_OOCOO;
+            sVisibleList[sVisibleCount].kItemsIdx   = -1;
+            sVisibleList[sVisibleCount].purchasable = true;
+            sAvailCount++;
+            sVisibleCount++;
+        }
     }
+
     if (sSelectedIdx >= sVisibleCount) {
         sSelectedIdx = (sVisibleCount > 0) ? sVisibleCount - 1 : 0;
     }
@@ -303,6 +336,24 @@ static void tryPurchase(int visIdx) {
     if (!sVisibleList[visIdx].purchasable) {
         return;  // ????? row — not purchasable yet
     }
+
+    if (sVisibleList[visIdx].kind == VISIBLE_OOCOO) {
+        if (!dALBWOocoo_tryPurchase()) {
+            sStatusMsg          = "Sincerest apologies, but we can't send the\n"
+                                  "cuckoo out for that little..";
+            sStatusExpiry       = clock::now() + std::chrono::seconds(5);
+            sJustFailedPurchase = true;
+            return;
+        }
+        sPurchasedThisSession = true;
+        sJustPurchased        = true;
+        sStatusMsg            = "Oocoo will carry you back when you leave the shop.\n"
+                                "Thank you for your patronage!";
+        sStatusExpiry         = clock::now() + std::chrono::seconds(6);
+        rebuildVisibleList();
+        return;
+    }
+
     const ALBWRentalEntry& e = kItems[sVisibleList[visIdx].kItemsIdx];
     u16 rupees = dComIfGs_getRupee();
     if (rupees < (u16)e.price) {
@@ -312,9 +363,18 @@ static void tryPurchase(int visIdx) {
         return;
     }
     dComIfGs_setRupee(rupees - (u16)e.price);
-    dComIfGs_onItemFirstBit(e.itemNo);
-    if (e.slotNo >= 0) {
-        dComIfGs_setItem(e.slotNo, e.itemNo);
+    if (dMeter2_isShieldItem(e.itemNo)) {
+        if (!dMeter2_canAcquireShield(e.itemNo)) {
+            sStatusMsg    = "You can only carry one shield at a time.";
+            sStatusExpiry = clock::now() + std::chrono::seconds(5);
+            return;
+        }
+        dMeter2_grantRentalShield(e.itemNo);
+    } else {
+        dComIfGs_onItemFirstBit(e.itemNo);
+        if (e.slotNo >= 0) {
+            dComIfGs_setItem(e.slotNo, e.itemNo);
+        }
     }
     sPurchasedThisSession = true;
     sJustPurchased        = true;   // triggers Z2SE_POST_V_FANFARE in d_a_npc_post.cpp
@@ -795,16 +855,24 @@ void dALBWRental_imguiDraw() {
             ImGui::TableHeadersRow();
 
             for (int row = 0; row < sVisibleCount; ++row) {
-                const VisibleEntry&    ve    = sVisibleList[row];
-                const ALBWRentalEntry& e     = kItems[ve.kItemsIdx];
-                const bool             isSel = (sSelectedIdx == row);
+                const VisibleEntry& ve = sVisibleList[row];
+                const bool          isSel = (sSelectedIdx == row);
+                const char*         rowName = nullptr;
+                int                 rowPrice = 0;
+                if (ve.kind == VISIBLE_OOCOO) {
+                    rowName  = dALBWOocoo_getServiceName();
+                    rowPrice = dALBWOocoo_getServicePrice();
+                } else {
+                    rowName  = kItems[ve.kItemsIdx].name;
+                    rowPrice = kItems[ve.kItemsIdx].price;
+                }
 
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
 
                 char selId[64];
                 if (ve.purchasable) {
-                    snprintf(selId, sizeof(selId), "%s##r%d", e.name, row);
+                    snprintf(selId, sizeof(selId), "%s##r%d", rowName, row);
                 } else {
                     snprintf(selId, sizeof(selId), "?????##r%d", row);
                     ImGui::PushStyleColor(ImGuiCol_Text, kDimCol);
@@ -834,7 +902,7 @@ void dALBWRental_imguiDraw() {
                 if (!ve.purchasable) {
                     ImGui::PushStyleColor(ImGuiCol_Text, kDimCol);
                 }
-                ImGui::Text("%d", e.price);   // real price always shown
+                ImGui::Text("%d", rowPrice);   // real price always shown
                 if (!ve.purchasable) {
                     ImGui::PopStyleColor();
                 }
@@ -848,12 +916,14 @@ void dALBWRental_imguiDraw() {
         // Nothing      → invisible dummy to keep layout height stable.
         ImGui::Spacing();
         if (sSelectedIdx >= 0 && sSelectedIdx < sVisibleCount) {
-            const VisibleEntry&    selVe = sVisibleList[sSelectedIdx];
-            const ALBWRentalEntry& selE  = kItems[selVe.kItemsIdx];
+            const VisibleEntry& selVe = sVisibleList[sSelectedIdx];
             if (selVe.purchasable) {
                 // Real item available for purchase — show its description.
+                const char* desc = selVe.kind == VISIBLE_OOCOO
+                    ? dALBWOocoo_getServiceDesc()
+                    : kItems[selVe.kItemsIdx].desc;
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.85f, 0.85f, 1.0f));
-                ImGui::TextWrapped("%s", selE.desc);
+                ImGui::TextWrapped("%s", desc);
                 ImGui::PopStyleColor();
             } else {
                 // ????? item — not yet eligible for purchase.
@@ -914,14 +984,24 @@ void dALBWRental_imguiDraw() {
 // ">" cursor prefix and scroll its 6-row viewport to keep it visible.
 // ============================================
 const dALBWVisibleEntry* dALBWRental_getVisibleList(int* outCount) {
-    static dALBWVisibleEntry sPubList[sizeof(kItems)/sizeof(kItems[0])];
+    static dALBWVisibleEntry sPubList[sizeof(kItems)/sizeof(kItems[0]) + 1];
     for (int i = 0; i < sVisibleCount; ++i) {
-        const ALBWRentalEntry& e = kItems[sVisibleList[i].kItemsIdx];
-        sPubList[i].name        = e.name;
-        sPubList[i].price       = e.price;
-        sPubList[i].purchasable = sVisibleList[i].purchasable;
-        sPubList[i].desc        = sVisibleList[i].purchasable ? e.desc : nullptr;
-        sPubList[i].itemNo      = e.itemNo;
+        if (sVisibleList[i].kind == VISIBLE_OOCOO) {
+            sPubList[i].name           = dALBWOocoo_getServiceName();
+            sPubList[i].price          = dALBWOocoo_getServicePrice();
+            sPubList[i].purchasable    = true;
+            sPubList[i].desc           = dALBWOocoo_getServiceDesc();
+            sPubList[i].itemNo         = (u8)dItemNo_DUNGEON_BACK_e;
+            sPubList[i].isOocooService = true;
+        } else {
+            const ALBWRentalEntry& e = kItems[sVisibleList[i].kItemsIdx];
+            sPubList[i].name           = e.name;
+            sPubList[i].price          = e.price;
+            sPubList[i].purchasable    = sVisibleList[i].purchasable;
+            sPubList[i].desc           = sVisibleList[i].purchasable ? e.desc : nullptr;
+            sPubList[i].itemNo         = e.itemNo;
+            sPubList[i].isOocooService = false;
+        }
     }
     *outCount = sVisibleCount;
     return sPubList;

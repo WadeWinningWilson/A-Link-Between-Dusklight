@@ -75,7 +75,9 @@ static const u64 kTagMidoku[6] = {
 };
 
 static constexpr f32 kTitleFontScale   = 0.65f;
-static constexpr f32 kDescFontScale    = 0.65f;
+// Applied once on t4_s at load; drawDescMesgText uses that size (no second multiply).
+static constexpr f32 kDescFontScale       = 0.65f;
+static constexpr f32 kDescLineSpaceScale  = 0.72f;  // ruled pitch is tall; tighten vs font size
 static constexpr f32 kRowNameFontScale = 0.88f;  // long names (e.g. Double Clawshot) vs price column
 // let_area is the whole letter-window interior (list + parchment), not the list column alone.
 // Vanilla only draws the menu inside it; parchment in read mode is full-screen with a dim pass.
@@ -163,6 +165,8 @@ static const char* shopRentalItemBtiName(u8 itemNo) {
     case (u8)dItemNo_ARMOR_e:
     case (u8)dItemNo_DEITY_ARMOR_e:
         return "ni_magicarmor_48.bti";
+    case (u8)dItemNo_DUNGEON_BACK_e:
+        return "im_musuko_48.bti";
     default:
         return nullptr;
     }
@@ -480,10 +484,86 @@ static LetAreaBounds calcRowIconSlotBounds(CPaneMgr* letterMgr) {
     return slot;
 }
 
+// Heap icon column: flame_* left edge per row (stable when scrolling; do not reuse row-0 mail X).
+static void calcRowHeapIconDrawPos(CPaneMgr* letterMgr, J2DPicture* rowFrame, f32 listIconLeft,
+                                   f32* outX, f32* outY, f32* outW, f32* outH) {
+    const LetAreaBounds slot = calcRowIconSlotBounds(letterMgr);
+    *outW                  = slot.valid ? slot.w : kRowLetterIconBoxMaxW;
+    *outH                  = slot.valid ? slot.h : kWheelIconBaselinePx;
+    *outX                  = slot.valid ? slot.x : 0.0f;
+    *outY                  = slot.valid ? slot.y : 0.0f;
+
+    if (listIconLeft >= 0.0f) {
+        *outX = listIconLeft;
+    } else if (rowFrame) {
+        const LetAreaBounds frame = calcPaneScreenBounds(rowFrame);
+        if (frame.valid) {
+            *outX = frame.x + kRowFrameInsetX;
+        }
+    }
+
+    if (rowFrame) {
+        const LetAreaBounds frame = calcPaneScreenBounds(rowFrame);
+        if (frame.valid && *outH > 1.0f) {
+            *outY = frame.y + 0.5f * (frame.h - *outH);
+        }
+    }
+}
+
+// Match visible mail/envelope X on a locked row; flame_* left edge is a fallback only.
+static f32 calcShopListIconLeft(J2DPicture* const* rowFrames, J2DPane* const* letterGfx,
+                                 J2DPicture* const* letterPic, CPaneMgr* const* letterMgr,
+                                 int scrollTop, int visCount, const dALBWVisibleEntry* visList) {
+    for (int row = 0; row < 6; ++row) {
+        const int itemIdx = scrollTop + row;
+        if (itemIdx >= visCount || visList[itemIdx].purchasable) {
+            continue;
+        }
+        if (letterGfx[row]) {
+            const LetAreaBounds b = calcPaneScreenBounds(letterGfx[row]);
+            if (b.valid && b.w < 80.0f && b.h < 80.0f) {
+                return b.x;
+            }
+        }
+        if (letterPic[row] && letterPic[row]->isVisible()) {
+            const LetAreaBounds b = calcPaneScreenBounds(letterPic[row]);
+            if (b.valid) {
+                return b.x;
+            }
+        }
+        const LetAreaBounds slot = calcRowIconSlotBounds(letterMgr[row]);
+        if (slot.valid) {
+            return slot.x;
+        }
+    }
+
+    f32 left = -1.0f;
+    for (int row = 0; row < 6; ++row) {
+        const LetAreaBounds slot = calcRowIconSlotBounds(letterMgr[row]);
+        if (slot.valid && (left < 0.0f || slot.x < left)) {
+            left = slot.x;
+        }
+    }
+    for (int row = 0; row < 6; ++row) {
+        if (!rowFrames[row]) {
+            continue;
+        }
+        const LetAreaBounds frame = calcPaneScreenBounds(rowFrames[row]);
+        if (!frame.valid) {
+            continue;
+        }
+        const f32 x = frame.x + kRowFrameInsetX;
+        if (left < 0.0f || x < left) {
+            left = x;
+        }
+    }
+    return left;
+}
+
 // let_*_n is PAN2: row bar / name / price may share its JSUTree. Hiding the root suppresses
 // flame_* and fenu_t* even after show() on those tags — only hide letter gfx in the icon slot.
 static void walkLetRowSubtree(J2DPane* pane, ResTIMG* letterTimg, bool rental, JUTTexture* savedContents,
-                              bool isLetRoot, const LetAreaBounds& iconSlot) {
+                              bool isLetRoot, const LetAreaBounds& iconSlot, f32 listIconLeft) {
     if (!pane) {
         return;
     }
@@ -497,6 +577,22 @@ static void walkLetRowSubtree(J2DPane* pane, ResTIMG* letterTimg, bool rental, J
                 setRowLetterEnvelopeVisible((J2DWindow*)pane, savedContents, false);
             }
             pane->hide();
+        } else if (listIconLeft >= 0.0f) {
+            const u16  type      = pane->getTypeID();
+            const bool maybeIcon = pane->getKind() == 'PIC1' || type == 17 || type == 18;
+            if (maybeIcon) {
+                const LetAreaBounds b            = calcPaneScreenBounds(pane);
+                const f32           mailColRight = listIconLeft + kRowLetterIconBoxMaxW;
+                const bool          centerItemGfx =
+                    b.valid && b.w < 120.0f && b.x > mailColRight - 4.0f;
+                if (centerItemGfx) {
+                    pane->hide();
+                } else {
+                    pane->show();
+                }
+            } else {
+                pane->show();
+            }
         } else {
             pane->show();
         }
@@ -506,14 +602,15 @@ static void walkLetRowSubtree(J2DPane* pane, ResTIMG* letterTimg, bool rental, J
 
     JSUTreeIterator<J2DPane> iter = pane->getPaneTree()->getFirstChild();
     while (iter) {
-        walkLetRowSubtree(*iter, letterTimg, rental, savedContents, false, iconSlot);
+        walkLetRowSubtree(*iter, letterTimg, rental, savedContents, false, iconSlot, listIconLeft);
         ++iter;
     }
 }
 
 static void applyLetRowSubtreeRental(J2DPane* letRoot, ResTIMG* letterTimg, bool rental,
-                                     JUTTexture* savedContents, const LetAreaBounds& iconSlot) {
-    walkLetRowSubtree(letRoot, letterTimg, rental, savedContents, true, iconSlot);
+                                     JUTTexture* savedContents, const LetAreaBounds& iconSlot,
+                                     f32 listIconLeft) {
+    walkLetRowSubtree(letRoot, letterTimg, rental, savedContents, true, iconSlot, listIconLeft);
 }
 
 static void setRowLetterGraphicsVisible(J2DPane* gfxPane, J2DWindow* win, JUTTexture* savedContents,
@@ -718,7 +815,7 @@ static void configureLetterBaseTextScreen(J2DScreen* screen, J2DTextBox** outDes
     tb->setBlackWhite(JUtility::TColor(0, 0, 0, 0),
                       JUtility::TColor(65, 55, 30, 255));
     tb->setString(0x200, "");
-    tb->hide();  // body copy drawn via drawDescMesgText (J2DPrint), not letter t4_s OutFont
+    tb->show();
     *outDescBox = tb;
     if (outDescOutFontBox) {
         *outDescOutFontBox = nullptr;
@@ -1249,7 +1346,9 @@ dALBWShop_c::~dALBWShop_c() {
     JKR_DELETE(mpDescBoxMgr);
     JKR_DELETE(mpDescSpotScreen);
     JKR_DELETE(mpDescTextScreen);
-    for (int i = 0; i < 6; ++i) JKR_DELETE(mpRowPriceMgr[i]);
+    for (int i = 0; i < 6; ++i) {
+        JKR_DELETE(mpRowPriceMgr[i]);
+    }
     mpDescBox = nullptr;
     mpDescOutFontBox = nullptr;
     if (mpMount) {
@@ -1344,6 +1443,19 @@ void dALBWShop_c::create() {
         if (J2DPane* sh = mpMenuScreen->search(kTagSubShadow[i])) sh->hide();
         if (J2DPane* sh = mpMenuScreen->search(kTagPriceShadow[i])) sh->hide();
         if (J2DPane* md = mpMenuScreen->search(kTagMidoku[i])) md->hide();
+    }
+    // Non-JPN letter select hides menu_t* row bars; leaving them visible draws full-width
+    // chrome that gets scissor-clipped (black bar on the right) and shifts wheel icons.
+    static const u64 kHideMenuRowTags[] = {
+        MULTI_CHAR('menu_t0'),  MULTI_CHAR('menu_t1'),  MULTI_CHAR('menu_t2'),
+        MULTI_CHAR('menu_t3'),  MULTI_CHAR('menu_t4'),  MULTI_CHAR('menu_t5'),
+        MULTI_CHAR('menu_t0s'), MULTI_CHAR('menu_t1s'), MULTI_CHAR('menu_t2s'),
+        MULTI_CHAR('menu_t3s'), MULTI_CHAR('menu_t4s'), MULTI_CHAR('menu_t5s'),
+    };
+    for (int i = 0; i < (int)(sizeof(kHideMenuRowTags) / sizeof(kHideMenuRowTags[0])); ++i) {
+        hidePaneTag(mpMenuScreen, kHideMenuRowTags[i]);
+    }
+    for (int i = 0; i < 6; ++i) {
         mpRowLetterPane[i] = mpMenuScreen->search(kTagRowLetter[i]);
         mpRowLetterMgr[i]  = JKR_NEW CPaneMgr(mpMenuScreen, kTagRowLetter[i], 0, NULL);
         mpRowLetterWin[i]     = nullptr;
@@ -1353,9 +1465,10 @@ void dALBWShop_c::create() {
             J2DPane* screenRoot = mpMenuScreen->search('ROOT');
             mpRowLetterGfx[i] = findLetterGfxPaneNear(screenRoot, mRowLetterTimg, mpRowLetterPane[i],
                                                       mpRowLetterMgr[i]);
-            if (!mpRowLetterGfx[i]) {
-                mpRowLetterGfx[i] =
-                    findIconGfxPaneNear(screenRoot, mpRowLetterPane[i], mpRowLetterMgr[i]);
+            mpRowBloItemGfx[i] =
+                findIconGfxPaneNear(screenRoot, mpRowLetterPane[i], mpRowLetterMgr[i]);
+            if (mpRowBloItemGfx[i] == mpRowLetterGfx[i]) {
+                mpRowBloItemGfx[i] = nullptr;
             }
             if (mpRowLetterGfx[i] && mpRowLetterGfx[i]->getTypeID() == 17) {
                 mpRowLetterWin[i] = (J2DWindow*)mpRowLetterGfx[i];
@@ -1371,6 +1484,7 @@ void dALBWShop_c::create() {
             }
         }
         if (mpRowLetterMgr[i]) {
+            mRowLetterInitCenterX[i] = mpRowLetterMgr[i]->getInitGlobalCenterPosX();
             mpRowLetterMgr[i]->setAlphaRate(1.0f);
             const f32 iconScale = g_drawHIO.mLetterSelectScreen.mUnselectBarScale;
             mpRowLetterMgr[i]->scale(iconScale, iconScale);
@@ -1574,7 +1688,10 @@ void dALBWShop_c::drawDescMesgText(J2DGrafContext* gfx, f32 x, f32 y, f32 w, f32
     ortho->setPort();
 
     const JUtility::TColor ink(65, 55, 30, 255);
-    const f32 lineSpace = calcDescLineSpace(mpDescBox, font, ruledLinePitch);
+    f32 lineSpace = calcDescLineSpace(mpDescBox, font, ruledLinePitch);
+    if (ruledLinePitch > 1.0f) {
+        lineSpace = ruledLinePitch * kDescLineSpaceScale;
+    }
     dALBW_wrapMesgWords(mDescWrapBuf, sizeof(mDescWrapBuf), mDescBuf, textW, font, fontSizeX);
 
     J2DPrint print(font, mpDescBox ? mpDescBox->getCharSpace() : 0.0f, lineSpace, ink, ink,
@@ -1657,8 +1774,12 @@ void dALBWShop_c::populateRows() {
         if (itemIdx < visCount) {
             const dALBWVisibleEntry& ve    = visList[itemIdx];
             const bool               isSel = (itemIdx == sel);
-            const char*              name  = ve.purchasable ? ve.name : "?????";
-            snprintf(buf, sizeof(buf), "  %s", name);
+            const char* name = ve.purchasable ? ve.name : "?????";
+            if (isSel) {
+                snprintf(buf, sizeof(buf), "> %s", name);
+            } else {
+                snprintf(buf, sizeof(buf), "  %s", name);
+            }
             mpRowName[row]->setString(buf);
             mpRowName[row]->show();
             if (mpRowPrice[row]) {
@@ -1705,9 +1826,10 @@ void dALBWShop_c::populateRows() {
     } else {
         snprintf(mDescBuf, sizeof(mDescBuf), "Not in stock yet - Come back soon!!!");
     }
-    (void)mpDescBox;  // text rendered by drawDescMesgText, not t4_s screen draw
+    if (mpDescBox) {
+        mpDescBox->hide();
+    }
     updateDescParchment(showItemBox, itemNo);
-    updateRowLetters(visCount, sel);
 }
 
 bool dALBWShop_c::ensureRowWheelPic(int row, u8 itemNo, JKRArchive* arc) {
@@ -1767,7 +1889,8 @@ bool dALBWShop_c::ensureItemBoxPic() {
 }
 
 void dALBWShop_c::cacheRowLetterSlotBounds(int row) {
-    const LetAreaBounds slot  = calcRowIconSlotBounds(mpRowLetterMgr[row]);
+    const LetAreaBounds slot =
+        calcRowIconSlotBounds(mpRowLetterMgr[row]);
     mRowIconSlot[row].x       = slot.x;
     mRowIconSlot[row].y       = slot.y;
     mRowIconSlot[row].w       = slot.w;
@@ -1835,15 +1958,16 @@ void dALBWShop_c::dumpRowIconDebug(JKRArchive* iconArc, int visCount,
         fprintf(fp,
                 "row=%d itemIdx=%d purch=%d itemNo=%u price=%d ensure=%d letVis=%d frameVis=%d "
                 "priceVis=%d "
-                "kind=%c%c%c%c picCount=%d pane=%p gfx=%p slot=%d slotXYWH=%.1f,%.1f,%.1f,%.1f\n",
+                "kind=%c%c%c%c picCount=%d pane=%p letterGfx=%p bloItemGfx=%p "
+                "slot=%d slotXYWH=%.1f,%.1f,%.1f,%.1f\n",
                 row, itemIdx, purch, (unsigned)itemNo, priceSet, ensure,
                 mpRowLetterPane[row] && mpRowLetterPane[row]->isVisible() ? 1 : 0,
                 mpRowFrame[row] && mpRowFrame[row]->isVisible() ? 1 : 0,
                 mpRowPrice[row] && mpRowPrice[row]->isVisible() ? 1 : 0,
                 (char)(kind >> 24), (char)(kind >> 16), (char)(kind >> 8), (char)kind, picCount,
                 (void*)mpRowLetterPane[row], (void*)mpRowLetterGfx[row],
-                mRowIconSlot[row].valid ? 1 : 0, mRowIconSlot[row].x, mRowIconSlot[row].y,
-                mRowIconSlot[row].w, mRowIconSlot[row].h);
+                (void*)mpRowBloItemGfx[row], mRowIconSlot[row].valid ? 1 : 0, mRowIconSlot[row].x,
+                mRowIconSlot[row].y, mRowIconSlot[row].w, mRowIconSlot[row].h);
         if (purch && ensure && mRowItemTexBuf[row]) {
             const ResTIMG* timg = (const ResTIMG*)mRowItemTexBuf[row];
             f32          dw = 0.0f;
@@ -1876,6 +2000,10 @@ void dALBWShop_c::drawRowWheelIcons(J2DGrafContext* gfx, int visCount) {
     ortho->setup2D();
     ortho->setPort();
 
+    const f32 listIconLeft =
+        calcShopListIconLeft(mpRowFrame, mpRowLetterGfx, mpRowLetter, mpRowLetterMgr, mScrollTop,
+                             visCount, visList);
+
     for (int row = 0; row < 6; ++row) {
         const int itemIdx = mScrollTop + row;
         if (itemIdx >= visCount || !visList[itemIdx].purchasable) {
@@ -1884,15 +2012,20 @@ void dALBWShop_c::drawRowWheelIcons(J2DGrafContext* gfx, int visCount) {
 
         const u8 itemNo     = visList[itemIdx].itemNo;
         const u8 iconItemNo = shopWheelIconItemNo(itemNo);
-        if (!ensureRowWheelPic(row, itemNo, iconArc) || !mRowIconSlot[row].valid ||
-            !ensureItemBoxPic()) {
+        if (!ensureRowWheelPic(row, itemNo, iconArc) || !ensureItemBoxPic()) {
             continue;
         }
 
-        const f32 slotX = mRowIconSlot[row].x;
-        const f32 slotY = mRowIconSlot[row].y;
-        const f32 slotW = mRowIconSlot[row].w;
-        const f32 slotH = mRowIconSlot[row].h;
+        f32 slotX = 0.0f;
+        f32 slotY = 0.0f;
+        f32 slotW = 0.0f;
+        f32 slotH = 0.0f;
+        calcRowHeapIconDrawPos(mpRowLetterMgr[row], mpRowFrame[row], listIconLeft, &slotX, &slotY,
+                               &slotW, &slotH);
+        if (slotW < 1.0f || slotH < 1.0f) {
+            continue;
+        }
+
         mpItemBoxPic->show();
         mpItemBoxPic->draw(slotX, slotY, slotW, slotH, false, false, false);
 
@@ -1938,7 +2071,6 @@ void dALBWShop_c::drawRowListText(J2DGrafContext* gfx, int visCount) {
             (itemIdx == sel) ? hio.mSelectTextFront
                              : JUtility::TColor(180, 165, 120, 255);
         if (row == 4) {
-            // 5th viewport row: fenu_t10 is covered by menu_10n footer gfx in the BLO tree.
             const LetAreaBounds slot = calcPaneScreenBounds(mpRowPrice[row]);
             drawRowPriceMesg(gfx, slot, buf, ink);
             continue;
@@ -1981,6 +2113,8 @@ void dALBWShop_c::updateRowLetters(int visCount, int sel) {
             const f32 scale =
                 (isSel && !rentableRow) ? hio.mSelectBarScale : hio.mUnselectBarScale;
             mgr->scale(scale, scale);
+            // let_* holds flame_* — never paneTrans the row container (shifts bars off-screen).
+            mgr->paneTrans(0.0f, 0.0f);
         }
 
         pane->show();
@@ -1988,15 +2122,22 @@ void dALBWShop_c::updateRowLetters(int visCount, int sel) {
         const LetAreaBounds iconSlot = calcRowIconSlotBounds(mgr);
         cacheRowLetterSlotBounds(row);
 
+        if (mpRowBloItemGfx[row]) {
+            mpRowBloItemGfx[row]->hide();
+        }
+
         if (ve.purchasable && dComIfGp_getItemIconArchive() &&
             ensureRowWheelPic(row, ve.itemNo, dComIfGp_getItemIconArchive())) {
-            applyLetRowSubtreeRental(pane, mRowLetterTimg, true, mRowLetterContentsTex[row], iconSlot);
             setRowLetterGraphicsVisible(mpRowLetterGfx[row], mpRowLetterWin[row],
                                         mRowLetterContentsTex[row], false);
-            if (mpRowLetter[row] && mRowLetterTimg && mpRowLetter[row]->isUsed(mRowLetterTimg)) {
+            if (mpRowLetterGfx[row] && mRowLetterTimg && !mpRowLetterGfx[row]->isUsed(mRowLetterTimg)) {
+                mpRowLetterGfx[row]->hide();
+            }
+            if (mpRowLetter[row]) {
                 mpRowLetter[row]->hide();
             }
             if (mpRowFrame[row]) {
+                showPaneAndAncestors(mpRowFrame[row]);
                 mpRowFrame[row]->show();
             }
             if (mpRowName[row]) {
@@ -2006,7 +2147,7 @@ void dALBWShop_c::updateRowLetters(int visCount, int sel) {
                 showPaneAndAncestors(mpRowPrice[row]);
             }
             if (mpRowItemPic[row]) {
-                mpRowItemPic[row]->show();
+                mpRowItemPic[row]->hide();
             }
         } else {
             mRowIconSlot[row].valid = false;
@@ -2014,7 +2155,9 @@ void dALBWShop_c::updateRowLetters(int visCount, int sel) {
                 mpRowItemPic[row]->hide();
             }
             mRowItemPicItemNo[row] = 0xff;
-            applyLetRowSubtreeRental(pane, mRowLetterTimg, false, mRowLetterContentsTex[row], iconSlot);
+            restoreLetterIconsToPane(pane, mRowLetterTimg, mRowLetterBaseW[row], mRowLetterBaseH[row]);
+            applyLetRowSubtreeRental(pane, mRowLetterTimg, false, mRowLetterContentsTex[row], iconSlot,
+                                     -1.0f);
             setRowLetterGraphicsVisible(mpRowLetterGfx[row], mpRowLetterWin[row],
                                         mRowLetterContentsTex[row], true);
             if (mpRowLetterWin[row]) {
@@ -2034,6 +2177,36 @@ void dALBWShop_c::updateRowLetters(int visCount, int sel) {
     }
 }
 
+void dALBWShop_c::hideRentableCenterBloIcons(int visCount, f32 listIconLeft) {
+    const dALBWVisibleEntry* visList = dALBWRental_getVisibleList(&visCount);
+
+    for (int row = 0; row < 6; ++row) {
+        J2DPane* pane = mpRowLetterPane[row];
+        if (!pane || !mpRowLetterMgr[row]) {
+            continue;
+        }
+
+        const int itemIdx = mScrollTop + row;
+        if (itemIdx >= visCount) {
+            continue;
+        }
+
+        const dALBWVisibleEntry& ve = visList[itemIdx];
+        if (!ve.purchasable || !dComIfGp_getItemIconArchive() ||
+            !ensureRowWheelPic(row, ve.itemNo, dComIfGp_getItemIconArchive())) {
+            continue;
+        }
+
+        if (mpRowBloItemGfx[row]) {
+            mpRowBloItemGfx[row]->hide();
+        }
+
+        const LetAreaBounds iconSlot = calcRowIconSlotBounds(mpRowLetterMgr[row]);
+        applyLetRowSubtreeRental(pane, mRowLetterTimg, true, mRowLetterContentsTex[row], iconSlot,
+                                 listIconLeft);
+    }
+}
+
 void dALBWShop_c::registerDraw() {
     if (mReady) dComIfGd_set2DOpa(this);
 }
@@ -2045,20 +2218,6 @@ void dALBWShop_c::draw() {
     const int   sel      = dALBWRental_getSelectedIdx();
     const dALBWVisibleEntry* visList = dALBWRental_getVisibleList(&visCount);
     (void)sel;
-
-    static int s_debugFrames     = 0;
-    static int s_debugLastSel    = -1;
-    static int s_debugLastScroll = -1;
-    const bool debugRefresh =
-        s_debugFrames < 60 || sel != s_debugLastSel || mScrollTop != s_debugLastScroll;
-    if (debugRefresh) {
-        dumpRowIconDebug(ensureItemIconArchive(), visCount, visList);
-        s_debugLastSel    = sel;
-        s_debugLastScroll = mScrollTop;
-        if (s_debugFrames < 60) {
-            ++s_debugFrames;
-        }
-    }
 
     J2DGrafContext* gfx = dComIfGp_getCurrentGrafPort();
 
@@ -2093,6 +2252,10 @@ void dALBWShop_c::draw() {
         const f32 descW = area.w - listW - kListDescGap;
 
         applyListColumnLayout(area.x, listW);
+        for (int row = 0; row < 6; ++row) {
+            cacheRowLetterSlotBounds(row);
+        }
+        updateRowLetters(visCount, sel);
 
         // Item list: left column + icon column (icons sit slightly left of let_area origin).
         const f32 listScissorX = area.x - kListIconScissorPad;
@@ -2101,32 +2264,48 @@ void dALBWShop_c::draw() {
         gfx->setScissor();
         suppressFifthRowFooterOverlap(mpMenuScreen, mpRowPrice[4]);
         mpMenuScreen->draw(0.0f, 0.0f, gfx);
+        const f32 listIconLeft =
+            calcShopListIconLeft(mpRowFrame, mpRowLetterGfx, mpRowLetter, mpRowLetterMgr, mScrollTop,
+                                 visCount, visList);
+        hideRentableCenterBloIcons(visCount, listIconLeft);
         drawRowListText(gfx, visCount);
         drawRowWheelIcons(gfx, visCount);
         restoreScissor(gfx, savedL, savedT, savedW, savedH);
 
         // Parchment on the right column (shifted past list + gap).
         applyDescColumnShift(listW + kListDescGap);
-        const f32 ruledLinePitch = measureParchmentLinePitch(mpDescTextScreen);
 
-        // Ruled parchment only (no spot.blo decorative frame).
         gfx->scissor(descX, area.y, descW, area.h);
         gfx->setScissor();
+        const f32 ruledPitch = measureParchmentLinePitch(mpDescTextScreen);
+        if (mpDescSpotScreen) {
+            mpDescSpotScreen->draw(0.0f, 0.0f, gfx);
+        }
         if (mpDescTextScreen) {
-            // Ruled lines + n_e4line; t4_s hidden — body via drawDescMesgText.
             mpDescTextScreen->draw(0.0f, 0.0f, gfx);
         }
-        drawDescMesgText(gfx, descX, area.y, descW, area.h, ruledLinePitch);
+        drawDescMesgText(gfx, descX, area.y, descW, area.h, ruledPitch);
         restoreScissor(gfx, savedL, savedT, savedW, savedH);
     } else {
+        updateRowLetters(visCount, sel);
         suppressFifthRowFooterOverlap(mpMenuScreen, mpRowPrice[4]);
         mpMenuScreen->draw(0.0f, 0.0f, gfx);
+        const f32 listIconLeft =
+            calcShopListIconLeft(mpRowFrame, mpRowLetterGfx, mpRowLetter, mpRowLetterMgr, mScrollTop,
+                                 visCount, visList);
+        hideRentableCenterBloIcons(visCount, listIconLeft);
         drawRowListText(gfx, visCount);
         drawRowWheelIcons(gfx, visCount);
-        if (mpDescTextScreen) mpDescTextScreen->draw(0.0f, 0.0f, gfx);
-        const f32 ruledLinePitch = measureParchmentLinePitch(mpDescTextScreen);
-        drawDescMesgText(gfx, 0.0f, 0.0f, mDoGph_gInf_c::getWidthF(), mDoGph_gInf_c::getHeightF(),
-                         ruledLinePitch);
+        const f32 ruledPitch = measureParchmentLinePitch(mpDescTextScreen);
+        if (mpDescSpotScreen) {
+            mpDescSpotScreen->draw(0.0f, 0.0f, gfx);
+        }
+        if (mpDescTextScreen) {
+            mpDescTextScreen->draw(0.0f, 0.0f, gfx);
+        }
+        if (area.valid) {
+            drawDescMesgText(gfx, area.x, area.y, area.w, area.h, ruledPitch);
+        }
     }
 
 }

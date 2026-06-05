@@ -48,11 +48,12 @@ private:
     void applyDescColumnShift(f32 shiftX);
     void populateRows();
     void updateRowLetters(int visCount, int sel);
+    void hideRentableCenterBloIcons(int visCount, f32 listIconLeft);
     bool ensureRowWheelPic(int row, u8 itemNo, JKRArchive* arc);
     bool ensureItemBoxPic();
     void cacheRowLetterSlotBounds(int row);
-    void drawRowWheelIcons(J2DGrafContext* gfx, int visCount);
     void drawRowListText(J2DGrafContext* gfx, int visCount);
+    void drawRowWheelIcons(J2DGrafContext* gfx, int visCount);
     void dumpRowIconDebug(JKRArchive* iconArc, int visCount, const dALBWVisibleEntry* visList);
     void updateDescParchment(bool showItemBox, u8 itemNo);
     void drawDescMesgText(J2DGrafContext* gfx, f32 x, f32 y, f32 w, f32 h, f32 ruledLinePitch);
@@ -112,6 +113,7 @@ private:
     J2DPicture*               mpRowLetter[6]   = {};  ///< PIC1 inside let_*_n (often null; letter is WIN contents)
     J2DWindow*                mpRowLetterWin[6] = {};  ///< WIN using letter TIMG near let_* (often a sibling)
     J2DPane*                  mpRowLetterGfx[6] = {};  ///< PIC/WIN pane that draws the envelope
+    J2DPane*                  mpRowBloItemGfx[6] = {}; ///< 6menu sibling item-icon pane (not the envelope)
     JUTTexture*               mRowLetterContentsTex[6] = {};  ///< saved field_0x110 while wheel icon shown
     J2DPicture*               mpRowItemPic[6]  = {};  ///< heap wheel icon (rentable rows)
     J2DPicture*               mpItemBoxPic      = nullptr; ///< shared empty item-slot frame
@@ -134,6 +136,7 @@ private:
     f32                       mRowFrameBaseW[6] = {}; ///< flame_00–05 width before list-column resize
     f32                       mRowFrameBaseH[6] = {};
     f32                       mPriceInitCenterX[6] = {}; ///< fenu_t6 default center (paneTrans offset base)
+    f32                       mRowLetterInitCenterX[6] = {}; ///< let_*_n default center (icon column paneTrans base)
     int                       mScrollTop   = 0;    ///< first visible row index in the 6-row viewport
     char                      mDescBuf[256]      = {}; ///< body text for right parchment pane
     char                      mDescWrapBuf[512] = {}; ///< word-wrapped copy for J2DPrint

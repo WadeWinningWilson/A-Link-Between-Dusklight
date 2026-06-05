@@ -26,6 +26,8 @@
 
 #if TARGET_PC
 #include "d/d_albw_rental.h"
+#include "d/d_albw_shield.h"
+#include "d/actor/d_a_player.h"
 #include "dusk/memory.h"
 #include "dusk/settings.h"
 #include <chrono>
@@ -164,9 +166,57 @@ static s16  sArmorLastRoomNo       = -1;
 // ============================================
 // NEW CODE ENDS HERE
 // ============================================
-static bool sInitialized     = false;
-static bool sALBWExpanding   = false;
-static int  sPrevUnlockCount = 0;
+static bool sInitialized       = false;
+static bool sALBWExpanding     = false;
+static int  sPrevUpgradeSteps  = 0;
+
+// Meter capacity: heart/armor tiers + one sword-swing (1817) per main dungeon clear.
+static constexpr int kALBWHeartArmorTierBonus = 8480;
+static constexpr int kALBWDungeonClearBonus   = 1817;
+static constexpr int kALBWRecoveryBase        = 109;
+static constexpr int kALBWRecoveryPerStep     = 164;  // 10 steps → 2.5× base (273/100ms)
+
+static const int kALBWDungeonClearBitIdx[] = {
+    55,  64,  78, 265, 266, 267, 268, 570,
+};
+
+static int countALBWDungeonClears() {
+    int count = 0;
+    for (int bitIdx : kALBWDungeonClearBitIdx) {
+        if (dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[bitIdx])) {
+            count++;
+        }
+    }
+    return count;
+}
+
+static int countALBWMeterUpgradeSteps() {
+    int steps = countALBWDungeonClears();
+    if (dComIfGs_getMaxLife() >= 50) {
+        steps++;
+    }
+    if (dComIfGs_isItemFirstBit(dItemNo_ARMOR_e)) {
+        steps++;
+    }
+    return steps;
+}
+
+static int computeALBWMeterMax() {
+    int maxVal = sOilBaseMax;
+    if (dComIfGs_getMaxLife() >= 50) {
+        maxVal += kALBWHeartArmorTierBonus;
+    }
+    if (dComIfGs_isItemFirstBit(dItemNo_ARMOR_e)) {
+        maxVal += kALBWHeartArmorTierBonus;
+    }
+    maxVal += countALBWDungeonClears() * kALBWDungeonClearBonus;
+    return maxVal;
+}
+
+static int computeALBWRecoveryRate() {
+    const int steps = countALBWMeterUpgradeSteps();
+    return kALBWRecoveryBase + (steps * kALBWRecoveryPerStep) / 10;
+}
 // ============================================
 // NEW CODE ENDS HERE
 // ============================================
@@ -291,6 +341,13 @@ bool dMeter2_isWolfForm() { return daPy_getPlayerActorClass()->checkWolf() != 0;
 // ============================================
 void dMeter2_setALBWPlayerIdle(bool i_idle) { sALBWPlayerIdle = i_idle; }
 // ============================================
+// NEW CODE — ALBW Port (Phase 3: no passive recovery while guarding)
+// Uses virtual checkPlayerGuard() on daAlink — no d_a_alink.h include.
+// ============================================
+static bool dMeter2_isALBWRecoveryPausedByGuard() {
+    return daPy_getPlayerActorClass()->checkPlayerGuard() != 0;
+}
+// ============================================
 // NEW CODE ENDS HERE
 // ============================================
 // ============================================
@@ -349,6 +406,10 @@ void dMeter2_onArmorAttackHit(fpc_ProcID actorID) {
     if (actorID == 0) return;
     sArmorEncounterIDs.insert(actorID);
 }
+
+bool dMeter2_isInCombatEncounter() {
+    return !sArmorEncounterIDs.empty();
+}
 // ============================================
 // NEW CODE — ALBW Port
 // Fractional meter refill used by magic pickup items (S_MAGIC / L_MAGIC).
@@ -359,6 +420,19 @@ void dMeter2_onArmorAttackHit(fpc_ProcID actorID) {
 void dMeter2_addALBWFraction(int numerator, int denominator) {
     int amount = (sOilMaxVar * numerator) / denominator;
     sALBWMeter = cLib_minMaxLimit<int>(sALBWMeter + amount, 0, sOilMaxVar);
+}
+
+void dMeter2_subALBWFraction(int numerator, int denominator) {
+    int amount = (sOilMaxVar * numerator) / denominator;
+    sALBWMeter = cLib_minMaxLimit<int>(sALBWMeter - amount, 0, sOilMaxVar);
+}
+
+int dMeter2_getALBWMeterValue() {
+    return sALBWMeter;
+}
+
+int dMeter2_getALBWMaxValue() {
+    return sOilMaxVar;
 }
 // ============================================
 // NEW CODE ENDS HERE
@@ -479,6 +553,9 @@ static void dMeter2_clearAllPossessionForms(u8 rentalItemNo) {
 }
 
 bool dMeter2_playerOwnsRentalItem(u8 itemNo) {
+    if (dMeter2_isShieldItem(itemNo)) {
+        return dComIfGs_getSelectEquipShield() == itemNo;
+    }
     if (itemNo == (u8)dItemNo_ARMOR_e &&
         dComIfGs_getSelectEquipClothes() == itemNo) {
         return true;
@@ -509,6 +586,98 @@ void dMeter2_stripAllALBWInventoryOnDeath() {
     if (dComIfGs_isItemFirstBit((u8)dItemNo_DEITY_ARMOR_e)) {
         dComIfGs_offItemFirstBit((u8)dItemNo_DEITY_ARMOR_e);
     }
+}
+
+static const u8 sShieldRentalItemNos[3] = {
+    (u8)dItemNo_WOOD_SHIELD_e,
+    (u8)dItemNo_SHIELD_e,
+    (u8)dItemNo_HYLIA_SHIELD_e,
+};
+static constexpr int kShieldRentalEligibleBase = 685; // saveBitLabels[685..687]
+
+bool dMeter2_isShieldItem(u8 itemNo) {
+    return itemNo == (u8)dItemNo_WOOD_SHIELD_e || itemNo == (u8)dItemNo_SHIELD_e ||
+           itemNo == (u8)dItemNo_HYLIA_SHIELD_e;
+}
+
+bool dMeter2_playerHasAnyShield() {
+    if (dComIfGs_getSelectEquipShield() != dItemNo_NONE_e) {
+        return true;
+    }
+    return dComIfGs_isItemFirstBit((u8)dItemNo_WOOD_SHIELD_e) ||
+           dComIfGs_isItemFirstBit((u8)dItemNo_SHIELD_e) ||
+           dComIfGs_isItemFirstBit((u8)dItemNo_HYLIA_SHIELD_e);
+}
+
+static void dMeter2_clearAllShieldPossession() {
+    dComIfGs_offItemFirstBit((u8)dItemNo_WOOD_SHIELD_e);
+    dComIfGs_offItemFirstBit((u8)dItemNo_SHIELD_e);
+    dComIfGs_offItemFirstBit((u8)dItemNo_HYLIA_SHIELD_e);
+    dMeter2Info_setShield(dItemNo_NONE_e, false);
+}
+
+bool dMeter2_canAcquireShield(u8 itemNo) {
+    if (!dMeter2_isShieldItem(itemNo)) {
+        return true;
+    }
+    if (!dMeter2_playerHasAnyShield()) {
+        return true;
+    }
+
+    const u8 equipped = dComIfGs_getSelectEquipShield();
+    if (equipped == itemNo) {
+        return true;
+    }
+
+    // One shield at a time until a future upgrade path allows multiples.
+    return false;
+}
+
+void dMeter2_onShieldDestroyedForRental(u8 itemNo) {
+    for (int i = 0; i < 3; i++) {
+        if (sShieldRentalItemNos[i] == itemNo) {
+            dComIfGs_onEventBit(dSv_event_flag_c::saveBitLabels[kShieldRentalEligibleBase + i]);
+            OS_REPORT("[dMeter2] shield rental eligible item=%u bit=%d\n", itemNo,
+                      kShieldRentalEligibleBase + i);
+            return;
+        }
+    }
+}
+
+bool dMeter2_isShieldRentalEligible(u8 itemNo) {
+    for (int i = 0; i < 3; i++) {
+        if (sShieldRentalItemNos[i] == itemNo) {
+            return dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[kShieldRentalEligibleBase + i]);
+        }
+    }
+    return false;
+}
+
+void dMeter2_grantRentalShield(u8 itemNo) {
+    if (!dMeter2_isShieldItem(itemNo) || !dMeter2_canAcquireShield(itemNo)) {
+        return;
+    }
+
+    if (dMeter2_playerHasAnyShield()) {
+        dMeter2_clearAllShieldPossession();
+    }
+
+    switch (itemNo) {
+    case (u8)dItemNo_WOOD_SHIELD_e:
+        dComIfGs_setCollectShield(COLLECT_WOODEN_SHIELD);
+        break;
+    case (u8)dItemNo_SHIELD_e:
+        dComIfGs_setCollectShield(COLLECT_ORDON_SHIELD);
+        break;
+    case (u8)dItemNo_HYLIA_SHIELD_e:
+        dComIfGs_setCollectShield(COLLECT_HYLIAN_SHIELD);
+        break;
+    default:
+        break;
+    }
+
+    dComIfGs_onItemFirstBit(itemNo);
+    dMeter2Info_setShield(itemNo, false);
 }
 
 #if TARGET_PC
@@ -1220,6 +1389,11 @@ void dMeter2_c::moveKantera() {
         }
 
         dComIfGs_setOil(var_r0);
+#if TARGET_PC
+        if (dComIfGp_getItemOilCount() < 0) {
+            dShield_repairDurabilityFraction(1, 5);
+        }
+#endif
         dComIfGp_clearItemOilCount();
         draw_kantera = true;
     }
@@ -1337,33 +1511,26 @@ void dMeter2_c::moveKantera() {
 
         // ============================================
         // NEW CODE — ALBW Port
-        // Meter expansion / unlock detection.
-        // Unlock 1: player has accumulated 10 or more heart containers
-        //   (dComIfGs_getMaxLife() returns 5 units per heart).
-        // Unlock 2: magic armor is in the player's inventory.
-        // Each unlock permanently adds 5450 to sOilMaxVar (50% of base).
-        // Both unlocks together double the meter: 10900 → 21800.
-        //
-        // On the very first frame (sInitialized == false) we silently
-        // size the meter to match whatever the save already has earned —
-        // no animation, no sound (the player already had these unlocks).
-        // On any later frame where a NEW unlock is detected we set
-        // sALBWExpanding = true so the fill-with-sound path runs below.
+        // Meter expansion: 10+ hearts, magic armor, and eight main dungeon
+        // clears. Each heart/armor tier adds kALBWHeartArmorTierBonus; each
+        // dungeon adds kALBWDungeonClearBonus (one normal sword swing).
+        // New steps trigger sALBWExpanding (celebration fill + border growth).
         // ============================================
         {
-            int newUnlockCount = 0;
-            if (dComIfGs_getMaxLife() >= 50) newUnlockCount++;
-            if (dComIfGs_isItemFirstBit(dItemNo_ARMOR_e)) newUnlockCount++;
+            const int upgradeSteps = countALBWMeterUpgradeSteps();
+            const int newMax       = computeALBWMeterMax();
 
             if (!sInitialized) {
-                sOilMaxVar       = sOilBaseMax + newUnlockCount * 5450;
-                sALBWMeter       = sOilMaxVar;
-                sPrevUnlockCount = newUnlockCount;
-                sInitialized     = true;
-            } else if (newUnlockCount > sPrevUnlockCount) {
-                sOilMaxVar       = sOilBaseMax + newUnlockCount * 5450;
-                sPrevUnlockCount = newUnlockCount;
-                sALBWExpanding   = true;
+                sOilMaxVar          = newMax;
+                sALBWMeter          = newMax;
+                sPrevUpgradeSteps   = upgradeSteps;
+                sInitialized        = true;
+            } else if (upgradeSteps > sPrevUpgradeSteps) {
+                sOilMaxVar        = newMax;
+                sPrevUpgradeSteps = upgradeSteps;
+                sALBWExpanding    = true;
+            } else if (newMax != sOilMaxVar) {
+                sOilMaxVar = newMax;
             }
         }
         // ============================================
@@ -1539,8 +1706,9 @@ void dMeter2_c::moveKantera() {
         //   2 unlocks: 219/100ms → ~5.0s (4.98s)
         // sALBWExpanding (level-up fill animation) intentionally stays at
         // the flat 36 rate — it's a visual event, not a gameplay gate.
+        // Passive recovery scales with all upgrade steps (max 2.5× at 10).
         // ============================================
-        const int sBaseRecovery = 109 + sPrevUnlockCount * 55;
+        const int sBaseRecovery = computeALBWRecoveryRate();
         // ============================================
         // NEW CODE — ALBW Port
         // Idle recovery boost: +5% while Link is standing still AND the
@@ -1549,8 +1717,10 @@ void dMeter2_c::moveKantera() {
         // sALBWPlayerIdle is asserted each frame by procWait() and cleared
         // here each tick so it must be re-set on subsequent frames to remain
         // active — stale "idle" readings from a previous action cannot linger.
+        // Phase 3: no passive recovery or idle boost while guarding.
         // ============================================
-        const int sRecoveryRate = (sALBWLocked && sALBWPlayerIdle)
+        const bool sALBWGuarding = dMeter2_isALBWRecoveryPausedByGuard();
+        const int sRecoveryRate = (sALBWLocked && sALBWPlayerIdle && !sALBWGuarding)
             ? (sBaseRecovery * 105 / 100) : sBaseRecovery;
         sALBWPlayerIdle = false;
         // ============================================
@@ -1559,7 +1729,7 @@ void dMeter2_c::moveKantera() {
         auto msElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
             sNow - sLastRecoveryTime).count();
         if (sALBWExpanding) {
-            if (msElapsed >= 100) {
+            if (!sALBWGuarding && msElapsed >= 100) {
                 sALBWMeter += 36;
                 sLastRecoveryTime = sNow;
                 if (sALBWMeter >= sOilMaxVar) {
@@ -1580,7 +1750,7 @@ void dMeter2_c::moveKantera() {
                 sALBWMeter     = sOilMaxVar;
                 sALBWExpanding = false;
             }
-        } else if (msElapsed >= 100 && sALBWMeter < sOilMaxVar && !sMeterinc) {
+        } else if (!sALBWGuarding && msElapsed >= 100 && sALBWMeter < sOilMaxVar && !sMeterinc) {
             sALBWMeter += sRecoveryRate;
             sLastRecoveryTime = sNow;
             if (sALBWMeter >= sOilMaxVar) {

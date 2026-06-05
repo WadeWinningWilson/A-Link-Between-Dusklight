@@ -37,6 +37,9 @@ dAlbwHP_Category dAlbwHP_getCategory(s16 profName);
 // Returns attackPower unchanged when multiplier == 1 or category == EXCLUDED.
 int dAlbwHP_applyMult(s16 profName, int attackPower);
 
+// Shield durability: mid-boss 1.5×, boss/final 2× on non-parry hits (final may get bespoke rules later).
+u16 dAlbwHP_applyDurabilityMult(s16 profName, u16 damage);
+
 // ============================================
 // NEW CODE ENDS HERE
 // ============================================

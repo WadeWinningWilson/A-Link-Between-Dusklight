@@ -17,6 +17,7 @@
 #include "m_Do/m_Do_mtx.h"
 
 #if TARGET_PC
+#include "d/d_albw_death_rupee.h"
 #include "dusk/frame_interpolation.h"
 #endif
 
@@ -895,6 +896,12 @@ void daItem_c::itemGetNextExecute() {
 }
 
 void daItem_c::itemGet() {
+#if TARGET_PC
+    if (dALBWDeathRupees_onOrbItemGet(this)) {
+        mDoAud_seStart(Z2SE_SY_LIGHT_DROP_GET, NULL, 0, 0);
+        return;
+    }
+#endif
     switch (m_itemNo) {
     case dItemNo_HEART_e:
         mDoAud_seStart(Z2SE_HEART_PIECE_GET, NULL, 0, 0);

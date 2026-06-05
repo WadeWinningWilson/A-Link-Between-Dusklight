@@ -7,6 +7,9 @@
 #include "d/d_com_inf_game.h"
 #include "d/actor/d_a_obj_gra2.h"
 #include "d/actor/d_a_npc_kn.h"
+#if TARGET_PC
+#include "d/d_albw_shield.h"
+#endif
 
 BOOL daAlink_c::checkEnemyGroup(fopAc_ac_c* i_actor) {
     return i_actor != NULL
@@ -29,9 +32,20 @@ BOOL daAlink_c::checkShieldAttackEmphasys() {
 }
 
 BOOL daAlink_c::checkGuardActionChange() {
+    const bool allowNpcGuard =
+        !((mTargetedActor != NULL && !checkSpecialNpc(mTargetedActor)) &&
+          (fopAcM_GetGroup(mTargetedActor) == 3 || fopAcM_GetGroup(mTargetedActor) == fopAc_NPC_e));
+
+#if TARGET_PC
+    // ZR guard works without Z-target lock-on whenever a shield is equipped.
+    if (manualShieldButton()) {
+        return !checkIronBallWaitAnime() && !checkGrabAnime() && !checkCopyRodControllAnime() &&
+               allowNpcGuard;
+    }
+#endif
+
     return checkAttentionLock() && !checkIronBallWaitAnime() && !checkGrabAnime() &&
-           !checkCopyRodControllAnime() && !((mTargetedActor != NULL && !checkSpecialNpc(mTargetedActor)) &&
-           (fopAcM_GetGroup(mTargetedActor) == 3 || fopAcM_GetGroup(mTargetedActor) == fopAc_NPC_e));
+           !checkCopyRodControllAnime() && allowNpcGuard;
 }
 
 void daAlink_c::stickArrowIncrement(int param_0) {
@@ -172,9 +186,13 @@ BOOL daAlink_c::checkPlayerGuardAndAttack() const {
 }
 
 BOOL daAlink_c::checkGuardAccept() {
-    return checkModeFlg(0x80) &&
-           checkShieldGet() &&
-           !checkFmChainGrabAnime() &&
+#if TARGET_PC
+    // PROC_MOVE omits MODE_GUARD_ENABLED; ZR + shield bypasses lock-on requirement.
+    if (manualShieldButton()) {
+        return checkShieldGet() && !checkFmChainGrabAnime() && !checkNotBattleStage();
+    }
+#endif
+    return checkModeFlg(MODE_GUARD_ENABLED) && checkShieldGet() && !checkFmChainGrabAnime() &&
            !checkNotBattleStage();
 }
 
@@ -190,12 +208,20 @@ void daAlink_c::setShieldGuard() {
         (checkGuardAccept() && !checkGrabAnime() && !checkUpperReadyThrowAnime() &&
          !checkDkCaught2Anime() && !checkKandelaarSwingAnime() && !checkCutDashAnime() &&
          !checkCutDashChargeAnime() && (!checkEquipAnime() || checkUpperGuardAnime()) &&
-         !checkRideOn() && checkGuardActionChange()))
+         !checkRideOn() && checkGuardActionChange()
+#if TARGET_PC
+         && manualShieldButton()
+#endif
+         ))
     {
         onNoResetFlg2(FLG2_UNK_8000000);
     } else {
         offNoResetFlg2(FLG2_UNK_8000000);
     }
+
+#if TARGET_PC
+    dShield_updateGuardTracking(this);
+#endif
 }
 
 void daAlink_c::setGuardSe(dCcD_GObjInf* i_objinf) {
@@ -241,10 +267,19 @@ int daAlink_c::procGuardSlipInit(int i_atSpl, dCcD_GObjInf* i_objinf) {
         return 0;
     }
 
-    field_0x2fd5++;
-    if (field_0x2fd5 == 4) {
-        field_0x2fd5 = 0;
-        return procGuardBreakInit();
+#if TARGET_PC
+    if (dShield_isDurabilityEnabled()) {
+        if (dShield_isBroken()) {
+            return 0;
+        }
+    } else
+#endif
+    {
+        field_0x2fd5++;
+        if (field_0x2fd5 == 4) {
+            field_0x2fd5 = 0;
+            return procGuardBreakInit();
+        }
     }
 
     commonProcInit(PROC_GUARD_SLIP);
@@ -371,6 +406,12 @@ int daAlink_c::procGuardAttackInit() {
         return 1;
     }
 
+#if TARGET_PC
+    if (!dShield_tryBeginGuardAttack()) {
+        return 0;
+    }
+#endif
+
     commonProcInit(PROC_GUARD_ATTACK);
     daAlink_ANM anm = ANM_SHIELD_ATTACK;
     const daAlinkHIO_guardAttack_c1* params = &mpHIO->mGuard.mAtPush.m;
@@ -442,6 +483,9 @@ int daAlink_c::procGuardAttack() {
 
     if (mProcVar0.field_0x3008 == 0 && mGuardAtCps.ChkAtHit()) {
         mProcVar0.field_0x3008 = 1;
+#if TARGET_PC
+        dShield_onGuardAttackConnect();
+#endif
         dComIfGp_getVibration().StartShock(VIBMODE_S_POWER3, 1, cXyz(0.0f, 1.0f, 0.0f));
     }
 
@@ -631,9 +675,15 @@ int daAlink_c::procTurnMove() {
     }
 
     if (checkAnmEnd(framectrl)) {
+#if TARGET_PC
+        if (!checkAttentionLock() && !manualShieldButton()) {
+            offNoResetFlg2(FLG2_UNK_8000000);
+        }
+#else
         if (!checkAttentionLock()) {
             offNoResetFlg2(FLG2_UNK_8000000);
         }
+#endif
         checkNextAction(0);
     } else if (mProcVar0.field_0x3008 != 0 && !checkNotJumpSinkLimit() && framectrl->getFrame() > mpHIO->mGuard.mTurnMove.m.mTwirlCutDelayF) {
         procCutFinishJumpUpInit();

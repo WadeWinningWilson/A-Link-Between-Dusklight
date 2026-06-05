@@ -26,6 +26,24 @@ void daAlink_c::setArcName(BOOL i_isWolf) {
 }
 
 void daAlink_c::setShieldArcName() {
+#if TARGET_PC
+    // Ordon quest = WOOD_SHIELD (0x2A) -> CWShd. Shop/replace = SHIELD (0x2B) -> SWShd. See docs/shield-ordon-quest-assets.md.
+    if (checkCarvingWoodShieldEquip()) {
+        mShieldArcName = l_cWShdArcName;
+    } else if (checkShopWoodShieldEquip()) {
+        mShieldArcName = l_sWShdArcName;
+    } else if (dComIfGs_isItemFirstBit(dItemNo_HYLIA_SHIELD_e)) {
+        mShieldArcName = l_hyShdArcName;
+    } else if (dComIfGs_isItemFirstBit(dItemNo_WOOD_SHIELD_e)) {
+        mShieldArcName = l_cWShdArcName;
+    } else if (dComIfGs_isItemFirstBit(dItemNo_SHIELD_e)) {
+        mShieldArcName = l_sWShdArcName;
+    } else if (!checkShieldGet()) {
+        mShieldArcName = l_cWShdArcName;
+    } else {
+        mShieldArcName = l_hyShdArcName;
+    }
+#else
     if (checkCarvingWoodShieldEquip() || !checkShieldGet()) {
         mShieldArcName = l_cWShdArcName;
     } else if (checkShopWoodShieldEquip()) {
@@ -33,6 +51,7 @@ void daAlink_c::setShieldArcName() {
     } else {
         mShieldArcName = l_hyShdArcName;
     }
+#endif
 }
 
 void daAlink_c::setOriginalHeap(JKRExpHeap** i_ppheap, u32 i_size) {
