@@ -8,7 +8,7 @@
 
 # ALBW-Dusklight
 
-A work-in-progress mod for [Dusklight](https://github.com/TwilitRealm/dusklight) — the open-source PC reimplementation of _The Legend of Zelda: Twilight Princess_ — that adds an _A Link Between Worlds_–style **energy meter**, **death item strip**, and **Postman rental shop** (native in-game UI on PC when built with the option below).
+A work-in-progress mod for [Dusklight](https://github.com/TwilitRealm/dusklight) — the open-source PC reimplementation of _The Legend of Zelda: Twilight Princess_ — that adds an _A Link Between Worlds_–style **energy meter**, **stripping items on death**, **shield parries/durability/manual shielding** and **Postman rental shop** (native in-game UI on PC when built with the option below).
 
 > **You must provide your own legal copy of the game.** This repository does not include copyrighted assets.
 
