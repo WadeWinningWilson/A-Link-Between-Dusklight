@@ -12,7 +12,7 @@ A work-in-progress mod for [Dusklight](https://github.com/TwilitRealm/dusklight)
 
 > **You must provide your own legal copy of the game.** This repository does not include copyrighted assets.
 
-Inspired by CaptainKittyCa2’s ALBW meter work. Base game by [TwilitRealm](https://twilitrealm.dev).
+Inspired by CaptainKittyCa2’s ALBW meter mod work. Base game by [TwilitRealm](https://twilitrealm.dev).
 
 ## Features (summary)
 
