@@ -395,7 +395,8 @@
         "ci"
       ],
       "cacheVariables": {
-        "AURORA_SDL3_PROVIDER": "vendor"
+        "AURORA_SDL3_PROVIDER": "vendor",
+        "CMAKE_LINKER_TYPE": "MOLD"
       }
     },
     {
