@@ -1594,6 +1594,7 @@ set(DUSK_FILES
         src/dusk/randomizer/generator/test/test.hpp
         src/dusk/randomizer/generator/utility/color.cpp
         src/dusk/randomizer/generator/utility/color.hpp
+        src/dusk/randomizer/generator/utility/crc32.hpp
         src/dusk/randomizer/generator/utility/common.cpp
         src/dusk/randomizer/generator/utility/common.hpp
         src/dusk/randomizer/generator/utility/container.hpp
