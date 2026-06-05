@@ -26,6 +26,7 @@ Inspired by CaptainKittyCa2’s ALBW meter work. Base game by [TwilitRealm](http
 | Postman Rental Shop | ✅ (footer polish WIP) |
 | Wolf form unaffected by meter | ✅ |
 | Colossal Wallet / final pricing pass | ⏳ |
+| Stamina Tweaks/Performance fixes | ⏳ |
 
 Full gameplay and file list: **[docs/albw-port.md](docs/albw-port.md)**.
 
