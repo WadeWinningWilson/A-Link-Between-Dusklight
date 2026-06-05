@@ -23,6 +23,18 @@
       }
     },
     {
+      "name": "release",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDLL",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": {
+          "type": "BOOL",
+          "value": true
+        }
+      }
+    },
+    {
       "name": "ci",
       "hidden": true,
       "cacheVariables": {
@@ -367,7 +379,8 @@
       "hidden": true,
       "inherits": [
         "android-base",
-        "ci"
+        "ci",
+        "release"
       ],
       "cacheVariables": {
         "DUSK_ENABLE_SENTRY_NATIVE": {
