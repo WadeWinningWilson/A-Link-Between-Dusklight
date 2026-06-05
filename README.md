@@ -20,9 +20,10 @@ Inspired by CaptainKittyCa2’s ALBW meter work. Base game by [TwilitRealm](http
 |--------|--------|
 | ALBW energy meter HUD | ✅ |
 | Meter drain (sword, agility, hidden skills) | ✅ |
-| Death strip + 13-item rental shop | ✅ |
-| Native TP shop & Postman dialogue (`TARGET_PC_NATIVE_UI=ON`) | ✅ (footer polish WIP) |
-| ImGui shop/dialogue fallback (`TARGET_PC_NATIVE_UI=OFF`) | ✅ |
+|Shield parry+ manual shield + Durabiility System (optional) | ✅ |
+| Death strip of 13 items | ✅ |
+| Rupee Death Penalty ( Recover 50% with Tear of Light!) | ✅ |
+| Postman Rental Shop | ✅ (footer polish WIP) |
 | Wolf form unaffected by meter | ✅ |
 | Colossal Wallet / final pricing pass | ⏳ |
 
