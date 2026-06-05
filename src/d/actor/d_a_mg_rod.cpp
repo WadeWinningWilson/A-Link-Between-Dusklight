@@ -5755,6 +5755,12 @@ static void play_camera_u(dmg_rod_class* i_this) {
     }
 }
 
+#if TARGET_PC
+BOOL item_any_fishing_rod(int itemId) {
+    return itemId == dItemNo_FISHING_ROD_1_e || (itemId >= dItemNo_BEE_ROD_e && itemId <= dItemNo_JEWEL_WORM_ROD_e);
+}
+#endif
+
 static int dmg_rod_Execute(dmg_rod_class* i_this) {
     fopAc_ac_c* actor = &i_this->actor;
 
@@ -5820,6 +5826,17 @@ static int dmg_rod_Execute(dmg_rod_class* i_this) {
 #endif
     i_this->prev_rod_substick_y = i_this->rod_substick_y;
     i_this->rod_substick_y = mDoCPd_c::getSubStickY(PAD_1);
+
+    #if TARGET_PC
+    if (dusk::getSettings().game.buttonFishing) {
+        if ((item_any_fishing_rod(dComIfGp_getSelectItem(0)) && mDoCPd_c::getHoldX(PAD_1)) ||
+            (item_any_fishing_rod(dComIfGp_getSelectItem(1)) && mDoCPd_c::getHoldY(PAD_1)))
+        {
+            i_this->rod_stick_y = -1.0f;
+            i_this->rod_substick_y = -1.0f;
+        }
+    }
+    #endif
 
     i_this->reel_speed = 5.0f;
     i_this->reel_btn_flags = mDoCPd_c::getHoldB(PAD_1) | mDoCPd_c::getHoldDown(PAD_1);
@@ -6464,7 +6481,7 @@ static int dmg_rod_Create(fopAc_ac_c* i_this) {
     return phase_state;
 }
 
-static actor_method_class l_dmg_rod_Method = {
+static DUSK_CONST actor_method_class l_dmg_rod_Method = {
     (process_method_func)dmg_rod_Create,
     (process_method_func)dmg_rod_Delete,
     (process_method_func)dmg_rod_Execute,
@@ -6472,7 +6489,7 @@ static actor_method_class l_dmg_rod_Method = {
     (process_method_func)dmg_rod_Draw,
 };
 
-actor_process_profile_definition g_profile_MG_ROD = {
+DUSK_PROFILE actor_process_profile_definition DUSK_CONST g_profile_MG_ROD = {
     /* Layer ID     */ fpcLy_CURRENT_e,
     /* List ID      */ 8,
     /* List Prio    */ fpcPi_CURRENT_e,

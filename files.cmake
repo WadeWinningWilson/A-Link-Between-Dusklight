@@ -1440,6 +1440,7 @@ set(DUSK_FILES
         src/dusk/game_clock.cpp
         src/dusk/globals.cpp
         src/dusk/gyro.cpp
+        src/dusk/mouse.cpp
 		src/dusk/gamepad_color.cpp
 		src/dusk/autosave.cpp
         src/dusk/http/http.hpp
@@ -1450,6 +1451,8 @@ set(DUSK_FILES
         src/dusk/speedrun.cpp
         src/dusk/string.cpp
         src/dusk/stubs.cpp
+        include/dusk/texture_replacements.hpp
+        src/dusk/texture_replacements.cpp
         src/dusk/update_check.cpp
         src/dusk/update_check.hpp
         #src/dusk/m_Do_ext_dusk.cpp

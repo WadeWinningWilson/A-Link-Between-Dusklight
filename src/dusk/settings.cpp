@@ -49,6 +49,7 @@ UserSettings g_userSettings = {
         .noMissClimbing {"game.noMissClimbing", false},
         .fastTears {"game.fastTears", false},
         .no2ndFishForCat {"game.no2ndFishForCat", false},
+        .buttonFishing {"game.buttonFishing", false},
         .instantSaves {"game.instantSaves", false},
         .instantText {"game.instantText", false},
         .sunsSong {"game.sunsSong", false},
@@ -58,6 +59,7 @@ UserSettings g_userSettings = {
         // Preferences
         .enableMirrorMode {"game.enableMirrorMode", false},
         .minimalHUD {"game.minimalHUD", false},
+        .hudScale {"game.hudScale", 1.0f},
         .pauseOnFocusLost {"game.pauseOnFocusLost", false},
         .enableLinkDollRotation {"game.enableLinkDollRotation", false},
         .enableAchievementToasts {"game.enableAchievementToasts", true},
@@ -83,7 +85,6 @@ UserSettings g_userSettings = {
         .midnasLamentNonStop {"game.midnasLamentNonStop", false},
 
         // Input
-        .gyroMode {"game.gyroMode", GyroMode::Sensor},
         .enableGyroAim {"game.enableGyroAim", false},
         .enableGyroRollgoal {"game.enableGyroRollgoal", false},
         .gyroSensitivityX {"game.gyroSensitivityX", 1.0f},
@@ -93,6 +94,11 @@ UserSettings g_userSettings = {
         .gyroDeadband {"game.gyroDeadband", 0.04f},
         .gyroInvertPitch {"game.gyroInvertPitch", false},
         .gyroInvertYaw {"game.gyroInvertYaw", false},
+        .enableMouseCamera {"game.enableMouseCamera", false},
+        .enableMouseAim {"game.enableMouseAim", false},
+        .mouseAimSensitivity {"game.mouseAimSensitivity", 1.0f},
+        .mouseCameraSensitivity {"game.mouseCameraSensitivity", 1.0f},
+        .invertMouseY {"game.invertMouseY", false},
         .freeCamera {"game.freeCamera", false},
         .invertCameraXAxis {"game.invertCameraXAxis", false},
         .invertCameraYAxis {"game.invertCameraYAxis", false},
@@ -100,10 +106,18 @@ UserSettings g_userSettings = {
         .invertFirstPersonYAxis {"game.invertFirstPersonYAxis", false},
         .invertAirSwimX {"game.invertAirSwimX", false},
         .invertAirSwimY {"game.invertAirSwimY", false},
-        .freeCameraSensitivity {"game.freeCameraSensitivity", 1.0f},
+        .freeCameraXSensitivity {"game.freeCameraXSensitivity", 1.0f},
+        .freeCameraYSensitivity {"game.freeCameraYSensitivity", 1.0f},
         .debugFlyCam {"game.debugFlyCam", false},
         .debugFlyCamLockEvents {"game.debugFlyCamLockEvents", true},
         .allowBackgroundInput {"game.allowBackgroundInput", true},
+        .enableLED {
+            ConfigVar<bool>{"game.enableLED_port0", true},
+            ConfigVar<bool>{"game.enableLED_port1", true},
+            ConfigVar<bool>{"game.enableLED_port2", true},
+            ConfigVar<bool>{"game.enableLED_port3", true},
+        },
+        .swapDirectSelect {"game.swapDirectSelect", false},
 
         // Cheats
         .infiniteHearts {"game.infiniteHearts", false},
@@ -227,6 +241,7 @@ void registerSettings() {
     Register(g_userSettings.game.fastClimbing);
     Register(g_userSettings.game.fastTears);
     Register(g_userSettings.game.no2ndFishForCat);
+    Register(g_userSettings.game.buttonFishing);
     Register(g_userSettings.game.instantSaves);
     Register(g_userSettings.game.instantText);
     Register(g_userSettings.game.sunsSong);
@@ -239,8 +254,10 @@ void registerSettings() {
     Register(g_userSettings.game.invertFirstPersonYAxis);
     Register(g_userSettings.game.invertAirSwimX);
     Register(g_userSettings.game.invertAirSwimY);
-    Register(g_userSettings.game.freeCameraSensitivity);
+    Register(g_userSettings.game.freeCameraXSensitivity);
+    Register(g_userSettings.game.freeCameraYSensitivity);
     Register(g_userSettings.game.minimalHUD);
+    Register(g_userSettings.game.hudScale);
     Register(g_userSettings.game.pauseOnFocusLost);
     Register(g_userSettings.game.enableDiscordPresence);
     Register(g_userSettings.game.bloomMode);
@@ -288,7 +305,6 @@ void registerSettings() {
     Register(g_userSettings.game.alwaysGreatspin);
     Register(g_userSettings.game.invincibleEnemies);
     Register(g_userSettings.game.enableFrameInterpolation);
-    Register(g_userSettings.game.gyroMode);
     Register(g_userSettings.game.enableGyroAim);
     Register(g_userSettings.game.enableGyroRollgoal);
     Register(g_userSettings.game.gyroSensitivityX);
@@ -298,10 +314,20 @@ void registerSettings() {
     Register(g_userSettings.game.gyroSmoothing);
     Register(g_userSettings.game.gyroInvertPitch);
     Register(g_userSettings.game.gyroInvertYaw);
+    Register(g_userSettings.game.enableMouseCamera);
+    Register(g_userSettings.game.enableMouseAim);
+    Register(g_userSettings.game.mouseAimSensitivity);
+    Register(g_userSettings.game.mouseCameraSensitivity);
+    Register(g_userSettings.game.invertMouseY);
     Register(g_userSettings.game.freeCamera);
     Register(g_userSettings.game.debugFlyCam);
     Register(g_userSettings.game.debugFlyCamLockEvents);
     Register(g_userSettings.game.allowBackgroundInput);
+    Register(g_userSettings.game.enableLED[0]);
+    Register(g_userSettings.game.enableLED[1]);
+    Register(g_userSettings.game.enableLED[2]);
+    Register(g_userSettings.game.enableLED[3]);
+    Register(g_userSettings.game.swapDirectSelect);
 
     Register(g_userSettings.backend.isoPath);
     Register(g_userSettings.backend.isoVerification);
