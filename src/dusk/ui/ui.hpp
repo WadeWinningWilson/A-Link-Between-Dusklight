@@ -54,6 +54,11 @@ constexpr u32 kSoundAchievementUnlock = Z2SE_NAVI_FLY;
 // Warning prompt
 constexpr u32 kSoundWarning = Z2SE_SY_COW_GET_IN;
 
+// Randomizer Seed Generation Success
+constexpr u32 kSoundSeedGenerateSuccess = Z2SE_SY_FILE_SAVE_OK;
+// Randomizer Seed Generation Error
+constexpr u32 kSoundSeedGenerateError = Z2SE_SYS_RESULT_WRONG;
+
 struct Insets {
     float top = 0.0f;
     float right = 0.0f;
