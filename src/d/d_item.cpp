@@ -1278,21 +1278,6 @@ void item_func_SMALL_KEY() {
 
 void item_func_KAKERA_HEART() {
     dComIfGp_setItemMaxLifeCount(1);
-#if TARGET_PC
-    if (randomizer_IsActive()) {
-        // TODO rando
-        /*
-        Pasting rando code until the framework has been updated
-        uint8_t maxLife = libtp::tp::d_com_inf_game::dComIfG_gameInfo.save.save_file.player.player_status_a.maxHealth + 1;
-
-            // Check if we have enough hearts to break the barrier.
-            randoPtr->checkSetHCBarrierFlag(rando::HC_Hearts, maxLife);
-
-            // Check if we have enough hearts to unlock the BK check.
-            randoPtr->checkSetHCBkFlag(rando::HC_BK_Hearts, maxLife);
-        */
-    }
-#endif
 }
 
 void item_func_UTUWA_HEART() {
@@ -2191,20 +2176,9 @@ void item_func_FUSED_SHADOW_3() {
 }
 
 void item_func_MIRROR_PIECE_1() {
-
     if (randomizer_IsActive()) {
         dComIfGs_onCollectMirror(0);
-        // TODO rando
-        /*
-        Adding rando code until framework is implemented
-        // Check if the requirement for the HC barrier is set to shards, and if so, set the flag
-        rando::gRandomizer->checkSetHCBarrierFlag(rando::HC_Mirror_Shards, 1);
-
-        // Check if the requirement for the HC BK is set to shards, and if so, set the flag
-        rando::gRandomizer->checkSetHCBkFlag(rando::HC_BK_Mirror_Shards, 1);
-        */
     }
-
 }
 #endif
 
@@ -2212,15 +2186,6 @@ void item_func_POU_SPIRIT() {
 #if TARGET_PC
     if (randomizer_IsActive()) {
         dComIfGs_addPohSpiritNum();
-        // TODO rando
-        /*
-        Adding rando code until framework is implemented
-        // Check if the HC barrier requires poes and if we have enough poe souls to set the flag.
-        randoPtr->checkSetHCBarrierFlag(rando::HC_Poe_Souls, *poeCountPtr);
-
-        // Check if the HC bk check requires poes and if we have enough poe souls to unlock the check.
-        randoPtr->checkSetHCBkFlag(rando::HC_BK_Poe_Souls, *poeCountPtr);
-        */
     }
 #endif
 }
