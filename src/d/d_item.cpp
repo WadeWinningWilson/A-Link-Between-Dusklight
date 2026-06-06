@@ -2247,7 +2247,7 @@ void item_func_MORTAL_DRAW() {
 }
 
 void item_func_JUMP_STRIKE() {
-    dComIfGs_onEventBit(0x29A40);
+    dComIfGs_onEventBit(0x2A40);
 }
 
 void item_func_GREAT_SPIN() {
