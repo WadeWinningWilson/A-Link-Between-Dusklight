@@ -41,12 +41,12 @@ public:
     /* 0x14 */ GXColor field_0x14;
     /* 0x18 */ GXColor field_0x18;
     /* 0x1C */ TGXTexObj field_0x1c;
-    /* 0x3C */ GXTlutObj field_0x3c;
+    /* 0x3C */ TGXTlutObj field_0x3c;
     /* 0x48 */ s16 field_0x48;
     /* 0x4A */ s16 field_0x4a;
     /* 0x4C */ u8 field_0x4c;
     /* 0x50 */ TGXTexObj field_0x50;
-    /* 0x70 */ GXTlutObj field_0x70;
+    /* 0x70 */ TGXTlutObj field_0x70;
     /* 0x7C */ s16 field_0x7c;
     /* 0x7E */ s16 field_0x7e;
     /* 0x80 */ u8 field_0x80;
@@ -100,7 +100,7 @@ public:
     u8 check() { return field_0x0; }
     int getCI() { return mCI; }
     TGXTexObj* getTexObj() { return &mTexObj; }
-    GXTlutObj* getTlutObj() { return &mTlutObj; }
+    TGXTlutObj* getTlutObj() { return &mTlutObj; }
     GXColor* getColor() { return &mColor; }
     f32 getS() { return mS; }
     f32 getT() { return mT; }
@@ -110,7 +110,7 @@ public:
     /* 0x00 */ u8 field_0x0;
     /* 0x01 */ u8 mCI;
     /* 0x04 */ TGXTexObj mTexObj;
-    /* 0x24 */ GXTlutObj mTlutObj;
+    /* 0x24 */ TGXTlutObj mTlutObj;
     /* 0x30 */ GXColor mColor;
     /* 0x34 */ f32 mS;
     /* 0x38 */ f32 mT;
