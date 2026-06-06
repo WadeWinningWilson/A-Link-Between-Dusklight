@@ -105,6 +105,18 @@ window content pane > * {
     flex: 0 0 auto;
 }
 
+pane.excluded-locations-pane {
+    display: flex;
+    flex-flow: column;
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+    gap: 8dp;
+    overflow-y: scroll;
+    font-size: 20dp;
+    border-top: 1dp #92875B;
+}
+
 window content pane:last-of-type > div {
     line-height: 1.625;
 }

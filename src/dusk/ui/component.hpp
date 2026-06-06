@@ -45,6 +45,7 @@ public:
     }
 
     Rml::Element* root() const { return mRoot; }
+    std::vector<std::unique_ptr<Component> >& children() { return mChildren; }
 
 protected:
     void clear_children();

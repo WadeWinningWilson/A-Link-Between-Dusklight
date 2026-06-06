@@ -64,6 +64,13 @@ void BaseStringButton::start_editing() {
             }
         }));
     mInputListeners.emplace_back(std::make_unique<ScopedEventListener>(
+        mInputElem, Rml::EventId::Change, [this](Rml::Event& event) {
+            if (event.GetTargetElement() == mInputElem) {
+                const Rml::String text = mInputElem->GetValue();
+                mRoot->DispatchEvent(Rml::EventId::Change, Rml::Dictionary{{"text", Rml::Variant{mInputElem->GetValue()}}});
+            }
+        }));
+    mInputListeners.emplace_back(std::make_unique<ScopedEventListener>(
         mInputElem, Rml::EventId::Keydown, [this](Rml::Event& event) {
             const auto cmd = map_nav_event(event);
             if (cmd == NavCommand::Confirm) {
