@@ -613,7 +613,8 @@ void daItem_c::procWaitGetDemoEvent() {
 
             procInitSimpleGetDemo();
             itemGet();
-            if (!haveItem) {
+            // Don't potentially unset item bits in rando unless they're rupees
+            if (!haveItem IF_DUSK(&& (!randomizer_IsActive() || isRupee(m_itemNo)))) {
                 dComIfGs_offItemFirstBit(m_itemNo);
             }
         } else {

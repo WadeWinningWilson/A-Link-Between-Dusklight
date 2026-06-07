@@ -3355,6 +3355,25 @@ BOOL isHeart(u8 i_itemNo) {
     return is_heart;
 }
 
+#if TARGET_PC
+BOOL isRupee(u8 i_itemNo) {
+    switch (i_itemNo) {
+    case dItemNo_GREEN_RUPEE_e:
+    case dItemNo_BLUE_RUPEE_e:
+    case dItemNo_YELLOW_RUPEE_e:
+    case dItemNo_RED_RUPEE_e:
+    case dItemNo_PURPLE_RUPEE_e:
+    case dItemNo_ORANGE_RUPEE_e:
+    case dItemNo_SILVER_RUPEE_e:
+        return true;
+    default:
+        break;
+    }
+
+    return false;
+}
+#endif
+
 BOOL isInsect(u8 i_itemNo) {
     BOOL is_insect = false;
 
