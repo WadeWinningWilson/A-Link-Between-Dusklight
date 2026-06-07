@@ -1459,6 +1459,7 @@ set(DUSK_FILES
         src/dusk/imgui/ImGuiMenuTools.hpp
         src/dusk/imgui/ImGuiMenuRandomizer.cpp
         src/dusk/imgui/ImGuiMenuRandomizer.hpp
+        src/dusk/imgui/ImGuiArchipelagoDebug.cpp
         src/dusk/imgui/ImGuiActorSpawner.cpp
         src/dusk/imgui/ImGuiProcessOverlay.cpp
         src/dusk/imgui/ImGuiCameraOverlay.cpp

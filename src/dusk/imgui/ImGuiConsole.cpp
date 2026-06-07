@@ -278,6 +278,7 @@ namespace dusk {
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
         if (showMenu && ImGui::BeginMainMenuBar()) {
             m_menuRandomizer.draw();
+            m_menuArchipelago.drawMenuItem();
             m_menuTools.draw();
 
             ImGui::EndMainMenuBar();
@@ -375,6 +376,7 @@ namespace dusk {
         m_menuRandomizer.windowRandoGeneration();
         m_menuRandomizer.windowRandoTracker();
 
+        m_menuArchipelago.drawWindow();
     }
 
     void ImGuiConsole::PostDraw() {

@@ -52,11 +52,18 @@ FetchContent_Declare(
         GIT_TAG        fdbae3f
 )
 
-FetchContent_MakeAvailable(yaml-cpp base64pp battery-embed)
+message(STATUS "randomizer: Fetching APCpp")
+FetchContent_Declare(
+        APCpp
+        GIT_REPOSITORY https://github.com/N00byKing/APCpp.git
+        GIT_TAG        9194179
+)
+
+FetchContent_MakeAvailable(yaml-cpp base64pp battery-embed APCpp)
 
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
 set(GAME_COMPILE_DEFS ${GAME_COMPILE_DEFS} SOURCE_PATH_SIZE=${SOURCE_PATH_SIZE})
-set(GAME_LIBS ${GAME_LIBS} yaml-cpp::yaml-cpp base64pp)
+set(GAME_LIBS ${GAME_LIBS} yaml-cpp::yaml-cpp base64pp APCpp)
 
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/randomizer")
 # Put data files together for easier manipulation

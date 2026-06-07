@@ -11,6 +11,7 @@
 #include "ImGuiMenuRandomizer.hpp"
 #include "dusk/main.h"
 #include "imgui.h"
+#include "ImGuiArchipelagoDebug.h"
 
 union SDL_Event;
 struct ImGuiWindow;
@@ -34,6 +35,7 @@ private:
     ImVec2 m_dragScrollLastMousePos = {};
 
     ImGuiMenuRandomizer m_menuRandomizer;
+    ImGuiArchipelagoDebug m_menuArchipelago;
 
     // Keep always last
     ImGuiMenuTools m_menuTools;
