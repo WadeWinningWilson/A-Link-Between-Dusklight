@@ -364,8 +364,6 @@ int daItem_c::_daItem_create() {
     if (flag) {
         CreateInit();
     } else {
-#if TARGET_PC
-#endif
         phase_state = dComIfG_resLoad(&mPhase, dItem_data::getFieldArc(M_ITEMNO_MODEL_ITEM_ID));
         if (phase_state == cPhs_COMPLEATE_e) {
             if (!fopAcM_entrySolidHeap(this, CheckFieldItemCreateHeap,
@@ -1051,6 +1049,13 @@ void daItem_c::itemGet() {
         execItemGet(m_itemNo);
         break;
     case dItemNo_BOOMERANG_e:
+#if TARGET_PC
+        if (randomizer_IsActive()) {
+            // Some kind of sound should play, otherwise it feels weird
+            mDoAud_seStart(Z2SE_CONSUMP_ITEM_GET, NULL, 0, 0);
+            execItemGet(m_itemNo);
+        }
+#endif
         break;
     case dItemNo_ARROW_10_e:
     case dItemNo_ARROW_20_e:
