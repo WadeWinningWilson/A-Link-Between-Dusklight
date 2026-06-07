@@ -9,6 +9,7 @@
 #include "d/d_kankyo.h"
 #include "d/d_meter2_info.h"
 #include "dusk/map_loader_definitions.h"
+#include "dusk/randomizer/game/verify_item_functions.h"
 #include "number_button.hpp"
 #include "pane.hpp"
 #include "select_button.hpp"
@@ -1097,10 +1098,21 @@ std::vector<ToggleEntry> collect_crystal_toggle_entries(
             .isSelected = [index] { return dComIfGs_isCollectCrystal(index); },
             .setSelected =
                 [index](bool selected) {
+                    static constexpr u8 fusedShadowItemNos[] = {
+                        dItemNo_Randomizer_FUSED_SHADOW_1_e,
+                        dItemNo_Randomizer_FUSED_SHADOW_2_e,
+                        dItemNo_Randomizer_FUSED_SHADOW_3_e,
+                    };
                     if (selected) {
                         dComIfGs_onCollectCrystal(index);
+                        if (randomizer_IsActive()) {
+                            dComIfGs_onItemFirstBit(fusedShadowItemNos[index]);
+                        }
                     } else {
                         dComIfGs_offCollectCrystal(index);
+                        if (randomizer_IsActive()) {
+                            dComIfGs_offItemFirstBit(fusedShadowItemNos[index]);
+                        }
                     }
                 },
         });
@@ -1119,10 +1131,23 @@ std::vector<ToggleEntry> collect_mirror_toggle_entries(
             .isSelected = [index] { return dComIfGs_isCollectMirror(index); },
             .setSelected =
                 [index](bool selected) {
+                    static constexpr u8 mirrorShardItemNos[] = {
+                        dItemNo_Randomizer_MIRROR_PIECE_1_e,
+                        dItemNo_Randomizer_MIRROR_PIECE_2_e,
+                        dItemNo_Randomizer_MIRROR_PIECE_3_e,
+                        dItemNo_Randomizer_MIRROR_PIECE_4_e,
+                    };
+
                     if (selected) {
+                        if (randomizer_IsActive()) {
+                            dComIfGs_onItemFirstBit(mirrorShardItemNos[index]);
+                        }
                         dComIfGs_onCollectMirror(index);
                     } else {
                         dComIfGs_offCollectMirror(index);
+                        if (randomizer_IsActive()) {
+                            dComIfGs_offItemFirstBit(mirrorShardItemNos[index]);
+                        }
                     }
                 },
         });
