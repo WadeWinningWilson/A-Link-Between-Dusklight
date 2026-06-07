@@ -832,8 +832,15 @@ void daItem_c::mode_wait() {
         itemActionForArrow();
         break;
     case dItemNo_BOOMERANG_e:
+#if TARGET_PC
+        if (!randomizer_IsActive()) {
+            itemActionForBoomerang();
+            break;
+        }
+#else
         itemActionForBoomerang();
         break;
+#endif
     case dItemNo_GREEN_RUPEE_e:
     case dItemNo_BLUE_RUPEE_e:
     case dItemNo_YELLOW_RUPEE_e:
@@ -1050,11 +1057,8 @@ void daItem_c::itemGet() {
         break;
     case dItemNo_BOOMERANG_e:
 #if TARGET_PC
-        if (randomizer_IsActive()) {
-            // Some kind of sound should play, otherwise it feels weird
-            mDoAud_seStart(Z2SE_CONSUMP_ITEM_GET, NULL, 0, 0);
-            execItemGet(m_itemNo);
-        }
+        // Let boomerang fall through in rando
+        if (!randomizer_IsActive())
 #endif
         break;
     case dItemNo_ARROW_10_e:
