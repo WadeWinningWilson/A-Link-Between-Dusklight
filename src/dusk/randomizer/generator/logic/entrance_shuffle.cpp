@@ -2,16 +2,16 @@
 
 #include "item_pool.hpp"
 #include "search.hpp"
-
-#include "../utility/file.hpp"
 #include "../utility/random.hpp"
 #include "../utility/yaml.hpp"
+
+#include <ranges>
 
 using namespace randomizer::logic::entrance;
 
 namespace randomizer::logic::entrance_shuffle
 {
-    void ShuffleWorldEntrances(world::World* world, world::WorldPool& worlds)
+    void ShuffleWorldEntrances(world::World* world)
     {
         SetAllEntrancesData(world);
 
@@ -19,20 +19,24 @@ namespace randomizer::logic::entrance_shuffle
         auto targetEntrancePools = CreateTargetPools(entrancePools);
 
         // Set plando entrances first
-        SetPlandomizedEntrances(world, worlds, entrancePools, targetEntrancePools);
+        try {
+            SetPlandomizedEntrances(world, entrancePools, targetEntrancePools);
+        } catch (std::runtime_error& e) {
+            throw std::runtime_error("Plandomizer Error: " + std::string(e.what()));
+        }
 
         // Then shuffle non-assumed types (currently this is just spawn)
-        ShuffleNonAssumedEntrancesPools(world, worlds, entrancePools, targetEntrancePools);
+        ShuffleNonAssumedEntrancesPools(world, entrancePools, targetEntrancePools);
 
         // Shuffle the rest of the entrance pools
         for (auto& [entranceType, entrancePool] : entrancePools)
         {
-            ShuffleEntrancePool(world, worlds, entrancePool, targetEntrancePools[entranceType]);
+            ShuffleEntrancePool(entrancePool, targetEntrancePools[entranceType]);
         }
 
         // Validate the world one last time to ensure everything worked
-        auto completeItemPool = item_pool::GetCompleteItemPool(worlds);
-        ValidateWorld(world, worlds, nullptr, completeItemPool);
+        auto completeItemPool = item_pool::GetCompleteItemPool(world->GetRandomizer()->GetWorlds());
+        ValidateWorld(world, nullptr, completeItemPool);
     }
 
     void SetAllEntrancesData(world::World* world)
@@ -344,11 +348,11 @@ namespace randomizer::logic::entrance_shuffle
     }
 
     void SetPlandomizedEntrances(world::World* world,
-                                 world::WorldPool& worlds,
                                  EntrancePools& entrancePools,
                                  EntrancePools& targetEntrancePools)
     {
         LOG_TO_DEBUG("Now placing plandomizer entrances");
+        auto& worlds = world->GetRandomizer()->GetWorlds();
         auto itemPool = item_pool::GetCompleteItemPool(worlds);
 
         for (auto& [plandoEntrance, plandoTarget] : world->GetPlandomizerEntrances())
@@ -360,20 +364,20 @@ namespace randomizer::logic::entrance_shuffle
             // Throw error if entrance/target types are not shuffleable
             if (entranceType == Type::INVALID)
             {
-                throw std::runtime_error("Plandomizer Error: " + entranceToConnect->GetOriginalName() +
+                throw std::runtime_error(entranceToConnect->GetOriginalName() +
                                          " is not an entrance that can be shuffled");
             }
             if (plandoTarget->GetType() == Type::INVALID)
             {
-                throw std::runtime_error("Plandomizer Error: " + plandoTarget->GetOriginalName() +
+                throw std::runtime_error(plandoTarget->GetOriginalName() +
                                          " is not an entrance that can be shuffled");
             }
 
             // Throw error if entrance type is shuffleable, but the type itself is not randomized currently
             if (!entrancePools.contains(entranceType))
             {
-                throw std::runtime_error("Plandomizer Error: " + entranceToConnect->GetOriginalName() + "'s type " +
-                                         TypeToStr(entranceType) + " is not being shuffled and thus can't be plandomized.");
+                throw std::runtime_error("Entrance type " + TypeToStr(entranceType) + " for " +
+                                          entranceToConnect->GetOriginalName() + " is not being shuffled and thus can't be plandomized.");
             }
 
             // Get the appropriate pools
@@ -383,13 +387,13 @@ namespace randomizer::logic::entrance_shuffle
             // If entrances are coupled, but the user tries to plandomize a non-primary connection, get the primary connection
             // instead
             if (world->Setting("Decouple Entrances") == "Off" &&
-                randomizer::utility::container::ElementInContainer(entrancePool, entranceToConnect->GetReverse()))
+                utility::container::ElementInContainer(entrancePool, entranceToConnect->GetReverse()))
             {
                 entranceToConnect = entranceToConnect->GetReverse();
                 targetToConnect = targetToConnect->GetReverse();
             }
 
-            if (randomizer::utility::container::ElementInContainer(entrancePool, entranceToConnect))
+            if (utility::container::ElementInContainer(entrancePool, entranceToConnect))
             {
                 bool validTargetFound = false;
                 for (auto& target : targetPool)
@@ -404,14 +408,14 @@ namespace randomizer::logic::entrance_shuffle
                             // If the spawn entrance isn't placed, then we can't validate the world
                             if (world->GetEntrance("Links Spawn -> Outside Links House")->GetConnectedArea() != nullptr)
                             {
-                                ValidateWorld(world, worlds, entranceToConnect, itemPool);
+                                ValidateWorld(world, entranceToConnect, itemPool);
                             }
                             validTargetFound = true;
                             ConfirmReplacement(entranceToConnect, target);
                         }
                         catch(const EntranceShuffleError& e)
                         {
-                            throw std::runtime_error("Could not connect plandomized entrance " +
+                            throw std::runtime_error("Could not connect entrance " +
                                                      entranceToConnect->GetOriginalName() + " to " + target->GetOriginalName() +
                                                      " Reason:\n" + e.what());
                         }
@@ -425,8 +429,8 @@ namespace randomizer::logic::entrance_shuffle
                 // If we found our target, delete the entrance and it's now connected target from their respective pools
                 if (validTargetFound)
                 {
-                    randomizer::utility::container::Erase(entrancePool, entranceToConnect);
-                    randomizer::utility::container::Erase(targetPool, targetToConnect->GetAssumed());
+                    utility::container::Erase(entrancePool, entranceToConnect);
+                    utility::container::Erase(targetPool, targetToConnect->GetAssumed());
                 }
                 // Otherwise, the target is invalid
                 else
@@ -438,7 +442,7 @@ namespace randomizer::logic::entrance_shuffle
             else
             {
                 throw std::runtime_error("Plandomizer Error: " + entranceToConnect->GetOriginalName() +
-                                         " for some reason could not be found.");
+                                         " could not be found.");
             }
         }
 
@@ -446,18 +450,25 @@ namespace randomizer::logic::entrance_shuffle
     }
 
     void ShuffleNonAssumedEntrancesPools(world::World* world,
-                                         world::WorldPool& worlds,
                                          EntrancePools& entrancePools,
                                          EntrancePools& targetEntrancePools)
     {
+        // If we aren't shuffling any non-assumed types, return early
+        if (std::ranges::none_of(entrancePools | std::ranges::views::keys, [](const auto& type) {
+            return NON_ASSUMED_TYPES.contains(type);
+        })) {
+            return;
+        }
+
+        auto& worlds = world->GetRandomizer()->GetWorlds();
         auto completeItemPool = item_pool::GetCompleteItemPool(worlds);
 
         // The idea here is we want to try shuffling all the non-assumed entrances
-        // at the same time since we can't validate the world after each one individually
-        // (That would require assuming access to entrances which we can't guarantee access to)
+        // at the same time since we can't validate the world after each one individually.
+        // (That would require assuming access to entrances which we can't guarantee access to.)
         // Realistically, this should never take more than 1 or 2 tries unless there's some wacky
-        // plandomizer stuff going on. Currently the only non-assumed entrance we're shuffling is the randomized spawn
-        // but if we ever shuffle warp portals, they'll go here too.
+        // plandomizer stuff going on. Currently, the only non-assumed entrance we're shuffling
+        // is the randomized spawn, but if we ever shuffle warp portals, they'll go here too.
 
         int retries = 20;
         while (retries > 0)
@@ -497,11 +508,11 @@ namespace randomizer::logic::entrance_shuffle
             bool successfulConnection = false;
             try
             {
-                ValidateWorld(world, worlds, nullptr, completeItemPool);
+                ValidateWorld(world, nullptr, completeItemPool);
                 for (auto& [entrance, target] : rollbacks)
                 {
                     ConfirmReplacement(entrance, target);
-                    randomizer::utility::container::Erase(targetEntrancePools[entrance->GetType()], target);
+                    utility::container::Erase(targetEntrancePools[entrance->GetType()], target);
                 }
                 // Once we've made a valid world, delete all other targets that didn't get used
                 for (auto& [entranceType, targetPool] : targetEntrancePools)
@@ -540,9 +551,7 @@ namespace randomizer::logic::entrance_shuffle
         }
     }
 
-    void ShuffleEntrancePool(world::World* world,
-                             world::WorldPool& worlds,
-                             EntrancePool& entrancePool,
+    void ShuffleEntrancePool(EntrancePool& entrancePool,
                              EntrancePool& targetEntrancePool,
                              int retries /* = 20*/)
     {
@@ -552,7 +561,7 @@ namespace randomizer::logic::entrance_shuffle
             std::unordered_map<Entrance*, Entrance*> rollbacks = {};
             try
             {
-                ShuffleEntrances(worlds, entrancePool, targetEntrancePool, rollbacks);
+                ShuffleEntrances(entrancePool, targetEntrancePool, rollbacks);
                 for (auto& [entrance, target] : rollbacks)
                 {
                     ConfirmReplacement(entrance, target);
@@ -576,13 +585,18 @@ namespace randomizer::logic::entrance_shuffle
             "generate successfully.");
     }
 
-    void ShuffleEntrances(world::WorldPool& worlds,
-                          EntrancePool& entrancePool,
+    void ShuffleEntrances(EntrancePool& entrancePool,
                           EntrancePool& targetEntrancePool,
                           std::unordered_map<Entrance*, Entrance*>& rollbacks)
     {
+        // This shouldn't be empty, but just incase
+        if (entrancePool.empty()) {
+            return;
+        }
+
+        auto& worlds = entrancePool.front()->GetWorld()->GetRandomizer()->GetWorlds();
         auto completeItemPool = item_pool::GetCompleteItemPool(worlds);
-        randomizer::utility::random::ShufflePool(entrancePool);
+        utility::random::ShufflePool(entrancePool);
 
         for (auto& entrance : entrancePool)
         {
@@ -591,7 +605,7 @@ namespace randomizer::logic::entrance_shuffle
             {
                 continue;
             }
-            randomizer::utility::random::ShufflePool(targetEntrancePool);
+            utility::random::ShufflePool(targetEntrancePool);
 
             // Loop through and find a valid target entrance to connect to
             for (auto& target : targetEntrancePool)
@@ -607,7 +621,7 @@ namespace randomizer::logic::entrance_shuffle
                              target->GetReplaces()->GetParentArea()->GetName() + " [W" +
                              std::to_string(entrance->GetWorld()->GetID()) +
                              "]");
-                if (ReplaceEntrance(worlds, entrance, target, rollbacks, completeItemPool))
+                if (ReplaceEntrance(entrance, target, rollbacks, completeItemPool))
                 {
                     break;
                 }
@@ -631,8 +645,7 @@ namespace randomizer::logic::entrance_shuffle
         }
     }
 
-    bool ReplaceEntrance(world::WorldPool& worlds,
-                         Entrance* entrance,
+    bool ReplaceEntrance(Entrance* entrance,
                          Entrance* target,
                          std::unordered_map<Entrance*, Entrance*>& rollbacks,
                          const item_pool::ItemPool& completeItemPool)
@@ -641,7 +654,7 @@ namespace randomizer::logic::entrance_shuffle
         {
             CheckEntrancesCompatibility(entrance, target);
             ChangeConnections(entrance, target);
-            ValidateWorld(entrance->GetWorld(), worlds, entrance, completeItemPool);
+            ValidateWorld(entrance->GetWorld(), entrance, completeItemPool);
             rollbacks[entrance] = target;
             return true;
         }
@@ -717,11 +730,11 @@ namespace randomizer::logic::entrance_shuffle
     }
 
     void ValidateWorld(world::World* world,
-                       world::WorldPool& worlds,
                        Entrance* entrance,
                        const item_pool::ItemPool& completeItemPool)
     {
         // Validate that all logic is still satisfied
+        auto& worlds = world->GetRandomizer()->GetWorlds();
         auto verifyLogicError = search::VerifyLogic(&worlds, completeItemPool);
         if (verifyLogicError.has_value())
         {

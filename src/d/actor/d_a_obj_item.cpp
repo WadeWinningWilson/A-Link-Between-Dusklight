@@ -364,8 +364,6 @@ int daItem_c::_daItem_create() {
     if (flag) {
         CreateInit();
     } else {
-#if TARGET_PC
-#endif
         phase_state = dComIfG_resLoad(&mPhase, dItem_data::getFieldArc(M_ITEMNO_MODEL_ITEM_ID));
         if (phase_state == cPhs_COMPLEATE_e) {
             if (!fopAcM_entrySolidHeap(this, CheckFieldItemCreateHeap,
@@ -615,7 +613,8 @@ void daItem_c::procWaitGetDemoEvent() {
 
             procInitSimpleGetDemo();
             itemGet();
-            if (!haveItem) {
+            // Don't potentially unset item bits in rando unless they're rupees
+            if (!haveItem IF_DUSK(&& (!randomizer_IsActive() || isRupee(m_itemNo)))) {
                 dComIfGs_offItemFirstBit(m_itemNo);
             }
         } else {
@@ -834,8 +833,15 @@ void daItem_c::mode_wait() {
         itemActionForArrow();
         break;
     case dItemNo_BOOMERANG_e:
+#if TARGET_PC
+        if (!randomizer_IsActive()) {
+            itemActionForBoomerang();
+            break;
+        }
+#else
         itemActionForBoomerang();
         break;
+#endif
     case dItemNo_GREEN_RUPEE_e:
     case dItemNo_BLUE_RUPEE_e:
     case dItemNo_YELLOW_RUPEE_e:
@@ -1051,6 +1057,10 @@ void daItem_c::itemGet() {
         execItemGet(m_itemNo);
         break;
     case dItemNo_BOOMERANG_e:
+#if TARGET_PC
+        // Let boomerang fall through in rando
+        if (!randomizer_IsActive())
+#endif
         break;
     case dItemNo_ARROW_10_e:
     case dItemNo_ARROW_20_e:

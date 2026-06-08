@@ -65,6 +65,7 @@ public:
     void show() override;
     void hide(bool close) override;
     bool visible() const override;
+    Rml::Element* root() { return mRoot;}
 
 protected:
     Rml::Element* mRoot = nullptr;
