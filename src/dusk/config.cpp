@@ -23,8 +23,12 @@ using json = nlohmann::json;
 
 aurora::Module DuskConfigLog("dusk::config");
 
-static absl::flat_hash_map<std::string_view, ConfigVarBase*> RegisteredConfigVars;
 static bool RegistrationDone = false;
+
+static absl::flat_hash_map<std::string_view, ConfigVarBase*>& registered_config_vars() {
+    static absl::flat_hash_map<std::string_view, ConfigVarBase*> vars;
+    return vars;
+}
 
 static std::filesystem::path GetConfigJsonPath() {
     return dusk::ConfigPath / ConfigFileName;
@@ -200,16 +204,17 @@ namespace dusk::config {
 }
 
 void dusk::config::Register(ConfigVarBase& configVar) {
+    auto& registeredConfigVars = registered_config_vars();
     const auto& name = configVar.getName();
     if (RegistrationDone) {
         DuskConfigLog.fatal("Tried to register CVar {} after registrations closed!", name);
     }
 
-    if (RegisteredConfigVars.contains(name)) {
+    if (registeredConfigVars.contains(name)) {
         DuskConfigLog.fatal("Tried to register CVar {} twice!", name);
     }
 
-    RegisteredConfigVars[name] = &configVar;
+    registeredConfigVars[name] = &configVar;
     configVar.markRegistered();
 }
 
@@ -234,6 +239,7 @@ void dusk::config::LoadFromUserPreferences() {
 }
 
 static void LoadFromPath(const char* path) {
+    auto& registeredConfigVars = registered_config_vars();
     auto data = dusk::io::FileStream::ReadAllBytes(path);
 
     json j = json::parse(data);
@@ -244,8 +250,8 @@ static void LoadFromPath(const char* path) {
 
     for (const auto& el : j.items()) {
         const auto& key = el.key();
-        auto configVar = RegisteredConfigVars.find(key);
-        if (configVar == RegisteredConfigVars.end()) {
+        auto configVar = registeredConfigVars.find(key);
+        if (configVar == registeredConfigVars.end()) {
             DuskConfigLog.error("Unknown key '{}' found in config!", key);
             continue;
         }
@@ -293,7 +299,7 @@ void dusk::config::Save() {
 
     json j;
 
-    for (const auto& pair : RegisteredConfigVars) {
+    for (const auto& pair : registered_config_vars()) {
         const auto layer = pair.second->getLayer();
         if (layer == ConfigVarLayer::Value || layer == ConfigVarLayer::Speedrun) {
             j[pair.first] = pair.second->getImpl()->dumpToJson(*pair.second);
@@ -317,8 +323,9 @@ void dusk::config::ClearAllActionBindings(int port) {
 }
 
 ConfigVarBase* dusk::config::GetConfigVar(std::string_view name) {
-    const auto configVar = RegisteredConfigVars.find(name);
-    if (configVar != RegisteredConfigVars.end()) {
+    auto& registeredConfigVars = registered_config_vars();
+    const auto configVar = registeredConfigVars.find(name);
+    if (configVar != registeredConfigVars.end()) {
         return configVar->second;
     }
 
@@ -326,7 +333,7 @@ ConfigVarBase* dusk::config::GetConfigVar(std::string_view name) {
 }
 
 void dusk::config::EnumerateRegistered(std::function<void(ConfigVarBase&)> callback) {
-    for (auto& pair : RegisteredConfigVars) {
+    for (auto& pair : registered_config_vars()) {
         callback(*pair.second);
     }
 }
