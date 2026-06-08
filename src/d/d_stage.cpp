@@ -27,6 +27,9 @@
 #include "dusk/logging.h"
 #include "dusk/string.hpp"
 #include "dusk/randomizer/game/randomizer_context.hpp"
+#include "dusk/randomizer/game/flags.h"
+#include "dusk/randomizer/game/stages.h"
+#include "dusk/randomizer/game/tools.h"
 #include <format>
 #include <fmt/ranges.h>
 #endif
@@ -1730,6 +1733,41 @@ static int dStage_playerInit(dStage_dt_c* i_stage, void* i_data, int num, void* 
     stage_actor_data_class* player_data = player->m_entries;
     i_stage->setPlayer(player);
     i_stage->setPlayerNum(num);
+
+#if TARGET_PC
+    // Modify entrance types in certain situations to avoid crashes
+    if (randomizer_IsActive()) {
+        for (size_t i = 0; i < num; ++i) {
+            u8& entranceType = reinterpret_cast<u8*>(&player_data[i].base.parameters)[2];
+            switch (entranceType) {
+            // Only replace the entrance type if it is a door.
+            case 0x80:
+            case 0xA0:
+            case 0xB0:
+            {
+                if (dComIfGs_getTransformStatus() == TF_STATUS_WOLF) {
+                    // Change the entrance type to play the animation of walking out of the loading zone instead of entering
+                    // through the door.
+                    entranceType = 0x50;
+                }
+                break;
+            }
+
+            // Water swimming entrance. If we have this, but there isn't any water to spawn in, the game hangs
+            case 0xD0:
+            {
+                // If there's no water, change to non-swimming entrance
+                if (getStageID() == Lake_Hylia && !dComIfGs_isEventBit(WARPED_METEOR_TO_ZORAS_DOMAIN)) {
+                    entranceType = 0x50;
+                }
+                break;
+            }
+            default:
+                break;
+            }
+        }
+    }
+#endif
 
     if (dComIfGp_getPlayer(0) != NULL || dComIfGp_getStartStageRoomNo() != i_stage->getRoomNo()) {
         return 1;
