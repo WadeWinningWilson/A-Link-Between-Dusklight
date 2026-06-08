@@ -12734,7 +12734,19 @@ void daAlink_c::setMagicArmorBrk(int i_status) {
 
 BOOL daAlink_c::checkMagicArmorHeavy() const {
 #if TARGET_PC
-    return checkMagicArmorWearAbility() && (dComIfGs_getRupee() == 0 && !dusk::getSettings().game.freeMagicArmor);
+    if(!checkMagicArmorWearAbility()) {
+        return false;
+    }
+
+    switch(dusk::getSettings().game.armorRupeeDrain) {
+        case dusk::MagicArmorMode::NORMAL:
+            return dComIfGs_getRupee() == 0;
+        case dusk::MagicArmorMode::ON_DAMAGE:
+        case dusk::MagicArmorMode::DOUBLE_DEFENSE:
+        case dusk::MagicArmorMode::INVINCIBLE:
+        case dusk::MagicArmorMode::COSMETIC:
+            return false;
+    }
 #else
     return checkMagicArmorWearAbility() && dComIfGs_getRupee() == 0;
 #endif
@@ -18707,7 +18719,7 @@ int daAlink_c::execute() {
 #if TARGET_PC
             // This handles rupee drain and transitions between rupees/no rupees
             // We can skip all of that if the magic armor doesn't use rupees
-            if (!dusk::getSettings().game.freeMagicArmor && checkMagicArmorWearAbility() && mClothesChangeWaitTimer == 0) {
+            if (dusk::getSettings().game.armorRupeeDrain.getValue() == dusk::MagicArmorMode::NORMAL && checkMagicArmorWearAbility() && mClothesChangeWaitTimer == 0) {
 #else
             if (checkMagicArmorWearAbility() && mClothesChangeWaitTimer == 0) {
 #endif
