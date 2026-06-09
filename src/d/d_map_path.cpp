@@ -19,8 +19,8 @@
 #include <numbers>
 #include <array>
 
-constexpr u16 kPreferredMapResolutionMultiplier = 4;
-constexpr u32 kMaxMapRenderPixels = 4096 * 4096;
+constexpr u16 kPreferredMapResolutionMultiplier = 1;
+constexpr u32 kMaxMapRenderPixels = 2048 * 2048;
 constexpr u16 kMapImageSide = 16 * kPreferredMapResolutionMultiplier;
 constexpr u32 kMapImageTotalPixels = kMapImageSide * kMapImageSide;
 
