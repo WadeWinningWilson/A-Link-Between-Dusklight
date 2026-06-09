@@ -55,6 +55,7 @@
 #include "dusk/frame_interpolation.h"
 #include "dusk/game_clock.h"
 #include "dusk/gyro.h"
+#include "dusk/mouse.h"
 #include "dusk/imgui/ImGuiConsole.hpp"
 #include "dusk/imgui/ImGuiEngine.hpp"
 #include "dusk/iso_validate.hpp"
@@ -74,7 +75,6 @@
 #include <dolphin/dvd.h>
 
 #include "SDL3/SDL_init.h"
-#include "SDL3/SDL_filesystem.h"
 #include "SDL3/SDL_iostream.h"
 #include "SDL3/SDL_misc.h"
 #include "cxxopts.hpp"
@@ -169,6 +169,7 @@ bool launchUILoop() {
         while (event != nullptr && event->type != AURORA_NONE) {
             switch (event->type) {
             case AURORA_SDL_EVENT:
+                dusk::mouse::handle_event(event->sdl);
                 dusk::ui::handle_event(event->sdl);
                 dusk::g_imguiConsole.HandleSDLEvent(event->sdl);
                 break;
@@ -247,12 +248,15 @@ void main01(void) {
                 goto eventsDone;
             case AURORA_PAUSED:
                 dusk::audio::SetPaused(true);
+                dusk::mouse::onFocusLost();
                 break;
             case AURORA_UNPAUSED:
                 dusk::audio::SetPaused(false);
                 dusk::game_clock::reset_frame_timer();
+                dusk::mouse::onFocusGained();
                 break;
             case AURORA_SDL_EVENT:
+                dusk::mouse::handle_event(event->sdl);
                 dusk::ui::handle_event(event->sdl);
                 dusk::g_imguiConsole.HandleSDLEvent(event->sdl);
                 break;
@@ -289,6 +293,7 @@ void main01(void) {
                 for (int sim_tick = 0; sim_tick < pacing.sim_ticks_to_run; ++sim_tick) {
                     dusk::frame_interp::begin_sim_tick();
                     mDoCPd_c::read();
+                    dusk::mouse::read();
                     dusk::gyro::read(pacing.sim_pace);
                     fapGm_Execute();
                     mDoAud_Execute();
@@ -311,6 +316,7 @@ void main01(void) {
 
             // Game Inputs
             mDoCPd_c::read();
+            dusk::mouse::read();
             dusk::gyro::read(pacing.presentation_dt_seconds);
 
             // EXECUTE GAME LOGIC & RENDER
@@ -479,14 +485,6 @@ static void LanguageInit() {
     selectedLanguage = static_cast<u8>(dusk::getSettings().game.language.getValue());
 }
 
-static std::string asset_path(const char* assetName) {
-    const char* basePath = SDL_GetBasePath();
-    if (basePath != nullptr && basePath[0] != '\0') {
-        return std::string(basePath) + "res/" + assetName;
-    }
-    return std::string("res/") + assetName;
-}
-
 static void log_build_info() {
     DuskLog.info("Build: {} (rev {}, built {}, type {})", DUSK_WC_DESCRIBE, DUSK_WC_REVISION, DUSK_WC_DATE, DUSK_BUILD_TYPE);
     DuskLog.info("Platform: {}", DUSK_PLATFORM_NAME);
@@ -556,10 +554,17 @@ int game_main(int argc, char* argv[]) {
     // PADSetDefaultMapping(&defaultPadMapping, PAD_TYPE_STANDARD);
 
     {
-        // Load mappings from https://github.com/mdqinc/SDL_GameControllerDB
-        const auto mappingsPath = asset_path("gamecontrollerdb.txt");
-        if (SDL_AddGamepadMappingsFromFile(mappingsPath.c_str()) < 0) {
-            DuskLog.warn("Failed to load gamecontrollerdb.txt: {}", SDL_GetError());
+        const auto mappingsPath = dusk::ConfigPath / "gamecontrollerdb.txt";
+        std::error_code ec;
+        if (std::filesystem::exists(mappingsPath, ec)) {
+            const auto mappingsPathString = dusk::io::fs_path_to_string(mappingsPath);
+            if (SDL_AddGamepadMappingsFromFile(mappingsPathString.c_str()) < 0) {
+                DuskLog.warn("Failed to load gamecontrollerdb.txt from '{}': {}",
+                    mappingsPathString, SDL_GetError());
+            }
+        } else if (ec) {
+            DuskLog.warn("Failed to inspect gamecontrollerdb.txt in data folder '{}': {}",
+                dusk::io::fs_path_to_string(mappingsPath), ec.message());
         }
     }
 
@@ -573,6 +578,9 @@ int game_main(int argc, char* argv[]) {
         config.appName = dusk::AppName;
         config.userPath = reinterpret_cast<const char*>(userPathString.c_str());
         config.cachePath = reinterpret_cast<const char*>(cachePathString.c_str());
+#ifdef DUSK_ASSET_DIR
+        config.resourcesPath = DUSK_ASSET_DIR;
+#endif
         config.vsync = dusk::getSettings().video.enableVsync;
         config.startFullscreen = dusk::getSettings().video.enableFullscreen;
         config.windowPosX = -1;
