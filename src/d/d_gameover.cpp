@@ -143,6 +143,10 @@ static moveFunc move_process[] = {
 static int  sALBWWarpChoice    = -1;
 static bool sALBWWarpInDungeon = false;
 static int  sALBWWarpDelay     = 0;
+
+static bool albwWarpChoiceAllowed() {
+    return !dMeter2_isWolfForm() || dComIfGs_isItemFirstBit(dItemNo_MASTER_SWORD_e);
+}
 #endif
 // ============================================
 // NEW CODE ENDS HERE
@@ -386,21 +390,18 @@ void dGameover_c::saveMove_proc() {
 // Cutscene deaths (types 1 and 2) bypass this dialog — they already
 // have their own custom handling in saveClose_proc.
 //
-// Three-condition gate:
-//   1. Normal death (type 0) — not a cutscene kill
-//   2. Talo rescue event (F_0625) — used as the general "early game done"
-//      unlock; also gates the postman route and rental shop
-//   3. Wolf Link form adds a further gate: warp is hidden until Link
-//      obtains the Master Sword, since Ordon is irrelevant as a wolf
-//      destination before that story milestone.
-//      Human Link deaths respect only condition 2 (Talo flag).
+// Gate: normal death (type 0) after Talo rescue (F_0625). Pre-MS Wolf Link
+// skips warp choice entirely (vanilla continue) to avoid Ordon softlocks;
+// sALBWWarpChoice must be cleared so a prior human Ordon pick cannot stick.
+// Human Link and wolf-with-Master-Sword get the full A/B toast.
 // ============================================
 #if TARGET_PC
         if (dMeter2Info_getGameOverType() == 0 &&
             dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625]) &&
-            (!dMeter2_isWolfForm() || dComIfGs_isItemFirstBit(dItemNo_MASTER_SWORD_e))) {
+            albwWarpChoiceAllowed()) {
             mProc = PROC_ALBW_WARP_CHOICE;
         } else {
+            sALBWWarpChoice = -1;
             mProc = PROC_SAVE_CLOSE;
         }
 #else
@@ -435,7 +436,8 @@ void dGameover_c::saveClose_proc() {
 // does NOT fire — the stage change handles the reload instead.
 // ============================================
 #if TARGET_PC
-        else if (dMeter2Info_getGameOverType() == 0 && sALBWWarpChoice == 1) {
+        else if (dMeter2Info_getGameOverType() == 0 && sALBWWarpChoice == 1 &&
+                 albwWarpChoiceAllowed()) {
             // setNextStage bypasses the normal continue path that restores HP,
             // so Link would arrive in Ordon at 0 HP and immediately die again.
             // Restore to full health here before the stage transition fires.

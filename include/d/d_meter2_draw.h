@@ -69,6 +69,7 @@ public:
     void setAlphaMagicAnimeMax();
     void drawShieldDurabilityBelowAlbw();
     bool getRupeeAnchorCenter(Vec* o_center) const;
+    bool getShieldHudAnchorCenter(Vec* o_center) const;
     f32 getRupeeHudReferenceSize() const;
     // ============================================
     // NEW CODE ENDS HERE

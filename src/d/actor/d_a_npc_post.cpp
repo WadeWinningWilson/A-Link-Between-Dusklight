@@ -38,13 +38,12 @@
 // All three are guarded by TARGET_PC_NATIVE_UI and owned by the ALBW postman actor.
 // ============================================
 #if TARGET_PC
+static bool             s_rentalEvtStarted   = false;
 #if TARGET_PC_NATIVE_UI
 static dALBWShop_c*     s_pALBWShop      = nullptr;
 // Single persistent dialogue window. BLOs are loaded once and reused for both
 // greeting and farewell — no per-dialogue new/delete to avoid archive corruption.
 static dALBWDialogue_c* s_pALBWDialogue  = nullptr;
-// Prevents dALBWRental_open() from firing again after farewell on the same talk event.
-static bool             s_rentalEvtStarted   = false;
 static u8               s_greetStep = 0;  // 0=page1, 1=page2, 2=page3
 #endif
 #endif

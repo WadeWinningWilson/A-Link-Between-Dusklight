@@ -495,6 +495,23 @@ public:
         return &mWaterBubblePcallBack; 
     }
 
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Diagnostics for the death recovery orb: tear FX are scene particles
+    // (Pscene###.jpc); dungeons load archives without the tear resources.
+    // ============================================
+    u8 getScenePrtclNo() const { return field_0x18; }
+    bool hasSceneParticleRes(u16 i_resID) const;
+    // Loads Pscene011.jpc (Faron Woods archive, contains the tear FX) into a
+    // supplemental resource slot so the recovery orb renders in stages whose
+    // own archive lacks them (dungeons). Async; returns true once available.
+    bool ensureTearSceneRes();
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
+
     static dPa_selectTexEcallBack mTsubo[8];
     static dPa_setColorEcallBack mLifeBall[3];
     static Mtx mWindViewMatrix;

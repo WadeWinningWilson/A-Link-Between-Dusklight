@@ -133,6 +133,9 @@ set(AURORA_ENABLE_DVD ON CACHE BOOL "Enable DVD API support" FORCE)
 set(AURORA_ENABLE_CARD ON CACHE BOOL "Enable CARD API support" FORCE)
 set(AURORA_ENABLE_RMLUI ON CACHE BOOL "Enable RmlUi UI support" FORCE)
 add_subdirectory(extern/aurora EXCLUDE_FROM_ALL)
+if (TARGET libzstd_static AND NOT TARGET zstd::libzstd)
+    add_library(zstd::libzstd ALIAS libzstd_static)
+endif ()
 target_compile_definitions(aurora_mtx PRIVATE MTX_USE_PS=1)
 
 add_subdirectory(libs/freeverb)
@@ -336,7 +339,7 @@ set(DUSK_COPYRIGHT "Copyright (C) Twilit Realm contributors")
 source_group("dolzel" FILES ${DOLZEL_FILES} ${Z2AUDIOLIB_FILES} ${REL_FILES})
 source_group("dusklight" FILES ${DUSK_FILES} ${DUSK_HTTP_BACKEND_FILES})
 
-set(GAME_COMPILE_DEFS TARGET_PC WIDESCREEN_SUPPORT=1 AVOID_UB=1 VERSION=0 MTX_USE_PS=1)
+set(GAME_COMPILE_DEFS TARGET_PC TARGET_PC_NATIVE_UI WIDESCREEN_SUPPORT=1 AVOID_UB=1 VERSION=0 MTX_USE_PS=1)
 
 set(GAME_INCLUDE_DIRS
     include
@@ -425,8 +428,6 @@ if(ANDROID)
     list(APPEND GAME_COMPILE_DEFS TARGET_ANDROID=1)
 endif ()
 
-option(TARGET_PC_NATIVE_UI "Use native TP rendering for rental shop and postman dialogue" OFF)
-
 if (DUSK_GFX_DEBUG_GROUPS)
     list(APPEND GAME_COMPILE_DEFS DUSK_GFX_DEBUG_GROUPS=1)
     target_compile_definitions(aurora_gx PRIVATE AURORA_GFX_DEBUG_GROUPS)
@@ -493,9 +494,6 @@ target_compile_definitions(dusklight PRIVATE ${GAME_COMPILE_DEFS})
 target_include_directories(dusklight PRIVATE ${GAME_INCLUDE_DIRS})
 target_link_libraries(dusklight PRIVATE aurora::main ${GAME_LIBS} ${JSYSTEM_LINK_LIBRARIES})
 target_precompile_headers(dusklight PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_SOURCE_DIR}/include/dusk_pch.hpp>")
-if(TARGET_PC_NATIVE_UI)
-    target_compile_definitions(dusklight PRIVATE TARGET_PC_NATIVE_UI)
-endif()
 if (TARGET crashpad_handler)
     add_dependencies(dusklight crashpad_handler)
     add_custom_command(TARGET dusklight POST_BUILD

@@ -210,7 +210,8 @@ void daAlink_c::setShieldGuard() {
          !checkCutDashChargeAnime() && (!checkEquipAnime() || checkUpperGuardAnime()) &&
          !checkRideOn() && checkGuardActionChange()
 #if TARGET_PC
-         && manualShieldButton()
+         // Manual Shielding on: ZR required. Off: vanilla Z-target guard unchanged.
+         && (!dusk::getSettings().game.manualShielding || manualShieldButton())
 #endif
          ))
     {

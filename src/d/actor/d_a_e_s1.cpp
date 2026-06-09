@@ -304,28 +304,88 @@ static void path_check2(e_s1_class* i_this) {
     }
 }
 
-static int same_id;
+static bool e_s1_is_wolf_pack_finish_attack(dCcU_AtInfo* i_atInfo) {
+    if (i_atInfo->mpCollider == NULL) {
+        return false;
+    }
 
-static int fail_id;
+    return i_atInfo->mpCollider->ChkAtType(
+        AT_TYPE_WOLF_CUT_TURN | AT_TYPE_MIDNA_LOCK | AT_TYPE_10000000);
+}
 
-static void* s_last_sub(void* i_actor, void* i_data) {
+static void e_s1_enter_fail_wait(e_s1_class* i_this) {
+    if (i_this->mAction == ACT_FAIL_WAIT || i_this->mAction == ACT_FAIL) {
+        return;
+    }
+
+    fopAc_ac_c* a_this = (fopAc_ac_c*)i_this;
+    a_this->health = 0;
+    i_this->mAction = ACT_FAIL_WAIT;
+    i_this->mMode = 0;
+    i_this->mHitInvincibilityTimer = 10;
+    a_this->speedF = 0.0f;
+    i_this->mSound.startCreatureVoice(Z2SE_EN_NS_V_DEATH, -1);
+}
+
+static bool s_pack_any_above_1;
+
+static void* s_pack_count_sub(void* i_actor, void* i_data) {
     fopAc_ac_c* a_actor = (fopAc_ac_c*)i_actor;
-    fopAc_ac_c* a_data = (fopAc_ac_c*)i_data;
+    e_s1_class* e_data = (e_s1_class*)i_data;
 
-    if (fopAcM_IsActor(a_actor) && fopAcM_GetName(a_actor) == fpcNm_E_S1_e) {
-        e_s1_class* e_data = (e_s1_class*)a_data;
-        e_s1_class* e_actor = (e_s1_class*)a_actor;
+    if (!fopAcM_IsActor(a_actor) || fopAcM_GetName(a_actor) != fpcNm_E_S1_e) {
+        return NULL;
+    }
 
-        if (e_actor != e_data && e_actor->mGroupID == e_data->mGroupID) {
-            same_id++;
+    e_s1_class* e_actor = (e_s1_class*)a_actor;
+    if (e_actor->mGroupID != e_data->mGroupID || e_actor->mGroupID == 0xFF) {
+        return NULL;
+    }
 
-            if (e_actor->mAction == ACT_FAIL || e_actor->mAction == ACT_FAIL_WAIT) {
-                fail_id++;
-            }
-        }
+    if (a_actor->health > 1) {
+        s_pack_any_above_1 = true;
     }
 
     return NULL;
+}
+
+static void* s_pack_finish_sub(void* i_actor, void* i_data) {
+    fopAc_ac_c* a_actor = (fopAc_ac_c*)i_actor;
+    e_s1_class* e_data = (e_s1_class*)i_data;
+
+    if (!fopAcM_IsActor(a_actor) || fopAcM_GetName(a_actor) != fpcNm_E_S1_e) {
+        return NULL;
+    }
+
+    e_s1_class* e_actor = (e_s1_class*)a_actor;
+    if (e_actor->mGroupID != e_data->mGroupID || e_actor->mGroupID == 0xFF) {
+        return NULL;
+    }
+
+    if (a_actor->health <= 1) {
+        e_s1_enter_fail_wait(e_actor);
+    }
+
+    return NULL;
+}
+
+static void e_s1_try_pack_finish(e_s1_class* i_this) {
+    if (i_this->mGroupID == 0xFF) {
+        return;
+    }
+
+    if (!e_s1_is_wolf_pack_finish_attack(&i_this->mAtInfo)) {
+        return;
+    }
+
+    s_pack_any_above_1 = false;
+    fpcM_Search(s_pack_count_sub, i_this);
+
+    if (s_pack_any_above_1) {
+        return;
+    }
+
+    fpcM_Search(s_pack_finish_sub, i_this);
 }
 
 static void damage_check(e_s1_class* i_this) {
@@ -428,27 +488,14 @@ static void damage_check(e_s1_class* i_this) {
                             i_this->mAction = ACT_FAIL_WAIT;
                             i_this->mHitInvincibilityTimer = 10;
                             i_this->mSound.startCreatureVoice(Z2SE_EN_NS_V_DEATH, -1);
-                        } else if (a_this->health <= 0) {
-                            if (i_this->mAtInfo.mHitBit & 0x880) {
-                                OS_REPORT("////////// S1 TURN CUT FAIL ..\n");
-                                i_this->mAction = ACT_FAIL_WAIT;
-                                i_this->mHitInvincibilityTimer = 10;
-                                i_this->mSound.startCreatureVoice(Z2SE_EN_NS_V_DEATH, -1);
-                            } else {
-                                fail_id = 0;
-                                same_id = 0;
-
-                                fpcM_Search(s_last_sub, a_this);
-
-                                OS_REPORT("////////// SAME ID %d\n", same_id);
-                                OS_REPORT("////////// FAIL ID %d\n", fail_id);
-
-                                if (i_this->mGroupID == 0xFF || same_id != fail_id) {
-                                    i_this->mAction = ACT_FAIL_WAIT;
-                                    i_this->mHitInvincibilityTimer = 10;
-                                    i_this->mSound.startCreatureVoice(Z2SE_EN_NS_V_DEATH, -1);
-                                }
-                            }
+                            e_s1_try_pack_finish(i_this);
+                        } else if (a_this->health <= 0 ||
+                                   (a_this->health <= 1 &&
+                                    e_s1_is_wolf_pack_finish_attack(&i_this->mAtInfo)))
+                        {
+                            a_this->health = 0;
+                            e_s1_enter_fail_wait(i_this);
+                            e_s1_try_pack_finish(i_this);
                         } else {
                             i_this->mAction = ACT_DAMAGE;
                             i_this->mSound.startCreatureVoice(Z2SE_EN_NS_V_DAMAGE, -1);

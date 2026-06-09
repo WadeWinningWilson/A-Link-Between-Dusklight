@@ -10,13 +10,9 @@
 // after the player completes the Talo rescue (event bit 625).
 // Intercept happens in daNpc_Post_c::evtTalk() when getBitSW() == 0x42.
 //
-// Two separate entry points are intentional:
-//   dALBWRental_tick()      — input + state machine; call from actor Execute()
-//   dALBWRental_imguiDraw() — ImGui shop window; call from the main game loop
-//                             (after aurora_begin_frame, before aurora_end_frame)
-//
-// Keeping them separate ensures the ImGui window is submitted exactly once
-// per presented frame regardless of how many sim-ticks Execute() runs.
+// Entry points:
+//   dALBWRental_tick() — input + state machine; call from actor Execute()
+//   dALBWShop_c        — native TP letter-select shop; drawn from postman Draw()
 // ============================================
 #if TARGET_PC
 void dALBWRental_open();
@@ -29,7 +25,6 @@ void dALBWRental_clearVanillaTalkSuppress();
 bool dALBWRental_shouldSuppressVanillaTalkMsg();
 bool dALBWRental_justClosed();          // evtTalk()  — true once after shop closes; triggers evtChange()
 void dALBWRental_tick();                // actor Execute() — input & state only
-void dALBWRental_imguiDraw();           // main loop — ImGui shop window only
 
 // ============================================
 // NEW CODE — ALBW Port

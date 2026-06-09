@@ -673,7 +673,6 @@ void dMeter2Draw_c::draw() {
     if (!dComIfGp_isPauseFlag() && dComIfGp_isHeapLockFlag() != 6) {
         drawKanteraScreen(0);
         drawShieldDurabilityBelowAlbw();
-        dShield_drawBashCharges();
     }
     // ============================================
     // NEW CODE ENDS HERE
@@ -819,6 +818,13 @@ void dMeter2Draw_c::draw() {
                    g_drawHIO.mMidnaIconPikariBackOuter, g_drawHIO.mMidnaIconPikariBackInner,
                    g_drawHIO.mMidnaIconPikariAnimSpeed, 3);
     }
+
+#if TARGET_PC
+    // Draw after the rest of the HUD so spur icons sit above rupees / buttons.
+    if (!dComIfGp_isPauseFlag() && dComIfGp_isHeapLockFlag() != 6) {
+        dShield_drawBashCharges();
+    }
+#endif
 }
 
 void dMeter2Draw_c::initLife() {
@@ -1823,6 +1829,19 @@ bool dMeter2Draw_c::getRupeeAnchorCenter(Vec* o_center) const {
 
     *o_center = mpRupeeParent[0]->getGlobalVtxCenter(false, 0);
     return true;
+}
+
+bool dMeter2Draw_c::getShieldHudAnchorCenter(Vec* o_center) const {
+    if (o_center == NULL) {
+        return false;
+    }
+
+    if (mpRupeeKeyParent != NULL && mpRupeeKeyParent->getPanePtr() != NULL) {
+        *o_center = mpRupeeKeyParent->getGlobalVtxCenter(false, 0);
+        return true;
+    }
+
+    return getRupeeAnchorCenter(o_center);
 }
 
 f32 dMeter2Draw_c::getRupeeHudReferenceSize() const {

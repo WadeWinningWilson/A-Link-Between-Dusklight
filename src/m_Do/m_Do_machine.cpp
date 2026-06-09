@@ -814,6 +814,12 @@ int mDoMch_Create() {
     gameHeapSize += 0x100000;
     dynamicLinkHeapSize = 0x180000;
 
+#if TARGET_PC
+    // ALBW Port: hosts the dedicated tear-archive heap in dPa_control_c
+    // (resident supplemental Pscene011 for the death recovery orb).
+    archiveHeapSize += 0xA0000;
+#endif
+
     #if !DEBUG
     // Fakematch because the heap sizes differ between debug and retail.
     // Maybe the actual calculations above use sizeof or constants and that's why it's different?

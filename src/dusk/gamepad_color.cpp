@@ -98,10 +98,12 @@ namespace {
 }  // namespace
 
 bool pad_has_led(const int port) noexcept {
-    if (port > PAD_MAX_CONTROLLERS || port < 0)
+    if (port > PAD_MAX_CONTROLLERS || port < 0) {
         return false;
+    }
 
-    return PADHasLED(port);
+    (void)port;
+    return false;
 }
 
 void handleGamepadColor() {

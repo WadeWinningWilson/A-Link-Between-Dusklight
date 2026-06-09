@@ -37,7 +37,8 @@ static cXyz      sOrbPos         = { 0.0f, 0.0f, 0.0f };
 
 // ym_swbit=0xFF → daObjDrop_c::modeInit spawns floating tear without a shadow insect parent.
 static constexpr u32 kRecoveryDropParams = 0x0000FF00u;
-static constexpr f32 kOrbFloatAboveGround = 90.0f;
+// Slightly above Link's head so the particle glow reads clearly at a distance.
+static constexpr f32 kOrbFloatAboveGround = 135.0f;
 
 static bool sTearRenderFlagWasSet[3] = {};
 
@@ -58,6 +59,14 @@ static void popTearRenderFlags() {
 }
 
 static void orbDebugReset() {
+    // Truncate once per session so a multi-death test (dungeon + overworld)
+    // keeps every run in the log.
+    static bool sResetDone = false;
+    if (sResetDone) {
+        return;
+    }
+    sResetDone = true;
+
     char path[512];
     path[0] = '\0';
     const char* user = getenv("USERPROFILE");
@@ -194,6 +203,12 @@ void dALBWDeathRupees_applyHalvingOnDeath() {
     sOrbPending = true;
     sOrbSpawned = false;
 
+    // Kick the supplemental tear-archive load now (async) so the FX resources
+    // are resident by the time the player returns to the death room.
+    if (dPa_control_c* pa = g_dComIfG_gameInfo.play.getParticle()) {
+        pa->ensureTearSceneRes();
+    }
+
     orbDebugLog(
         "death: wallet=%u lost=%u kept=%u recovery=%u stage=%s startStage=%s lastStage=%s "
         "room=%d pos=(%.1f,%.1f,%.1f)\n",
@@ -217,6 +232,12 @@ u16 dALBWDeathRupees_getOrbRecoveryAmount() {
 void dALBWDeathRupees_tickSpawn() {
     if (!sOrbPending || sOrbRecovery == 0) {
         return;
+    }
+
+    // Poll the async supplemental tear-archive load; once registered, the
+    // orb's per-frame body FX retry (daObjDrop_c::execute) picks it up.
+    if (dPa_control_c* pa = g_dComIfG_gameInfo.play.getParticle()) {
+        pa->ensureTearSceneRes();
     }
 
     const char* stage = dComIfGp_getStartStageName();
@@ -328,8 +349,24 @@ void dALBWDeathRupees_finishRecoveryDropSetup(daObjDrop_c* drop) {
     drop->createBodyEffect();
     drop->mSound.startSound(Z2SE_OBJ_LIGHTDROP_APPEAR, 0, -1);
 
-    orbDebugLog("created: id=%u pos=(%.1f,%.1f,%.1f) groundY=%.1f\n", (unsigned)sOrbActorId,
-                pos.x, pos.y, pos.z, groundY);
+    // Tear visuals are scene particles (Pscene###.jpc). Log which archive this
+    // stage loaded and whether it contains the tear body FX — dungeons that
+    // load an archive without them produce an invisible (but working) orb.
+    int bodyFx = 0;
+    for (int i = 0; i < 6; i++) {
+        if (drop->mpBodyEffEmtrs[i] != NULL) {
+            bodyFx++;
+        }
+    }
+    dPa_control_c* pa     = g_dComIfG_gameInfo.play.getParticle();
+    const int sceneNo     = pa ? pa->getScenePrtclNo() : -1;
+    const bool hasTearRes = pa && pa->hasSceneParticleRes(0x838B);
+    const bool suppReady  = pa && pa->ensureTearSceneRes();
+
+    orbDebugLog("created: id=%u pos=(%.1f,%.1f,%.1f) groundY=%.1f bodyFx=%d/6 "
+                "sceneJpc=Pscene%03d hasTearRes=%d suppRes=%d\n",
+                (unsigned)sOrbActorId, pos.x, pos.y, pos.z, groundY, bodyFx, sceneNo,
+                hasTearRes ? 1 : 0, suppReady ? 1 : 0);
 }
 
 void dALBWDeathRupees_onOrbDropCreateAborted() {

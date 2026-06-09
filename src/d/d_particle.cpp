@@ -1,4 +1,4 @@
-﻿// d_particle is odd in that it doesn't appear to include dolzel.pch.
+// d_particle is odd in that it doesn't appear to include dolzel.pch.
 // It uses ...data pooling, but weak data from the PCH (e.g. Z2Calc::cNullVec)
 // isn't present like would be expected for a TU using pooling.
 //
@@ -1167,6 +1167,21 @@ Mtx dPa_control_c::mWindViewMatrix;
 
 dPa_particleTracePcallBack_c dPa_control_c::mParticleTracePCB;
 
+#if TARGET_PC
+// ============================================
+// NEW CODE — ALBW Port
+// Dedicated heap for the resident supplemental tear archive
+// (ensureTearSceneRes). Kept out of m_resHeap: that heap is budgeted for
+// common.jpc + exactly one scene archive, and the dungeon->overworld
+// transition briefly needs both stages' archives resident — adding a third
+// archive there overflows it. Reserved at boot to dodge fragmentation.
+// ============================================
+static JKRExpHeap* sTearHeap = NULL;
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+#endif
+
 dPa_control_c::dPa_control_c() {
 #if DEBUG
     size_t heapSize = 0x1f0800;
@@ -1176,6 +1191,11 @@ dPa_control_c::dPa_control_c() {
     m_resHeap = JKRCreateExpHeap(heapSize, mDoExt_getArchiveHeap(), false);
     JKRHEAP_NAME(m_resHeap, "Particle control");
     JUT_ASSERT(2426, m_resHeap != NULL);
+
+#if TARGET_PC
+    sTearHeap = JKRCreateExpHeap(0xA0000, mDoExt_getArchiveHeap(), false);
+    JKRHEAP_NAME(sTearHeap, "ALBW tear particle res");
+#endif
     mHeap = NULL;
     mSceneHeap = NULL;
     field_0x18 = 0xFF;
@@ -1208,7 +1228,13 @@ void dPa_control_c::createCommon(void const* param_0) {
     mCommonResMng = JKR_NEW_ARGS (mHeap, 0) JPAResourceManager(param_0, mHeap);
     JUT_ASSERT(2521, mCommonResMng != NULL);
     mCommonResMng->swapTexture(mDoGph_gInf_c::getFrameBufferTimg(), "dummy");
+#if TARGET_PC
+    // ALBW Port: third resource slot reserved for the supplemental tear
+    // archive (ensureTearSceneRes) used by the death recovery orb.
+    mEmitterMng = JKR_NEW_ARGS (mHeap, 0) JPAEmitterManager(3000, 250, mHeap, 0x13, 3);
+#else
     mEmitterMng = JKR_NEW_ARGS (mHeap, 0) JPAEmitterManager(3000, 250, mHeap, 0x13, 2);
+#endif
     JUT_ASSERT(2531, mEmitterMng != NULL);
     mEmitterMng->entryResourceManager(mCommonResMng, 0);
     JKRHeap* prevHeap = mDoExt_setCurrentHeap(mHeap);
@@ -1249,6 +1275,84 @@ void dPa_control_c::createRoomScene() {
     u32 memory = mDoExt_adjustSolidHeap(mSceneHeap);
     OS_REPORT("-------<Scene Particle Memory> %d\n", memory);
 }
+
+#if TARGET_PC
+// ============================================
+// NEW CODE — ALBW Port
+// True when the currently loaded scene particle archive (Pscene###.jpc)
+// contains the given resource id. Tear of Light body FX (0x838B..0x842B)
+// only exist in some overworld archives — see d_albw_death_rupee.cpp.
+// ============================================
+bool dPa_control_c::hasSceneParticleRes(u16 i_resID) const {
+    return mSceneResMng != NULL && mSceneResMng->checkUserIndexDuplication(i_resID);
+}
+
+// Supplemental tear archive for the death recovery orb. Pscene011.jpc is the
+// Faron Woods scene archive and contains the full tear FX set (confirmed via
+// orb debug log: sceneJpc=Pscene011 hasTearRes=1 bodyFx=6/6). It is loaded
+// once, kept resident on its own heap (sTearHeap), and registered in
+// emitter-manager slot 2 so dPa_control_c::set can fall back to it when the
+// current stage's own archive lacks a requested scene particle (all dungeons).
+static mDoDvdThd_toMainRam_c* sTearResCommand = NULL;
+static JPAResourceManager*    sTearResMng     = NULL;
+static bool                   sTearResFailed  = false;
+
+bool dPa_control_c::ensureTearSceneRes() {
+    if (sTearResMng != NULL) {
+        return true;
+    }
+    if (sTearResFailed) {
+        return false;
+    }
+    if (sTearHeap == NULL) {
+        sTearResFailed = true;
+        return false;
+    }
+    if (sTearResCommand == NULL) {
+        sTearResCommand = mDoDvdThd_toMainRam_c::create("/res/Particle/Pscene011.jpc", 0, sTearHeap);
+        if (sTearResCommand == NULL) {
+            sTearResFailed = true;
+            OS_REPORT("ALBW tear res: failed to queue Pscene011.jpc read\n");
+        }
+        return false;
+    }
+    if (!sTearResCommand->sync()) {
+        return false;
+    }
+    void* data = sTearResCommand->getMemAddress();
+    sTearResCommand->destroy();
+    sTearResCommand = NULL;
+    if (data == NULL) {
+        sTearResFailed = true;
+        OS_REPORT("ALBW tear res: Pscene011.jpc read returned no data\n");
+        return false;
+    }
+    sTearResMng = JKR_NEW_ARGS(sTearHeap, 0) JPAResourceManager(data, sTearHeap);
+    if (sTearResMng == NULL) {
+        sTearResFailed = true;
+        return false;
+    }
+    sTearResMng->swapTexture(mDoGph_gInf_c::getFrameBufferTimg(), "dummy");
+    mEmitterMng->entryResourceManager(sTearResMng, 2);
+    OS_REPORT("ALBW tear res: supplemental Pscene011 registered (slot 2)\n");
+    return true;
+}
+
+// dPa_control_c::set — pick the supplemental slot for scene particles the
+// current archive doesn't have (returns the original id when no fallback).
+static u8 dPa_tearResFallbackRM(const dPa_control_c* i_pa, u16 i_resID, u8 i_rmID) {
+    if (i_rmID != 1 || sTearResMng == NULL) {
+        return i_rmID;
+    }
+    if (i_pa->hasSceneParticleRes(i_resID)) {
+        return i_rmID;
+    }
+    return sTearResMng->checkUserIndexDuplication(i_resID) ? 2 : i_rmID;
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+#endif
 
 bool dPa_control_c::readScene(u8 param_0, mDoDvdThd_toMainRam_c** param_1) {
     if (param_0 == 0xff || param_0 == field_0x18) {
@@ -1470,6 +1574,11 @@ JPABaseEmitter* dPa_control_c::set(u8 param_0, u16 param_1, cXyz const* i_pos,
                                    s8 param_8, GXColor const* param_9, GXColor const* param_10,
                                    cXyz const* param_11, f32 param_12) {
     u8 local_e0 = getRM_ID(param_1);
+#if TARGET_PC
+    // ALBW Port: route tear FX through the supplemental archive when the
+    // current stage's scene archive lacks them (death recovery orb in dungeons).
+    local_e0 = dPa_tearResFallbackRM(this, param_1, local_e0);
+#endif
     JPAResourceManager* local_a8 = mEmitterMng->getResourceManager(local_e0);
     if (local_a8 == NULL) {
         return NULL;

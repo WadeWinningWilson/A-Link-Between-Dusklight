@@ -451,11 +451,13 @@ void updateShieldHudLinger(daAlink_c* i_link) {
         return;
     }
 
-    const bool guardHeld = i_link->checkUpperGuardAnime() && isGuardInputHeld(i_link);
+    // Any active guard (ZR, Z-target, slip recovery) — no combat / lock-on gate.
+    const bool guardHeld =
+        i_link->checkPlayerGuard() || i_link->manualShieldButton();
     if (guardHeld) {
         sShieldHudLingerFrames = SHIELD_HUD_LINGER_FRAMES;
-    } else if (!i_link->checkUpperGuardAnime() && !i_link->checkGuardSlipMode() &&
-               !i_link->checkGuardBreakMode() && sShieldHudLingerFrames > 0) {
+    } else if (!i_link->checkGuardSlipMode() && !i_link->checkGuardBreakMode() &&
+               sShieldHudLingerFrames > 0) {
         sShieldHudLingerFrames--;
     }
 }
@@ -481,11 +483,15 @@ bool isShieldAuxHudVisible(const daAlink_c* i_link) {
         return true;
     }
 
-    return isGuardInputHeld(i_link) && i_link->checkUpperGuardAnime();
+    if (i_link->manualShieldButton()) {
+        return true;
+    }
+
+    return i_link->checkPlayerGuard();
 }
 
 bool shouldShowDurabilityHud() {
-    if (!dShield_isDurabilityEnabled() || !dusk::getSettings().game.manualShielding) {
+    if (!dShield_isDurabilityEnabled()) {
         return false;
     }
 
@@ -498,7 +504,7 @@ bool shouldShowDurabilityHud() {
 }
 
 bool shouldShowBashHud() {
-    if (!dShield_isParryCombatEnabled() || !dusk::getSettings().game.manualShielding) {
+    if (!dShield_isParryCombatEnabled()) {
         return false;
     }
 
@@ -559,6 +565,11 @@ bool ensureBashHud() {
     if (!sHud.mpIconScreen->setPriority("zelda_game_image_hakusha_parts.blo", 0x20000,
                                         dComIfGp_getMain2DArchive())) {
         deleteBashHud();
+        static bool sLoggedBloFailure = false;
+        if (!sLoggedBloFailure) {
+            sLoggedBloFailure = true;
+            OS_REPORT("[dShield] bash HUD: failed to load hakusha_parts.blo\n");
+        }
         return false;
     }
 
@@ -961,6 +972,9 @@ bool dShield_isBashSpendChainActive() {
 }
 
 void dShield_drawBashCharges() {
+    daAlink_c* link = daAlink_getAlinkActorClass();
+    updateShieldHudLinger(link);
+
     if (!shouldShowBashHud() || !ensureBashHud()) {
         return;
     }
@@ -986,7 +1000,7 @@ void dShield_drawBashCharges() {
     dMeter2_c* meter = dMeter2Info_getMeterClass();
     if (meter != NULL) {
         dMeter2Draw_c* draw = meter->getMeterDrawPtr();
-        if (draw != NULL) {
+        if (draw != NULL && !draw->getShieldHudAnchorCenter(&rupeeCenter)) {
             draw->getRupeeAnchorCenter(&rupeeCenter);
         }
     }

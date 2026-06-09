@@ -11,13 +11,12 @@
 //   dALBWRental_close()       — triggered by B button or "Leave"
 //
 // State machine:
-//   STATE_GREETING  — Dusk toast shown; A/B or timeout → shop
-//   STATE_SHOP      — centred ImGui shop window
-//   STATE_FAREWELL  — Dusk toast shown; A/B or timeout → closed
+//   STATE_GREETING  — native TP dialogue; advance → shop
+//   STATE_SHOP      — native letter-select window (dALBWShop_c)
+//   STATE_FAREWELL  — native TP dialogue; advance → closed
 //
-// Greeting and farewell use push_toast() (RmlUI, type "npc-dialogue")
-// because that system is stable at any framerate. ImGui dialogue boxes
-// flickered at uncapped framerates due to per-frame repositioning.
+// Greeting and farewell use dALBWDialogue_c (native zelda message window).
+// The shop list uses dALBWShop_c (letter-select BLO from letres.arc).
 //
 // All timing uses std::chrono so behaviour is framerate-independent.
 // The grace period (300 ms) prevents the talk-event A-press from
@@ -33,7 +32,6 @@
 
 #if TARGET_PC
 
-#include <aurora/imgui.h>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -157,29 +155,18 @@ static constexpr int kItemCount = sizeof(kItems) / sizeof(kItems[0]);
 
 using clock = std::chrono::steady_clock;
 
-// How long after entering a dialogue state before A/B is accepted.
-// Absorbs button presses from the interaction that opened/closed the shop.
-static constexpr auto kDialogueGrace    = std::chrono::milliseconds(300);
-
-// Toast display durations. Long enough that the player will always
-// dismiss via A/B before they expire. State does NOT auto-advance on
-// timeout — only A/B progresses the dialogue.
-static constexpr auto kGreetingDuration = std::chrono::seconds(30);
-static constexpr auto kFarewellDuration = std::chrono::seconds(20);
-
 // ============================================
 // Shop state
 // ============================================
 
 enum ALBWRentalState {
     STATE_CLOSED   = 0,
-    STATE_GREETING,   // toast visible; A/B or kGreetingDuration → shop
-    STATE_SHOP,       // main ImGui shop window
-    STATE_FAREWELL,   // toast visible; A/B or kFarewellDuration → closed
+    STATE_GREETING,   // native dialogue; advance → shop
+    STATE_SHOP,       // native letter-select window
+    STATE_FAREWELL,   // native dialogue; advance → closed
 };
 
-static ALBWRentalState   sState              = STATE_CLOSED;
-static clock::time_point sDialogueOpenTime;   // when current dialogue state started
+static ALBWRentalState sState = STATE_CLOSED;
 
 // Every entry the player can see in the table (eligible+owned items hidden).
 // purchasable == true  → eligible AND not owned → real name, can press A
@@ -208,10 +195,7 @@ static bool         sPurchasedThisSession = false;
 static const char*       sStatusMsg    = nullptr;
 static clock::time_point sStatusExpiry;
 
-// Set to true by tick() whenever D-pad navigation changes sSelectedIdx.
-// Consumed by imguiDraw() via ImGui::SetScrollHereY() to keep the selected
-// row visible inside the scrollable table — necessary because gamepads have
-// no way to interact with the scroll bar directly.
+// Consumed by dALBWShop_c to scroll its 6-row viewport to keep selection visible.
 static bool sScrollToSelected = false;
 
 // Set to true when the shop transitions to STATE_CLOSED.  evtTalk() reads
@@ -508,13 +492,6 @@ void dALBWRental_open() {
         ? "Greetings! Lost your treasured possessions? Never fear, I have a new shipment for you! All for a.....small fee!"
         : "Greetings! As an ever dutiful Junior mail carrier I return all that is lost or misplaced!";
 
-// ============================================
-// NEW CODE — ALBW Port (Native Dialogue)
-// Store the chosen greeting text for dALBWDialogue_c to read via
-// dALBWRental_getGreetingText(). The pointer is valid for the duration of
-// the talk event because greeting points to a string literal.
-// ============================================
-#if TARGET_PC_NATIVE_UI
     if (returning) {
         sGreetingText  = greeting;
         sGreetingPage2 = nullptr;
@@ -525,19 +502,7 @@ void dALBWRental_open() {
             "You may never know when something slips off your person!";
     }
     (void)greeting;
-#else
-    dusk::ui::push_toast({
-        .type     = "npc-dialogue",
-        .title    = "Postman's Lending Service",
-        .content  = greeting,
-        .duration = kGreetingDuration,
-    });
-#endif
-// ============================================
-// NEW CODE ENDS HERE
-// ============================================
 
-    sDialogueOpenTime    = clock::now();
     sState               = STATE_GREETING;
     sJustEnteredGreeting = true;  // signals Execute() to play MOT_HELLO
 #if TARGET_PC
@@ -567,27 +532,9 @@ void dALBWRental_close() {
         : "My friend do not shed a tear, save up and return. "
           "Even I can't leave this town yet without a rupee or two more in the bank!";
 
-// ============================================
-// NEW CODE — ALBW Port (Native Dialogue)
-// Store the chosen farewell text for dALBWDialogue_c to read via
-// dALBWRental_getFarewellText(). Pointer is valid for the talk-event duration.
-// ============================================
-#if TARGET_PC_NATIVE_UI
     sFarewellText = farewell;
     (void)farewell;
-#else
-    dusk::ui::push_toast({
-        .type     = "npc-dialogue",
-        .title    = "Postman's Lending Service",
-        .content  = farewell,
-        .duration = kFarewellDuration,
-    });
-#endif
-// ============================================
-// NEW CODE ENDS HERE
-// ============================================
 
-    sDialogueOpenTime    = clock::now();
     sState               = STATE_FAREWELL;
     sJustEnteredFarewell = true;  // signals Execute() to play MOT_BYE
 }
@@ -617,87 +564,22 @@ bool dALBWRental_shouldSuppressVanillaTalkMsg() {
 // ============================================
 // NEW CODE — ALBW Port
 // dALBWRental_tick()
-// Input polling and state-machine transitions only.  Call from actor
-// Execute() (which runs inside the sim-tick loop and may be skipped on
-// frames where sim_ticks_to_run == 0 — that's fine for input; it's not
-// fine for ImGui rendering, which is why ImGui lives in imguiDraw()).
+// Input polling and state-machine transitions only. Call from actor Execute().
 // ============================================
 void dALBWRental_tick() {
     if (sState == STATE_CLOSED) {
         return;
     }
 
-    const auto elapsed = clock::now() - sDialogueOpenTime;
-
     // ---- STATE_GREETING ----
-    // Toast (or native dialogue) is visible. Only A/B advances to the shop.
+    // Native dialogue drives the transition via dALBWRental_advanceToShop().
     if (sState == STATE_GREETING) {
-// ============================================
-// NEW CODE — ALBW Port (Native Dialogue)
-// In native mode evtTalk drives the transition via dALBWRental_advanceToShop().
-// ============================================
-#if !TARGET_PC_NATIVE_UI
-        if (elapsed >= kDialogueGrace) {
-            if (mDoCPd_c::getTrigA(PAD_1) || mDoCPd_c::getTrigB(PAD_1)) {
-                // Expire the toast immediately so it fades out instead of
-                // lingering for 30 s behind the shop window.
-                auto& toasts = dusk::ui::get_toasts();
-                if (!toasts.empty()) {
-                    toasts.front().duration = std::chrono::milliseconds(1);
-                }
-                sState          = STATE_SHOP;
-                sJustEnteredShop = true;  // signals Execute() to lock in MOT_WAIT_A
-            }
-        }
-#endif
-// ============================================
-// NEW CODE ENDS HERE
-// ============================================
         return;
     }
 
     // ---- STATE_FAREWELL ----
-    // Toast (or native dialogue) is visible. A/B dismisses it and releases the event lock.
+    // Native dialogue drives the transition via dALBWRental_advanceToClosed().
     if (sState == STATE_FAREWELL) {
-// ============================================
-// NEW CODE — ALBW Port (Native Dialogue)
-// In native mode evtTalk drives the transition via dALBWRental_advanceToClosed().
-// ============================================
-#if !TARGET_PC_NATIVE_UI
-        // Safety auto-close: once the 20 s toast expires the player can
-        // no longer read it.  Signal evtTalk() to end the event so Link
-        // doesn't stay locked with no visible UI.
-        if (elapsed >= kFarewellDuration) {
-            sJustClosed = true;
-            sState      = STATE_CLOSED;
-#if TARGET_PC
-            dALBWRental_clearVanillaTalkSuppress();
-#endif
-            return;
-        }
-        if (elapsed >= kDialogueGrace) {
-            if (mDoCPd_c::getTrigA(PAD_1) || mDoCPd_c::getTrigB(PAD_1)) {
-                // Expire the farewell toast immediately — same pattern as
-                // the greeting dismissal above.  Without this the toast
-                // stays visible for its full 20 s even though the state
-                // is now CLOSED, making the player think nothing happened.
-                auto& toasts = dusk::ui::get_toasts();
-                if (!toasts.empty()) {
-                    toasts.front().duration = std::chrono::milliseconds(1);
-                }
-                // Signal evtTalk() that it should now call evtChange() to
-                // cleanly end the event and release Link's movement lock.
-                sJustClosed = true;
-                sState      = STATE_CLOSED;
-#if TARGET_PC
-                dALBWRental_clearVanillaTalkSuppress();
-#endif
-            }
-        }
-#endif
-// ============================================
-// NEW CODE ENDS HERE
-// ============================================
         return;
     }
 
@@ -731,7 +613,7 @@ void dALBWRental_tick() {
 
     // Navigation traverses all visible rows (real items AND ?????).
     // tryPurchase() silently ignores ????? rows — A only works on real items.
-    // sScrollToSelected tells imguiDraw() to call SetScrollHereY() on the
+    // sScrollToSelected tells dALBWShop_c to scroll its viewport to the
     // newly focused row so gamepad users never navigate off-screen.
     if (sStatusMsg == nullptr && sVisibleCount > 0) {
         if (mDoCPd_c::getTrigDown(PAD_1) && sSelectedIdx < sVisibleCount - 1) {
@@ -772,203 +654,6 @@ void dALBWRental_tick() {
 // ============================================
 // NEW CODE ENDS HERE
 // ============================================
-}
-// ============================================
-// NEW CODE ENDS HERE
-// ============================================
-
-// ============================================
-// NEW CODE — ALBW Port
-// dALBWRental_imguiDraw()
-// ImGui shop window — called directly from the main game loop once per
-// presented frame (after aurora_begin_frame, before aurora_end_frame).
-// Keeping this separate from tick() means the window is submitted exactly
-// once per rendered frame regardless of how many sim-ticks Execute() ran
-// (the sim-tick loop can run 0 times on interpolated frames, which would
-// make the window flicker if Begin/End lived inside actor Execute()).
-// ============================================
-void dALBWRental_imguiDraw() {
-    if (sState != STATE_SHOP) {
-        return;
-    }
-
-    const ImGuiIO& io = ImGui::GetIO();
-    const float winW  = 520.0f;
-    const float winH  = 390.0f;
-    ImGui::SetNextWindowPos(
-        ImVec2((io.DisplaySize.x - winW) * 0.5f,
-               (io.DisplaySize.y - winH) * 0.5f),
-        ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(winW, winH), ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.92f);
-
-    const ImGuiWindowFlags kWinFlags =
-        ImGuiWindowFlags_NoTitleBar            |
-        ImGuiWindowFlags_NoMove                |
-        ImGuiWindowFlags_NoResize              |
-        ImGuiWindowFlags_NoBringToFrontOnFocus |
-        ImGuiWindowFlags_NoSavedSettings;
-
-    if (!ImGui::Begin("##ALBWRental", nullptr, kWinFlags)) {
-        ImGui::End();
-        return;
-    }
-
-    // Title
-    ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.2f, 1.0f), "Postman's Lending Service");
-    ImGui::Separator();
-    ImGui::Spacing();
-
-    if (sVisibleCount == 0) {
-        // All 12 items are owned — extremely rare edge case.
-        ImGui::TextWrapped(
-            "You have everything in our catalogue! Truly remarkable, "
-            "a legend in the making.");
-        ImGui::Spacing();
-        ImGui::Spacing();
-        if (ImGui::Button("Leave  (B)", ImVec2(120.0f, 0.0f))) {
-            dALBWRental_close();
-        }
-    } else {
-        // ---- Status / purchase message ----
-        if (sStatusMsg != nullptr && clock::now() < sStatusExpiry) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.95f, 0.5f, 1.0f));
-            ImGui::TextWrapped("%s", sStatusMsg);
-            ImGui::PopStyleColor();
-            ImGui::Spacing();
-        }
-
-        // ---- Item table ----
-        // Dim colour for ????? rows (not yet eligible).
-        static const ImVec4 kDimCol = ImVec4(0.45f, 0.45f, 0.45f, 1.0f);
-
-        const ImGuiTableFlags kTableFlags =
-            ImGuiTableFlags_BordersOuter  |
-            ImGuiTableFlags_BordersInnerH |
-            ImGuiTableFlags_ScrollY       |
-            ImGuiTableFlags_RowBg;
-
-        if (ImGui::BeginTable("##rentitems", 2, kTableFlags, ImVec2(0.0f, 200.0f))) {
-            ImGui::TableSetupScrollFreeze(0, 1);
-            ImGui::TableSetupColumn("Item",           ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("Price (Rupees)", ImGuiTableColumnFlags_WidthFixed, 130.0f);
-            ImGui::TableHeadersRow();
-
-            for (int row = 0; row < sVisibleCount; ++row) {
-                const VisibleEntry& ve = sVisibleList[row];
-                const bool          isSel = (sSelectedIdx == row);
-                const char*         rowName = nullptr;
-                int                 rowPrice = 0;
-                if (ve.kind == VISIBLE_OOCOO) {
-                    rowName  = dALBWOocoo_getServiceName();
-                    rowPrice = dALBWOocoo_getServicePrice();
-                } else {
-                    rowName  = kItems[ve.kItemsIdx].name;
-                    rowPrice = kItems[ve.kItemsIdx].price;
-                }
-
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-
-                char selId[64];
-                if (ve.purchasable) {
-                    snprintf(selId, sizeof(selId), "%s##r%d", rowName, row);
-                } else {
-                    snprintf(selId, sizeof(selId), "?????##r%d", row);
-                    ImGui::PushStyleColor(ImGuiCol_Text, kDimCol);
-                }
-
-                if (ImGui::Selectable(selId, isSel,
-                                      ImGuiSelectableFlags_SpanAllColumns |
-                                      ImGuiSelectableFlags_AllowOverlap,
-                                      ImVec2(0.0f, 0.0f))) {
-                    sSelectedIdx      = row;
-                    sScrollToSelected = true;  // mouse click also scrolls into view
-                }
-
-                // Scroll the table so this row stays visible after D-pad navigation.
-                // Must be called immediately after Selectable while still inside
-                // the scrolling region — imguiDraw() consumes the flag here.
-                if (isSel && sScrollToSelected) {
-                    ImGui::SetScrollHereY(0.5f);
-                    sScrollToSelected = false;
-                }
-
-                if (!ve.purchasable) {
-                    ImGui::PopStyleColor();
-                }
-
-                ImGui::TableSetColumnIndex(1);
-                if (!ve.purchasable) {
-                    ImGui::PushStyleColor(ImGuiCol_Text, kDimCol);
-                }
-                ImGui::Text("%d", rowPrice);   // real price always shown
-                if (!ve.purchasable) {
-                    ImGui::PopStyleColor();
-                }
-            }
-            ImGui::EndTable();
-        }
-
-        // ---- Description for the selected row ----
-        // Purchasable  → item's own desc field (bright text).
-        // ????? row    → "Not in stock" / Magic Armor special line (dim text).
-        // Nothing      → invisible dummy to keep layout height stable.
-        ImGui::Spacing();
-        if (sSelectedIdx >= 0 && sSelectedIdx < sVisibleCount) {
-            const VisibleEntry& selVe = sVisibleList[sSelectedIdx];
-            if (selVe.purchasable) {
-                // Real item available for purchase — show its description.
-                const char* desc = selVe.kind == VISIBLE_OOCOO
-                    ? dALBWOocoo_getServiceDesc()
-                    : kItems[selVe.kItemsIdx].desc;
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.85f, 0.85f, 1.0f));
-                ImGui::TextWrapped("%s", desc);
-                ImGui::PopStyleColor();
-            } else {
-                // ????? item — not yet eligible for purchase.
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.55f, 0.55f, 1.0f));
-                ImGui::TextWrapped("Not in stock yet - Come back soon!");
-                ImGui::PopStyleColor();
-            }
-        } else {
-            ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeight()));
-        }
-
-        // ---- Footer ----
-        ImGui::Separator();
-        ImGui::Spacing();
-
-        ImGui::Text("Rupees: %d", (int)dComIfGs_getRupee());
-        ImGui::SameLine();
-        ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - 220.0f + ImGui::GetCursorPosX());
-
-        // "Rent It" is disabled when a status message is showing OR the
-        // selected row is a ????? (not yet eligible) item.
-        const bool statusClear   = (sStatusMsg == nullptr || clock::now() >= sStatusExpiry);
-        const bool selPurchasable = (sSelectedIdx >= 0 &&
-                                     sSelectedIdx < sVisibleCount &&
-                                     sVisibleList[sSelectedIdx].purchasable);
-        const bool canBuy = statusClear && selPurchasable;
-        if (!canBuy) {
-            ImGui::BeginDisabled();
-        }
-        if (ImGui::Button("Rent It  (A)", ImVec2(120.0f, 0.0f))) {
-            tryPurchase(sSelectedIdx);
-        }
-        if (!canBuy) {
-            ImGui::EndDisabled();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Leave  (B)", ImVec2(95.0f, 0.0f))) {
-            dALBWRental_close();
-        }
-
-        ImGui::Spacing();
-        ImGui::TextDisabled("[D-Pad Up/Down] Navigate    [A] Rent    [B] Leave");
-    }
-
-    ImGui::End();
 }
 // ============================================
 // NEW CODE ENDS HERE
