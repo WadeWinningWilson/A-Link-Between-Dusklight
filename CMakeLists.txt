@@ -378,9 +378,7 @@ set(GAME_INCLUDE_DIRS
 find_package(Threads REQUIRED)
 set(GAME_LIBS aurora::core aurora::gx aurora::gd aurora::si aurora::vi aurora::pad aurora::mtx aurora::os aurora::dvd
     aurora::card freeverb cxxopts::cxxopts absl::flat_hash_map nlohmann_json::nlohmann_json TracyClient fmt::fmt
-    Threads::Threads)
-
-list(APPEND GAME_LIBS zstd::libzstd)
+    Threads::Threads zstd::libzstd)
 
 if (DUSK_ENABLE_SENTRY_NATIVE)
     list(APPEND GAME_LIBS sentry)
