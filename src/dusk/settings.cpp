@@ -185,7 +185,13 @@ UserSettings g_userSettings = {
             ActionBindConfigVar{"actionBindings.turboButton_port2", PAD_NATIVE_BUTTON_INVALID},
             ActionBindConfigVar{"actionBindings.turboButton_port3", PAD_NATIVE_BUTTON_INVALID},
         },
-    }
+    },
+
+    .archipelago = {
+        .serverIP {"archipelago.serverIP", "archipelago.gg"},
+        .serverPass {"archipelago.serverPass", ""},
+        .slotName {"archipelago.slotName", ""},
+    },
 };
 
 UserSettings& getSettings() {
@@ -339,6 +345,10 @@ void registerSettings() {
     Register(g_userSettings.actionBindings.turboSpeedButton[1]);
     Register(g_userSettings.actionBindings.turboSpeedButton[2]);
     Register(g_userSettings.actionBindings.turboSpeedButton[3]);
+
+    Register(g_userSettings.archipelago.serverIP);
+    Register(g_userSettings.archipelago.serverPass);
+    Register(g_userSettings.archipelago.slotName);
 }
 
 // Transient settings

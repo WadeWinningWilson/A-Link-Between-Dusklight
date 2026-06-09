@@ -1624,6 +1624,8 @@ set(DUSK_FILES
         src/dusk/randomizer/generator/utility/time.cpp
         src/dusk/randomizer/generator/utility/time.hpp
         src/dusk/randomizer/generator/utility/yaml.hpp
+        # Archipelago Files
+        src/dusk/archipelago/archipelago_context.cpp
 )
 
 set(DUSK_HTTP_BACKEND_FILES

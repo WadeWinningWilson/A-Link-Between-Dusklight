@@ -289,6 +289,13 @@ struct UserSettings {
         std::array<ActionBindConfigVar, 4> openDusklightMenu;
         std::array<ActionBindConfigVar, 4> turboSpeedButton;
     } actionBindings;
+
+    // Archipelago Settings
+    struct {
+        ConfigVar<std::string> serverIP;
+        ConfigVar<std::string> serverPass;
+        ConfigVar<std::string> slotName;
+    } archipelago;
 };
 
 UserSettings& getSettings();
