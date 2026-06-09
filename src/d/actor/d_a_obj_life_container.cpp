@@ -499,7 +499,16 @@ int daObjLife_c::initActionOrderGetDemo() {
 int daObjLife_c::actionOrderGetDemo() {
     if (eventInfo.checkCommandItem()) {
         setStatus(STATUS_GET_DEMO_e);
-        
+
+#if TARGET_PC
+        // Set the tracker flag for rando now. The flag doesn't normally
+        // get set until after execItemGive runs
+        if (randomizer_IsActive()) {
+            g_randomizerState.mTrackerTempItemFlag.flag = getSaveBitNo();
+            g_randomizerState.mTrackerTempItemFlag.stage = getStageSaveId(getStageID());
+        }
+#endif
+
         if (mItemId != fpcM_ERROR_PROCESS_ID_e) {
             dComIfGp_event_setItemPartnerId(mItemId);
         }
