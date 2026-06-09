@@ -1522,6 +1522,8 @@ set(DUSK_FILES
         src/dusk/ui/window.hpp
         src/dusk/ui/rando_config.cpp
         src/dusk/ui/rando_config.hpp
+        src/dusk/ui/rando_seed_generation.cpp
+        src/dusk/ui/rando_seed_generation.hpp
         src/dusk/achievements.cpp
         src/dusk/iso_validate.cpp
         src/dusk/livesplit.cpp
