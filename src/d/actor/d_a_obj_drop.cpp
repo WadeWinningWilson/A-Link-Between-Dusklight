@@ -680,6 +680,7 @@ int daObjDrop_c::execute() {
             }
         }
         if (needBody) {
+            removeBodyEffect();
             createBodyEffect();
         }
     }

@@ -619,6 +619,7 @@ bool dShield_isDurabilityEnabled() {
 }
 
 void dShield_resetSession() {
+    deleteBashHud();
     sSimFrame = 0;
     sGuardOnsetFrame = 0;
     sWasGuardActive = false;
