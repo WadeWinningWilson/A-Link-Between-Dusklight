@@ -324,18 +324,17 @@ void dALBWDeathRupees_finishRecoveryDropSetup(daObjDrop_c* drop) {
         return;
     }
 
+    // Place at death height — GroundCross often hits room floor far below ledges/upper floors.
     cXyz pos = sOrbPos;
-    dBgS_GndChk gnd;
-    gnd.SetPos(&pos);
-    const f32 groundY = dComIfG_Bgsp().GroundCross(&gnd);
-    if (groundY > -1.0e8f) {
-        pos.y = groundY + kOrbFloatAboveGround;
-    } else {
-        pos.y = sOrbPos.y + kOrbFloatAboveGround;
-        if (pos.y < 80.0f) {
-            pos.y = 80.0f;
-        }
+    pos.y    = sOrbPos.y + kOrbFloatAboveGround;
+    if (pos.y < 80.0f) {
+        pos.y = 80.0f;
     }
+
+    // groundY logged only (not used for placement).
+    dBgS_GndChk gnd;
+    gnd.SetPos(&sOrbPos);
+    const f32 groundY = dComIfG_Bgsp().GroundCross(&gnd);
 
     drop->current.pos = pos;
     drop->home.pos    = pos;
