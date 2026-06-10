@@ -289,6 +289,11 @@ struct UserSettings {
         std::array<ActionBindConfigVar, 4> openDusklightMenu;
         std::array<ActionBindConfigVar, 4> turboSpeedButton;
     } actionBindings;
+
+    // Randomizer seed hashes, 1 per file
+    struct {
+        std::array<ConfigVar<std::string>, 3> seedHashes;
+    } randomizer;
 };
 
 UserSettings& getSettings();

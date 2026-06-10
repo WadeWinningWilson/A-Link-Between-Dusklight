@@ -116,6 +116,24 @@ int dFile_info_c::setSaveData(dSv_save_c* i_savedata, BOOL i_validChksum, u8 i_d
             SAFE_STRCPY(mPlayerName, player_name);
             setSaveDate(i_savedata);
             setPlayTime(i_savedata);
+#if TARGET_PC
+            // If this is a randomizer file
+            auto curFileSeedHash = dusk::getSettings().randomizer.seedHashes.at(i_dataNo).getValue();
+            if (!curFileSeedHash.empty()) {
+                // Overwrite "Save time" text with "Randomizer"
+                auto saveTimeText = (J2DTextBox*)mFileInfo.Scr->search(MULTI_CHAR('f_s_t_02'));
+                dusk::SafeStringCopy(saveTimeText->getStringPtr(), "Randomizer");
+                saveTimeText->setHBinding(J2DTextBoxHBinding::HBIND_LEFT);
+
+                // Overwrite the "Total play time" text with the seed hash
+                auto playTimeText = (J2DTextBox*)mFileInfo.Scr->search(MULTI_CHAR('f_p_t_02'));
+                dusk::SafeStringCopy(playTimeText->getStringPtr(), curFileSeedHash.c_str());
+
+                // Give the text double the space on the menu incase the seed hash is long
+                playTimeText->setHBinding(J2DTextBoxHBinding::HBIND_LEFT);
+                playTimeText->resize(playTimeText->getWidth() * 2, playTimeText->getHeight());
+            }
+#endif
             result = 0;
         }
     } else {
