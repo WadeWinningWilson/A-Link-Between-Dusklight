@@ -1538,6 +1538,8 @@ set(DUSK_FILES
         src/dusk/tphd/AddrLib.cpp
         src/dusk/tphd/HdAssetLayer.hpp
         src/dusk/tphd/HdAssetLayer.cpp
+        src/dusk/tphd/LosTable.hpp
+        src/dusk/tphd/LosTable.cpp
 )
 
 set(DUSK_HTTP_BACKEND_FILES

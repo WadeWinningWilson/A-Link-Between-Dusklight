@@ -28,6 +28,7 @@
 #include "dusk/logging.h"
 #include "AddrLib.hpp"
 #include "GtxParser.hpp"
+#include "LosTable.hpp"
 #include "TphdPack.hpp"
 #include "tracy/Tracy.hpp"
 
@@ -910,6 +911,7 @@ void set_hd_content_path(std::filesystem::path contentPath) {
     g_entryNumToOverlay().clear();
     g_arcRanges().clear();
     rebuild_hd_overlay_locked();
+    load_los_table(g_contentPath);
     HdLog.info("HD content path set to: {}",
                g_contentPath.empty() ? "(disabled)" : g_contentPath.string());
 }

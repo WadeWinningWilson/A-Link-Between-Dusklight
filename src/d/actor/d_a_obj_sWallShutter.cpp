@@ -208,6 +208,13 @@ void daSwShutter_c::init_modeMoveDownInit() {
     mMaxAtten = l_HIO.mMaxAtten;
     mMinAtten = l_HIO.mMinAtten;
 
+#if TARGET_PC
+    if (dusk::tphd_active()) {
+        // TPHD: opening a Cave-of-Shadows shutter gate reveals the floor below
+        dStage_showLOSNextFloor(fopAcM_GetRoomNo(this));
+    }
+#endif
+
     if (mModelType == TYPE_SUBDAN_e) {
         dComIfGp_particle_set(0x8C73, &current.pos, &shape_angle, NULL);
         dComIfGp_particle_set(0x8C74, &current.pos, &shape_angle, NULL);
