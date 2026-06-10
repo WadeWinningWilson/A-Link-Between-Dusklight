@@ -1297,6 +1297,23 @@ static mDoDvdThd_toMainRam_c* sTearResCommand = NULL;
 static JPAResourceManager*    sTearResMng     = NULL;
 static bool                   sTearResFailed  = false;
 
+// Drop an in-flight or orphaned Pscene011 read. Never touches sTearResMng once
+// registered — supplemental tear rendering stays resident.
+static void cancelTearSceneResLoad() {
+    if (sTearResCommand == NULL) {
+        return;
+    }
+    if (!sTearResCommand->sync()) {
+        return;
+    }
+    void* data = sTearResCommand->getMemAddress();
+    sTearResCommand->destroy();
+    sTearResCommand = NULL;
+    if (data != NULL && sTearResMng == NULL) {
+        JKRFree(data);
+    }
+}
+
 bool dPa_control_c::ensureTearSceneRes() {
     if (sTearResMng != NULL) {
         return true;
@@ -1411,6 +1428,9 @@ bool dPa_control_c::removeRoomScene(bool param_0) {
 }
 
 void dPa_control_c::removeScene(bool param_0) {
+#if TARGET_PC
+    cancelTearSceneResLoad();
+#endif
     field_0x210.cleanup();
     removeRoomScene(param_0);
     for (int i = 0; i < field_0x1a; i++) {
