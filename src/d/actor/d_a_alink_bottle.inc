@@ -191,7 +191,20 @@ int daAlink_c::commonBottleDrink(BOOL param_0) {
                     dComIfGp_setItemLifeCount(dComIfGs_getMaxLifeGauge(), 0);
                 } else if (mEquipItem == dItemNo_CHUCHU_RARE_e || mEquipItem == dItemNo_FAIRY_DROP_e) {
                     dComIfGp_setItemLifeCount(dComIfGs_getMaxLifeGauge(), 0);
+                // ============================================
+                // NEW CODE — ALBW Port
+                // Green potion / green chu jelly restore 1/3 of the ALBW
+                // stamina meter. Originally intended to restore the cut magic
+                // meter; now restores the stamina meter in the same role.
+                // ============================================
+#if TARGET_PC
+                } else if (mEquipItem == dItemNo_GREEN_BOTTLE_e || mEquipItem == dItemNo_CHUCHU_GREEN_e) {
+                    dMeter2_addALBWFraction(1, 3);
+#endif
                 }
+                // ============================================
+                // NEW CODE ENDS HERE
+                // ============================================
             }
             voiceStart(Z2SE_AL_V_DRINK);
         } else if (frameCtrl_p->checkPass(50.0f)) {

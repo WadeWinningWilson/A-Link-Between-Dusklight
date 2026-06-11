@@ -11,6 +11,7 @@
 #include "d/actor/d_a_obj_drop.h"
 #include "d/d_bg_s.h"
 #include "d/d_com_inf_game.h"
+#include "dusk/settings.h"
 #include "f_op/f_op_actor.h"
 #include "f_op/f_op_actor_mng.h"
 #include "f_pc/f_pc_name.h"
@@ -155,7 +156,15 @@ static void clearLinkTearCollectEffect() {
 
 }  // namespace
 
+bool dALBWDeathRupees_isEnabled() {
+    return dusk::getSettings().game.deathRecoveryOrb.getValue();
+}
+
 void dALBWDeathRupees_applyHalvingOnDeath() {
+    if (!dALBWDeathRupees_isEnabled()) {
+        return;
+    }
+
     sLastLostRupees = 0;
     clearOrbState();
     orbDebugReset();
@@ -230,6 +239,9 @@ u16 dALBWDeathRupees_getOrbRecoveryAmount() {
 }
 
 void dALBWDeathRupees_tickSpawn() {
+    if (!dALBWDeathRupees_isEnabled()) {
+        return;
+    }
     if (!sOrbPending || sOrbRecovery == 0) {
         return;
     }
@@ -249,6 +261,9 @@ void dALBWDeathRupees_tickSpawn() {
 }
 
 void dALBWDeathRupees_trySpawnOrbInRoom(const char* stageName, int roomNo) {
+    if (!dALBWDeathRupees_isEnabled()) {
+        return;
+    }
     if (!sOrbPending || sOrbRecovery == 0 || !stageName) {
         return;
     }
@@ -308,6 +323,9 @@ void dALBWDeathRupees_trySpawnOrbInRoom(const char* stageName, int roomNo) {
 }
 
 bool dALBWDeathRupees_allowOrbDropCreate() {
+    if (!dALBWDeathRupees_isEnabled()) {
+        return false;
+    }
     return sOrbCreateGate || sOrbDropCreatePending;
 }
 

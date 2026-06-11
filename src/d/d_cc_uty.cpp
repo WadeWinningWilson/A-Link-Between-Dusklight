@@ -472,6 +472,21 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* i_enemy, dCcU_AtInfo* i_AtInfo) {
                 if (link != nullptr && link->mProcID == daAlink_c::PROC_CUT_FINISH && link->mIsRollstab) {
                     dusk::AchievementSystem::get().signal("rollstab_kill");
                 }
+                // ============================================
+                // NEW CODE — ALBW Port
+                // Magic jar bonus drop on common enemy kill. Fires for all
+                // actors in fopAc_ENEMY_e group — excludes bosses, traps,
+                // and final bosses which live in different actor groups.
+                // 10% drop rate (matches original orange rupee ALBW bonus drop).
+                // ============================================
+                if (cM_rndF(1.0f) < 0.10f) {
+                    static const cXyz s_jarDropScale(1.3f, 1.3f, 1.3f);
+                    fopAcM_createItem(&i_enemy->current.pos, dItemNo_L_MAGIC_e, -1,
+                                      fopAcM_GetRoomNo(i_enemy), NULL, &s_jarDropScale, 0);
+                }
+                // ============================================
+                // NEW CODE ENDS HERE
+                // ============================================
             }
 #endif
         }

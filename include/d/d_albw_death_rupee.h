@@ -5,10 +5,14 @@
 // NEW CODE — ALBW Port
 // Death rupee penalty (half wallet, round up) and recovery orb at death location.
 // Gated on F_0625 (Talo rescued), same as ALBW item strip.
+// Also gated on Dusk setting game.deathRecoveryOrb (default off).
 // ============================================
 #if TARGET_PC
 
 class fopAc_ac_c;
+
+// True when the Death Recovery Orb setting is enabled (Dusk settings menu).
+bool dALBWDeathRupees_isEnabled();
 
 // Apply (wallet + 1) / 2 rupee loss; records amount lost and queues orb spawn.
 void dALBWDeathRupees_applyHalvingOnDeath();

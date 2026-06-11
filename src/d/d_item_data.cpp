@@ -11,8 +11,19 @@ dItem_itemResource dItem_data::item_resource[] = {
     {"F_gD_rupy", 0x0004,-0x0001,-0x0001, 0x0007,-0x0001, 0x4, -0x1, 0x002D, 0x3C, 0x0000},
     {"F_gD_rupy", 0x0004,-0x0001,-0x0001, 0x0007,-0x0001, 0x5, -0x1, 0x002D, 0x3C, 0x0000},
     {"F_gD_rupy", 0x0004,-0x0001,-0x0001, 0x0007,-0x0001, 0x6, -0x1, 0x002D, 0x3C, 0x0000},
-    {"F_gD_rupy", 0x0004,-0x0001,-0x0001, 0x0007,-0x0001, 0x5, -0x1, 0x002D, 0x64, 0x0000}, // S_MAGIC: orange rupee visual (F_gD_rupy always loaded; TevFrm 5=orange)
-    {"F_gD_rupy", 0x0004,-0x0001,-0x0001, 0x0007,-0x0001, 0x5, -0x1, 0x002D, 0x82, 0x0000}, // L_MAGIC: same arc, larger scale (0x82 vs 0x64)
+    // ============================================
+    // MODIFIED CODE — ALBW Port
+    // S_MAGIC get-demo model: green rupee (F_gD_rupy, TevFrame=1).
+    // This visually matches the "small meter fill" green rupee that already
+    // operates as the minor ALBW stamina restore in the mod base.
+    // L_MAGIC get-demo model: green magic jar (O_mD_gren, bmd index 3).
+    // Previously both were orange rupee placeholders (F_gD_rupy, TevFrame=5).
+    // ============================================
+    {"F_gD_rupy", 0x0004,-0x0001,-0x0001, 0x0007,-0x0001, 0x1, -0x1, 0x002D, 0x64, 0x0000}, // S_MAGIC: green rupee appearance (TevFrame=1)
+    {"O_mD_gren", 0x0003,-0x0001,-0x0001,-0x0001,-0x0001, -0x1, -0x1, 0x0000, 0x82, 0x0000}, // L_MAGIC: green jar (O_mD_gren), 0x82 scale
+    // ============================================
+    // MODIFIED CODE ENDS HERE
+    // ============================================
     {"O_gD_bomb", 0x0003,-0x0001,-0x0001,-0x0001,-0x0001, -0x1, -0x1, 0x000C, 0x64, 0x019F},
     {"O_gD_bomb", 0x0003,-0x0001,-0x0001,-0x0001,-0x0001, -0x1, -0x1, 0x000C, 0x64, 0x019F},
     {"O_gD_bomb", 0x0003,-0x0001,-0x0001,-0x0001,-0x0001, -0x1, -0x1, 0x000C, 0x64, 0x019F},
@@ -270,16 +281,17 @@ dItem_fieldItemResource dItem_data::field_item_res[] = {
     {"Always", 0x0017,-0x0001, 0x0031, 0x5, 0x1000},
     {"Always", 0x0017,-0x0001, 0x0031, 0x6, 0x1000},
     // ============================================
-    // NEW CODE — ALBW Port
-    // S_MAGIC / L_MAGIC use the "Always" arc (always resident, no load guard needed).
-    // bmdName 0x0017 = rupee mesh; brkName 0x0031 = color animation played at
-    // TevFrm 5 (orange) sourced from item_resource[].mTevFrm. Scale
-    // differentiation (L vs S) is applied by the fopAcM_createItem caller.
+    // MODIFIED CODE — ALBW Port
+    // S_MAGIC field model: green rupee (Always arc, 0x0017 mesh, BRK 0x0031,
+    // field_0xa=1 = green tev variant). Visually identical to green rupee drop.
+    // L_MAGIC field model: green magic jar (O_mD_gren, bmd local index 0x0003).
+    // Previously both used "Always"/orange-rupee tev (field_0xa=5).
+    // Custom-archive entries always use 0x0003 as mItemBmdName (local arc index).
     // ============================================
-    {"Always", 0x0017,-0x0001, 0x0031, 0x5, 0x1000}, // S_MAGIC: orange rupee field model
-    {"Always", 0x0017,-0x0001, 0x0031, 0x5, 0x1000}, // L_MAGIC: same model, larger scale at spawn
+    {"Always",    0x0017,-0x0001, 0x0031, 0x1, 0x1000}, // S_MAGIC: green rupee field model (tev variant 1)
+    {"O_mD_gren", 0x0003,-0x0001,-0x0001, 0xFF, 0x1000}, // L_MAGIC: green jar field model (O_mD_gren)
     // ============================================
-    // NEW CODE ENDS HERE
+    // MODIFIED CODE ENDS HERE
     // ============================================
     {NULL,-0x0001,-0x0001,-0x0001, 0xFF, 0x1000},
     {NULL,-0x0001,-0x0001,-0x0001, 0xFF, 0x1000},

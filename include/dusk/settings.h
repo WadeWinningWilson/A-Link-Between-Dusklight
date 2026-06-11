@@ -153,6 +153,8 @@ struct UserSettings {
         // Phase 4: LoP-style parry, bash charges, ALBW rewards/penalties. Off = vanilla guard slip only.
         ConfigVar<bool> shieldParryCombat;
         ConfigVar<bool> shieldDurability;
+        // Halve wallet on death and spawn a Tear-of-Light recovery orb (F_0625 gate unchanged).
+        ConfigVar<bool> deathRecoveryOrb;
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================

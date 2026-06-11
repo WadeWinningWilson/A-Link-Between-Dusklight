@@ -1302,6 +1302,10 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Shield Durability", getSettings().game.shieldDurability,
             "Shield HP by tier; failed blocks drain it. Hylian repairs on parry and takes more "
             "damage per hit. Break at 0 uses guard break (replaces vanilla slip counter).");
+        addOption("Death Recovery Orb", getSettings().game.deathRecoveryOrb,
+            "After Talo is rescued, dying halves your rupees and leaves a Tear of Light at the "
+            "death spot to recover part of them. Off keeps your wallet unchanged and spawns no orb. "
+            "Item strip and meter refill on death are unaffected.");
         addOption("No 2nd Fish for Cat", getSettings().game.no2ndFishForCat,
             "Skip needing to catch a second fish for Sera's cat.");
         addOption("Button Fishing", getSettings().game.buttonFishing,
