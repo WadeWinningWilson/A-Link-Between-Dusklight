@@ -807,7 +807,7 @@ void rebuild_hd_overlay_locked() {
     }
 
     std::error_code ec;
-    const auto resRoot = g_contentPath / "res";
+    const auto resRoot = g_contentPath;
     if (!std::filesystem::is_directory(resRoot, ec)) {
         HdLog.warn("HD content path has no res directory: {}", g_contentPath.string());
         return;
@@ -834,7 +834,6 @@ void rebuild_hd_overlay_locked() {
 
         const auto& arcPath = it->path();
         const std::string filename = arcPath.filename().string();
-        if (!endsWithSuffixCI(filename, ".arc")) continue;
 
         const auto rel = arcPath.lexically_relative(g_contentPath);
         const std::string resPath = rel.generic_string();
