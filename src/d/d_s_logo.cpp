@@ -1644,7 +1644,7 @@ void dScnLogo_c::dvdDataLoad() {
     mpRubyResCommand = onMemMount("/res/Fontus/rubyres.arc");
 #endif
 
-    mParticleCommand = mDoDvdThd_toMainRam_c::create(PARTICLE_COM_PATH, 0, dComIfGp_particle_getResHeap());
+    mParticleCommand = mDoDvdThd_toMainRam_c::create(DUSK_IF_ELSE(dusk::tphd_active() ? "/res/Particle/common-r.jpc" : PARTICLE_COM_PATH, PARTICLE_COM_PATH), 0, dComIfGp_particle_getResHeap());
 
     mItemTableCommand = mDoDvdThd_toMainRam_c::create("/res/ItemTable/item_table.bin", 0, NULL);
     JUT_ASSERT(2620, mItemTableCommand != NULL);
