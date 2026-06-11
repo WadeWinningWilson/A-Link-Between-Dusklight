@@ -100,8 +100,6 @@ void fpcM_Management(fpcM_ManagementFunc i_preExecuteFn, fpcM_ManagementFunc i_p
                     g_randomizerState._create();
                 }
                 g_randomizerState.execute();
-            } else if (g_randomizerState.mInitialized) {
-                g_randomizerState = RandomizerState{};
             }
 #endif
             if (!fapGm_HIO_c::isCaptureScreen()) {

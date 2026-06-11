@@ -2984,6 +2984,7 @@ void dComIfGs_setupRandomizerSave() {
         execItemGet(itemId);
     }
 
+    g_randomizerState = RandomizerState();
     DuskLog.debug("Created Rando Save");
     randoData.mCreatingSave = false;
 }

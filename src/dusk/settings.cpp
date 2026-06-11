@@ -187,6 +187,12 @@ UserSettings g_userSettings = {
         },
     },
 
+    .randomizer = {
+        ConfigVar<std::string>{"randomizer.file1SeedHash", ""},
+         ConfigVar<std::string>{"randomizer.file2SeedHash", ""},
+        ConfigVar<std::string>{"randomizer.file3SeedHash", ""},
+    }
+    
     .archipelago = {
         .serverIP {"archipelago.serverIP", "archipelago.gg"},
         .serverPass {"archipelago.serverPass", ""},
@@ -346,6 +352,10 @@ void registerSettings() {
     Register(g_userSettings.actionBindings.turboSpeedButton[2]);
     Register(g_userSettings.actionBindings.turboSpeedButton[3]);
 
+    Register(g_userSettings.randomizer.seedHashes[0]);
+    Register(g_userSettings.randomizer.seedHashes[1]);
+    Register(g_userSettings.randomizer.seedHashes[2]);
+    
     Register(g_userSettings.archipelago.serverIP);
     Register(g_userSettings.archipelago.serverPass);
     Register(g_userSettings.archipelago.slotName);
