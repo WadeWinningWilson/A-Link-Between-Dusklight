@@ -1899,7 +1899,7 @@ void dALBWShop_c::cacheRowLetterSlotBounds(int row) {
 }
 
 void dALBWShop_c::dumpRowIconDebug(JKRArchive* iconArc, int visCount,
-                                   const dALBWVisibleEntry* visList) {
+                                   const dALBWVisibleEntry* visList, f32 listIconLeft) {
     char path[512];
     path[0] = '\0';
     const char* user = getenv("USERPROFILE");
@@ -1924,8 +1924,17 @@ void dALBWShop_c::dumpRowIconDebug(JKRArchive* iconArc, int visCount,
             "maxScroll=%d\n",
             (void*)dComIfGp_getItemIconArchive(), (void*)iconArc, mReady ? 1 : 0, visCount, sel,
             mScrollTop, (visCount > 6) ? (visCount - 6) : 0);
-    fprintf(fp, "letterTimg=%p itemBoxTimg=%p itemBoxPic=%p\n", (void*)mRowLetterTimg,
-            (void*)mItemBoxTimg, (void*)mpItemBoxPic);
+    fprintf(fp, "letterTimg=%p itemBoxTimg=%p itemBoxPic=%p listIconLeft=%.1f\n",
+            (void*)mRowLetterTimg, (void*)mItemBoxTimg, (void*)mpItemBoxPic, listIconLeft);
+    fprintf(fp, "gInf min=%.1f,%.1f size=%.1f,%.1f\n", mDoGph_gInf_c::getMinXF(),
+            mDoGph_gInf_c::getMinYF(), mDoGph_gInf_c::getWidthF(), mDoGph_gInf_c::getHeightF());
+    {
+        J2DGrafContext* cur = dComIfGp_getCurrentGrafPort();
+        if (cur && cur->getGrafType() == 1) {
+            const JGeometry::TBox2<f32>* ob = ((J2DOrthoGraph*)cur)->getOrtho();
+            fprintf(fp, "curOrtho=%.1f,%.1f -> %.1f,%.1f\n", ob->i.x, ob->i.y, ob->f.x, ob->f.y);
+        }
+    }
     fprintf(fp, "--- catalog (all %d items; UI shows 6 at scrollTop+row) ---\n", visCount);
     for (int i = 0; i < visCount && visList; ++i) {
         fprintf(fp, "itemIdx=%d purch=%d price=%d itemNo=%u name=%s\n", i,
@@ -1975,6 +1984,24 @@ void dALBWShop_c::dumpRowIconDebug(JKRArchive* iconArc, int visCount,
             calcWheelIconDrawSize(itemNo, timg, mRowIconSlot[row].h, &dw, &dh);
             fprintf(fp, "  drawWH=%.1f,%.1f\n", dw, dh);
         }
+
+        LetAreaBounds gfxB;
+        if (mpRowLetterGfx[row]) {
+            gfxB = calcPaneScreenBounds(mpRowLetterGfx[row]);
+        }
+        LetAreaBounds frameB;
+        if (mpRowFrame[row]) {
+            frameB = calcPaneScreenBounds(mpRowFrame[row]);
+        }
+        f32 hx = 0.0f, hy = 0.0f, hw = 0.0f, hh = 0.0f;
+        calcRowHeapIconDrawPos(mpRowLetterMgr[row], mpRowFrame[row], listIconLeft, &hx, &hy, &hw,
+                               &hh);
+        fprintf(fp,
+                "  gfxB=%d:%.1f,%.1f,%.1f,%.1f frameB=%d:%.1f,%.1f,%.1f,%.1f heapDraw=%.1f,%.1f,"
+                "%.1f,%.1f itemPic=%p boxPic=%p\n",
+                gfxB.valid ? 1 : 0, gfxB.x, gfxB.y, gfxB.w, gfxB.h, frameB.valid ? 1 : 0, frameB.x,
+                frameB.y, frameB.w, frameB.h, hx, hy, hw, hh, (void*)mpRowItemPic[row],
+                (void*)mpItemBoxPic);
     }
     fclose(fp);
 }
@@ -1994,9 +2021,13 @@ void dALBWShop_c::drawRowWheelIcons(J2DGrafContext* gfx, int visCount) {
     dusk::frame_interp::set_ui_tick_pending(true);
 #endif
 
-    J2DOrthoGraph* ortho = (J2DOrthoGraph*)gfx;
-    ortho->setOrtho(mDoGph_gInf_c::getMinXF(), mDoGph_gInf_c::getMinYF(),
-                    mDoGph_gInf_c::getWidthF(), mDoGph_gInf_c::getHeightF(), -1.0f, 1.0f);
+    // dALBW_calcPaneScreenBounds returns positions normalized to a 0..640x0..480 canvas
+    // spanning the full viewport ((x - minXF) / (widthF / 640)). Drawing them under the
+    // widescreen-extended gInf ortho shifts icons right at non-4:3 aspects (identical at 4:3).
+    // Use a plain 0..640 ortho for the heap icons, then restore the context's port below.
+    J2DOrthoGraph*              ortho      = (J2DOrthoGraph*)gfx;
+    const JGeometry::TBox2<f32> savedOrtho = *ortho->getOrtho();
+    ortho->setOrtho(0.0f, 0.0f, 640.0f, 480.0f, -1.0f, 1.0f);
     ortho->setup2D();
     ortho->setPort();
 
@@ -2043,6 +2074,10 @@ void dALBWShop_c::drawRowWheelIcons(J2DGrafContext* gfx, int visCount) {
         pic->show();
         pic->draw(drawX, drawY, drawW, drawH, false, false, false);
     }
+
+    // Restore the context's original projection for the BLO screen draws that follow.
+    ortho->setOrtho(savedOrtho, -1.0f, 1.0f);
+    ortho->setPort();
 }
 
 void dALBWShop_c::drawRowListText(J2DGrafContext* gfx, int visCount) {
@@ -2268,6 +2303,10 @@ void dALBWShop_c::draw() {
             calcShopListIconLeft(mpRowFrame, mpRowLetterGfx, mpRowLetter, mpRowLetterMgr, mScrollTop,
                                  visCount, visList);
         hideRentableCenterBloIcons(visCount, listIconLeft);
+        static u32 sIconDbgFrame = 0;
+        if ((sIconDbgFrame++ % 90) == 0) {
+            dumpRowIconDebug(dComIfGp_getItemIconArchive(), visCount, visList, listIconLeft);
+        }
         drawRowListText(gfx, visCount);
         drawRowWheelIcons(gfx, visCount);
         restoreScissor(gfx, savedL, savedT, savedW, savedH);
@@ -2294,6 +2333,10 @@ void dALBWShop_c::draw() {
             calcShopListIconLeft(mpRowFrame, mpRowLetterGfx, mpRowLetter, mpRowLetterMgr, mScrollTop,
                                  visCount, visList);
         hideRentableCenterBloIcons(visCount, listIconLeft);
+        static u32 sIconDbgFrameNoArea = 0;
+        if ((sIconDbgFrameNoArea++ % 90) == 0) {
+            dumpRowIconDebug(dComIfGp_getItemIconArchive(), visCount, visList, listIconLeft);
+        }
         drawRowListText(gfx, visCount);
         drawRowWheelIcons(gfx, visCount);
         const f32 ruledPitch = measureParchmentLinePitch(mpDescTextScreen);

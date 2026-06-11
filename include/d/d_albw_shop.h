@@ -54,7 +54,8 @@ private:
     void cacheRowLetterSlotBounds(int row);
     void drawRowListText(J2DGrafContext* gfx, int visCount);
     void drawRowWheelIcons(J2DGrafContext* gfx, int visCount);
-    void dumpRowIconDebug(JKRArchive* iconArc, int visCount, const dALBWVisibleEntry* visList);
+    void dumpRowIconDebug(JKRArchive* iconArc, int visCount, const dALBWVisibleEntry* visList,
+                          f32 listIconLeft);
     void updateDescParchment(bool showItemBox, u8 itemNo);
     void drawDescMesgText(J2DGrafContext* gfx, f32 x, f32 y, f32 w, f32 h, f32 ruledLinePitch);
     JKRArchive* ensureItemIconArchive();
