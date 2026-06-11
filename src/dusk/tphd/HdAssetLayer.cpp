@@ -688,12 +688,7 @@ void register_hd_textures_for_arc(std::span<u8> arcBytes, const std::vector<ArcF
 
 // HD arcs whose Wii-U layouts don't match the GC UI pipeline.
 constexpr std::string_view kHdSkipList[] = {
-    "res/Object/LogoUs.arc",
-    "res/Object/balloon2D.arc",
-    "res/Object/Coach2D.arc",
     "res/Object/fileSel.arc",
-    "res/FieldMap/res-f.arc",
-    "res/FieldMap/res-d.arc",
 };
 
 bool is_layout_arc_path(std::string_view resPath) {
