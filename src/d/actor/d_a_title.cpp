@@ -101,6 +101,14 @@ void daTit_HIO_c::genMessage(JORMContext* mctx) {
 #endif
 
 int daTitle_c::CreateHeap() {
+
+    #if TARGET_PC
+    if (dusk::tphd_active()) {
+#undef l_arcName
+#define l_arcName "Title"
+    }
+    #endif
+
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(l_arcName, 10);
     JUT_ASSERT(258, modelData);
     mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000285);
