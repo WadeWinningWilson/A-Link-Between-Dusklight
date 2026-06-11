@@ -116,4 +116,12 @@ int los_floor_index(int roomNo) {
     return s32(u32(entries()[roomNo].id3));
 }
 
+// D_SB11 (Cave of Shadows, HD): true when the los table is loaded and we are in D_SB11.
+// Mirrors HD's `g_dComIfG_gameInfo.field4_0x1e448 != 0` gate (set once in phase_1 for D_SB11).
+bool is_los_active() {
+    return tphd_active() &&
+           los_loaded() &&
+           std::strcmp(dComIfGp_getStartStageName(), "D_SB11") == 0;
+}
+
 }  // namespace dusk::tphd

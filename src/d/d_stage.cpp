@@ -2096,13 +2096,6 @@ static int dStage_doorInfoInit(dStage_dt_c* i_stage, void* i_data, int entryNum,
 }
 
 #if TARGET_PC
-// D_SB11 (Cave of Shadows, HD): true when the los table is loaded and we are in D_SB11.
-// Mirrors HD's `g_dComIfG_gameInfo.field4_0x1e448 != 0` gate (set once in phase_1 for D_SB11).
-static bool isLOSStage() {
-    return dusk::tphd::los_loaded() &&
-           std::strcmp(dComIfGp_getStartStageName(), "D_SB11") == 0;
-}
-
 // Mirrors HD FUN_02ab7e94 (los override): the file RTBL is a linear placeholder chain
 // (r19 -> [19,18,20]); rewrite each room's m_rooms in place from los.bin floor links.
 // next gets NO 0x80 (floor not yet unlocked) so it is not bg-loaded at stage-create;
@@ -2154,7 +2147,7 @@ static void dStage_LOSRoomReadOverride(roomRead_class* p_node) {
 // No-op outside los stages. This replaces the earlier per-frame RoomCheck reveal (which churned
 // room loads). HD reveals the next floor at the moment you open the descent gate, not per-frame.
 void dStage_showLOSNextFloor(int fromRoom) {
-    if (!isLOSStage()) {
+    if (!dusk::tphd::is_los_active()) {
         return;
     }
 
@@ -2201,7 +2194,7 @@ static int dStage_roomReadInit(dStage_dt_c* i_stage, void* i_data, int param_2, 
     }
 
 #if TARGET_PC
-    if (dusk::tphd_active() && isLOSStage()) {
+    if (dusk::tphd_active() && dusk::tphd::is_los_active()) {
         dStage_LOSRoomReadOverride(p_node);
     }
 #endif
@@ -2397,7 +2390,7 @@ static int dStage_mecoInfoInit(dStage_dt_c* i_stage, void* i_data, int param_2, 
 #if TARGET_PC
             // los stages (D_SB11): the file MEC0 (roomNo%3) collides for los-adjacent floors;
             // HD re-derives the block from the los floor index instead (FUN_02ab8910).
-            if (dusk::tphd_active() && isLOSStage()) {
+            if (dusk::tphd_active() && dusk::tphd::is_los_active()) {
                 entry_p->m_blockID = (u8)(dusk::tphd::los_floor_index(entry_p->m_roomNo) % 3);
             }
 #endif
