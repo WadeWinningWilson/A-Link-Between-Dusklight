@@ -28,6 +28,7 @@
 #include <dusk/ui/settings.hpp>
 
 #include "dusk/string.hpp"
+#include "dusk/tphd/LosTable.hpp"
 
 void dComIfG_play_c::ct() {
     mWindowNum = 0;
@@ -2862,6 +2863,12 @@ BOOL dComIfGs_Wolf_Change_Check() {
     } else if (dComIfGs_isTransformLV(3) && !dComIfGs_isDarkClearLV(3)) {
         is_wolf = true;
     }
+
+#if TARGET_PC
+    if (dusk::tphd::is_los_active()) {
+        is_wolf = true;
+    }
+#endif
 
     OS_REPORT("dComIfGs_isSaveSwitch 12[%x] 13[%x]\n", dComIfGs_isSaveSwitch(12), dComIfGs_isSaveSwitch(13));
 
