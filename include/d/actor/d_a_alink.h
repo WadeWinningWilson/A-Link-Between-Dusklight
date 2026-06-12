@@ -4559,6 +4559,8 @@ public:
 
     void onIronBallChainInterpCallback();
 
+    f32 mLosStickValue;
+
     static const int IRON_BALL_CHAIN_COUNT = 102;
     cXyz mIBChainInterpPrevPos[IRON_BALL_CHAIN_COUNT];
     cXyz mIBChainInterpCurrPos[IRON_BALL_CHAIN_COUNT];
