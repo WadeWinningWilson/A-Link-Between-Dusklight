@@ -8,7 +8,7 @@
 
 # A Link Between Dusklight
 
-**A Link Between Dusklight** is the release name for this mod (repository: [ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight)). It is a PC mod for [Dusklight](https://github.com/TwilitRealm/dusklight) — the open-source reimplementation of _The Legend of Zelda: Twilight Princess_ — that adds an _A Link Between Worlds_–style **energy meter**, **death item strip**, **Postman rental shop**, and a suite of optional combat and economy tweaks (shield parry/durability, wolf combat, enemy HP scaling, death rupee orb, enemy death rupees, and more).
+**A Link Between Dusklight** is a PC mod for [Dusklight](https://github.com/TwilitRealm/dusklight) — the open-source reimplementation of _The Legend of Zelda: Twilight Princess_ — that adds an _A Link Between Worlds_–style **energy meter**, **death item strip**, **Postman rental shop**, and a suite of optional combat and economy tweaks (shield parry/durability, wolf combat, enemy HP scaling, death rupee orb, enemy death rupees, and more).
 
 > **You must provide your own legal copy of the game.** This repository does not include copyrighted assets.
 
