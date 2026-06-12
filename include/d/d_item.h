@@ -250,6 +250,7 @@ void item_func_FUSED_SHADOW_1();
 void item_func_FUSED_SHADOW_2();
 void item_func_FUSED_SHADOW_3();
 void item_func_MIRROR_PIECE_1();
+void item_func_ARCHIPELAGO_ITEM();
 #endif
 void item_func_POU_SPIRIT();
 #if TARGET_PC

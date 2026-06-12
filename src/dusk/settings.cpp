@@ -191,13 +191,13 @@ UserSettings g_userSettings = {
         ConfigVar<std::string>{"randomizer.file1SeedHash", ""},
          ConfigVar<std::string>{"randomizer.file2SeedHash", ""},
         ConfigVar<std::string>{"randomizer.file3SeedHash", ""},
-    }
+    },
     
     .archipelago = {
         .serverIP {"archipelago.serverIP", "archipelago.gg"},
         .serverPass {"archipelago.serverPass", ""},
         .slotName {"archipelago.slotName", ""},
-    },
+    }
 };
 
 UserSettings& getSettings() {

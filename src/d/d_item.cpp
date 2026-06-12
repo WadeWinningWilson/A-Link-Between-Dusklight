@@ -16,6 +16,8 @@
 #endif
 #include <cstring>
 
+#include "dusk/archipelago/archipelago_context.hpp"
+
 static void (*item_func_ptr[256])() = {
     item_func_HEART,
     item_func_GREEN_RUPEE,
@@ -497,7 +499,7 @@ static void (*item_func_ptr_randomizer[256])() = {
     /* 0xD9 */ item_func_FUSED_SHADOW_2,
     /* 0xDA */ item_func_FUSED_SHADOW_3,
     /* 0xDB */ item_func_MIRROR_PIECE_1,
-    /* 0xDC */ item_func_noentry,
+    /* 0xDC */ item_func_ARCHIPELAGO_ITEM,
     /* 0xDD */ item_func_noentry,
     /* 0xDE */ item_func_noentry,
     /* 0xDF */ item_func_noentry,
@@ -2180,6 +2182,13 @@ void item_func_MIRROR_PIECE_1() {
         dComIfGs_onCollectMirror(0);
     }
 }
+
+void item_func_ARCHIPELAGO_ITEM() {
+    if (randomizer_IsActive()) {
+        dusk::archi::ArchipelagoContext::UpdateCheckedLocations();
+    }
+}
+
 #endif
 
 void item_func_POU_SPIRIT() {

@@ -130,6 +130,7 @@
 #- Name: Water Bombs 3
 #  Importance: Junk
 #  Id: 0x19
+#  APItemId: 16
 
 - Name: Bomblings 5
   Importance: Junk
@@ -144,6 +145,7 @@
 #- Name: Bomblings 3
 #  Importance: Junk
 #  Id: 0x1C
+#  APItemId: 20
 #
 #- Name: Bomblings 1
 #  Importance: Junk
@@ -601,7 +603,7 @@
 - Name: Horse Call
   Importance: Minor
   Id: 0x84
-  APItemId: -1
+  APItemId: 53
 
 - Name: Forest Temple Small Key
   Importance: Major
@@ -1133,7 +1135,7 @@
 - Name: North Faron Woods Gate Key
   Importance: Major
   Id: 0xEE
-  APItemId: -1
+  APItemId: 63
 
 #- Name: Blue Fire
 #  Importance: Major
@@ -1205,7 +1207,7 @@
 - Name: Coro Key
   Importance: Major
   Id: 0xFE
-  APItemId: -1
+  APItemId: 64
 
 #- Name: Invalid
 #  Importance: Major
