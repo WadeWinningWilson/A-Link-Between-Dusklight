@@ -2,13 +2,13 @@
   <img src="res/logo.png" alt="Logo" width="640">
 
   <p align="center">
-    <a href="https://github.com/WadeWinningWilson/ALBW-Dusklight">ALBW-Dusklight on GitHub</a>
+    <a href="https://github.com/WadeWinningWilson/ALBW-Dusklight">A Link Between Dusklight on GitHub</a>
   </p>
 </div>
 
-# ALBW-Dusklight
+# A Link Between Dusklight
 
-A work-in-progress mod for [Dusklight](https://github.com/TwilitRealm/dusklight) — the open-source PC reimplementation of _The Legend of Zelda: Twilight Princess_ — that adds an _A Link Between Worlds_–style **energy meter**, **stripping items on death**, **shield parries/durability/manual shielding** and **Postman rental shop** (native in-game UI on PC when built with the option below).
+**A Link Between Dusklight** is the release name for this mod (repository: [ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight)). It is a PC mod for [Dusklight](https://github.com/TwilitRealm/dusklight) — the open-source reimplementation of _The Legend of Zelda: Twilight Princess_ — that adds an _A Link Between Worlds_–style **energy meter**, **death item strip**, **Postman rental shop**, and a suite of optional combat and economy tweaks (shield parry/durability, wolf combat, enemy HP scaling, death rupee orb, enemy death rupees, and more).
 
 > **You must provide your own legal copy of the game.** This repository does not include copyrighted assets.
 
@@ -20,15 +20,17 @@ Inspired by CaptainKittyCa2’s ALBW meter mod work. Base game by [TwilitRealm](
 |--------|--------|
 | ALBW energy meter HUD | ✅ |
 | Meter drain (sword, agility, hidden skills) | ✅ |
-|Shield parry+ manual shield + Durabiility System (optional) | ✅ |
+| Manual shield / parry & bash charges / durability (optional) | ✅ |
 | Death strip of 13 items | ✅ |
-| Rupee Death Penalty ( Recover 50% with Tear of Light!) | ✅ |
-| Postman Rental Shop | ✅ (footer polish WIP) |
+| Death Recovery Orb — half wallet on death, recover via Tear of Light (optional) | ✅ |
+| Postman rental shop + Oocoo dungeon warp | ✅ (shop footer polish WIP) |
 | Wolf form unaffected by meter | ✅ |
+| Wolf Link combat overhaul (optional) | ✅ |
+| Enemy HP multipliers — Normal / Mid-Boss / Boss / Final (optional) | ✅ |
+| Enemy Death Rupees + native “+n” HUD popup (optional) | ✅ |
 | Colossal Wallet / final pricing pass | ⏳ |
-| Stamina Tweaks/Performance fixes | ⏳ |
 
-Full gameplay and file list: **[docs/albw-port.md](docs/albw-port.md)**.
+Full gameplay, settings, and source file list: **[docs/albw-port.md](docs/albw-port.md)**.
 
 ---
 
@@ -105,20 +107,20 @@ GPU: D3D12, Vulkan, or Metal capable card recommended (see upstream Dusklight no
 
 ## Building on macOS / Linux
 
-The **ALBW mod code is PC-only** (`#if TARGET_PC`). You can still build vanilla Dusklight from this tree using the presets in [docs/building.md](docs/building.md); the meter and rental systems will not be included on those platforms.
+The **A Link Between Dusklight mod code is PC-only** (`#if TARGET_PC`). You can still build vanilla Dusklight from this tree using the presets in [docs/building.md](docs/building.md); the meter and rental systems will not be included on those platforms.
 
 ---
 
 # Upstream Dusklight
 
-This repo is a full Dusklight source tree with the ALBW mod integrated. For vanilla Dusklight releases, documentation, and community links:
+This repo is a full Dusklight source tree with **A Link Between Dusklight** integrated. For vanilla Dusklight releases, documentation, and community links:
 
 - [TwilitRealm/dusklight](https://github.com/TwilitRealm/dusklight)
 - [Official site](https://twilitrealm.dev) · [Discord](https://discord.gg/6NpMhefCK9)
 
 # Credits
 
-- **Mod:** WadeWinningWilson — [ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight)
+- **A Link Between Dusklight:** WadeWinningWilson — [ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight) (GitHub repo name)
 - **Inspired by:** CaptainKittyCa2
 - **Dusklight:** [TwilitRealm](https://github.com/TwilitRealm/dusklight) and [contributors](https://github.com/TwilitRealm/dusklight/graphs/contributors)
 - **Decomp / Aurora / community:** see upstream [README](https://github.com/TwilitRealm/dusklight/blob/main/README.md) credits

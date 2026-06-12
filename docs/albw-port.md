@@ -1,12 +1,12 @@
 # ALBW Port (PC)
 
-Dusklight includes an experimental **A Link Between Worlds–style item rental** flow for the PC build. It reuses Twilight Princess native UI (J2D letter-select screens and message windows) instead of ImGui when enabled.
+**ALBW-Dusklight** adds an _A Link Between Worlds_–style energy meter, death item strip, Postman rental economy, and optional combat/economy systems to the PC build of [Dusklight](https://github.com/TwilitRealm/dusklight). All mod code is gated on `#if TARGET_PC`.
 
-Part of **[ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight)** — clone that repo and follow its **[README](../README.md)** for build steps. Based on [Dusklight](https://github.com/TwilitRealm/dusklight).
+Clone **[ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight)** and follow the **[README](../README.md)** for build steps.
 
 ## Build flag
 
-Enable at configure time:
+Enable native in-game UI at configure time:
 
 ```sh
 cmake --preset windows-msvc-relwithdebinfo -DTARGET_PC_NATIVE_UI=ON
@@ -17,68 +17,149 @@ When `TARGET_PC_NATIVE_UI` is **OFF** (default), the rental Postman still works 
 
 When **ON**, greeting, shop, and farewell use in-game BLO screens and fonts.
 
-## How to find it in-game
+---
+
+## Settings
+
+Pause menu → **Quality of Life** → **ALBW Settings** (single section):
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| **Enemy HP ×** (Normal / Mid-Boss / Boss / Final Boss) | 1× each | Scales effective enemy HP by dividing incoming attack power in `d_cc_uty.cpp` (1–16× per category). |
+| **No Ammo Drops** | On | Bombs, arrows, and seeds no longer drop from enemies; magic pickups replace them. |
+| **Manual Shielding** | Off | Hold **ZR** to guard without Z-target lock-on; **ZR+B** shield bash. Off = vanilla auto-guard on Z-target. |
+| **Shield Parry & Bash Charges** | On | Perfect-guard timing earns bash charges and ALBW meter; failed blocks cost meter and charges. Off = traditional TP guard. |
+| **Shield Durability** | Off | Shield HP by tier; failed blocks drain it. Hylian repairs on parry. Break at 0 triggers guard break. |
+| **Death Recovery Orb** | Off | After Talo is rescued, dying halves your wallet and leaves a Tear of Light at the death spot to recover part of it. Item strip and meter refill on death are unaffected. |
+| **Wolf Link Combat** | Off | ALBW wolf form: bite charges for Midna field attacks, twilight/non-twilight damage split, non-twilight stun, low-HP bite healing. Off = vanilla TP wolf combat. |
+| **Enemy Death Rupees** | Off | Credit rupees directly to your wallet when enemies die and when boss fights end. Vanilla drop tables (hearts, jars, ground rupees) are unchanged. |
+
+Design details for shield systems: **[shield-combat.md](shield-combat.md)**.
+
+---
+
+## Gameplay
+
+### ALBW energy meter
+
+- Replaces the lantern-oil HUD with an ALBW-style stamina bar for **human Link**.
+- Drains on sword swings, agility actions, and hidden-skill use; passive recovery when not guarding.
+- **Wolf Link is unaffected** — wolf combat uses its own optional overhaul (below), not the meter.
+- While actively guarding, passive ALBW recovery (including idle boost) is paused; parry rewards refill via explicit meter grants.
+
+### Death — item strip
+
+- On death, eligible inventory items can be **stripped** (13 rentable slots; same mapping as the ALBW design).
+- Save bits track which items were ever eligible for rental.
+- **Magic Armor** and **Deity Armor** use extra eligibility rules (wallet / prior armor strip).
+- Meter refills on death regardless of optional economy settings.
+
+### Death — Recovery Orb (optional)
+
+- Gated on **Death Recovery Orb** and progress after **Talo is rescued** (event bit F_0625).
+- On real player death: wallet halved (round up), Tear of Light spawns at death location when you reload that room.
+- Picking up the orb returns **50% of what was lost** (see **[albw-death-recovery-orb-brief.md](albw-death-recovery-orb-brief.md)**).
+
+### Death — Oocoo warp (Postman service)
+
+- After a **stripped dungeon death** where you respawn in Ordon, the Postman can sell **Cuckoo's Return** — a paid warp back to that dungeon entrance.
+- Not an inventory item; appears as a special shop row when eligible.
+
+### Postman rental shop
+
+**How to find it:**
 
 1. Play as **human Link** (not wolf).
 2. Progress until the **Ordon Village rental Postman** is active (`getBitSW() == 0x42` on the special Postman actor in F_SP103).
 3. Talk to him to open **Postman's Lending Service**.
 
-Items appear in the shop only if they were **stripped on death** (ALBW rental eligibility) and are **not currently owned**.
+Items appear in the shop only if they were **stripped on death** and are **not currently owned**.
 
-## Features
-
-### Death / game over integration
-
-- On death, eligible inventory items can be **stripped** (same slot mapping as the ALBW design).
-- Save bits track which items were ever eligible for rental.
-- **Magic Armor** and **Deity Armor** entries use extra eligibility rules (wallet / prior armor strip).
-
-### Rental shop (native UI)
+**Native UI** (`TARGET_PC_NATIVE_UI=ON`):
 
 - **13 rentable items** in ascending price order (Slingshot through Deity Armor).
-- **Six visible rows** with scroll; selection follows D-pad / stick (rental state machine).
-- **Letter-select layout** (`zelda_letter_select_6menu.blo` + `select_base.blo`):
-  - Left: item icon, name (`?????` when locked), **rupee price** on the right of each row.
-  - Right: parchment description (stock message or item text + price when rentable).
-- **Rent** with A when the row is purchasable and you have enough rupees; **Leave** with B.
-- Row prices use `fenu_t6`–`fenu_t11`; footer work must not hide those panes (see maintainer notes below).
+- **Six visible rows** with scroll; selection follows D-pad / stick.
+- **Letter-select layout** (`zelda_letter_select_6menu.blo` + `select_base.blo`): icon, name (`?????` when locked), rupee price per row; parchment description on the right.
+- **Rent** with A when purchasable; **Leave** with B.
+- **Native dialogue:** first visit uses three greeting pages; returning customers get one page; farewell depends on whether you rented this session.
 
-### Native dialogue (greeting / farewell)
-
-- Uses `zelda_message_window_text.blo` + `zelda_message_window_new.blo` (shared message archive).
-- **First visit:** greeting split across **three** message boxes to avoid overflow.
-- **Returning customer:** single greeting page.
-- **Farewell** text depends on whether you rented anything this session.
-- Pagination and dismiss with A/B; vanilla “No response…” bar is suppressed **only while the rental talk event is open**.
-
-### Postman actor (PC)
-
-- Custom voice SFX arc and optional BGM during the interaction.
-- `evtTalk()` intercept for the rental Postman; keeps the talk event alive during shop (locks Link like vanilla NPC talk).
-- Wolf Link gets a dismissal toast and immediate event end (no shop).
-
-### ImGui fallback (TARGET_PC_NATIVE_UI=OFF)
+**ImGui fallback** (`TARGET_PC_NATIVE_UI=OFF`):
 
 - `dALBWRental_imguiDraw()` — shop window in the main loop.
 - `dusk::ui::push_toast()` — greeting and farewell.
+
+**Postman actor:** custom voice SFX, optional BGM, `evtTalk()` intercept keeps Link locked during shop. Wolf Link gets a dismissal toast and no shop.
+
+Shop footer polish (analog-stick hint, tagline) is still WIP — see **[albw-shop-icon-alignment.md](albw-shop-icon-alignment.md)** and maintainer notes below.
+
+### Shield combat (optional)
+
+Three independent toggles under **ALBW Settings** (see table above):
+
+- **Manual shielding** — Dawnlight-style guard chord (hold ZR); no auto-guard from Z-target alone.
+- **Shield Parry & Bash Charges** — perfect-block window, charge bank by shield tier, bash spend rules, ALBW meter rewards/penalties.
+- **Shield Durability** — separate shield-HP meter and HUD; mid-boss/boss hits scale durability loss via HP category.
+
+ALBW recovery pause while guarding is always active on PC when the mod is built in.
+
+### Wolf Link combat (optional)
+
+When **Wolf Link Combat** is on:
+
+- Bite charge system for Midna field attacks (with dedicated charge HUD).
+- Twilight vs non-twilight damage split, non-twilight enemy stun, low-HP bite healing.
+- Wolf form remains **outside** the ALBW energy meter economy.
+
+### Enemy Death Rupees (optional)
+
+When **Enemy Death Rupees** is on:
+
+- **Additive only** — vanilla enemy drop tables (hearts, jars, ground rupees) are unchanged.
+- Field kills credit the wallet via per-enemy lookup tables; boss/mid-boss **fight victories** grant once per profile name per session.
+- A native **"+n"** popup beside the rupee counter shows each grant (`d_albw_rupee_popup.cpp`, drawn from `d_meter2_draw.cpp`).
+- Many enemies hook death in their actor files in addition to the central `d_cc_uty.cpp` path (Deku Baba segments, Skulltulas, Beamos, etc.).
+
+---
 
 ## Key source files
 
 | Area | Files |
 |------|--------|
 | Rental state, catalog, input | `src/d/d_albw_rental.cpp`, `include/d/d_albw_rental.h` |
-| Native shop UI | `src/d/d_albw_shop.cpp`, `include/d/d_albw_shop.h` — see [albw-shop-icon-alignment.md](albw-shop-icon-alignment.md) |
-| Death rupee orb | `src/d/d_albw_death_rupee.cpp` — see [albw-death-recovery-orb-brief.md](albw-death-recovery-orb-brief.md) |
+| Native shop UI | `src/d/d_albw_shop.cpp`, `include/d/d_albw_shop.h` |
 | Native talk box | `src/d/d_albw_dialogue.cpp`, `include/d/d_albw_dialogue.h` |
-| Shared text helpers | `src/d/d_albw_ui_text.cpp`, `include/d/d_albw_ui_text.h` |
+| Shared UI text helpers | `src/d/d_albw_ui_text.cpp`, `include/d/d_albw_ui_text.h` |
+| Oocoo warp service | `src/d/d_albw_oocoo.cpp`, `include/d/d_albw_oocoo.h` |
+| Death Recovery Orb | `src/d/d_albw_death_rupee.cpp`, `include/d/d_albw_death_rupee.h` |
+| Enemy HP multipliers | `src/d/d_albw_hp_mult.cpp`, `include/d/d_albw_hp_mult.h` |
+| Shield parry / durability / bash | `src/d/d_albw_shield.cpp`, `include/d/d_albw_shield.h` |
+| Wolf combat + stun | `src/d/d_albw_wolf_stun.cpp`, `include/d/d_albw_wolf_stun.h` |
+| Wolf charge HUD | `src/d/d_albw_wolf_charge_hud.cpp`, `include/d/d_albw_wolf_charge_hud.h` |
+| Enemy Death Rupees | `src/d/d_albw_enemy_rupee.cpp`, `include/d/d_albw_enemy_rupee.h` |
+| Rupee grant HUD popup | `src/d/d_albw_rupee_popup.cpp`, `include/d/d_albw_rupee_popup.h` |
+| ALBW meter HUD + recovery | `src/d/d_meter2.cpp`, `src/d/d_meter2_draw.cpp` |
+| Collision / kill hooks | `src/d/d_cc_uty.cpp` |
+| Death strip + orb hook | `src/d/d_gameover.cpp` |
+| Orb room spawn | `src/d/d_s_room.cpp` |
 | Postman hook | `src/d/actor/d_a_npc_post.cpp` |
+| Link guard / manual shield | `src/d/actor/d_a_alink.cpp`, `src/d/actor/d_a_alink_guard.inc` |
 | Vanilla talk suppress | `src/d/d_msg_object.cpp`, `src/d/d_msg_scrn_talk.cpp` |
-| HUD while shop open | `src/d/d_meter2.cpp` |
-| Death strip | `src/d/d_gameover.cpp` |
+| Settings UI | `src/dusk/ui/settings.cpp`, `src/dusk/settings.cpp` |
+| Per-enemy kill hooks | `src/d/actor/d_a_e_*.cpp`, `src/d/actor/d_a_b_*.cpp`, `src/d/actor/d_a_obj_bemos.cpp`, … |
 
-## Maintainer notes — shop footer (in progress)
+## Related docs
 
-Footer customization (analog stick icon, tagline, “A Rent / B Leave”) is **only** partially done. To avoid regressions:
+| Doc | Topic |
+|-----|--------|
+| [shield-combat.md](shield-combat.md) | Shield design, Dawnlight port notes, playtest checklist |
+| [albw-death-recovery-orb-brief.md](albw-death-recovery-orb-brief.md) | Death orb state machine and spawn rules |
+| [albw-shop-icon-alignment.md](albw-shop-icon-alignment.md) | Shop row icons, footer layout constraints |
+
+---
+
+## Maintainer notes — shop footer
+
+Footer customization (analog stick icon, tagline, “A Rent / B Leave”) is partially done. To avoid regressions:
 
 - **Do not** hide `fenu_t6`–`fenu_t11` on `mpMenuScreen` (row prices).
 - **Do not** `hidePaneTag` / subtree-hide `menu_f6`…`menu_t11` or `menu_10n` on 6menu without `suppressFifthRowFooterOverlap()` — the **5th on-screen row** (`fenu_t10`) shares layout with footer hints.
@@ -91,15 +172,3 @@ Footer customization (analog stick icon, tagline, “A Rent / B Leave”) is **o
 
 - `dALBWRental_armVanillaTalkSuppress()` / `clearVanillaTalkSuppress()` guard the global message UI during Postman talk.
 - **Must** clear suppress on `advanceToClosed()`, `STATE_CLOSED`, and Postman `Delete()` — otherwise **all NPC dialogue** stops rendering after one rental session.
-
-## Debug
-
-With the shop open, the game may write `albw_shop_debug.txt` under the project or user Documents path (catalog + viewport rows). This file is for local debugging and is not required for release builds.
-
-## Local build script (optional)
-
-Some developers use a repo-root `build_run.bat` to configure with `TARGET_PC_NATIVE_UI=ON` and run ninja; it is not part of the upstream build docs and may be kept locally only.
-
-## Planned: shield combat
-
-**Manual shielding** (Dawnlight `9ff9d35`) and **ALBW recovery pause while guarding** are implemented — see **[shield-combat.md](shield-combat.md)**. **Next:** Phase 4 parry + bash charge economy (spec in shield-combat § Phase 4). Shield durability (Phase 2) follows.
