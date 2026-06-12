@@ -10,6 +10,9 @@
 #include "f_op/f_op_actor_enemy.h"
 #include "Z2AudioLib/Z2Instances.h"
 #include <cstring>
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 enum E_st_RES_File_ID {
     /* BCK */
@@ -487,6 +490,9 @@ static void damage_check(e_st_class* i_this) {
             }
 
             i_this->mSound.startCreatureVoice(Z2SE_EN_ST_V_DEATH, -1);
+#if TARGET_PC
+            dAlbwEnemyRupees_onEnemyKill(a_this);
+#endif
             daPy_getPlayerActorClass()->onEnemyDead();
             i_this->mDeathFlag = 1;
             i_this->mAction = ACTION_DAMAGE;
@@ -1695,6 +1701,9 @@ static void e_st_water(e_st_class* i_this) {
             i_this->mTimers[0] = 40;
             a_this->speed.y = 0.0f;
             i_this->mDeathFlag = 1;
+#if TARGET_PC
+            dAlbwEnemyRupees_onEnemyKill(a_this);
+#endif
             anm_init(i_this, BCK_ST_WATERDEAD, 3.0f, J3DFrameCtrl::EMode_LOOP, 1.0f);
             i_this->mSound.startCreatureSound(Z2SE_EN_ST_V_WATERDEAD, 0, -1);
             // fallthrough
@@ -2094,6 +2103,9 @@ static void e_st_g_chance(e_st_class* i_this) {
         enemy_a_this->offCutDownHitFlg();
         enemy_a_this->offDownFlg();
         i_this->mDeathFlag = 1;
+#if TARGET_PC
+        dAlbwEnemyRupees_onEnemyKill(a_this);
+#endif
         daPy_getPlayerActorClass()->onEnemyDead();
     }
 }
@@ -2196,6 +2208,9 @@ static void damage_check_g(e_st_class* i_this) {
         } else if (a_this->health <= 0) {
             i_this->mAction = ACTION_G_END;
             i_this->mActionPhase = G_END_PHASE_10;
+#if TARGET_PC
+            dAlbwEnemyRupees_onEnemyKill(a_this);
+#endif
             daPy_getPlayerActorClass()->onEnemyDead();
             a_this->speedF = KREG_F(14) + -40.0f;
             daPy_getPlayerActorClass()->onEnemyDead();

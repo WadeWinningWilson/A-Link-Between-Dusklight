@@ -18,6 +18,9 @@
 #include "c/c_damagereaction.h"
 #include "f_op/f_op_actor_enemy.h"
 #include "Z2AudioLib/Z2Instances.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 enum daB_DS_Joint {
     DS_JNT_BACKBONE1,
@@ -4084,6 +4087,9 @@ void daB_DS_c::executeBattle2Dead() {
             camera->mCamera.SetTrimSize(0);
             dComIfGp_event_reset();
             dComIfGs_onStageBossEnemy(0x13);
+#if TARGET_PC
+            dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_B_DS_e);
+#endif
             /* dSv_event_flag_c::F_0265 - Arbiter's Grounds - Arbiter's Grounds clear */
             dComIfGs_onEventBit(0x2010);
             fopAcM_delete(this);

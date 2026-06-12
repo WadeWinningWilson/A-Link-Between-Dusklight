@@ -1262,6 +1262,28 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                     "Scales HP of the final boss sequence: Dark Beast Ganon "
                     "and the Ganondorf sword fight on Hyrule Castle rooftop.");
             });
+        addOption("No Ammo Drops", getSettings().game.noAmmoDrops,
+            "Bombs, arrows, and seeds will not drop from enemies. Magic pickups (seed drops) replace them.");
+        addOption("Manual Shielding", getSettings().game.manualShielding,
+            "Hold ZR to raise your shield without Z-target lock-on; move freely while guarding. "
+            "Shield bash is ZR+B. Off preserves vanilla auto-guard on Z-target.");
+        addOption("Shield Parry & Bash Charges", getSettings().game.shieldParryCombat,
+            "Perfect-guard timing earns bash charges and ALBW meter. Failed blocks cost meter "
+            "and charges. Off uses traditional TP guard (no parry economy).");
+        addOption("Shield Durability", getSettings().game.shieldDurability,
+            "Shield HP by tier; failed blocks drain it. Hylian repairs on parry and takes more "
+            "damage per hit. Break at 0 uses guard break (replaces vanilla slip counter).");
+        addOption("Death Recovery Orb", getSettings().game.deathRecoveryOrb,
+            "After Talo is rescued, dying halves your rupees and leaves a Tear of Light at the "
+            "death spot to recover part of them. Off keeps your wallet unchanged and spawns no orb. "
+            "Item strip and meter refill on death are unaffected.");
+        addOption("Wolf Link Combat", getSettings().game.wolfLinkCombat,
+            "ALBW wolf form: bite charges for Midna field attacks, twilight/non-twilight damage "
+            "split, non-twilight stun, and low-HP bite healing. Off uses vanilla Twilight Princess "
+            "wolf combat.");
+        addOption("Enemy Death Rupees", getSettings().game.enemyDeathRupees,
+            "Credit rupees directly to your wallet when enemies die and when boss fights end. "
+            "Vanilla drop tables (hearts, jars, ground rupees) are unchanged.");
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================
@@ -1269,8 +1291,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Instant Death", getSettings().game.instantDeath, "Any hit will instantly kill you.");
         addSpeedrunDisabledOption("No Heart Drops", getSettings().game.noHeartDrops,
             "Hearts will never drop from enemies, pots, and various other places.");
-        addOption("No Ammo Drops", getSettings().game.noAmmoDrops,
-            "Bombs, arrows, and seeds will not drop from enemies. Magic pickups (seed drops) replace them.");
 
         leftPane.add_section("Quality of Life");
         addOption("Bigger Wallets", getSettings().game.biggerWallets,
@@ -1294,24 +1314,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Always collect Rupees even if your Wallet is too full.");
         addOption("No Sword Recoil", getSettings().game.noSwordRecoil,
             "Link will not recoil when his sword hits walls.");
-        leftPane.add_section("ALBW Settings");
-        addOption("Manual Shielding", getSettings().game.manualShielding,
-            "Hold ZR to raise your shield without Z-target lock-on; move freely while guarding. "
-            "Shield bash is ZR+B. Off preserves vanilla auto-guard on Z-target.");
-        addOption("Shield Parry & Bash Charges", getSettings().game.shieldParryCombat,
-            "Perfect-guard timing earns bash charges and ALBW meter. Failed blocks cost meter "
-            "and charges. Off uses traditional TP guard (no parry economy).");
-        addOption("Shield Durability", getSettings().game.shieldDurability,
-            "Shield HP by tier; failed blocks drain it. Hylian repairs on parry and takes more "
-            "damage per hit. Break at 0 uses guard break (replaces vanilla slip counter).");
-        addOption("Death Recovery Orb", getSettings().game.deathRecoveryOrb,
-            "After Talo is rescued, dying halves your rupees and leaves a Tear of Light at the "
-            "death spot to recover part of them. Off keeps your wallet unchanged and spawns no orb. "
-            "Item strip and meter refill on death are unaffected.");
-        addOption("Wolf Link Combat", getSettings().game.wolfLinkCombat,
-            "ALBW wolf form: bite charges for Midna field attacks, twilight/non-twilight damage "
-            "split, non-twilight stun, and low-HP bite healing. Off uses vanilla Twilight Princess "
-            "wolf combat.");
         addOption("No 2nd Fish for Cat", getSettings().game.no2ndFishForCat,
             "Skip needing to catch a second fish for Sera's cat.");
         addOption("Button Fishing", getSettings().game.buttonFishing,

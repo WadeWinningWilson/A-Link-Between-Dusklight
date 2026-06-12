@@ -20,6 +20,9 @@
 #include "f_op/f_op_camera_mng.h"
 #include "m_Do/m_Do_graphic.h"
 #include "m_Do/m_Do_lib.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 class daE_DT_HIO_c {
 public:
@@ -1473,6 +1476,9 @@ void daE_DT_c::executeDeath() {
             Z2GetAudioMgr()->subBgmStop();
             Z2GetAudioMgr()->muteSceneBgm(0, 0.0f);
             dComIfGs_onStageMiddleBoss();
+#if TARGET_PC
+            dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_E_DT_e);
+#endif
         }
         break;
 

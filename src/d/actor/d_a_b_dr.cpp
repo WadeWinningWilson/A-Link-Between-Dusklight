@@ -16,6 +16,9 @@
 #include "c/c_damagereaction.h"
 #include "f_op/f_op_camera_mng.h"
 #include "Z2AudioLib/Z2Instances.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 
 class daB_DR_HIO_c : public JORReflexible {
@@ -1954,6 +1957,9 @@ void daB_DR_c::executeWeekHit() {
             /* City in the Sky - City in the Sky clear */
             dComIfGs_onEventBit(dSv_event_flag_c::F_0268);
             dComIfGs_onStageBossEnemy(0x16);
+#if TARGET_PC
+            dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_B_DR_e);
+#endif
             fopAcM_onSwitch(this, 0x38);
             fopAcM_delete(this);
         }

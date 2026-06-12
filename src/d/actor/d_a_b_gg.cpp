@@ -13,6 +13,9 @@
 #include "f_op/f_op_actor_enemy.h"
 #include "f_op/f_op_camera_mng.h"
 #include <cstring>
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 class daB_GG_HIO_c : public JORReflexible {
 public:
@@ -3290,6 +3293,9 @@ void daB_GG_c::DeathCam() {
                 if (field_0x5cf != 0xFF && !dComIfGs_isSwitch(field_0x5cf, fopAcM_GetRoomNo(this))) {
                     dComIfGs_onSwitch(field_0x5cf, fopAcM_GetRoomNo(this));
                     dComIfGs_onStageMiddleBoss();
+#if TARGET_PC
+                    dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_B_GG_e);
+#endif
                 }
                 fopAcM_delete(this);
             }
@@ -3306,6 +3312,9 @@ void daB_GG_c::DeathCam() {
             if (field_0x5cf != 0xFF && !dComIfGs_isSwitch(field_0x5cf, fopAcM_GetRoomNo(this))) {
                 dComIfGs_onSwitch(field_0x5cf, fopAcM_GetRoomNo(this));
                 dComIfGs_onStageMiddleBoss();
+#if TARGET_PC
+                dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_B_GG_e);
+#endif
             }
 
             fopAcM_delete(this);

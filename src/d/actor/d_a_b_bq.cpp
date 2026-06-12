@@ -17,6 +17,9 @@
 #include "SSystem/SComponent/c_math.h"
 #include "c/c_damagereaction.h"
 #include <cmath>
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 enum B_bq_RES_File_ID {
     /* BCK */
@@ -2136,6 +2139,9 @@ static void demo_camera(b_bq_class* i_this) {
             i_this->field_0x1151 = 1;
 
             dComIfGs_onStageBossEnemy();
+#if TARGET_PC
+            dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_B_BQ_e);
+#endif
             int sw = (fopAcM_GetParam(a_this) & 0x00FF0000) >> 0x10;
             dComIfGs_offSwitch(sw, fopAcM_GetRoomNo(a_this));
 

@@ -16,6 +16,9 @@
 #include "m_Do/m_Do_graphic.h"
 #include "c/c_damagereaction.h"
 #include "Z2AudioLib/Z2Instances.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 class daE_GOB_HIO_c : public JORReflexible {
 public:
@@ -1960,6 +1963,9 @@ static void demo_camera(e_gob_class* i_this) {
             i_this->mAction = ACTION_MESSAGE;
             i_this->mMode = 0;
             dComIfGs_onStageMiddleBoss();
+#if TARGET_PC
+            dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_E_GOB_e);
+#endif
             fopAcM_onSwitch(actor, 14);
         }
         break;

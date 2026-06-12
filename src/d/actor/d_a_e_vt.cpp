@@ -17,6 +17,9 @@
 #include "f_op/f_op_actor_enemy.h"
 #include "f_op/f_op_camera_mng.h"
 #include "Z2AudioLib/Z2Instances.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 #define WL_CUT_TYPE_SMALL 1
 #define WL_CUT_TYPE_JUMP 2
@@ -2962,6 +2965,9 @@ void daE_VA_c::executeOpaciDeath() {
         Z2GetAudioMgr()->muteSceneBgm(0, 0.0f);
 
         dComIfGs_onStageMiddleBoss();
+#if TARGET_PC
+        dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_E_VT_e);
+#endif
         field_0x1364 = 0;
 
         setBck(ANM_SUBS_DOWN_DIE_e, J3DFrameCtrl::EMode_NONE, 3.0f, 1.0f);

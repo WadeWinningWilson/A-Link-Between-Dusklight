@@ -21,6 +21,16 @@
 #include "m_Do/m_Do_lib.h"
 #include <cstring>
 
+// ============================================
+// NEW CODE STARTS HERE
+// ============================================
+#if TARGET_PC
+#include "res/Layout/main2D.h"
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
 class daBalloon2D_HIO_c : public mDoHIO_entry_c {
 public:
     inline daBalloon2D_HIO_c() {
@@ -185,6 +195,22 @@ int daBalloon2D_c::createHeap() {
         field_0x5c4[i] = JKR_NEW J2DPicture(resTimg);
     }
     ResTIMG* resTimg = (ResTIMG*)dComIfGp_getMain2DArchive()->getResource('TIMG', dMeter2Info_getPlusTextureName());
+    // ============================================
+    // NEW CODE STARTS HERE
+    // ============================================
+#if TARGET_PC
+    // The '+' filename contains a full-width 'x' (im_plus_metal_24x24) whose
+    // byte encoding in this source tree does not match the archive's string
+    // table, so the by-name lookup fails on PC.  Fall back to the archive
+    // file index from the generated asset header, which is encoding-proof.
+    if (resTimg == NULL) {
+        resTimg = (ResTIMG*)dComIfGp_getMain2DArchive()->getIdxResource(
+            dRes_INDEX_MAIN2D_BTI_IM_PLUS_METAL_24X24_00_e);
+    }
+#endif
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     field_0x5ec = JKR_NEW J2DPicture(resTimg);
     if (field_0x578 == NULL || field_0x57c == NULL || field_0x580 == NULL ||
         field_0x584 == NULL ||field_0x588 == NULL || field_0x58c == NULL ||

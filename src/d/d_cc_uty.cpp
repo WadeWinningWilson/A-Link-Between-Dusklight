@@ -21,6 +21,7 @@
 #include "d/d_albw_wolf_stun.h"
 #include "d/d_albw_wolf_combat.h"
 #include "d/d_albw_wolf_charge_hud.h"
+#include "d/d_albw_enemy_rupee.h"
 #endif
 
 static int plCutLRC[58] = {
@@ -505,6 +506,11 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* i_enemy, dCcU_AtInfo* i_AtInfo) {
 
         if (i_AtInfo->mAttackPower != 0) {
             i_enemy->health -= i_AtInfo->mAttackPower;
+#if TARGET_PC
+            if (fopAcM_GetGroup(i_enemy) == fopAc_ENEMY_e) {
+                dAlbwEnemyRupees_tryKillAfterDamage(i_enemy, i_AtInfo->mAttackPower);
+            }
+#endif
         }
 
         s8 pause_time = 0;
@@ -530,6 +536,7 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* i_enemy, dCcU_AtInfo* i_AtInfo) {
                     fopAcM_createItem(&i_enemy->current.pos, dItemNo_L_MAGIC_e, -1,
                                       fopAcM_GetRoomNo(i_enemy), NULL, &s_jarDropScale, 0);
                 }
+                // Rupee grant handled by tryKillAfterDamage() above (includes lethal thresholds).
                 // ============================================
                 // NEW CODE ENDS HERE
                 // ============================================

@@ -14,6 +14,9 @@
 #include "d/actor/d_a_obj_lv3WaterB.h"
 #include "d/actor/d_a_obj_ystone.h"
 #include "Z2AudioLib/Z2Instances.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 enum B_oh_RES_File_ID {
     /* BCK */
@@ -2805,6 +2808,9 @@ static void demo_camera(b_ob_class* i_this) {
             if (i_this->mDemoActionTimer == 290) {
                 i_this->mDemoAction = 100;
                 dComIfGs_onStageBossEnemy();
+#if TARGET_PC
+                dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_B_OB_e);
+#endif
                 dComIfGs_onSwitch(a_this->home.angle.z & 0xFF, fopAcM_GetRoomNo(a_this));
                 fopAcM_delete(a_this);
             }

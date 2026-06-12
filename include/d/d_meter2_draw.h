@@ -71,6 +71,12 @@ public:
     bool getRupeeAnchorCenter(Vec* o_center) const;
     bool getShieldHudAnchorCenter(Vec* o_center) const;
     f32 getRupeeHudReferenceSize() const;
+    // Current rupee HUD alpha rate (0 when faded out in cutscenes etc.).
+    f32 getRupeeHudAlphaRate() const;
+    // On-screen size, horizontal advance, leftmost slot centre X and row
+    // centre Y of the rupee counter digits.
+    bool getRupeeDigitMetrics(f32* o_width, f32* o_height, f32* o_advance,
+                              f32* o_leftCenterX, f32* o_centerY) const;
     // ============================================
     // NEW CODE ENDS HERE
     // ============================================

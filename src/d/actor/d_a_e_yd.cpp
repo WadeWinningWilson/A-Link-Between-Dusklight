@@ -14,6 +14,7 @@
 
 #if TARGET_PC
 #include "dusk/frame_interpolation.h"
+#include "d/d_albw_enemy_rupee.h"
 #endif
 
 class daE_YD_HIO_c {
@@ -44,6 +45,9 @@ daE_YD_HIO_c::daE_YD_HIO_c() {
 
 static void yd_disappear(e_yd_class* i_this) {
     cXyz particleScale(1.5f, 1.5f, 1.5f);
+#if TARGET_PC
+    dAlbwEnemyRupees_onEnemyKill(&i_this->actor);
+#endif
     dComIfGp_particle_set(0x826c, &i_this->actor.current.pos, NULL, &particleScale);
     dComIfGp_particle_set(0x826d, &i_this->actor.current.pos, NULL, &particleScale);
     fopAcM_seStart(&i_this->actor, Z2SE_DARK_VANISH, 0);

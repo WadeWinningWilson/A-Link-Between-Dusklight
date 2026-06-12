@@ -13,6 +13,9 @@
 #include "f_op/f_op_camera_mng.h"
 #include <cmath>
 #include "Z2AudioLib/Z2Instances.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 struct daE_YMB_HIO_c {
 public:
@@ -2169,6 +2172,9 @@ void daE_YMB_c::executeDeath() {
                 camera->mCamera.Start();
                 camera->mCamera.SetTrimSize(0);
                 dComIfGp_event_reset();
+#if TARGET_PC
+                dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_E_YMB_e);
+#endif
                 dComIfGs_offSwitch(5, fopAcM_GetRoomNo(this));
                 dComIfGs_offOneZoneSwitch(15, fopAcM_GetRoomNo(this));
                 fopAcM_delete(this);

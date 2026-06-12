@@ -16,6 +16,9 @@
 #include "f_op/f_op_camera_mng.h"
 #include "f_op/f_op_msg_mng.h"
 #include "Z2AudioLib/Z2Instances.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 #define ANM_EYE_TEST            6
 #define ANM_GM_BEAM             7
@@ -1493,6 +1496,9 @@ static void demo_camera(b_gm_class* i_this) {
             csXyz angle(0, 0, 0);
             fopAcM_createWarpHole(&pos, &angle, fopAcM_GetRoomNo(a_this), 1, 1, 0xFF);
             dComIfGs_onStageBossEnemy();
+#if TARGET_PC
+            dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_B_GM_e);
+#endif
         }
 
         if (i_this->mDemoModeTimer == 341) {

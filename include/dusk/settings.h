@@ -157,6 +157,8 @@ struct UserSettings {
         ConfigVar<bool> deathRecoveryOrb;
         // Wolf charge economy, field attack damage/stun, bite healing. Off = vanilla TP wolf.
         ConfigVar<bool> wolfLinkCombat;
+        // Direct wallet credit on enemy kill and boss fight victory (additive; vanilla drops unchanged).
+        ConfigVar<bool> enemyDeathRupees;
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================

@@ -15,6 +15,9 @@
 #include "f_op/f_op_actor_enemy.h"
 #include "f_op/f_op_camera_mng.h"
 #include <cstring>
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 class daE_RDB_HIO_c : public JORReflexible {
 public:
@@ -1345,6 +1348,9 @@ static void demo_camera(e_rdb_class* i_this) {
             fopAcM_delete(fopAcM_SearchByName(fpcNm_E_RD_e));
             fopAcM_delete(fopAcM_SearchByName(fpcNm_E_WB_e));
             dComIfGs_onStageMiddleBoss();
+#if TARGET_PC
+            dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_E_RDB_e);
+#endif
             int swBit = fopAcM_GetParam(a_this) >> 24;
             if (swBit != 0xFF) {
                 dComIfGs_onSwitch(swBit, fopAcM_GetRoomNo(a_this));

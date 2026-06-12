@@ -13,6 +13,9 @@
 #include "f_op/f_op_msg_mng.h"
 #include "m_Do/m_Do_graphic.h"
 #include "d/d_s_play.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 #define ANM_ATTACKC         6
 #define ANM_ATTACKC_A       7
@@ -589,6 +592,9 @@ static void e_hzelda_attack_c(e_hzelda_class* i_this) {
 
             if (a_this->health <= 0) {
                 i_this->mDemoMode = 1;
+#if TARGET_PC
+                dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_E_HZELDA_e);
+#endif
                 Z2GetAudioMgr()->bgmStop(0x1E, 0);
                 i_this->mMode = 10;
                 

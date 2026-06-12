@@ -24,6 +24,9 @@
 #include "d/d_s_play.h"
 #include "Z2AudioLib/Z2Instances.h"
 #include <cstring>
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 class daB_YO_HIO_c {
 public:
@@ -2311,6 +2314,9 @@ void daB_YO_c::executeDeath() {
         mCamFovY = 68.0f;
         mMode = 1;
         dComIfGs_onStageBossEnemy();
+#if TARGET_PC
+        dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_B_YO_e);
+#endif
         dComIfGs_onSwitch(mSwNo2, fopAcM_GetRoomNo(this));
         Z2GetAudioMgr()->bgmStop(0x1e, 0);
         Z2GetAudioMgr()->bgmStreamPrepare(0x2000059);

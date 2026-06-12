@@ -20,6 +20,9 @@
 #include "f_op/f_op_camera_mng.h"
 #include "Z2AudioLib/Z2Instances.h"
 #include <cstring>
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 class daE_MK_HIO_c : public JORReflexible {
 public:
@@ -1589,6 +1592,9 @@ static void demo_camera_end(e_mk_class* i_this) {
             boomerang_p->current.pos.y += 10000.0f;
             Z2GetAudioMgr()->bgmStreamPrepare(0x200000E);
             dComIfGs_onStageMiddleBoss();
+#if TARGET_PC
+            dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_E_MK_e);
+#endif
             // fallthrough
         case 2:
             cMtx_YrotS(*calc_mtx, actor->shape_angle.y);

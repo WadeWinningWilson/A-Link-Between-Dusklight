@@ -9,6 +9,9 @@
 #include "d/actor/d_a_obj_carry.h"
 #include <cmath>
 #include "f_op/f_op_actor_enemy.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 #define PLAYER_NOT_FOUND  0
 #define PLAYER_TARGET   1
@@ -622,6 +625,9 @@ void daE_WS_c::damage_check() {
     
             cc_at_check(this, &mAtInfo);
             setActionMode(ACTION_DOWN_e);
+#if TARGET_PC
+            dAlbwEnemyRupees_onEnemyKill(this);
+#endif
             return;
         }
 
@@ -643,6 +649,9 @@ void daE_WS_c::damage_check() {
                 setActionMode(ACTION_WIND_DOWN_e);
             } else {
                 setActionMode(ACTION_DOWN_e);
+#if TARGET_PC
+                dAlbwEnemyRupees_onEnemyKill(this);
+#endif
             }
         }
     }

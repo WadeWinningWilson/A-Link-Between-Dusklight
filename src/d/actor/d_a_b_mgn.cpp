@@ -12,6 +12,9 @@
 #include "f_op/f_op_msg_mng.h"
 #include "m_Do/m_Do_graphic.h"
 #include "f_op/f_op_actor_enemy.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 enum B_MGN_RES_FILE_ID {
     /* BCK */
@@ -2838,6 +2841,9 @@ void daB_MGN_c::executeDeath() {
         }
 
         Z2GetAudioMgr()->bgmStop(0x1E, 0);
+#if TARGET_PC
+        dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_B_MGN_e);
+#endif
 
         if (mSwBit != 0xFF) {
             dComIfGs_onSwitch(mSwBit, fopAcM_GetRoomNo(this));

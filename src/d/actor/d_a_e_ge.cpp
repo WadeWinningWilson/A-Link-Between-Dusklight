@@ -10,6 +10,9 @@
 #include "d/d_cc_d.h"
 #include "f_op/f_op_actor_enemy.h"
 #include "f_op/f_op_camera_mng.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 
 class daE_GE_HIO_c : public JORReflexible {
@@ -233,6 +236,9 @@ void daE_GE_c::damage_check() {
                     dComIfGp_setHitMark(3, this, &position, NULL, NULL, 0);
 
                     setActionMode(ACTION_DOWN);
+#if TARGET_PC
+                    dAlbwEnemyRupees_onEnemyKill(this);
+#endif
 
                     if (!mAtInfo.mpCollider->ChkAtType(AT_TYPE_ARROW)) {
                         speedF = cM_rndF(5.0f) + 15.0f;

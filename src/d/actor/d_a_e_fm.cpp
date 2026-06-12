@@ -15,6 +15,9 @@
 #include "f_op/f_op_camera_mng.h"
 #include "f_op/f_op_msg_mng.h"
 #include "Z2AudioLib/Z2Instances.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 class daE_FM_HIO_c : public JORReflexible {
 public:
@@ -1760,6 +1763,9 @@ static void demo_camera(e_fm_class* i_this) {
         if (i_this->mDemoCamTimer == VREG_S(3) + 110) {
             i_this->mDemoCamMode = 100;
             dComIfGs_onStageBossEnemy();
+#if TARGET_PC
+            dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_E_FM_e);
+#endif
             /* dSv_event_flag_c::M_031 - Goron Mines - Goron Mines clear */
             dComIfGs_onEventBit(dSv_event_flag_c::saveBitLabels[64]);
         }

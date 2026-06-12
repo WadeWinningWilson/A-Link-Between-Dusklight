@@ -27,6 +27,7 @@
 #if TARGET_PC
 #include "d/d_albw_shield.h"
 #include "d/d_albw_wolf_charge_hud.h"
+#include "d/d_albw_rupee_popup.h"
 #include "JSystem/JUtility/TColor.h"
 #endif
 
@@ -825,6 +826,7 @@ void dMeter2Draw_c::draw() {
     if (!dComIfGp_isPauseFlag() && dComIfGp_isHeapLockFlag() != 6) {
         dAlbwWolfChargeHud_draw();
         dShield_drawBashCharges();
+        dAlbwRupeePopup_draw();
     }
 #endif
 }
@@ -1846,6 +1848,13 @@ bool dMeter2Draw_c::getShieldHudAnchorCenter(Vec* o_center) const {
     return getRupeeAnchorCenter(o_center);
 }
 
+f32 dMeter2Draw_c::getRupeeHudAlphaRate() const {
+    if (mpRupeeParent[0] == NULL) {
+        return 0.0f;
+    }
+    return mpRupeeParent[0]->getAlphaRate();
+}
+
 f32 dMeter2Draw_c::getRupeeHudReferenceSize() const {
     if (mpRupeeParent[0] == NULL || mpRupeeParent[0]->getPanePtr() == NULL) {
         return 0.0f;
@@ -1864,6 +1873,44 @@ f32 dMeter2Draw_c::getRupeeHudReferenceSize() const {
         return h;
     }
     return (w < h) ? w : h;
+}
+
+bool dMeter2Draw_c::getRupeeDigitMetrics(f32* o_width, f32* o_height, f32* o_advance,
+                                         f32* o_leftCenterX, f32* o_centerY) const {
+    if (mpRupeeTexture[0][1] == NULL || mpRupeeTexture[0][1]->getPanePtr() == NULL ||
+        mpRupeeTexture[1][1] == NULL || mpRupeeTexture[1][1]->getPanePtr() == NULL)
+    {
+        return false;
+    }
+
+    Mtx m;
+    J2DPane* pane0 = mpRupeeTexture[0][1]->getPanePtr();
+    const Vec a0 = mpRupeeTexture[0][1]->getGlobalVtx(pane0, &m, 0, false, 0);
+    const Vec a3 = mpRupeeTexture[0][1]->getGlobalVtx(pane0, &m, 3, false, 0);
+
+    const Vec c0 = mpRupeeTexture[0][1]->getGlobalVtxCenter(false, 0);
+    const Vec c1 = mpRupeeTexture[1][1]->getGlobalVtxCenter(false, 0);
+
+    *o_width = std::fabs(a3.x - a0.x);
+    *o_height = std::fabs(a3.y - a0.y);
+    *o_advance = std::fabs(c1.x - c0.x);
+
+    // Leftmost digit slot centre (the four panes are not in screen order).
+    f32 leftX = c0.x;
+    f32 centerY = c0.y;
+    for (int i = 1; i < 4; i++) {
+        if (mpRupeeTexture[i][1] == NULL || mpRupeeTexture[i][1]->getPanePtr() == NULL) {
+            continue;
+        }
+        const Vec c = mpRupeeTexture[i][1]->getGlobalVtxCenter(false, 0);
+        if (c.x < leftX) {
+            leftX = c.x;
+        }
+    }
+    *o_leftCenterX = leftX;
+    *o_centerY = centerY;
+
+    return *o_width > 0.5f && *o_height > 0.5f && *o_advance > 0.5f;
 }
 #endif
 

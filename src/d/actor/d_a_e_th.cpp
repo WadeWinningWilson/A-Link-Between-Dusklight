@@ -14,6 +14,7 @@
 #include "f_op/f_op_camera_mng.h"
 #if TARGET_PC
 #include "dusk/achievements.h"
+#include "d/d_albw_enemy_rupee.h"
 #endif
 
 class daE_TH_HIO_c : public JORReflexible {
@@ -513,6 +514,9 @@ static void e_th_end(e_th_class* i_this) {
         if (i_this->mpModelMorf->isStop()) {
             i_this->mMode = 2;
             dComIfGs_onStageMiddleBoss();
+#if TARGET_PC
+            dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_E_TH_e);
+#endif
         }
         break;
     case 3:

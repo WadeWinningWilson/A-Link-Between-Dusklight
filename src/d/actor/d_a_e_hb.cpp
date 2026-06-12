@@ -11,6 +11,7 @@
 
 #if TARGET_PC
 #include "dusk/frame_interpolation.h"
+#include "d/d_albw_enemy_rupee.h"
 #endif
 
 enum daE_HB_ACTION {
@@ -234,6 +235,9 @@ static void damage_check(e_hb_class* i_this) {
             i_this->field_0x1230 = 10;
             actor->health = 0;
 
+#if TARGET_PC
+            dAlbwEnemyRupees_onEnemyKill(actor);
+#endif
             def_se_set(&i_this->sound, i_this->atInfo.mpCollider, 0x21, NULL);
             i_this->sound.startCreatureSound(Z2SE_EN_DB_DRY, 0, -1);
 

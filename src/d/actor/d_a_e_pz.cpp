@@ -14,6 +14,9 @@
 #include "Z2AudioLib/Z2Instances.h"
 #include "f_op/f_op_actor_enemy.h"
 #include "f_op/f_op_camera_mng.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 class daE_PZ_HIO_c : public JORReflexible {
 public:
@@ -1699,6 +1702,9 @@ void daE_PZ_c::executeDead() {
             sp1C->mCamera.SetTrimSize(0);
 
             dComIfGp_event_reset();
+#if TARGET_PC
+            dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_E_PZ_e);
+#endif
             fopAcM_delete(this);
         }
         break;

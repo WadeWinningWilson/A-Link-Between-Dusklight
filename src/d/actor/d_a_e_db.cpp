@@ -12,6 +12,7 @@
 
 #if TARGET_PC
 #include "dusk/frame_interpolation.h"
+#include "d/d_albw_enemy_rupee.h"
 #endif
 
 class daE_DB_HIO_c : public JORReflexible {
@@ -1511,6 +1512,9 @@ static s8 e_db_escape(e_db_class* i_this) {
         anm_init(i_this, 0xE, 20.0f, 0, 1.0f);
         i_this->sound.startCreatureVoice(Z2SE_EN_DB_V_DEATH, -1);
         i_this->field_0x852 = 1;
+#if TARGET_PC
+        dAlbwEnemyRupees_onEnemyKill(actor);
+#endif
         daPy_getPlayerActorClass()->onEnemyDead();
 
         i_this->invulnerabilityTimer = 200;
@@ -1559,6 +1563,9 @@ static void e_db_e_dead(e_db_class* i_this) {
 
     switch (i_this->mode) {
     case 0:
+#if TARGET_PC
+        dAlbwEnemyRupees_onEnemyKill(actor);
+#endif
         i_this->field_0x840 = 25.0f + TREG_F(8);
         cMtx_YrotS(*calc_mtx, i_this->field_0x680);
         sp24.x = 0.0f;
@@ -1657,6 +1664,9 @@ static void e_db_e_dead(e_db_class* i_this) {
         anm_init(i_this, 0xE, 20.0f, 0, 1.0f);
         i_this->sound.startCreatureVoice(Z2SE_EN_DB_V_DEATH, -1);
         i_this->field_0x852 = 1;
+#if TARGET_PC
+        dAlbwEnemyRupees_onEnemyKill(actor);
+#endif
         daPy_getPlayerActorClass()->onEnemyDead();
 
         i_this->invulnerabilityTimer = 200;

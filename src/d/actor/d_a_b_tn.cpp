@@ -14,6 +14,9 @@
 
 #include "f_op/f_op_actor_enemy.h"
 #include "f_op/f_op_camera_mng.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 class daB_TN_HIO_c {
 public:
@@ -4221,6 +4224,9 @@ void daB_TN_c::executeEnding() {
         player->setPlayerPosAndAngle(&sp1c, 0x7000, 0);
         player->changeDemoMode(4, 1, 0, 0);
         dComIfGs_onStageMiddleBoss();
+#if TARGET_PC
+        dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_B_TN_e);
+#endif
         return;
 
     case ACTION2_1_e:

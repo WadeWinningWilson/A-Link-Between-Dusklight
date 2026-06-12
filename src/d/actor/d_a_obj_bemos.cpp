@@ -16,6 +16,9 @@
 #endif
 #include "d/d_s_play.h"
 #include "Z2AudioLib/Z2Instances.h"
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 #include <cstring>
 
 enum Action_e {
@@ -1118,6 +1121,9 @@ void daObjBm_c::mode_afl() {
 }
 
 void daObjBm_c::mode_dead_init() {
+#if TARGET_PC
+    dAlbwEnemyRupees_onBeamosDestroyed();
+#endif
     mpBgW->OffPushPullOk();
     fopAcM_SetSpeedF(this, 0.0f);
     mModeProcIdx = MODE_DEAD_e;

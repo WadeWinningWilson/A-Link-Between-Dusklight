@@ -18,6 +18,9 @@
 #include "Z2AudioLib/Z2Instances.h"
 #include "JSystem/JAudio2/JAUSectionHeap.h"
 #include <cmath>
+#if TARGET_PC
+#include "d/d_albw_enemy_rupee.h"
+#endif
 
 enum Joint {
     /* 0x00 */ JNT_CENTER,
@@ -4375,6 +4378,9 @@ void daB_ZANT_c::executeLastEndDemo() {
         field_0x6ba = 0x2F00;
         field_0x6bc = 0.0f;
         dComIfGs_onStageBossEnemy();
+#if TARGET_PC
+        dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_B_ZANT_e);
+#endif
         return;
     case 1:
     case 2:

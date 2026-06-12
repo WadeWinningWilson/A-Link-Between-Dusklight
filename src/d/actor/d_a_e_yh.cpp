@@ -14,6 +14,7 @@
 
 #if TARGET_PC
 #include "dusk/frame_interpolation.h"
+#include "d/d_albw_enemy_rupee.h"
 #endif
 
 class daE_YH_HIO_c : public JORReflexible {
@@ -1582,6 +1583,9 @@ static s8 e_yh_escape(e_yh_class* i_this) {
         i_this->mSound.startCreatureVoice(Z2SE_EN_DB_V_DEATH, -1);
         daPy_py_c* pyPlayer = (daPy_py_c*)daPy_getPlayerActorClass();
         pyPlayer->onEnemyDead();
+#if TARGET_PC
+        dAlbwEnemyRupees_onEnemyKill(a_this);
+#endif
         i_this->field_0x69e = 200;
         i_this->field_0x698[0] = 80;
         if (cM_rndF(1.0f) < 0.5f) {
@@ -1617,6 +1621,9 @@ static void e_yh_e_dead(e_yh_class* i_this) {
     
     switch (i_this->field_0x670) {
     case 0:
+#if TARGET_PC
+        dAlbwEnemyRupees_onEnemyKill(a_this);
+#endif
         i_this->field_0x844 = TREG_F(8) + 25.0f;
         cMtx_YrotS(*calc_mtx, i_this->field_0x684);
         local_a0.x = 0.0f;
