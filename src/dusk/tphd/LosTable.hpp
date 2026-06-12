@@ -25,6 +25,7 @@ int los_prev_floor(int roomNo);
 int los_floor_index(int roomNo);
 
 bool is_los_active();
+void set_los_next_stage();
 
 }
 

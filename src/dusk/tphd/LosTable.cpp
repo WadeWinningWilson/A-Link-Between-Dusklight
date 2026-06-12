@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "aurora/lib/logging.hpp"
+#include "d/actor/d_a_player.h"
 #include "dusk/endian.h"
 
 static aurora::Module LosLog("dusk::tphd::los");
@@ -122,6 +123,13 @@ bool is_los_active() {
     return tphd_active() &&
            los_loaded() &&
            std::strcmp(dComIfGp_getStartStageName(), "D_SB11") == 0;
+}
+
+void set_los_next_stage() {
+    dComIfGp_setNextStage("D_SB11", 0, 19, -1, 0.0f, 0, 1, 0, 0, 1, 0);
+    g_dComIfG_gameInfo.info.getRestart().setLastSceneInfo(20.0f, 0, 0);
+    dComIfGs_setTurnRestart(dComIfGs_getTurnRestartPos(), 0, 0, daPy_py_c::setParamData(0, 1, 0xCA, 0));
+    dComIfGs_setLife(dComIfGs_getMaxLife());
 }
 
 }  // namespace dusk::tphd
