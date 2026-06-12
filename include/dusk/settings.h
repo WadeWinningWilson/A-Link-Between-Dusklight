@@ -155,6 +155,8 @@ struct UserSettings {
         ConfigVar<bool> shieldDurability;
         // Halve wallet on death and spawn a Tear-of-Light recovery orb (F_0625 gate unchanged).
         ConfigVar<bool> deathRecoveryOrb;
+        // Wolf charge economy, field attack damage/stun, bite healing. Off = vanilla TP wolf.
+        ConfigVar<bool> wolfLinkCombat;
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================

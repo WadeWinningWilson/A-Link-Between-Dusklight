@@ -8,6 +8,7 @@
 #include "d/dolzel.h" // IWYU pragma: keep
 #include "d/d_albw_shield.h"
 #include "d/d_albw_hp_mult.h"
+#include "d/d_albw_wolf_combat.h"
 #include "d/actor/d_a_alink.h"
 #include "d/d_com_inf_game.h"
 #include "d/d_item_data.h"
@@ -975,6 +976,18 @@ bool dShield_isBashSpendChainActive() {
 void dShield_drawBashCharges() {
     daAlink_c* link = daAlink_getAlinkActorClass();
     updateShieldHudLinger(link);
+
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Wolf charge icons occupy this row during wolf form.
+    // Suppress spur rendering for that window; they return on transform back.
+    // ============================================
+    if (daPy_py_c::checkNowWolf() && dAlbwWolfCombat_isEnabled()) {
+        return;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
 
     if (!shouldShowBashHud() || !ensureBashHud()) {
         return;

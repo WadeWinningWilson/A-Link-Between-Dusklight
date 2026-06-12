@@ -101,39 +101,41 @@ dAlbwHP_Category dAlbwHP_getCategory(s16 profName) {
     return dAlbwHP_NORMAL;
 }
 
+static int getCategoryMult(dAlbwHP_Category cat) {
+    if (cat == dAlbwHP_EXCLUDED) {
+        return 1;
+    }
+
+    const auto& g = dusk::getSettings().game;
+    switch (cat) {
+    case dAlbwHP_NORMAL:
+        return g.hpMultNormal.getValue();
+    case dAlbwHP_MID_BOSS:
+        return g.hpMultMidBoss.getValue();
+    case dAlbwHP_BOSS:
+        return g.hpMultBoss.getValue();
+    case dAlbwHP_FINAL:
+        return g.hpMultFinalBoss.getValue();
+    default:
+        return 1;
+    }
+}
+
 int dAlbwHP_applyMult(s16 profName, int attackPower) {
     if (attackPower <= 0) {
         return attackPower;
     }
 
-    dAlbwHP_Category cat = dAlbwHP_getCategory(profName);
-    if (cat == dAlbwHP_EXCLUDED) {
-        return attackPower;
-    }
-
-    int mult = 1;
-    const auto& g = dusk::getSettings().game;
-    switch (cat) {
-    case dAlbwHP_NORMAL:
-        mult = g.hpMultNormal.getValue();
-        break;
-    case dAlbwHP_MID_BOSS:
-        mult = g.hpMultMidBoss.getValue();
-        break;
-    case dAlbwHP_BOSS:
-        mult = g.hpMultBoss.getValue();
-        break;
-    case dAlbwHP_FINAL:
-        mult = g.hpMultFinalBoss.getValue();
-        break;
-    default:
-        break;
-    }
-
+    const int mult = getCategoryMult(dAlbwHP_getCategory(profName));
     if (mult <= 1) {
         return attackPower;
     }
     return std::max(1, attackPower / mult);
+}
+
+int dAlbwHP_getRawMult(s16 profName) {
+    const int mult = getCategoryMult(dAlbwHP_getCategory(profName));
+    return mult > 1 ? mult : 1;
 }
 
 u16 dAlbwHP_applyDurabilityMult(s16 profName, u16 damage) {

@@ -9,6 +9,7 @@
 #include "d/actor/d_a_alink.h"
 #include "d/actor/d_a_player.h"
 #include "d/actor/d_a_obj_drop.h"
+#include "SSystem/SComponent/c_m3d.h"
 #include "d/d_bg_s.h"
 #include "d/d_com_inf_game.h"
 #include "dusk/settings.h"
@@ -35,11 +36,18 @@ static fpc_ProcID sOrbActorId         = fpcM_ERROR_PROCESS_ID_e;
 static char      sOrbStage[32]   = {};
 static int       sOrbRoom        = -1;
 static cXyz      sOrbPos         = { 0.0f, 0.0f, 0.0f };
+static f32       sOrbRefY        = 0.0f;
+static bool      sOrbSnapshotValid = false;
 
 // ym_swbit=0xFF → daObjDrop_c::modeInit spawns floating tear without a shadow insect parent.
 static constexpr u32 kRecoveryDropParams = 0x0000FF00u;
 // Slightly above Link's head so the particle glow reads clearly at a distance.
 static constexpr f32 kOrbFloatAboveGround = 135.0f;
+// Actor pos below this is treated as void/kill-plane garbage, not walkable height.
+static constexpr f32 kVoidPosY = -500.0f;
+// GroundCross more than this far below the death reference is a lower floor layer.
+static constexpr f32 kMaxGroundBelowRef = 120.0f;
+static constexpr f32 kFeetBelowEyes = 90.0f;
 
 static bool sTearRenderFlagWasSet[3] = {};
 
@@ -154,10 +162,74 @@ static void clearLinkTearCollectEffect() {
     }
 }
 
+static bool isValidGroundY(f32 groundY) {
+    return groundY > -G_CM3D_F_INF + 1.0f;
+}
+
+static f32 resolveReferenceY(const daAlink_c* link) {
+    f32 refY = link->current.pos.y;
+
+    if (link->mLinkAcch.ChkGroundHit()) {
+        const f32 groundH = link->mLinkAcch.GetGroundH();
+        if (isValidGroundY(groundH)) {
+            return groundH;
+        }
+    } else if (dComIfG_Bgsp().ChkPolySafe(link->mLinkAcch.m_gnd)) {
+        const f32 groundH = link->mLinkAcch.GetGroundH();
+        if (isValidGroundY(groundH)) {
+            return groundH;
+        }
+    }
+
+    if (refY >= kVoidPosY) {
+        return refY;
+    }
+
+    if (link->eyePos.y >= kVoidPosY) {
+        return link->eyePos.y - kFeetBelowEyes;
+    }
+    if (link->old.pos.y >= kVoidPosY) {
+        return link->old.pos.y;
+    }
+    if (link->field_0x33c8 >= kVoidPosY) {
+        return link->field_0x33c8;
+    }
+
+    return refY;
+}
+
+static f32 resolveOrbFloorY(f32 x, f32 z, f32 refY) {
+    cXyz probe(x, refY, z);
+    dBgS_GndChk gnd;
+    gnd.SetPos(&probe);
+    const f32 groundY = dComIfG_Bgsp().GroundCross(&gnd);
+    if (!isValidGroundY(groundY)) {
+        return refY;
+    }
+    if (groundY < refY - kMaxGroundBelowRef) {
+        return refY;
+    }
+    return groundY;
+}
+
 }  // namespace
 
 bool dALBWDeathRupees_isEnabled() {
     return dusk::getSettings().game.deathRecoveryOrb.getValue();
+}
+
+void dALBWDeathRupees_onLinkDeathBegin(daAlink_c* link) {
+    if (link == NULL) {
+        sOrbSnapshotValid = false;
+        return;
+    }
+
+    sOrbPos.x = link->current.pos.x;
+    sOrbPos.z = link->current.pos.z;
+    sOrbRefY  = resolveReferenceY(link);
+    sOrbPos.y = sOrbRefY;
+    sOrbRoom  = fopAcM_GetRoomNo(link);
+    sOrbSnapshotValid = true;
 }
 
 void dALBWDeathRupees_applyHalvingOnDeath() {
@@ -166,8 +238,21 @@ void dALBWDeathRupees_applyHalvingOnDeath() {
     }
 
     sLastLostRupees = 0;
+
+    const bool hadSnapshot = sOrbSnapshotValid;
+    const cXyz savedPos      = sOrbPos;
+    const f32  savedRefY     = sOrbRefY;
+    const int  savedRoom     = sOrbRoom;
+
     clearOrbState();
     orbDebugReset();
+
+    if (hadSnapshot) {
+        sOrbPos             = savedPos;
+        sOrbRefY            = savedRefY;
+        sOrbRoom            = savedRoom;
+        sOrbSnapshotValid   = true;
+    }
 
     const u16 wallet = dComIfGs_getRupee();
     if (wallet == 0) {
@@ -186,18 +271,21 @@ void dALBWDeathRupees_applyHalvingOnDeath() {
         return;
     }
 
-    daPy_py_c* link = daPy_getLinkPlayerActorClass();
-    if (!link) {
-        orbDebugLog("death: no link actor\n");
-        return;
-    }
+    if (!sOrbSnapshotValid) {
+        daAlink_c* link = daAlink_getAlinkActorClass();
+        if (link == NULL) {
+            orbDebugLog("death: no link actor and no death snapshot\n");
+            return;
+        }
 
-    sOrbPos  = link->current.pos;
-    // Gameover can leave Link below the floor; prefer the last in-bounds Y.
-    if (link->old.pos.abs(sOrbPos) > 1.0f && link->old.pos.y > sOrbPos.y) {
-        sOrbPos.y = link->old.pos.y;
+        sOrbPos.x = link->current.pos.x;
+        sOrbPos.z = link->current.pos.z;
+        sOrbRefY  = resolveReferenceY(link);
+        sOrbPos.y = sOrbRefY;
+        sOrbRoom  = fopAcM_GetRoomNo(link);
+        orbDebugLog("death: missing snapshot, fallback refY=%.1f actorY=%.1f\n", sOrbRefY,
+                    link->current.pos.y);
     }
-    sOrbRoom = fopAcM_GetRoomNo(link);
     // Death stage: lastPlay is authoritative at gameover (see d_gameover.cpp Oocoo hook).
     // Room spawn uses getStartStageName() once the target stage is loading.
     const char* stage = dComIfGp_getLastPlayStageName();
@@ -220,11 +308,12 @@ void dALBWDeathRupees_applyHalvingOnDeath() {
 
     orbDebugLog(
         "death: wallet=%u lost=%u kept=%u recovery=%u stage=%s startStage=%s lastStage=%s "
-        "room=%d pos=(%.1f,%.1f,%.1f)\n",
+        "room=%d pos=(%.1f,%.1f,%.1f) refY=%.1f snapshot=%d\n",
         (unsigned)wallet, (unsigned)lost, (unsigned)kept, (unsigned)sOrbRecovery, sOrbStage,
         dComIfGp_getStartStageName() ? dComIfGp_getStartStageName() : "(null)",
         dComIfGp_getLastPlayStageName() ? dComIfGp_getLastPlayStageName() : "(null)", sOrbRoom,
-        sOrbPos.x, sOrbPos.y, sOrbPos.z);
+        sOrbPos.x, sOrbPos.y, sOrbPos.z, sOrbRefY, sOrbSnapshotValid ? 1 : 0);
+    sOrbSnapshotValid = false;
     OS_REPORT("ALBW death orb: lost=%u recovery=%u stage=%s room=%d pos=(%.1f,%.1f,%.1f)\n",
               (unsigned)sLastLostRupees, (unsigned)sOrbRecovery, sOrbStage, sOrbRoom, sOrbPos.x,
               sOrbPos.y, sOrbPos.z);
@@ -342,17 +431,8 @@ void dALBWDeathRupees_finishRecoveryDropSetup(daObjDrop_c* drop) {
         return;
     }
 
-    // Place at death height — GroundCross often hits room floor far below ledges/upper floors.
-    cXyz pos = sOrbPos;
-    pos.y    = sOrbPos.y + kOrbFloatAboveGround;
-    if (pos.y < 80.0f) {
-        pos.y = 80.0f;
-    }
-
-    // groundY logged only (not used for placement).
-    dBgS_GndChk gnd;
-    gnd.SetPos(&sOrbPos);
-    const f32 groundY = dComIfG_Bgsp().GroundCross(&gnd);
+    const f32 floorY = resolveOrbFloorY(sOrbPos.x, sOrbPos.z, sOrbRefY);
+    cXyz      pos(sOrbPos.x, floorY + kOrbFloatAboveGround, sOrbPos.z);
 
     drop->current.pos = pos;
     drop->home.pos    = pos;
@@ -380,9 +460,9 @@ void dALBWDeathRupees_finishRecoveryDropSetup(daObjDrop_c* drop) {
     const bool hasTearRes = pa && pa->hasSceneParticleRes(0x838B);
     const bool suppReady  = pa && pa->ensureTearSceneRes();
 
-    orbDebugLog("created: id=%u pos=(%.1f,%.1f,%.1f) groundY=%.1f bodyFx=%d/6 "
+    orbDebugLog("created: id=%u pos=(%.1f,%.1f,%.1f) refY=%.1f floorY=%.1f bodyFx=%d/6 "
                 "sceneJpc=Pscene%03d hasTearRes=%d suppRes=%d\n",
-                (unsigned)sOrbActorId, pos.x, pos.y, pos.z, groundY, bodyFx, sceneNo,
+                (unsigned)sOrbActorId, pos.x, pos.y, pos.z, sOrbRefY, floorY, bodyFx, sceneNo,
                 hasTearRes ? 1 : 0, suppReady ? 1 : 0);
 }
 

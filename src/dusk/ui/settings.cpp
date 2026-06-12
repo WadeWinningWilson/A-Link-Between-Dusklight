@@ -1160,6 +1160,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         // d_cc_uty.cpp so effective enemy health scales up without
         // touching any HP values directly.
         // ============================================
+        leftPane.add_section("ALBW Settings");
         leftPane.register_control(
             leftPane.add_child<NumberButton>(NumberButton::Props{
                 .key = "Enemy HP ×",
@@ -1293,6 +1294,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Always collect Rupees even if your Wallet is too full.");
         addOption("No Sword Recoil", getSettings().game.noSwordRecoil,
             "Link will not recoil when his sword hits walls.");
+        leftPane.add_section("ALBW Settings");
         addOption("Manual Shielding", getSettings().game.manualShielding,
             "Hold ZR to raise your shield without Z-target lock-on; move freely while guarding. "
             "Shield bash is ZR+B. Off preserves vanilla auto-guard on Z-target.");
@@ -1306,6 +1308,10 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "After Talo is rescued, dying halves your rupees and leaves a Tear of Light at the "
             "death spot to recover part of them. Off keeps your wallet unchanged and spawns no orb. "
             "Item strip and meter refill on death are unaffected.");
+        addOption("Wolf Link Combat", getSettings().game.wolfLinkCombat,
+            "ALBW wolf form: bite charges for Midna field attacks, twilight/non-twilight damage "
+            "split, non-twilight stun, and low-HP bite healing. Off uses vanilla Twilight Princess "
+            "wolf combat.");
         addOption("No 2nd Fish for Cat", getSettings().game.no2ndFishForCat,
             "Skip needing to catch a second fish for Sera's cat.");
         addOption("Button Fishing", getSettings().game.buttonFishing,

@@ -4580,6 +4580,19 @@ public:
     bool mIBChainInterpPrevValid;
     bool mIBChainInterpCurrValid;
     bool mIsRollstab = false;
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Wolf charge economy (gated on game.wolfLinkCombat). mWolfChargeCount: earned by wolf bites (5 bites =
+    // +1 charge, cap 2 base). mWolfBiteCount: running bite tally, resets at 5.
+    // mWolfSpendChainActive: set on first spend when ≥2 charges; allows
+    // chaining field attacks down to 0 before the chain closes.
+    // ============================================
+    u8   mWolfChargeCount      = 0;
+    u8   mWolfBiteCount        = 0;
+    bool mWolfSpendChainActive = false;
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
 #endif
 };  // Size: 0x385C
 

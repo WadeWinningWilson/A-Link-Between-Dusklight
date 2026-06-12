@@ -37,6 +37,12 @@ dAlbwHP_Category dAlbwHP_getCategory(s16 profName);
 // Returns attackPower unchanged when multiplier == 1 or category == EXCLUDED.
 int dAlbwHP_applyMult(s16 profName, int attackPower);
 
+// Returns the raw integer multiplier for profName's category (e.g. 2 for 2×).
+// Returns 1 when the multiplier is 1 or the category is EXCLUDED.
+// Used by wolf charge attack scaling so damage can be expressed as
+// base × hpMult × fraction instead of going through the divide-then-multiply path.
+int dAlbwHP_getRawMult(s16 profName);
+
 // Shield durability: mid-boss 1.5×, boss/final 2× on non-parry hits (final may get bespoke rules later).
 u16 dAlbwHP_applyDurabilityMult(s16 profName, u16 damage);
 

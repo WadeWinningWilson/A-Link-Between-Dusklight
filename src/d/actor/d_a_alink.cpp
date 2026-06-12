@@ -52,7 +52,11 @@
 #include "d/d_s_play.h"
 
 #if TARGET_PC
+#include "d/d_albw_death_rupee.h"
 #include "d/d_albw_shield.h"
+#include "d/d_albw_wolf_stun.h"
+#include "d/d_albw_wolf_combat.h"
+#include "d/d_albw_wolf_charge_hud.h"
 #include "dusk/action_bindings.h"
 #include "dusk/frame_interpolation.h"
 #include "dusk/settings.h"
@@ -18551,6 +18555,18 @@ int daAlink_c::execute() {
 
         checkLightSwordMtrl();
         (this->*mpProcFunc)();
+#if TARGET_PC
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Per-frame wolf stun timer tick. Decrements fpcM_PauseEnable timers
+        // set by the Midna field attack and releases expired entries.
+        // No-op when no enemies are currently stunned.
+        // ============================================
+        dAlbwWolfStun_update();
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+#endif
 
         if (!checkEndResetFlg0(ERFLG0_UNK_2000) && checkWindDashAnime()) {
             resetUpperAnime(UPPER_2, 3.0f);

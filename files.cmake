@@ -177,6 +177,8 @@ set(DOLZEL_FILES
         src/d/d_albw_ui_text.cpp
         src/d/d_albw_hp_mult.cpp
         src/d/d_albw_shield.cpp
+        src/d/d_albw_wolf_stun.cpp
+        src/d/d_albw_wolf_charge_hud.cpp
         src/d/d_kankyo.cpp
         src/d/d_kyeff.cpp
         src/d/d_kyeff2.cpp

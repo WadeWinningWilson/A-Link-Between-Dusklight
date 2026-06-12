@@ -18,6 +18,9 @@
 #include "dusk/settings.h"
 #include "d/actor/d_a_alink.h"
 #include "d/d_albw_hp_mult.h"
+#include "d/d_albw_wolf_stun.h"
+#include "d/d_albw_wolf_combat.h"
+#include "d/d_albw_wolf_charge_hud.h"
 #endif
 
 static int plCutLRC[58] = {
@@ -452,6 +455,49 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* i_enemy, dCcU_AtInfo* i_AtInfo) {
             i_AtInfo->mAttackPower =
                 dAlbwHP_applyMult(fopAcM_GetName(i_enemy), i_AtInfo->mAttackPower);
         }
+        // Wolf field attack damage modifier.
+        // Runs after all other attack-power adjustments (including the HP
+        // multiplier division above) so the split is applied to the
+        // fully-resolved value.
+        //
+        // The HP multiplier already divided mAttackPower by rawMult.
+        // To express charge damage as  base × rawMult × fraction  we
+        // multiply by rawMult² here, which cancels the division and then
+        // scales forward:  (base / rawMult) × rawMult² × fraction
+        //                = base × rawMult × fraction.
+        //
+        // Twilight enemies (shadow/dusk forms):  70 % of scaled damage,
+        //   no stun; these enemies feel weaker against wolf form.
+        // Non-twilight enemies:                  50 % of scaled damage,
+        //   compensated by the 300-frame stun dispatched after deduction.
+        //
+        // Zant excluded — his fight's phase scripts check AT_TYPE_WOLF_*
+        // for hit-timing hooks and must not have damage or stun modified.
+        // ============================================
+        if (dAlbwWolfCombat_isEnabled() &&
+            i_AtInfo->mAttackPower > 0 &&
+            i_AtInfo->mpCollider->ChkAtType(AT_TYPE_MIDNA_LOCK) &&
+            daPy_py_c::checkNowWolf() &&
+            fopAcM_GetGroup(i_enemy) == fopAc_ENEMY_e &&
+            fopAcM_GetName(i_enemy) != fpcNm_B_ZANT_e)
+        {
+            const int rawMult = dAlbwHP_getRawMult(fopAcM_GetName(i_enemy));
+            if (dAlbwWolfStun_isTwilightEnemy(fopAcM_GetName(i_enemy))) {
+                // Twilight: base × rawMult × 0.70, no stun
+                i_AtInfo->mAttackPower =
+                    (i_AtInfo->mAttackPower * rawMult * rawMult * 7) / 10;
+                if (i_AtInfo->mAttackPower < 1) {
+                    i_AtInfo->mAttackPower = 1;
+                }
+            } else {
+                // Non-twilight: base × rawMult × 0.50, stun applied below
+                i_AtInfo->mAttackPower =
+                    (i_AtInfo->mAttackPower * rawMult * rawMult * 5) / 10;
+                if (i_AtInfo->mAttackPower < 1) {
+                    i_AtInfo->mAttackPower = 1;
+                }
+            }
+        }
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================
@@ -490,6 +536,63 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* i_enemy, dCcU_AtInfo* i_AtInfo) {
             }
 #endif
         }
+
+#if TARGET_PC
+        // ============================================
+        // NEW CODE — ALBW Port
+        // Wolf bite charge accumulation and field attack stun dispatch.
+        //
+        // Bite tracking: 5 normal wolf bites (AT not MIDNA_LOCK) grant
+        // +1 charge (cap 2) and heal 1/4 heart when Link is at or below
+        // 50 % max HP.  Bites that deal 0 damage are ignored.
+        //
+        // Field attack stun: non-twilight enemies that survived the hit
+        // (health > 0 after deduction) are frozen via fpcM_PauseEnable
+        // for WOLF_STUN_FRAMES (300 frames).  Twilight enemies and Zant
+        // are excluded.
+        // ============================================
+        if (dAlbwWolfCombat_isEnabled() &&
+            fopAcM_GetGroup(i_enemy) == fopAc_ENEMY_e &&
+            fopAcM_GetName(i_enemy) != fpcNm_B_ZANT_e)
+        {
+            auto* link = static_cast<daAlink_c*>(daPy_getPlayerActorClass());
+            if (link != NULL && daPy_py_c::checkNowWolf()) {
+
+                // --- Wolf normal bite: charge accumulation ---
+                if (i_AtInfo->mHitType == HIT_TYPE_LINK_NORMAL_ATTACK &&
+                    !i_AtInfo->mpCollider->ChkAtType(AT_TYPE_MIDNA_LOCK) &&
+                    i_AtInfo->mAttackPower > 0)
+                {
+                    link->mWolfBiteCount++;
+                    if (link->mWolfBiteCount >= 5) {
+                        link->mWolfBiteCount = 0;
+                        if (link->mWolfChargeCount < 2) {
+                            link->mWolfChargeCount++;
+                            dAlbwWolfChargeHud_notify();
+                        }
+                        // Heal 1/4 heart when at or below 50 % max HP
+                        const u16 curHP = dComIfGs_getLife();
+                        const u16 maxHP = dComIfGs_getMaxLifeGauge();
+                        if (curHP * 2 <= maxHP) {
+                            dComIfGp_setItemLifeCount(1.0f, 0);
+                        }
+                    }
+                }
+
+                // --- Wolf field attack: stun non-twilight survivors ---
+                if (i_AtInfo->mpCollider->ChkAtType(AT_TYPE_MIDNA_LOCK) &&
+                    i_AtInfo->mAttackPower > 0 &&
+                    i_enemy->health > 0 &&
+                    !dAlbwWolfStun_isTwilightEnemy(fopAcM_GetName(i_enemy)))
+                {
+                    dAlbwWolfStun_apply(i_enemy);
+                }
+            }
+        }
+        // ============================================
+        // NEW CODE ENDS HERE
+        // ============================================
+#endif
 
         int uvar8;
         if (i_AtInfo->mpCollider->ChkAtType(AT_TYPE_HOOKSHOT) &&

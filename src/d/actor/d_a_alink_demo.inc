@@ -2919,6 +2919,10 @@ int daAlink_c::procCoDeadInit(int param_0) {
         return 1;
     }
 
+#if TARGET_PC
+    dALBWDeathRupees_onLinkDeathBegin(this);
+#endif
+
     dComIfGp_event_compulsory(this, NULL, 0xFFFF);
     mDemo.setSpecialDemoType();
     mNormalSpeed = 0.0f;

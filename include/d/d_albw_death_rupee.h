@@ -11,8 +11,13 @@
 
 class fopAc_ac_c;
 
+class daAlink_c;
+
 // True when the Death Recovery Orb setting is enabled (Dusk settings menu).
 bool dALBWDeathRupees_isEnabled();
+
+// Record death X/Z and floor reference Y at procCoDeadInit (before game-over corrupts pos).
+void dALBWDeathRupees_onLinkDeathBegin(daAlink_c* link);
 
 // Apply (wallet + 1) / 2 rupee loss; records amount lost and queues orb spawn.
 void dALBWDeathRupees_applyHalvingOnDeath();

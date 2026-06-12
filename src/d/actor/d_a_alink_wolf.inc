@@ -7190,6 +7190,39 @@ int daAlink_c::procWolfRollAttackMove() {
         if (mProcVar0.field_0x3008 == 0) {
             if (mWolfLockNum != 0) {
                 resetCombo(TRUE);
+#if TARGET_PC
+                // ============================================
+                // NEW CODE — ALBW Port
+                // Gate Midna field attack on wolf charge economy.
+                // Opening a chain requires ≥2 charges; once open the chain
+                // can continue until charges reach 0.
+                // On insufficient charges: play the ALBW deny sound and fall
+                // through to a normal roll attack instead.
+                // ============================================
+                {
+                    if (dAlbwWolfCombat_isEnabled()) {
+                        const bool canOpen  = (mWolfChargeCount >= 2);
+                        const bool canChain = mWolfSpendChainActive;
+                        if (!canOpen && !canChain) {
+                            Z2GetAudioMgr()->seStart(Z2SE_SY_ITEM_USE_CANCEL, NULL,
+                                                     0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
+                            dAlbwWolfChargeHud_notifyDeny();
+                            return procWolfRollAttackInit(1, 0);
+                        }
+                        if (!mWolfSpendChainActive) {
+                            mWolfSpendChainActive = true;
+                        }
+                        mWolfChargeCount--;
+                        if (mWolfChargeCount == 0) {
+                            mWolfSpendChainActive = false;
+                        }
+                        dAlbwWolfChargeHud_notify();
+                    }
+                }
+                // ============================================
+                // NEW CODE ENDS HERE
+                // ============================================
+#endif
                 return procWolfLockAttackInit(0);
             } else {
                 return procWolfRollAttackInit(1, 0);
@@ -7203,6 +7236,29 @@ int daAlink_c::procWolfRollAttackMove() {
         mProcVar0.field_0x3008--;
 
         if (mProcVar0.field_0x3008 == 0 && checkWolfLockAttackChargeState()) {
+#if TARGET_PC
+            // ============================================
+            // NEW CODE — ALBW Port
+            // Gate the Midna charge state at dome formation, not just at
+            // launch.  Without the dome, mEquipItem never becomes 0x109,
+            // so no enemies are locked and holding the button behaves like
+            // vanilla pre-Midna-charge wolf (release = normal roll attack).
+            // Opening requires ≥2 charges; an active spend chain may
+            // continue below that.  On insufficient charges play the same
+            // deny sound as the shield bash system (once, on the frame the
+            // dome would have appeared).
+            // ============================================
+            if (dAlbwWolfCombat_isEnabled() &&
+                mWolfChargeCount < 2 && !mWolfSpendChainActive)
+            {
+                Z2GetAudioMgr()->seStart(Z2SE_SY_ITEM_USE_CANCEL, NULL,
+                                         0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
+                dAlbwWolfChargeHud_notifyDeny();
+            } else
+            // ============================================
+            // NEW CODE ENDS HERE
+            // ============================================
+#endif
             setWolfLockDomeModel();
         }
     } else {

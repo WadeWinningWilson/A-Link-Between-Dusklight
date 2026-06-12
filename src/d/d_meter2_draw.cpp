@@ -26,6 +26,7 @@
 #include <cstring>
 #if TARGET_PC
 #include "d/d_albw_shield.h"
+#include "d/d_albw_wolf_charge_hud.h"
 #include "JSystem/JUtility/TColor.h"
 #endif
 
@@ -820,8 +821,9 @@ void dMeter2Draw_c::draw() {
     }
 
 #if TARGET_PC
-    // Draw after the rest of the HUD so spur icons sit above rupees / buttons.
+    // Draw after the rest of the HUD so charge/spur icons sit above rupees / buttons.
     if (!dComIfGp_isPauseFlag() && dComIfGp_isHeapLockFlag() != 6) {
+        dAlbwWolfChargeHud_draw();
         dShield_drawBashCharges();
     }
 #endif
