@@ -828,8 +828,7 @@ void rebuild_hd_overlay_locked() {
         if (!regularFile) continue;
 
         const auto& arcPath = it->path();
-        const std::string filename = arcPath.filename().string();
-
+        
         const auto rel = arcPath.lexically_relative(g_contentPath);
         const std::string resPath = rel.generic_string();
         if (resPath.empty()) continue;
@@ -889,7 +888,7 @@ void rebuild_hd_overlay_locked() {
         g_entryNumToOverlay()[overlayEntryNums[i]] = entry;
     }
 
-    HdLog.info("HD DVD overlay registered {} arcs from {}",
+    HdLog.info("HD DVD overlay registered {} files (arcs, .jpc and Audiores) from {}",
                overlayFiles.size(), g_contentPath.string());
 }
 

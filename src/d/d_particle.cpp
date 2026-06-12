@@ -1737,16 +1737,6 @@ u32 dPa_control_c::set(u32 param_0, u8 param_1, u16 param_2, cXyz const* pos,
     u8 uVar7 = getRM_ID(param_2);
     JPAResourceManager* this_01 = mEmitterMng->getResourceManager(uVar7);
 
-#if TARGET_PC
-    // A scene particle (id & 0x8000) was requested but this stage has no scene resource
-    // manager: its STAG mParticleNo is 0xFF, so readScene/createRoomScene never ran (the scene
-    // bank is bank 1). D_SB11 is such a stage. Returning 0 (do not emit) is the correct response
-    // to a missing bank — emitting would deref a NULL JPAResourceManager.
-    if (this_01 == NULL) {
-        return 0;
-    }
-#endif
-
     u32 uVar3 = this_01->getResUserWork(param_2);
     if (this_00 != NULL) {
         if (param_2 == this_00->getNameId()) {

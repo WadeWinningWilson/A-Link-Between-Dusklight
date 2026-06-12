@@ -811,7 +811,14 @@ u32 dMsgObject_c::getMessageIndexAlways(u32 param_0) {
 }
 
 u32 dMsgObject_c::getMessageIDAlways(u32 param_0) {
-    return ((JMSMesgInfo_c*)((u8*)mpMsgRes + 0x20))->entries[param_0].message_id;
+    JMSMesgInfo_c* info = (JMSMesgInfo_c*)((u8*)mpMsgRes + 0x20);
+#if TARGET_PC
+    // 32-bit console wrap: HD r00_in.stb passes top-bit indices (0x80000000|idx)
+    u32 off = (u32)param_0 * (u32)sizeof(JMSMesgEntry_c);
+    return ((JMSMesgEntry_c*)((u8*)info->entries + off))->message_id;
+#else
+    return info->entries[param_0].message_id;
+#endif
 }
 
 s16 dMsgObject_c::getMessageGroup(u32 param_0) {
