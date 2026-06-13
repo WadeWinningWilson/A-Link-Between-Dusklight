@@ -2616,7 +2616,8 @@ int dMsgFlow_c::event035(mesg_flow_node_event* i_flowNode_p, fopAc_ac_c* i_speak
     if (prm0 == dItemNo_TOMATO_PUREE_e || prm0 == dItemNo_TASTE_e) {
         dComIfGs_offItemFirstBit(prm0);
     } else if (prm0 == dItemNo_RAFRELS_MEMO_e || prm0 == dItemNo_ASHS_SCRIBBLING_e) {
-        IF_DUSK(if (!randomizer_IsActive())) // Prevents the line below from running in rando
+        // Only delete the item in rando if it's Ashei's sketch
+        IF_DUSK(if (!randomizer_IsActive() || prm0 == dItemNo_ASHS_SCRIBBLING_e))
         dComIfGs_setItem(SLOT_19, dItemNo_NONE_e);
     } else if (prm0 == dItemNo_LETTER_e || prm0 == dItemNo_BILL_e || prm0 == dItemNo_WOOD_STATUE_e || prm0 == dItemNo_IRIAS_PENDANT_e) {
 #if TARGET_PC
