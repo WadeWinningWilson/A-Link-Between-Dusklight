@@ -10,6 +10,10 @@
 #include "d/d_meter2_info.h"
 #include <cstring>
 
+#if TARGET_PC
+#include "d/d_albw_master_quest.h"
+#endif
+
 static void (*item_func_ptr[256])() = {
     item_func_HEART,
     item_func_GREEN_RUPEE,
@@ -724,10 +728,25 @@ void item_func_SMALL_KEY() {
 }
 
 void item_func_KAKERA_HEART() {
+#if TARGET_PC
+    if (dAlbwMQ_isEnabled()) {
+        dAlbwMQ_applyPieceHeartGrant();
+        return;
+    }
+#endif
     dComIfGp_setItemMaxLifeCount(1);
 }
 
 void item_func_UTUWA_HEART() {
+#if TARGET_PC
+    if (dAlbwMQ_isEnabled()) {
+        dAlbwMQ_applyContainerHeartGrant();
+        stage_stag_info_class* stag_info = dComIfGp_getStageStagInfo();
+        dStage_stagInfo_GetSaveTbl(stag_info);
+        dComIfGs_onStageLife();
+        return;
+    }
+#endif
     dComIfGp_setItemMaxLifeCount(5);
 
     f32 max_life = dComIfGs_getMaxLifeGauge();

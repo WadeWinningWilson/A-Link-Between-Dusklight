@@ -161,6 +161,8 @@ struct UserSettings {
         ConfigVar<bool> wolfLinkCombat;
         // Direct wallet credit on enemy kill and boss fight victory (additive; vanilla drops unchanged).
         ConfigVar<bool> enemyDeathRupees;
+        // Master Quest: Postman heart/stamina upgrades; halved heart container/piece grants.
+        ConfigVar<bool> masterQuest;
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================

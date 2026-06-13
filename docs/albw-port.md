@@ -25,7 +25,7 @@ Pause menu → **Quality of Life** → **ALBW Settings** (single section):
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Enemy HP ×** (Normal / Mid-Boss / Boss / Final Boss) | 1× each | Scales effective enemy HP by dividing incoming attack power in `d_cc_uty.cpp` (1–16× per category). |
+| **Enemy HP ×** (Normal / Mid-Boss / Boss / Final Boss) | 1× each | Scales effective enemy HP by dividing incoming attack power in `d_cc_uty.cpp` (1–16× per category). *Planned: true max-HP scaling — see [Next on the docket](#next-on-the-docket).* |
 | **No Ammo Drops** | On | Bombs, arrows, and seeds no longer drop from enemies; magic pickups replace them. |
 | **Manual Shielding** | Off | Hold **ZR** to guard without Z-target lock-on; **ZR+B** shield bash. Off = vanilla auto-guard on Z-target. |
 | **Shield Parry & Bash Charges** | On | Perfect-guard timing earns bash charges and ALBW meter; failed blocks cost meter and charges. Off = traditional TP guard. |
@@ -157,6 +157,37 @@ When **Enemy Death Rupees** is on:
 | [shield-combat.md](shield-combat.md) | Shield design, Dawnlight port notes, playtest checklist |
 | [albw-death-recovery-orb-brief.md](albw-death-recovery-orb-brief.md) | Death orb state machine and spawn rules |
 | [albw-shop-icon-alignment.md](albw-shop-icon-alignment.md) | Shop row icons, footer layout constraints |
+
+---
+
+## Next on the docket
+
+Planned work after v0.55, in rough priority order:
+
+### 1. Health & ALBW meter upgrades (Postman shop)
+
+Extend **Postman's Lending Service** (or a dedicated shop mode) so Link can **buy permanent upgrades** — not rentals:
+
+- **Heart containers / health** — increase max HP (ALBW-style progression).
+- **ALBW meter capacity** — increase max stamina (ties into existing `sOilMaxVar` / meter expansion hooks).
+
+**Economy model:** *Lies of P* / *Dark Souls*–style leveling — **each purchase costs more** based on how many upgrades Link already has (separate curves for hearts vs meter tiers). Price should read from current heart count and current meter ceiling, not flat catalog rows like the 13 rental items.
+
+**Touch points (starting points):** `d_albw_rental.cpp` / `d_albw_shop.cpp` (catalog + purchase flow), `d_com_inf_game.cpp` / save flags for heart pieces, `d_meter2.cpp` for meter max, wallet checks via existing rupee APIs.
+
+### 2. Actual enemy HP multiplier
+
+Replace (or offer alongside) today's **attack-power division** intercept in `dAlbwHP_applyMult()` with **real max-HP scaling** on enemies at spawn or init — so 16× means 16× HP without integer-division plateaus or the `max(1, …)` floor distorting time-to-kill.
+
+**Why:** Current divide-by-mult approach saturates early on normal sword hits (see maintainer discussion: damage hits 1 per hit once multiplier ≥ ⌊attackPower/2⌋ + 1). True HP mult keeps high slider values meaningful across all attack strengths.
+
+**Touch points:** `d_albw_hp_mult.cpp`, enemy init paths (`health` / `mMaxHp` fields per actor), `d_cc_uty.cpp` (remove or gate divide path), wolf charge scaling in `d_cc_uty.cpp` (today uses `dAlbwHP_getRawMult()` to undo the divide).
+
+### 3. Zant & Ganon boss changes
+
+ALBW-specific fight tuning for the **Zant** and **Ganon / Ganondorf** finale — phase scripts, damage expectations, and durability rules that still treat Zant as excluded from wolf combat overrides (`fpcNm_B_ZANT_e` in `d_cc_uty.cpp`).
+
+**Scope TBD:** document desired phase behavior, HP category overrides, and any bespoke parry/durability rules before implementation. Final-boss category already exists in `d_albw_hp_mult.cpp` (`sFinalBoss` list).
 
 ---
 

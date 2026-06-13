@@ -37,9 +37,10 @@
 #include <cstring>
 
 #include "d/d_albw_oocoo.h"
+#include "d/d_albw_master_quest.h"
 #include "d/d_com_inf_game.h"
-#include "d/d_meter2_info.h"
 #include "d/d_item_data.h"
+#include "d/d_meter2_info.h"
 #include "dusk/ui/ui.hpp"
 #include "m_Do/m_Do_controller_pad.h"
 // ============================================
@@ -172,7 +173,9 @@ static ALBWRentalState sState = STATE_CLOSED;
 // purchasable == true  → eligible AND not owned → real name, can press A
 // purchasable == false → not eligible yet       → shown as "?????"
 enum VisibleKind {
-    VISIBLE_ITEM = 0,
+    VISIBLE_MQ_HEART = 0,
+    VISIBLE_MQ_METER,
+    VISIBLE_ITEM,
     VISIBLE_OOCOO,
 };
 
@@ -182,16 +185,18 @@ struct VisibleEntry {
     bool        purchasable;
 };
 
-static VisibleEntry sVisibleList[kItemCount + 1];
+static constexpr int kVisibleListMax = 2 + kItemCount + 1;
+static VisibleEntry sVisibleList[kVisibleListMax];
 static int          sVisibleCount     = 0;  // total rows shown (inc. ?????)
 static int          sAvailCount       = 0;  // purchasable rows only (for button state)
 static int          sSelectedIdx      = 0;
 static bool         sPurchasedThisSession = false;
 
-// Status message shown inside the shop window (purchase result etc.).
-// Uses a chrono expiry so duration is framerate-independent.
-// sStatusTimer kept only as a bool-style "is message active" flag for
-// the navigation gate in tick(); the actual display check uses the clock.
+// Post-purchase cooldown: blocks A only (navigation stays live). Short window
+// for fanfare/feedback before the next buy.
+static constexpr auto kPurchaseCooldownSuccess = std::chrono::seconds(2);
+static constexpr auto kPurchaseCooldownFailure = std::chrono::seconds(1);
+
 static const char*       sStatusMsg    = nullptr;
 static clock::time_point sStatusExpiry;
 
@@ -270,6 +275,25 @@ static bool hasAnyEligible() {
 static void rebuildVisibleList() {
     sVisibleCount = 0;
     sAvailCount   = 0;
+
+    if (dAlbwMQ_isEnabled()) {
+        sVisibleList[sVisibleCount].kind        = VISIBLE_MQ_HEART;
+        sVisibleList[sVisibleCount].kItemsIdx   = -1;
+        sVisibleList[sVisibleCount].purchasable = dAlbwMQ_canPurchaseHeartShop();
+        if (sVisibleList[sVisibleCount].purchasable) {
+            sAvailCount++;
+        }
+        sVisibleCount++;
+
+        sVisibleList[sVisibleCount].kind        = VISIBLE_MQ_METER;
+        sVisibleList[sVisibleCount].kItemsIdx   = -1;
+        sVisibleList[sVisibleCount].purchasable = dAlbwMQ_canPurchaseMeterShop();
+        if (sVisibleList[sVisibleCount].purchasable) {
+            sAvailCount++;
+        }
+        sVisibleCount++;
+    }
+
     for (int i = 0; i < kItemCount; ++i) {
         const ALBWRentalEntry& entry = kItems[i];
         // ============================================
@@ -318,14 +342,56 @@ static void tryPurchase(int visIdx) {
         return;
     }
     if (!sVisibleList[visIdx].purchasable) {
-        return;  // ????? row — not purchasable yet
+        return;
+    }
+
+    if (sVisibleList[visIdx].kind == VISIBLE_MQ_HEART) {
+        const int price = dAlbwMQ_getHeartShopPrice(dAlbwMQ_getHeartShopTier());
+        u16 rupees      = dComIfGs_getRupee();
+        if (rupees < (u16)price) {
+            sStatusMsg          = "Sincerest apologies, but we can't return\nthat to you for that little..";
+            sStatusExpiry       = clock::now() + kPurchaseCooldownFailure;
+            sJustFailedPurchase = true;
+            return;
+        }
+        if (!dAlbwMQ_tryPurchaseHeartShop()) {
+            return;
+        }
+        dComIfGs_setRupee(rupees - (u16)price);
+        sPurchasedThisSession = true;
+        sJustPurchased        = true;
+        sStatusMsg            = "Your health will thank you.\nThank you for your patronage!";
+        sStatusExpiry         = clock::now() + kPurchaseCooldownSuccess;
+        rebuildVisibleList();
+        return;
+    }
+
+    if (sVisibleList[visIdx].kind == VISIBLE_MQ_METER) {
+        const int price = dAlbwMQ_getMeterShopPrice(dAlbwMQ_getMeterShopTier());
+        u16 rupees      = dComIfGs_getRupee();
+        if (rupees < (u16)price) {
+            sStatusMsg          = "Sincerest apologies, but we can't return\nthat to you for that little..";
+            sStatusExpiry       = clock::now() + kPurchaseCooldownFailure;
+            sJustFailedPurchase = true;
+            return;
+        }
+        if (!dAlbwMQ_tryPurchaseMeterShop()) {
+            return;
+        }
+        dComIfGs_setRupee(rupees - (u16)price);
+        sPurchasedThisSession = true;
+        sJustPurchased        = true;
+        sStatusMsg            = "May your stamina carry you far.\nThank you for your patronage!";
+        sStatusExpiry         = clock::now() + kPurchaseCooldownSuccess;
+        rebuildVisibleList();
+        return;
     }
 
     if (sVisibleList[visIdx].kind == VISIBLE_OOCOO) {
         if (!dALBWOocoo_tryPurchase()) {
             sStatusMsg          = "Sincerest apologies, but we can't send the\n"
                                   "cuckoo out for that little..";
-            sStatusExpiry       = clock::now() + std::chrono::seconds(5);
+            sStatusExpiry       = clock::now() + kPurchaseCooldownFailure;
             sJustFailedPurchase = true;
             return;
         }
@@ -333,7 +399,7 @@ static void tryPurchase(int visIdx) {
         sJustPurchased        = true;
         sStatusMsg            = "Oocoo will carry you back when you leave the shop.\n"
                                 "Thank you for your patronage!";
-        sStatusExpiry         = clock::now() + std::chrono::seconds(6);
+        sStatusExpiry         = clock::now() + kPurchaseCooldownSuccess;
         rebuildVisibleList();
         return;
     }
@@ -342,7 +408,7 @@ static void tryPurchase(int visIdx) {
     u16 rupees = dComIfGs_getRupee();
     if (rupees < (u16)e.price) {
         sStatusMsg          = "Sincerest apologies, but we can't return\nthat to you for that little..";
-        sStatusExpiry       = clock::now() + std::chrono::seconds(5);
+        sStatusExpiry       = clock::now() + kPurchaseCooldownFailure;
         sJustFailedPurchase = true;  // triggers Z2SE_POST_V_RUN_HIGH in d_a_npc_post.cpp
         return;
     }
@@ -350,7 +416,7 @@ static void tryPurchase(int visIdx) {
     if (dMeter2_isShieldItem(e.itemNo)) {
         if (!dMeter2_canAcquireShield(e.itemNo)) {
             sStatusMsg    = "You can only carry one shield at a time.";
-            sStatusExpiry = clock::now() + std::chrono::seconds(5);
+            sStatusExpiry = clock::now() + kPurchaseCooldownFailure;
             return;
         }
         dMeter2_grantRentalShield(e.itemNo);
@@ -363,7 +429,7 @@ static void tryPurchase(int visIdx) {
     sPurchasedThisSession = true;
     sJustPurchased        = true;   // triggers Z2SE_POST_V_FANFARE in d_a_npc_post.cpp
     sStatusMsg    = "One step closer to becoming a Senior Postman.\nI can smell the fields now, thank you for your patronage!";
-    sStatusExpiry = clock::now() + std::chrono::seconds(6);
+    sStatusExpiry = clock::now() + kPurchaseCooldownSuccess;
     rebuildVisibleList();
 }
 
@@ -615,14 +681,14 @@ void dALBWRental_tick() {
     // tryPurchase() silently ignores ????? rows — A only works on real items.
     // sScrollToSelected tells dALBWShop_c to scroll its viewport to the
     // newly focused row so gamepad users never navigate off-screen.
-    if (sStatusMsg == nullptr && sVisibleCount > 0) {
+    if (sVisibleCount > 0) {
         if (mDoCPd_c::getTrigDown(PAD_1) && sSelectedIdx < sVisibleCount - 1) {
             sSelectedIdx++;
             sScrollToSelected = true;
         } else if (mDoCPd_c::getTrigUp(PAD_1) && sSelectedIdx > 0) {
             sSelectedIdx--;
             sScrollToSelected = true;
-        } else if (mDoCPd_c::getTrigA(PAD_1)) {
+        } else if (sStatusMsg == nullptr && mDoCPd_c::getTrigA(PAD_1)) {
             tryPurchase(sSelectedIdx);
         }
     }
@@ -638,7 +704,7 @@ void dALBWRental_tick() {
 // ============================================
 #if TARGET_PC_NATIVE_UI
     if (sStickNavCooldown > 0) --sStickNavCooldown;
-    if (sStatusMsg == nullptr && sVisibleCount > 0 && sStickNavCooldown == 0) {
+    if (sVisibleCount > 0 && sStickNavCooldown == 0) {
         const f32 stickY = mDoCPd_c::getStickY(PAD_1);
         if (stickY < -0.5f && sSelectedIdx < sVisibleCount - 1) {
             sSelectedIdx++;
@@ -669,15 +735,34 @@ void dALBWRental_tick() {
 // ">" cursor prefix and scroll its 6-row viewport to keep it visible.
 // ============================================
 const dALBWVisibleEntry* dALBWRental_getVisibleList(int* outCount) {
-    static dALBWVisibleEntry sPubList[sizeof(kItems)/sizeof(kItems[0]) + 1];
+    static dALBWVisibleEntry sPubList[kVisibleListMax];
     for (int i = 0; i < sVisibleCount; ++i) {
-        if (sVisibleList[i].kind == VISIBLE_OOCOO) {
+        if (sVisibleList[i].kind == VISIBLE_MQ_HEART) {
+            sPubList[i].name           = dAlbwMQ_getHeartShopName();
+            sPubList[i].price          = sVisibleList[i].purchasable
+                ? dAlbwMQ_getHeartShopPrice(dAlbwMQ_getHeartShopTier()) : 0;
+            sPubList[i].purchasable    = sVisibleList[i].purchasable;
+            sPubList[i].desc           = dAlbwMQ_getHeartShopDesc();
+            sPubList[i].itemNo         = (u8)dItemNo_KAKERA_HEART_e;
+            sPubList[i].isOocooService = false;
+            sPubList[i].showNameWhenSoldOut = true;
+        } else if (sVisibleList[i].kind == VISIBLE_MQ_METER) {
+            sPubList[i].name           = dAlbwMQ_getMeterShopName();
+            sPubList[i].price          = sVisibleList[i].purchasable
+                ? dAlbwMQ_getMeterShopPrice(dAlbwMQ_getMeterShopTier()) : 0;
+            sPubList[i].purchasable    = sVisibleList[i].purchasable;
+            sPubList[i].desc           = dAlbwMQ_getMeterShopDesc();
+            sPubList[i].itemNo         = (u8)dItemNo_MAGIC_LV1_e;
+            sPubList[i].isOocooService = false;
+            sPubList[i].showNameWhenSoldOut = true;
+        } else if (sVisibleList[i].kind == VISIBLE_OOCOO) {
             sPubList[i].name           = dALBWOocoo_getServiceName();
             sPubList[i].price          = dALBWOocoo_getServicePrice();
             sPubList[i].purchasable    = true;
             sPubList[i].desc           = dALBWOocoo_getServiceDesc();
             sPubList[i].itemNo         = (u8)dItemNo_DUNGEON_BACK_e;
             sPubList[i].isOocooService = true;
+            sPubList[i].showNameWhenSoldOut = false;
         } else {
             const ALBWRentalEntry& e = kItems[sVisibleList[i].kItemsIdx];
             sPubList[i].name           = e.name;
@@ -686,6 +771,7 @@ const dALBWVisibleEntry* dALBWRental_getVisibleList(int* outCount) {
             sPubList[i].desc           = sVisibleList[i].purchasable ? e.desc : nullptr;
             sPubList[i].itemNo         = e.itemNo;
             sPubList[i].isOocooService = false;
+            sPubList[i].showNameWhenSoldOut = false;
         }
     }
     *outCount = sVisibleCount;

@@ -1289,6 +1289,11 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================
+        leftPane.add_section("ALBW Master Quest");
+        addOption("Master Quest", getSettings().game.masterQuest,
+            "Recommended once per playthrough. Halves heart container and heart-piece "
+            "set rewards; adds Postman heart and stamina upgrades. Disables dungeon ALBW "
+            "meter growth in favor of shop purchases.");
         addSpeedrunDisabledOption(
             "Instant Death", getSettings().game.instantDeath, "Any hit will instantly kill you.");
         addSpeedrunDisabledOption("No Heart Drops", getSettings().game.noHeartDrops,

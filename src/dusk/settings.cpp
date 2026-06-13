@@ -44,6 +44,7 @@ UserSettings g_userSettings = {
         .deathRecoveryOrb {"game.deathRecoveryOrb", false},
         .wolfLinkCombat {"game.wolfLinkCombat", false},
         .enemyDeathRupees {"game.enemyDeathRupees", false},
+        .masterQuest {"game.masterQuest", false},
         .damageMultiplier {"game.damageMultiplier", 1},
         .hpMultNormal     {"game.hpMultNormal",     1},
         .hpMultMidBoss    {"game.hpMultMidBoss",    1},
@@ -241,6 +242,7 @@ void registerSettings() {
     Register(g_userSettings.game.deathRecoveryOrb);
     Register(g_userSettings.game.wolfLinkCombat);
     Register(g_userSettings.game.enemyDeathRupees);
+    Register(g_userSettings.game.masterQuest);
     Register(g_userSettings.game.damageMultiplier);
     Register(g_userSettings.game.hpMultNormal);
     Register(g_userSettings.game.hpMultMidBoss);

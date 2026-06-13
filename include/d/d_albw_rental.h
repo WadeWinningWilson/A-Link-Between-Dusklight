@@ -54,6 +54,7 @@ struct dALBWVisibleEntry {
     const char* desc;   ///< description string (null when purchasable==false)
     u8          itemNo; ///< wheel item id for row icon (letter icon when !purchasable)
     bool        isOocooService;  ///< Cuckoo's Return (not a rental item row)
+    bool        showNameWhenSoldOut;  ///< Master Quest rows: real name even when !purchasable
 };
 const dALBWVisibleEntry* dALBWRental_getVisibleList(int* outCount);
 #if TARGET_PC_NATIVE_UI

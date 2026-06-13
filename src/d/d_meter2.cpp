@@ -25,6 +25,7 @@
 #include <cstring>
 
 #if TARGET_PC
+#include "d/d_albw_master_quest.h"
 #include "d/d_albw_rental.h"
 #include "d/d_albw_shield.h"
 #include "d/actor/d_a_player.h"
@@ -194,7 +195,12 @@ static int countALBWDungeonClears() {
 }
 
 static int countALBWMeterUpgradeSteps() {
-    int steps = countALBWDungeonClears();
+    int steps = 0;
+    if (dAlbwMQ_isEnabled()) {
+        steps = dAlbwMQ_getMeterShopTier();
+    } else {
+        steps = countALBWDungeonClears();
+    }
     if (dComIfGs_getMaxLife() >= 50) {
         steps++;
     }
@@ -212,13 +218,24 @@ static int computeALBWMeterMax() {
     if (dComIfGs_isItemFirstBit(dItemNo_ARMOR_e)) {
         maxVal += kALBWHeartArmorTierBonus;
     }
-    maxVal += countALBWDungeonClears() * kALBWDungeonClearBonus;
+    if (dAlbwMQ_isEnabled()) {
+        maxVal += dAlbwMQ_getMeterShopTier() * kAlbwMQMeterUnitsPerBuy;
+    } else {
+        maxVal += countALBWDungeonClears() * kALBWDungeonClearBonus;
+    }
     return maxVal;
 }
 
 static int computeALBWRecoveryRate() {
-    const int steps = countALBWMeterUpgradeSteps();
-    return kALBWRecoveryBase + (steps * kALBWRecoveryPerStep) / 10;
+    // Scale passive recovery with current meter capacity, not how it was earned.
+    const int expansion    = sOilMaxVar - sOilBaseMax;
+    const int maxExpansion = 8 * kALBWDungeonClearBonus + 2 * kALBWHeartArmorTierBonus;
+    if (maxExpansion <= 0) {
+        return kALBWRecoveryBase;
+    }
+    constexpr int kVanillaMaxSteps = 10;
+    return kALBWRecoveryBase +
+           (expansion * kALBWRecoveryPerStep * kVanillaMaxSteps) / (maxExpansion * 10);
 }
 // ============================================
 // NEW CODE ENDS HERE
@@ -475,6 +492,10 @@ void dMeter2_fillALBWMeter() {
     sALBWLocked             = false;
     sALBWExpanding          = false;
     sALBWRecoverSoundActive = false;
+}
+
+void dMeter2_onALBWMeterShopPurchase() {
+    sALBWExpanding = true;
 }
 
 void dMeter2_onALBWRentalEligible(u8 itemNo) {
@@ -1263,8 +1284,15 @@ void dMeter2_c::moveLife() {
             max_count = 15;
         }
 
-        life_count = (max_count / 5) * 4;
         dComIfGs_setMaxLife(max_count);
+#if TARGET_PC
+        if (dAlbwMQ_isEnabled()) {
+            life_count = static_cast<s16>(dComIfGs_getMaxLifeGauge());
+        } else
+#endif
+        {
+            life_count = (max_count / 5) * 4;
+        }
 
         s16 current_life = life_count - dComIfGs_getLife();
         dComIfGp_setItemLifeCount(current_life, 0);
@@ -1277,7 +1305,14 @@ void dMeter2_c::moveLife() {
     if (item_life_count != tmp) {
         mLifeCountType = dComIfGp_getItemLifeCountType();
         if (!draw_life) {
-            life_count = (dComIfGs_getMaxLife() / 5) * 4;
+#if TARGET_PC
+            if (dAlbwMQ_isEnabled()) {
+                life_count = static_cast<s16>(dComIfGs_getMaxLifeGauge());
+            } else
+#endif
+            {
+                life_count = (dComIfGs_getMaxLife() / 5) * 4;
+            }
         }
 
         s16 new_life = dComIfGs_getLife() + dComIfGp_getItemLifeCount();
@@ -1297,6 +1332,11 @@ void dMeter2_c::moveLife() {
     }
 
     u16 max_life = dComIfGs_getMaxLife();
+#if TARGET_PC
+    if (dAlbwMQ_isEnabled()) {
+        max_life = dAlbwMQ_getDisplayMaxLifeInternal();
+    }
+#endif
     if (mMaxLife != max_life) {
         if (mMaxLife < max_life) {
             mMaxLife++;
@@ -1881,15 +1921,20 @@ void dMeter2_c::moveKantera() {
         // ============================================
         // NEW CODE — ALBW Port
         // Feed ALBW meter values into the cut magic meter widget.
-        // drawMagic expects 0-32 range — normalize from sOilMaxVar.
-        // x_pos/y_pos are the lantern position so the bar appears in the
-        // same HUD slot the lantern occupied. setAlphaMagicChange(false)
-        // propagates the alpha driven by draw() each frame to child panes.
+        // drawMagic uses a 0–32 reference width at base capacity (sOilBaseMax).
+        // Bar length and fill both scale with sOilMaxVar so upgrades visibly
+        // lengthen the meter, not just its internal unit pool.
         // ============================================
         {
-            s16 mCur = (sOilMaxVar > 0)
-                ? (s16)((f32)sALBWMeter / (f32)sOilMaxVar * 32.0f) : 0;
-            mpMeterDraw->drawMagic(32, mCur, x_pos, y_pos);
+            static constexpr s16 kVisualMeterBaseWidth = 32;
+            const s16 barMax = (sOilMaxVar > 0)
+                ? static_cast<s16>((f32)kVisualMeterBaseWidth * (f32)sOilMaxVar /
+                                   (f32)sOilBaseMax)
+                : kVisualMeterBaseWidth;
+            const s16 barCur = (sOilMaxVar > 0)
+                ? static_cast<s16>((f32)sALBWMeter / (f32)sOilMaxVar * (f32)barMax)
+                : 0;
+            mpMeterDraw->drawMagic(barMax, barCur, x_pos, y_pos);
             mpMeterDraw->setAlphaMagicChange(false);
         }
         // ============================================

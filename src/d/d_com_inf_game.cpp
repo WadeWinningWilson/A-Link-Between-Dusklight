@@ -1,4 +1,4 @@
-﻿/**
+/**
  * d_com_inf_game.cpp
  * Game Information
  */
@@ -28,6 +28,7 @@
 
 #include "dusk/string.hpp"
 #if TARGET_PC
+#include "d/d_albw_master_quest.h"
 #include "d/d_albw_shield.h"
 #include "dusk/action_bindings.h"
 #endif
@@ -1929,7 +1930,11 @@ BOOL dComIfGs_isOneZoneItem(int i_swBit, int i_roomNo) {
 }
 
 u16 dComIfGs_getMaxLifeGauge() {
-    return (dComIfGs_getMaxLife() / 5) * 4;
+    u16 gauge = (dComIfGs_getMaxLife() / 5) * 4;
+#if TARGET_PC
+    gauge = static_cast<u16>(gauge + dAlbwMQ_getBonusMaxLifeQuarters());
+#endif
+    return gauge;
 }
 
 void dComIfGs_onGetMagicUseFlag() {

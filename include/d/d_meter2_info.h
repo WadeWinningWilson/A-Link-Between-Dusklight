@@ -906,6 +906,7 @@ void dMeter2_subALBWFraction(int numerator, int denominator);
 int dMeter2_getALBWMeterValue();
 int dMeter2_getALBWMaxValue();
 void dMeter2_fillALBWMeter();
+void dMeter2_onALBWMeterShopPurchase();
 void dMeter2_onALBWRentalEligible(u8 itemNo);
 bool dMeter2_isALBWRentalEligible(u8 itemNo);
 bool dMeter2_playerOwnsRentalItem(u8 itemNo);

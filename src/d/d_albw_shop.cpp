@@ -484,29 +484,78 @@ static LetAreaBounds calcRowIconSlotBounds(CPaneMgr* letterMgr) {
     return slot;
 }
 
-// Heap icon column: flame_* left edge per row (stable when scrolling; do not reuse row-0 mail X).
-static void calcRowHeapIconDrawPos(CPaneMgr* letterMgr, J2DPicture* rowFrame, f32 listIconLeft,
-                                   f32* outX, f32* outY, f32* outW, f32* outH) {
-    const LetAreaBounds slot = calcRowIconSlotBounds(letterMgr);
-    *outW                  = slot.valid ? slot.w : kRowLetterIconBoxMaxW;
-    *outH                  = slot.valid ? slot.h : kWheelIconBaselinePx;
-    *outX                  = slot.valid ? slot.x : 0.0f;
-    *outY                  = slot.valid ? slot.y : 0.0f;
-
-    if (listIconLeft >= 0.0f) {
-        *outX = listIconLeft;
-    } else if (rowFrame) {
-        const LetAreaBounds frame = calcPaneScreenBounds(rowFrame);
-        if (frame.valid) {
-            *outX = frame.x + kRowFrameInsetX;
-        }
+// Heap icon rect in gInf draw space (same coords as mpMenuScreen / getGlobalVtx).
+static bool calcRowHeapIconDrawGInf(J2DPicture* rowFrame, CPaneMgr* letterMgr, f32 listIconLeft,
+                                      f32* outX, f32* outY, f32* outW, f32* outH) {
+    if (!rowFrame) {
+        return false;
     }
 
-    if (rowFrame) {
-        const LetAreaBounds frame = calcPaneScreenBounds(rowFrame);
-        if (frame.valid && *outH > 1.0f) {
-            *outY = frame.y + 0.5f * (frame.h - *outH);
-        }
+    CPaneMgr scratch;
+    Mtx     mtx;
+    const Vec tl = scratch.getGlobalVtx(rowFrame, &mtx, 0, false, 0);
+    const Vec br = scratch.getGlobalVtx(rowFrame, &mtx, 3, false, 0);
+
+    const f32 scY    = mDoGph_gInf_c::getHeightF() / FB_HEIGHT;
+    const f32 frameH = br.y - tl.y;
+    if (frameH < 1.0f) {
+        return false;
+    }
+
+    f32 boxH = std::min(frameH - kRowWheelIconInsetY * 2.0f * scY, kRowLetterIconBoxMaxW * scY);
+    boxH     = std::max(boxH, 12.0f * scY);
+    const f32 boxW = boxH;
+
+    *outX = tl.x;
+    *outY = tl.y + 0.5f * (frameH - boxH);
+    *outW = boxW;
+    *outH = boxH;
+    (void)letterMgr;
+    (void)listIconLeft;
+    return true;
+}
+
+// Debug / fallback: normalized 640 bounds for dumpRowIconDebug.
+static void calcRowHeapIconDrawPos(CPaneMgr* letterMgr, J2DPicture* rowFrame, f32 listIconLeft,
+                                   f32* outX, f32* outY, f32* outW, f32* outH) {
+    f32 gx = 0.0f;
+    f32 gy = 0.0f;
+    f32 gw = 0.0f;
+    f32 gh = 0.0f;
+    if (calcRowHeapIconDrawGInf(rowFrame, letterMgr, listIconLeft, &gx, &gy, &gw, &gh)) {
+        const f32 scX = mDoGph_gInf_c::getWidthF() / FB_WIDTH;
+        const f32 scY = mDoGph_gInf_c::getHeightF() / FB_HEIGHT;
+        *outX         = (gx - mDoGph_gInf_c::getMinXF()) / scX;
+        *outY         = (gy - mDoGph_gInf_c::getMinYF()) / scY;
+        *outW         = gw / scX;
+        *outH         = gh / scY;
+        return;
+    }
+
+    const LetAreaBounds slot  = calcRowIconSlotBounds(letterMgr);
+    const LetAreaBounds frame = rowFrame ? calcPaneScreenBounds(rowFrame) : LetAreaBounds{};
+
+    f32 boxW = kRowLetterIconBoxMaxW;
+    if (slot.valid && slot.w > 4.0f) {
+        boxW = slot.w;
+    }
+
+    const f32 rowH = frame.valid ? frame.h : (slot.valid ? slot.h : kWheelIconBaselinePx);
+    const f32 rowY = frame.valid ? frame.y : (slot.valid ? slot.y : 0.0f);
+
+    f32 innerH = std::min(rowH - kRowWheelIconInsetY * 2.0f, kRowLetterIconBoxMaxW);
+    innerH     = std::max(innerH, 12.0f);
+    boxW       = std::min(boxW, innerH);
+
+    *outW = boxW;
+    *outH = innerH;
+    *outY = rowY + 0.5f * (rowH - innerH);
+    if (frame.valid) {
+        *outX = frame.x;
+    } else if (listIconLeft >= 0.0f) {
+        *outX = listIconLeft;
+    } else {
+        *outX = slot.valid ? slot.x : 0.0f;
     }
 }
 
@@ -581,14 +630,12 @@ static void walkLetRowSubtree(J2DPane* pane, ResTIMG* letterTimg, bool rental, J
             const u16  type      = pane->getTypeID();
             const bool maybeIcon = pane->getKind() == 'PIC1' || type == 17 || type == 18;
             if (maybeIcon) {
-                const LetAreaBounds b            = calcPaneScreenBounds(pane);
-                const f32           mailColRight = listIconLeft + kRowLetterIconBoxMaxW;
-                const bool          centerItemGfx =
-                    b.valid && b.w < 120.0f && b.x > mailColRight - 4.0f;
-                if (centerItemGfx) {
-                    pane->hide();
-                } else {
+                const LetAreaBounds b        = calcPaneScreenBounds(pane);
+                const bool          widePane = b.valid && b.w >= 120.0f;
+                if (widePane) {
                     pane->show();
+                } else {
+                    pane->hide();
                 }
             } else {
                 pane->show();
@@ -1774,7 +1821,7 @@ void dALBWShop_c::populateRows() {
         if (itemIdx < visCount) {
             const dALBWVisibleEntry& ve    = visList[itemIdx];
             const bool               isSel = (itemIdx == sel);
-            const char* name = ve.purchasable ? ve.name : "?????";
+            const char* name = (ve.purchasable || ve.showNameWhenSoldOut) ? ve.name : "?????";
             if (isSel) {
                 snprintf(buf, sizeof(buf), "> %s", name);
             } else {
@@ -1817,7 +1864,7 @@ void dALBWShop_c::populateRows() {
     if (sel >= 0 && sel < visCount) {
         const dALBWVisibleEntry& ve = visList[sel];
         itemNo = ve.itemNo;
-        if (ve.purchasable && ve.desc) {
+        if ((ve.purchasable || ve.showNameWhenSoldOut) && ve.desc) {
             snprintf(mDescBuf, sizeof(mDescBuf), "%s\n\nPrice:  %d Rupees", ve.desc, ve.price);
             showItemBox = true;
         } else {
@@ -1842,6 +1889,7 @@ bool dALBWShop_c::ensureRowWheelPic(int row, u8 itemNo, JKRArchive* arc) {
     }
 
     if (mpRowItemPic[row] && mRowItemPicItemNo[row] == itemNo) {
+        mpRowItemPic[row]->setBasePosition(J2DBasePosition_0);
         return true;
     }
 
@@ -1862,7 +1910,7 @@ bool dALBWShop_c::ensureRowWheelPic(int row, u8 itemNo, JKRArchive* arc) {
         return false;
     }
 
-    mpRowItemPic[row]->setBasePosition(J2DBasePosition_4);
+    mpRowItemPic[row]->setBasePosition(J2DBasePosition_0);
     dMeter2Info_setItemColor(iconItemNo, mpRowItemPic[row], nullptr, nullptr, nullptr);
     mpRowItemPic[row]->setBlackWhite(JUtility::TColor(0, 0, 0, 0),
                                      JUtility::TColor(255, 255, 255, 255));
@@ -1872,6 +1920,7 @@ bool dALBWShop_c::ensureRowWheelPic(int row, u8 itemNo, JKRArchive* arc) {
 
 bool dALBWShop_c::ensureItemBoxPic() {
     if (mpItemBoxPic) {
+        mpItemBoxPic->setBasePosition(J2DBasePosition_0);
         return true;
     }
     if (!mItemBoxTimg) {
@@ -1881,7 +1930,7 @@ bool dALBWShop_c::ensureItemBoxPic() {
     if (!mpItemBoxPic) {
         return false;
     }
-    mpItemBoxPic->setBasePosition(J2DBasePosition_4);
+    mpItemBoxPic->setBasePosition(J2DBasePosition_0);
     mpItemBoxPic->setBlackWhite(JUtility::TColor(0, 0, 0, 0),
                                  JUtility::TColor(255, 255, 255, 255));
     mpItemBoxPic->hide();
@@ -1924,7 +1973,7 @@ void dALBWShop_c::dumpRowIconDebug(JKRArchive* iconArc, int visCount,
             "maxScroll=%d\n",
             (void*)dComIfGp_getItemIconArchive(), (void*)iconArc, mReady ? 1 : 0, visCount, sel,
             mScrollTop, (visCount > 6) ? (visCount - 6) : 0);
-    fprintf(fp, "letterTimg=%p itemBoxTimg=%p itemBoxPic=%p listIconLeft=%.1f\n",
+    fprintf(fp, "letterTimg=%p itemBoxTimg=%p itemBoxPic=%p listIconLeft=%.1f draw_pass=gInf_vertex\n",
             (void*)mRowLetterTimg, (void*)mItemBoxTimg, (void*)mpItemBoxPic, listIconLeft);
     fprintf(fp, "gInf min=%.1f,%.1f size=%.1f,%.1f\n", mDoGph_gInf_c::getMinXF(),
             mDoGph_gInf_c::getMinYF(), mDoGph_gInf_c::getWidthF(), mDoGph_gInf_c::getHeightF());
@@ -2021,15 +2070,9 @@ void dALBWShop_c::drawRowWheelIcons(J2DGrafContext* gfx, int visCount) {
     dusk::frame_interp::set_ui_tick_pending(true);
 #endif
 
-    // dALBW_calcPaneScreenBounds returns positions normalized to a 0..640x0..480 canvas
-    // spanning the full viewport ((x - minXF) / (widthF / 640)). Drawing them under the
-    // widescreen-extended gInf ortho shifts icons right at non-4:3 aspects (identical at 4:3).
-    // Use a plain 0..640 ortho for the heap icons, then restore the context's port below.
-    J2DOrthoGraph*              ortho      = (J2DOrthoGraph*)gfx;
-    const JGeometry::TBox2<f32> savedOrtho = *ortho->getOrtho();
-    ortho->setOrtho(0.0f, 0.0f, 640.0f, 480.0f, -1.0f, 1.0f);
-    ortho->setup2D();
-    ortho->setPort();
+    // Draw in gInf vertex space (same as mpMenuScreen). Normalized 640 coords + a 640 ortho pass
+    // misalign Y against the list scissor; getGlobalVtx on flame_* keeps middle-left placement.
+    gfx->setup2D();
 
     const f32 listIconLeft =
         calcShopListIconLeft(mpRowFrame, mpRowLetterGfx, mpRowLetter, mpRowLetterMgr, mScrollTop,
@@ -2047,18 +2090,18 @@ void dALBWShop_c::drawRowWheelIcons(J2DGrafContext* gfx, int visCount) {
             continue;
         }
 
-        f32 slotX = 0.0f;
-        f32 slotY = 0.0f;
-        f32 slotW = 0.0f;
-        f32 slotH = 0.0f;
-        calcRowHeapIconDrawPos(mpRowLetterMgr[row], mpRowFrame[row], listIconLeft, &slotX, &slotY,
-                               &slotW, &slotH);
-        if (slotW < 1.0f || slotH < 1.0f) {
+        f32 boxXg = 0.0f;
+        f32 boxYg = 0.0f;
+        f32 boxWg = 0.0f;
+        f32 boxHg = 0.0f;
+        if (!calcRowHeapIconDrawGInf(mpRowFrame[row], mpRowLetterMgr[row], listIconLeft, &boxXg,
+                                     &boxYg, &boxWg, &boxHg)) {
             continue;
         }
 
         mpItemBoxPic->show();
-        mpItemBoxPic->draw(slotX, slotY, slotW, slotH, false, false, false);
+        mpItemBoxPic->setBasePosition(J2DBasePosition_0);
+        mpItemBoxPic->draw(boxXg, boxYg, boxWg, boxHg, false, false, false);
 
         J2DPicture* pic = mpRowItemPic[row];
         if (!pic || pic->getTextureCount() == 0) {
@@ -2068,16 +2111,20 @@ void dALBWShop_c::drawRowWheelIcons(J2DGrafContext* gfx, int visCount) {
         const ResTIMG* timg  = (const ResTIMG*)mRowItemTexBuf[row];
         f32            drawW = 0.0f;
         f32            drawH = 0.0f;
-        calcWheelIconDrawSize(iconItemNo, timg, slotH, &drawW, &drawH);
-        const f32 drawX = slotX + 0.5f * (slotW - drawW);
-        const f32 drawY = slotY + 0.5f * (slotH - drawH);
-        pic->show();
-        pic->draw(drawX, drawY, drawW, drawH, false, false, false);
-    }
+        const f32      slotHNorm =
+            boxHg / (mDoGph_gInf_c::getHeightF() / FB_HEIGHT);
+        calcWheelIconDrawSize(iconItemNo, timg, slotHNorm, &drawW, &drawH);
 
-    // Restore the context's original projection for the BLO screen draws that follow.
-    ortho->setOrtho(savedOrtho, -1.0f, 1.0f);
-    ortho->setPort();
+        const f32 scY = mDoGph_gInf_c::getHeightF() / FB_HEIGHT;
+        const f32 drawWg = drawW * scY;
+        const f32 drawHg = drawH * scY;
+        const f32 iconXg = boxXg + 0.5f * (boxWg - drawWg);
+        const f32 iconYg = boxYg + 0.5f * (boxHg - drawHg);
+
+        pic->show();
+        pic->setBasePosition(J2DBasePosition_0);
+        pic->draw(iconXg, iconYg, drawWg, drawHg, false, false, false);
+    }
 }
 
 void dALBWShop_c::drawRowListText(J2DGrafContext* gfx, int visCount) {
@@ -2163,6 +2210,11 @@ void dALBWShop_c::updateRowLetters(int visCount, int sel) {
 
         if (ve.purchasable && dComIfGp_getItemIconArchive() &&
             ensureRowWheelPic(row, ve.itemNo, dComIfGp_getItemIconArchive())) {
+            const f32 listIconLeft =
+                calcShopListIconLeft(mpRowFrame, mpRowLetterGfx, mpRowLetter, mpRowLetterMgr,
+                                     mScrollTop, visCount, visList);
+            applyLetRowSubtreeRental(pane, mRowLetterTimg, true, mRowLetterContentsTex[row],
+                                     iconSlot, listIconLeft);
             setRowLetterGraphicsVisible(mpRowLetterGfx[row], mpRowLetterWin[row],
                                         mRowLetterContentsTex[row], false);
             if (mpRowLetterGfx[row] && mRowLetterTimg && !mpRowLetterGfx[row]->isUsed(mRowLetterTimg)) {
@@ -2298,11 +2350,11 @@ void dALBWShop_c::draw() {
         gfx->scissor(listScissorX, area.y, listScissorW, area.h);
         gfx->setScissor();
         suppressFifthRowFooterOverlap(mpMenuScreen, mpRowPrice[4]);
-        mpMenuScreen->draw(0.0f, 0.0f, gfx);
         const f32 listIconLeft =
             calcShopListIconLeft(mpRowFrame, mpRowLetterGfx, mpRowLetter, mpRowLetterMgr, mScrollTop,
                                  visCount, visList);
         hideRentableCenterBloIcons(visCount, listIconLeft);
+        mpMenuScreen->draw(0.0f, 0.0f, gfx);
         static u32 sIconDbgFrame = 0;
         if ((sIconDbgFrame++ % 90) == 0) {
             dumpRowIconDebug(dComIfGp_getItemIconArchive(), visCount, visList, listIconLeft);
@@ -2328,11 +2380,11 @@ void dALBWShop_c::draw() {
     } else {
         updateRowLetters(visCount, sel);
         suppressFifthRowFooterOverlap(mpMenuScreen, mpRowPrice[4]);
-        mpMenuScreen->draw(0.0f, 0.0f, gfx);
         const f32 listIconLeft =
             calcShopListIconLeft(mpRowFrame, mpRowLetterGfx, mpRowLetter, mpRowLetterMgr, mScrollTop,
                                  visCount, visList);
         hideRentableCenterBloIcons(visCount, listIconLeft);
+        mpMenuScreen->draw(0.0f, 0.0f, gfx);
         static u32 sIconDbgFrameNoArea = 0;
         if ((sIconDbgFrameNoArea++ % 90) == 0) {
             dumpRowIconDebug(dComIfGp_getItemIconArchive(), visCount, visList, listIconLeft);
