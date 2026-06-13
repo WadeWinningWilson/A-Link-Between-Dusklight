@@ -882,6 +882,22 @@ void dFile_select_c::dataSelectStart() {
         selectWakuAlpahAnmInit(mSelectNum, 0xff, 0, g_fsHIO.select_box_appear_frames);
         makeRecInfo(mSelectNum);
 
+#if TARGET_PC
+        // Load the randomizer seed if one is tied to this file
+        auto curFileSeedHash = dusk::getSettings().randomizer.seedHashes.at(mSelectNum).getValue();
+        // If this is a vanilla file, clear rando data structures
+        if (curFileSeedHash.empty()) {
+            g_randomizerState = RandomizerState();
+            randomizer_GetContext() = RandomizerContext();
+        }
+        // Reset randomizer state if we're switching to a different file
+        else if (curFileSeedHash != randomizer_GetContext().mHash || g_randomizerState.mFileNum != mSelectNum) {
+            g_randomizerState = RandomizerState();
+            randomizer_GetContext() = RandomizerContext();
+            randomizer_GetContext().LoadFromHash(curFileSeedHash);
+        }
+#endif
+
         mDataSelProc = DATASELPROC_SELECT_DATA_OPEN_MOVE;
     }
 
@@ -1305,21 +1321,6 @@ void dFile_select_c::menuSelectStart() {
         mIsSelectEnd = true;
         mDataSelProc = DATASELPROC_NEXT_MODE_WAIT;
         dComIfGs_setDataNum(mSelectNum);
-    #if TARGET_PC
-        // Load the randomizer seed if one is tied to this file
-        auto curFileSeedHash = dusk::getSettings().randomizer.seedHashes.at(mSelectNum).getValue();
-        // If this is a vanilla file, clear rando data structures
-        if (curFileSeedHash.empty()) {
-            g_randomizerState = RandomizerState();
-            randomizer_GetContext() = RandomizerContext();
-        }
-        // Reset randomizer state if we're switching to a different file
-        else if (curFileSeedHash != randomizer_GetContext().mHash || g_randomizerState.mFileNum != mSelectNum) {
-            g_randomizerState = RandomizerState();
-            randomizer_GetContext() = RandomizerContext();
-            randomizer_GetContext().LoadFromHash(curFileSeedHash);
-        }
-    #endif
     } else if (mSelectMenuNum == 0) {
         mSelIcon->setAlphaRate(0.0f);
         yesnoMenuMoveAnmInitSet(0x473, 0x47d);
