@@ -28,6 +28,7 @@
 #include "d/d_albw_rental.h"
 #include "d/d_albw_shield.h"
 #include "d/actor/d_a_player.h"
+#include "dusk/action_bindings.h"
 #include "dusk/memory.h"
 #include "dusk/settings.h"
 #include <chrono>
@@ -58,6 +59,8 @@ static int sOilBaseMax = 10900;
 static int sOilMaxVar  = 10900;
 static bool sMeterinc = false;
 static int sALBWMeter = 10900;
+static u8 s_zSlotItemCache = 0xFF;
+static bool s_extraItemSlotCache = false;
 // ============================================
 // MODIFIED CODE — ALBW Port (fix: framerate-dependent recovery)
 // sRecoveryTimer counted frames, making recovery scale with FPS.
@@ -821,6 +824,15 @@ int dMeter2_c::_create() {
         dComIfGp_setSelectItem(i);
     }
 
+#if TARGET_PC
+    s_zSlotItemCache = 0xFF;
+    s_extraItemSlotCache = dusk::isExtraItemSlotEnabled();
+    if (s_extraItemSlotCache) {
+        dComIfGp_setSelectItem(SELECT_ITEM_DOWN);
+        s_zSlotItemCache = dComIfGp_getSelectItem(SELECT_ITEM_DOWN);
+    }
+#endif
+
     mItemStatus[X_ITEM] = dComIfGp_getSelectItem(0);
     mItemStatus[Y_ITEM] = dComIfGp_getSelectItem(1);
     mItemStatus[X_STATUS] = dComIfGp_getXStatus();
@@ -950,6 +962,7 @@ int dMeter2_c::_execute() {
     moveButtonC();
     moveButtonS();
     moveButtonCross();
+    mpMeterDraw->setButtonIconMidonaAlpha(mStatus);
     moveTouchSubMenu();
     moveBombNum();
     moveArrowNum();
@@ -971,6 +984,14 @@ int dMeter2_c::_execute() {
 
     dMeter2Info_allUseButton();
     dMeter2Info_offUseButton(0x800);
+#if TARGET_PC
+    if (dusk::isExtraItemSlotEnabled() && !daPy_getPlayerActorClass()->checkWolf()) {
+        const u8 zItem = dComIfGp_getSelectItem(SELECT_ITEM_DOWN);
+        if (zItem != dItemNo_NONE_e && zItem != 0) {
+            dMeter2Info_onUseButton(METER2_USEBUTTON_Z);
+        }
+    }
+#endif
     dMeter2Info_resetGameStatus();
     dComIfGp_setNunStatus(0, 0, 0);
     dComIfGp_setRemoConStatus(0, 0, 0);
@@ -2789,6 +2810,24 @@ void dMeter2_c::moveButtonZ() {
         dComIfGp_setZStatusForce(0, 0);
     }
 
+#if TARGET_PC
+    if (s_extraItemSlotCache != dusk::isExtraItemSlotEnabled()) {
+        s_extraItemSlotCache = dusk::isExtraItemSlotEnabled();
+        s_zSlotItemCache = 0xFF;
+        draw_buttonZ = true;
+    }
+
+    if (dusk::isExtraItemSlotEnabled() && !daPy_getPlayerActorClass()->checkWolf()) {
+        const u8 zItem = dComIfGp_getSelectItem(SELECT_ITEM_DOWN);
+        if (s_zSlotItemCache != zItem) {
+            s_zSlotItemCache = zItem;
+        }
+        // Redraw every frame: drawButtonR hides item_r_n when R status changes
+        // (e.g. boomerang lock-on), and the Z icon shares that pane tree.
+        draw_buttonZ = true;
+    }
+#endif
+
     if (mZStatus != dComIfGp_getZStatus() || draw_buttonZ) {
         mZStatus = dComIfGp_getZStatus();
 
@@ -2799,7 +2838,6 @@ void dMeter2_c::moveButtonZ() {
         mpMeterDraw->drawButtonZ(mZStatus);
     }
 
-    mpMeterDraw->setButtonIconMidonaAlpha(mStatus);
     dComIfGp_setZStatus(0, 0);
 
     if (dComIfGp_getBottleStatusForce() != 0) {
@@ -4090,8 +4128,6 @@ void dMeter2_c::alphaAnimeButton() {
     for (int i = 0; i < 2; i++) {
         mpMeterDraw->setButtonIconAlpha(i, mItemStatus[i * 2], mStatus,
                                         field_0x128 == 0 ? true : false);
-
-       // ============================================
         // MODIFIED CODE — ALBW Port
         // Source: Mod::visibleAmmo and silentAmmo in ALBW main.cpp
         // Original code showed ammo for specific items.
@@ -4131,6 +4167,10 @@ void dMeter2_c::alphaAnimeButton() {
             mpMeterDraw->drawKanteraMeter(i, 0.0f);
         }
     }
+
+#if TARGET_PC
+    mpMeterDraw->setButtonIconZItemAlpha(mStatus);
+#endif
 
     mpMeterDraw->setAlphaButtonChange(false);
 }

@@ -32,6 +32,8 @@ Inspired by CaptainKittyCa2’s ALBW meter mod work. Base game by [TwilitRealm](
 
 Full gameplay, settings, and source file list: **[docs/albw-port.md](docs/albw-port.md)**.
 
+Latest release notes: **[docs/patch-notes-v0.55.md](docs/patch-notes-v0.55.md)** (v0.55 since v0.5).
+
 ---
 
 ## Build the mod yourself (Windows)

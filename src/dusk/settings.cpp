@@ -1,6 +1,9 @@
 #include "dusk/settings.h"
 #include "dusk/config.hpp"
 
+#include <SDL3/SDL_gamepad.h>
+#include <dolphin/pad.h>
+
 namespace dusk {
 
 UserSettings g_userSettings = {
@@ -29,6 +32,7 @@ UserSettings g_userSettings = {
 
         // Quality of Life
         .enableQuickTransform {"game.enableQuickTransform", false},
+        .extraItemSlot {"game.extraItemSlot", false},
         .hideTvSettingsScreen {"game.hideTvSettingsScreen", true},
         .biggerWallets {"game.biggerWallets", false},
         .noReturnRupees {"game.noReturnRupees", false},
@@ -225,6 +229,7 @@ void registerSettings() {
     // Game
     Register(g_userSettings.game.language);
     Register(g_userSettings.game.enableQuickTransform);
+    Register(g_userSettings.game.extraItemSlot);
     Register(g_userSettings.game.hideTvSettingsScreen);
     Register(g_userSettings.game.biggerWallets);
     Register(g_userSettings.game.noReturnRupees);

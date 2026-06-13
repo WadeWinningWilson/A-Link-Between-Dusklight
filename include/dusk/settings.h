@@ -141,6 +141,8 @@ struct UserSettings {
 
         // QoL
         ConfigVar<bool> enableQuickTransform;
+        // Move Midna talk to left d-pad and keep Z visible for a future item slot.
+        ConfigVar<bool> extraItemSlot;
         ConfigVar<bool> hideTvSettingsScreen;
         ConfigVar<bool> biggerWallets;
         ConfigVar<bool> noReturnRupees;

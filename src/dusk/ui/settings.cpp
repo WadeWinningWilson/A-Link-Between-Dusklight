@@ -1284,6 +1284,8 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Enemy Death Rupees", getSettings().game.enemyDeathRupees,
             "Credit rupees directly to your wallet when enemies die and when boss fights end. "
             "Vanilla drop tables (hearts, jars, ground rupees) are unchanged.");
+        addOption("Extra Item Slot", getSettings().game.extraItemSlot,
+            "Move Midna talk to left D-pad and assign an inventory item to the Z button.");
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================

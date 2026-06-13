@@ -32,6 +32,7 @@
 
 #if TARGET_PC
 #include "d/d_albw_rental.h"
+#include "dusk/action_bindings.h"
 #include "dusk/settings.h"
 #include <vector>
 #include <array>
@@ -2260,7 +2261,12 @@ void dMsgObject_c::setSmellTypeLocal(u8 smellType) {
     mSmellType = smellType;
     dComIfGs_onItemFirstBit(smellType);
     dComIfGs_setCollectSmell(mSmellType);
-    dComIfGs_setSelectItemIndex(2, mSmellType);
+#if TARGET_PC
+    if (!dusk::isExtraItemSlotEnabled())
+#endif
+    {
+        dComIfGs_setSelectItemIndex(2, mSmellType);
+    }
 }
 
 u8 dMsgObject_c::getSelectCursorPosLocal() {

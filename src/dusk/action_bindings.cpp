@@ -4,6 +4,9 @@
 #include "dusk/settings.h"
 #include "dusk/ui/ui.hpp"
 
+#include <SDL3/SDL_gamepad.h>
+#include <dolphin/pad.h>
+
 namespace dusk {
 
 static std::array<std::array<ActionBindPressData, static_cast<int>(ActionBinds::COUNT)>, PAD_CHANMAX> actionPressData{};
@@ -93,4 +96,24 @@ bool getActionBindHoldAnyPort(ActionBinds action) {
 int getActionBindButton(ActionBinds action, u32 port) {
     return (*getActionBinds()[action].configVars)[port];
 }
+
+#if TARGET_PC
+bool isExtraItemSlotEnabled() {
+    return getSettings().game.extraItemSlot.getValue();
+}
+
+bool callMidnaReservesDpadLeft(u32 port) {
+    if (!isExtraItemSlotEnabled() || port != 0) {
+        return false;
+    }
+
+    if (isActionBound(ActionBinds::CALL_MIDNA, port)) {
+        return getActionBindButton(ActionBinds::CALL_MIDNA, port) == SDL_GAMEPAD_BUTTON_DPAD_LEFT;
+    }
+
+    // Built-in PC default when Call Midna is not customized in config.
+    return true;
+}
+#endif
+
 }

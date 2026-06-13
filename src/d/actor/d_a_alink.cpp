@@ -9402,13 +9402,30 @@ BOOL daAlink_c::manualShieldBlocksSwordInput() const {
 
 BOOL daAlink_c::midnaTalkTrigger() const {
 #if TARGET_PC
-    // If we have a custom bind for Midna, check that instead
-    if (dusk::isActionBound(dusk::ActionBinds::CALL_MIDNA, 0)) {
-        return dusk::getActionBindTrig(dusk::ActionBinds::CALL_MIDNA, 0);
+    if (dusk::isExtraItemSlotEnabled()) {
+        if (dusk::isActionBound(dusk::ActionBinds::CALL_MIDNA, 0)) {
+            return dusk::getActionBindTrig(dusk::ActionBinds::CALL_MIDNA, 0);
+        }
+
+        // Built-in PC default when Extra Item Slot is on: left d-pad replaces vanilla Z.
+        return mDoCPd_c::getTrigLeft(PAD_1) != 0;
     }
 #endif
     return mItemTrigger & BTN_Z;
 }
+
+#if TARGET_PC
+static int dusk_assignableItemButtonCount() {
+    return dusk::isExtraItemSlotEnabled() ? 3 : 2;
+}
+
+static bool dusk_itemNotOnAnyAssignButton(int btn) {
+    if (dusk::isExtraItemSlotEnabled()) {
+        return btn >= 3;
+    }
+    return btn == 2;
+}
+#endif
 
 BOOL daAlink_c::swordSwingTrigger() {
     if (manualShieldButton()) {
@@ -11386,6 +11403,17 @@ BOOL daAlink_c::checkUpperItemActionFly() {
 void daAlink_c::checkItemButtonChange() {
     if (mProcID != PROC_CANOE_PADDLE_PUT && mEquipItem != dItemNo_NONE_e && !checkEquipAnime()) {
         u8 temp_r0;
+#if TARGET_PC
+        const u8 buttonCount = dusk_assignableItemButtonCount();
+        for (u8 i = 0; i < buttonCount; i++) {
+            temp_r0 = (i + 1) % buttonCount;
+            if (mEquipItem == dComIfGp_getSelectItem(i) &&
+                (mEquipItem != dComIfGp_getSelectItem(temp_r0) || mSelectItemId != temp_r0))
+            {
+                mSelectItemId = i;
+            }
+        }
+#else
         for (u8 i = 0; i < 2; i++) {
             temp_r0 = (i + 1) % 2;
             if (mEquipItem == dComIfGp_getSelectItem(i) &&
@@ -11394,6 +11422,7 @@ void daAlink_c::checkItemButtonChange() {
                 mSelectItemId = i;
             }
         }
+#endif
     }
 }
 
@@ -11614,7 +11643,12 @@ int daAlink_c::orderZTalk() {
             setMidnaTalkStatus(BUTTON_STATUS_CHECK);
         }
 
-        dMeter2Info_onUseButton(METER2_USEBUTTON_Z);
+#if TARGET_PC
+        if (!dusk::isExtraItemSlotEnabled())
+#endif
+        {
+            dMeter2Info_onUseButton(METER2_USEBUTTON_Z);
+        }
 
         if (midnaTalkTrigger()
 #if DEBUG
@@ -12257,7 +12291,12 @@ BOOL daAlink_c::checkItemChangeFromButton() {
             itemEquip(0x105);
         } else {
             u8 i;
+#if TARGET_PC
+            const u8 buttonCount = dusk_assignableItemButtonCount();
+            for (i = 0; i < buttonCount; i++) {
+#else
             for (i = 0; i < 2; i++) {
+#endif
                 int proc_type = checkNewItemChange(i);
                 if (proc_type != 0 && itemTriggerCheck(1 << i)) {
                     BOOL var_r27 = changeItemTriggerKeepProc(i, proc_type);
@@ -12290,7 +12329,13 @@ BOOL daAlink_c::checkItemChangeFromButton() {
                        mEquipItem != 0x102 && (!checkCanoeRide() || !checkFisingRodLure()))
             {
                 if (!checkEventRun() || strcmp(dComIfGp_getEventManager().getRunEventName(), "ANGER") != 0) {
-                    if (strcmp(dComIfGp_getEventManager().getRunEventName(), "ANGER2") != 0 && checkItemSetButton(mEquipItem) == 2) {
+                    if (strcmp(dComIfGp_getEventManager().getRunEventName(), "ANGER2") != 0 &&
+#if TARGET_PC
+                        dusk_itemNotOnAnyAssignButton(checkItemSetButton(mEquipItem)))
+#else
+                        checkItemSetButton(mEquipItem) == 2)
+#endif
+                    {
                         allUnequip(1);
                     }
                 }
@@ -14537,7 +14582,12 @@ BOOL daAlink_c::checkGroupItem(int i_itemNo, int i_selItem) const {
 }
 
 int daAlink_c::checkSetItemTrigger(int i_itemNo) {
+#if TARGET_PC
+    const u8 buttonCount = dusk_assignableItemButtonCount();
+    for (u8 i = 0; i < buttonCount; i++) {
+#else
     for (u8 i = 0; i < 2; i++) {
+#endif
         if (checkGroupItem(i_itemNo, dComIfGp_getSelectItem(i)) && itemTriggerCheck(1 << i)) {
             if (i_itemNo != dItemNo_HVY_BOOTS_e) {
                 mSelectItemId = i;
@@ -14556,7 +14606,16 @@ int daAlink_c::checkItemSetButton(int i_itemNo) {
         }
     }
 
+#if TARGET_PC
+    if (dusk::isExtraItemSlotEnabled() &&
+        checkGroupItem(i_itemNo, dComIfGp_getSelectItem(SELECT_ITEM_DOWN)))
+    {
+        return SELECT_ITEM_DOWN;
+    }
+    return 3;
+#else
     return 2;
+#endif
 }
 
 bool daAlink_c::checkField() {
@@ -14756,7 +14815,13 @@ int daAlink_c::checkNewItemChange(u8 i_selItemIdx) {
                 return ITEM_PROC_BOTTLE_DRINK;
             }
 
-            if (checkOilBottleItem(sel_item) && checkItemSetButton(dItemNo_KANTERA_e) != 2) {
+            if (checkOilBottleItem(sel_item) &&
+#if TARGET_PC
+                !dusk_itemNotOnAnyAssignButton(checkItemSetButton(dItemNo_KANTERA_e)))
+#else
+                checkItemSetButton(dItemNo_KANTERA_e) != 2)
+#endif
+            {
                 return ITEM_PROC_KANDELAAR_POUR;
             }
         } else if (sel_item == dItemNo_HVY_BOOTS_e) {
@@ -14801,7 +14866,12 @@ int daAlink_c::checkNewItemChange(u8 i_selItemIdx) {
                     return ITEM_PROC_SPINNER_READY;
                 } else if (checkDungeonWarpItem(sel_item)) {
                     return ITEM_PROC_DUNGEON_WARP_READY;
-                } else if (checkItemSetButton(0x108) != 2 &&
+                } else if (
+#if TARGET_PC
+                    !dusk_itemNotOnAnyAssignButton(checkItemSetButton(0x108)) &&
+#else
+                    checkItemSetButton(0x108) != 2 &&
+#endif
                            (sel_item == dItemNo_WORM_e || sel_item == dItemNo_BEE_CHILD_e))
                 {
                     int itemNo = dComIfGp_getSelectItem(checkItemSetButton(0x108));
@@ -14825,7 +14895,13 @@ int daAlink_c::checkNewItemChange(u8 i_selItemIdx) {
                     return ITEM_PROC_NOT_USE_ITEM;
                 } else if (sel_item == dItemNo_HORSE_FLUTE_e) {
                     return ITEM_PROC_GRASS_WHISTLE;
-                } else if (checkOilBottleItem(sel_item) && checkItemSetButton(0x48) != 2) {
+                } else if (checkOilBottleItem(sel_item) &&
+#if TARGET_PC
+                           !dusk_itemNotOnAnyAssignButton(checkItemSetButton(0x48)))
+#else
+                           checkItemSetButton(0x48) != 2)
+#endif
+                {
                     return ITEM_PROC_KANDELAAR_POUR;
                 } else if (sel_item == dItemNo_HAWK_EYE_e) {
                     if (acceptSubjectModeChange()) {
@@ -18101,7 +18177,12 @@ int daAlink_c::execute() {
 
     if (checkNoResetFlg2(FLG2_UNK_1) != FALSE &&
         mEquipItem != dItemNo_KANTERA_e &&
-        checkItemSetButton(dItemNo_KANTERA_e) == 2) {
+#if TARGET_PC
+        dusk_itemNotOnAnyAssignButton(checkItemSetButton(dItemNo_KANTERA_e)))
+#else
+        checkItemSetButton(dItemNo_KANTERA_e) == 2)
+#endif
+    {
         offKandelaarModel();
     }
 
@@ -18490,7 +18571,11 @@ int daAlink_c::execute() {
 
         if (checkEquipHeavyBoots()) {
             int itemButton = checkItemSetButton(dItemNo_HVY_BOOTS_e);
+#if TARGET_PC
+            if (dusk_itemNotOnAnyAssignButton(itemButton) || checkNotHeavyBootsStage()) {
+#else
             if (itemButton == 2 || checkNotHeavyBootsStage()) {
+#endif
                 if (!dComIfGp_checkPlayerStatus1(0, 0x10000) || !checkHookshotRoofLv7Boss()) {
                     setHeavyBoots(0);
                 }
@@ -19075,6 +19160,14 @@ int daAlink_c::execute() {
                     dMeter2Info_offUseButton(METER2_USEBUTTON_X << i);
                 }
             }
+
+#if TARGET_PC
+            if (dusk::isExtraItemSlotEnabled() && !checkWolf()) {
+                if (!(mUseButtonFlags & BTN_Z) && !(field_0x2faf & BTN_Z)) {
+                    dMeter2Info_offUseButton(METER2_USEBUTTON_Z);
+                }
+            }
+#endif
 
             if (!(mUseButtonFlags & BTN_R) && !(field_0x2faf & BTN_R)) {
                 dMeter2Info_offUseButton(METER2_USEBUTTON_R);

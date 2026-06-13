@@ -28,6 +28,7 @@
 
 #ifdef TARGET_PC
 #include "dusk/frame_interpolation.h"
+#include "dusk/action_bindings.h"
 #endif
 
 class dDlst_MENU_CAPTURE_c : public dDlst_base_c {
@@ -150,6 +151,11 @@ BOOL dMw_DOWN_TRIGGER() {
 }
 
 BOOL dMw_LEFT_TRIGGER() {
+#if TARGET_PC
+    if (dusk::callMidnaReservesDpadLeft(0)) {
+        return false;
+    }
+#endif
     if (mDoCPd_c::getTrigLeft(PAD_1) && !dMw_UP_TRIGGER()) {
         return true;
     } else {

@@ -32,6 +32,7 @@
 #if TARGET_PC
 #include "dusk/game_clock.h"
 #include "dusk/settings.h"
+#include "dusk/action_bindings.h"
 #endif
 
 typedef void (dMenu_Ring_c::*initFunc)();
@@ -245,6 +246,13 @@ dMenu_Ring_c::dMenu_Ring_c(JKRExpHeap* i_heap, STControl* i_stick, CSTControl* i
         if (dComIfGs_getSelectItemIndex(1) == dComIfGs_getLineUpItem(i)) {
             mYButtonSlot = i;
         }
+#if TARGET_PC
+        if (dusk::isExtraItemSlotEnabled() && !mPlayerIsWolf) {
+            if (dComIfGs_getSelectItemIndex(SELECT_ITEM_DOWN) == dComIfGs_getLineUpItem(i)) {
+                field_0x6ac = i;
+            }
+        } else
+#endif
         if (dComIfGs_getSelectItemIndex(2) == dComIfGs_getWolfAbility(i)) {
             field_0x6ac = i;
         }
@@ -261,7 +269,16 @@ dMenu_Ring_c::dMenu_Ring_c(JKRExpHeap* i_heap, STControl* i_stick, CSTControl* i
         }
         field_0x6be[i] = 0;
         if (i == 2) {
-            setSelectItem(i, 0);
+#if TARGET_PC
+            if (dusk::isExtraItemSlotEnabled() && !mPlayerIsWolf) {
+                u8 slot = dComIfGs_getSelectItemIndex(SELECT_ITEM_DOWN);
+                u8 item = slot != 0xFF ? dComIfGs_getItem(slot, false) : dItemNo_NONE_e;
+                setSelectItem(i, item);
+            } else
+#endif
+            {
+                setSelectItem(i, 0);
+            }
         } else {
             setSelectItem(i, 0x43);
         }
@@ -1108,6 +1125,21 @@ void dMenu_Ring_c::setItem() {
                 mixItemIndex1 = dItemNo_NONE_e;
             }
         }
+    } else if (field_0x6b3 == 2) {
+        const u8 assignedSlot = mItemSlots[mCurrentSlot];
+        field_0x6ac = mCurrentSlot;
+        uVar3 = assignedSlot;
+        if (uVar1 == assignedSlot) {
+            uVar1 = 0xFF;
+            mXButtonSlot = dItemNo_NONE_e;
+            mixItemIndex0 = dItemNo_NONE_e;
+        }
+        if (uVar2 == assignedSlot) {
+            uVar2 = 0xFF;
+            mYButtonSlot = dItemNo_NONE_e;
+            mixItemIndex1 = dItemNo_NONE_e;
+        }
+        field_0x674[2] = 1;
     }
     field_0x6b4[0] = uVar1;
     field_0x6b4[1] = uVar2;
@@ -1161,6 +1193,29 @@ void dMenu_Ring_c::setJumpItem(bool i_useVibrationM) {
     } else if (field_0x6b3 == 1) {
         field_0x538[0] = g_ringHIO.mUnselectItemScale;
         field_0x538[1] = g_ringHIO.mSelectItemScale;
+        if (field_0x6b4[1] != dComIfGs_getSelectItemIndex(1) ||
+            field_0x6b8[1] != dComIfGs_getMixItemIndex(1))
+        {
+            field_0x674[1] = 1;
+#if TARGET_PC
+            mSelectItemSlideElapsed[1] = 0.0f;
+#endif
+        }
+    } else if (field_0x6b3 == 2) {
+        if (field_0x6b4[2] != dComIfGs_getSelectItemIndex(SELECT_ITEM_DOWN)) {
+            field_0x674[2] = 1;
+#if TARGET_PC
+            mSelectItemSlideElapsed[2] = 0.0f;
+#endif
+        }
+        if (field_0x6b4[0] != dComIfGs_getSelectItemIndex(0) ||
+            field_0x6b8[0] != dComIfGs_getMixItemIndex(0))
+        {
+            field_0x674[0] = 1;
+#if TARGET_PC
+            mSelectItemSlideElapsed[0] = 0.0f;
+#endif
+        }
         if (field_0x6b4[1] != dComIfGs_getSelectItemIndex(1) ||
             field_0x6b8[1] != dComIfGs_getMixItemIndex(1))
         {
@@ -1294,7 +1349,27 @@ void dMenu_Ring_c::setActiveCursor() {
                     (this->*stick_init[mStatus])();
                 }
             }
-        } else if (mDoCPd_c::getTrigX(PAD_1) || mDoCPd_c::getTrigY(PAD_1)) {
+#if TARGET_PC
+        } else if (mDoCPd_c::getTrigZ(PAD_1) && !mPlayerIsWolf && item != dItemNo_NONE_e &&
+                   dusk::isExtraItemSlotEnabled())
+        {
+            for (int i = 0; i < MAX_SELECT_ITEM; i++) {
+                setSelectItemForce(i);
+            }
+            field_0x6b3 = 2;
+            if (!checkCombineBomb(field_0x6b3)) {
+                setItem();
+                if (mpItemExplain->getStatus() == 0) {
+                    setStatus(STATUS_WAIT);
+                    (this->*stick_init[mStatus])();
+                }
+            }
+#endif
+        } else if (mDoCPd_c::getTrigX(PAD_1) || mDoCPd_c::getTrigY(PAD_1)
+#if TARGET_PC
+                   || (dusk::isExtraItemSlotEnabled() && mDoCPd_c::getTrigZ(PAD_1))
+#endif
+                  ) {
             // If the player is a wolf or somehow manages to access an item slot with no item, error
             Z2GetAudioMgr()->seStart(Z2SE_SYS_ERROR, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
         }

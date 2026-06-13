@@ -40,4 +40,12 @@ bool getActionBindHoldAnyPort(ActionBinds action);
 
 int getActionBindButton(ActionBinds action, u32 port);
 
+#if TARGET_PC
+/** True when Extra Item Slot is enabled (Midna on d-pad, Z free for an item). */
+bool isExtraItemSlotEnabled();
+
+/** True when Call Midna uses left d-pad (default or custom bind). Map open must yield. */
+bool callMidnaReservesDpadLeft(u32 port = 0);
+#endif
+
 }

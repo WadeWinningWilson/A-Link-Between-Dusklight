@@ -129,11 +129,19 @@ public:
     void setButtonIconAAlpha(u8, u32, bool);
     void setButtonIconBAlpha(u8, u32, bool);
     void setButtonIconMidonaAlpha(u32);
+#if TARGET_PC
+    void setButtonIconZItemAlpha(u32 status);
+#endif
     void setButtonIconAlpha(int, u8, u32, bool);
     ResTIMG* getNumberTexture(int);
     char* getActionString(u8, u8, u8*);
     void changeTextureItemB(u8);
     void changeTextureItemXY(int, u8);
+#if TARGET_PC
+    void changeTextureItemZ(u8);
+    void drawButtonZItem(u8 i_itemNo);
+    void hideButtonZItem();
+#endif
     void setAlphaAnimeMin(CPaneMgrAlpha*, s16);
     void setAlphaAnimeMax(CPaneMgrAlpha*, s16);
     void setItemNum(u8, u8, u8);
@@ -174,6 +182,8 @@ public:
     constexpr f32 getButtonZAlpha() const {
         return mButtonZAlpha;
     }
+
+    bool getShowMidnaIcon() const { return mShowMidnaIcon; }
 #endif
 
 private:
@@ -239,7 +249,8 @@ private:
     /* 0x4B8 */ CPaneMgrAlpha* mpUzu;
     /* 0x4BC */ u8 field_0x4bc[0x28];
     /* 0x4E4 */ ResTIMG* mpItemBTex[2][2];
-    /* 0x4F4 */ ResTIMG* mpItemXYTex[2][2][2];
+    /* 0x4F4 */ ResTIMG* mpItemZTex[2][2];
+    /* 0x504 */ ResTIMG* mpItemXYTex[2][2][2];
     /* 0x514 */ J2DPicture* mpItemBPane;
     /* 0x518 */ J2DPicture* mpItemXYPane[3];
     /* 0x524 */ int field_0x524[2][2];
@@ -327,6 +338,7 @@ private:
     /* 0x76C */ u8 field_0x76c[2];
     /* 0x76E */ u8 field_0x76e;
     /* 0x76F */ u8 mButtonBItem;
+    /* 0x770 */ u8 mButtonZItem;
     /* 0x770 */ u8 field_0x770;
     /* 0x771 */ u8 field_0x771;
     /* 0x772 */ u8 field_0x772;
@@ -387,6 +399,7 @@ private:
     /* 0x85C */ GXColor mButtonXYTextColor;
     /* 0x860 */ u8 field_0x860[2];
 #if TARGET_PC
+    bool mShowMidnaIcon{};
     void applyMagicMeterSlot(u8 i_slot);
     void layoutMagicMeterSlot(u8 i_slot, s16 i_max, s16 i_fill, f32 i_posX, f32 i_posY,
                               f32 i_widthScale);

@@ -82,10 +82,8 @@ applyListColumnLayout()
 cacheRowLetterSlotBounds() per row
 updateRowLetters()              // setup only; no rental subtree hide here
 
-mpMenuScreen->draw()            // native BLO (centered icons appear)
-
-calcShopListIconLeft()
-hideRentableCenterBloIcons()    // hide centered BLO duplicates AFTER menu draw
+hideRentableCenterBloIcons()    // hide left + center BLO duplicates BEFORE menu draw
+mpMenuScreen->draw()            // native BLO (no rentable icon duplicates)
 drawRowListText()
 drawRowWheelIcons()             // heap icons at mail column
 ```
@@ -95,7 +93,7 @@ drawRowWheelIcons()             // heap icons at mail column
 For purchasable rows only, walks `let_*` via `applyLetRowSubtreeRental(..., rental=true, listIconLeft)`:
 
 - Hides letter-in-slot panes (envelope TIMG in icon slot).
-- Hides **small** PIC/WIN (`width < 120px`) whose **left edge** is past `listIconLeft + kRowLetterIconBoxMaxW`.
+- Hides **small** PIC/WIN in the mail column (`width < 120px`, overlaps icon slot) **and** centered duplicates past `listIconLeft + kRowLetterIconBoxMaxW`.
 - **Never** hides wide panes — preserves `flame_*`.
 
 ### `drawRowWheelIcons`
@@ -103,9 +101,11 @@ For purchasable rows only, walks `let_*` via `applyLetRowSubtreeRental(..., rent
 Uses `calcRowHeapIconDrawPos`:
 
 - **X** = `listIconLeft`
-- **Y** = vertically centered in `flame_*` row bar
+- **Y** = `flame_*` top; white box height = row height; wheel icon centered inside (`drawY = slotY + 0.5×(slotH−drawH)`)
+- **Heap `J2DPicture` must use `J2DBasePosition_0` (top-left)** — `J2DBasePosition_4` applies anchor offsets from the texture’s native size (~160×174), not the ~25px draw size, so Y tweaks in `calcRowHeapIconDrawPos` had no visible effect
 - White box: shared `mpItemBoxPic` (`tt_do_icon7_160_174.bti`)
 - Item icon: `mpRowItemPic[row]` with wheel sizing from `itemicon.arc`
+- Heap draw uses plain `0..640` ortho (widescreen fix in `9e191bc8aa`) — do not revert to `gInf` ortho for this pass
 
 ### `walkLetRowSubtree` selection rule (rentable + `listIconLeft`)
 
@@ -143,7 +143,7 @@ Wide panes (`flame_*`) fail the width check; centered item PICs pass it.
 1. **Never `paneTrans` `let_*`** — moves `flame_*` off-screen.
 2. **Never hide by `fenu_t*` name overlap** — spans full row.
 3. **Never hide all `let_*` children** — `flame_*` is in that subtree.
-4. **Hide center BLO after `mpMenuScreen->draw()`** — otherwise native art wins.
+4. **Hide rentable BLO icons before `mpMenuScreen->draw()`** — post-draw hide leaves native art on screen for the current frame; hide left mail-column + center duplicates in `updateRowLetters` / pre-draw pass.
 5. **Align heap draw to envelope X**, not `flame_*` alone.
 6. **Do not touch** parchment, footer, title, `applyDescColumnShift` unless explicitly requested.
 7. **Do not hide** `fenu_t6`–`fenu_t11` or footer panes (see [albw-port.md](albw-port.md) maintainer notes).
