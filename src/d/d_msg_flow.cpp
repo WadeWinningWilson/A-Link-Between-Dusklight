@@ -2619,7 +2619,10 @@ int dMsgFlow_c::event043(mesg_flow_node_event* i_flowNode_p, fopAc_ac_c* i_speak
 int dMsgFlow_c::event044(mesg_flow_node_event* i_flowNode_p, fopAc_ac_c* i_speaker_p) {
     // stub
     // runs when choosing to "withdraw" from cave of shadows
-    // for now just have it reset to title, similar to original
+
+    daAlink_c* player = daAlink_getAlinkActorClass();
+    player->seStartOnlyReverb(Z2SE_WOLF_WARP_OUT);
+
     JUTGamePad::C3ButtonReset::sResetSwitchPushing = true;
     return 1;
 }
