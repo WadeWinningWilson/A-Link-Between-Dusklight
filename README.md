@@ -21,13 +21,13 @@ Inspired by CaptainKittyCa2’s ALBW meter mod work. Base game by [TwilitRealm](
 | ALBW energy meter HUD | ✅ |
 | Meter drain (sword, agility, hidden skills) | ✅ |
 | Manual shield / parry & bash charges / durability (optional) | ✅ |
-| Death strip of 13 items | ✅ |
-| Death Recovery Orb — half wallet on death, recover via Tear of Light (optional) | ✅ |
+| Strip 13 items on Death | ✅ |
+| Rupee Recovery Orb — half wallet on death, recover via Tear of Light (optional) | ✅ |
 | Postman rental shop + Oocoo dungeon warp | ✅ (shop footer polish WIP) |
-| Wolf form unaffected by meter | ✅ |
+| Cycle Z-Targeting | ✅ |
 | Wolf Link combat overhaul (optional) | ✅ |
 | Enemy HP multipliers — Normal / Mid-Boss / Boss / Final (optional) | ✅ |
-| Enemy Death Rupees + native “+n” HUD popup (optional) | ✅ |
+| Enemy Wealth + HUD popup (optional) | ✅ |
 | Colossal Wallet / final pricing pass | ⏳ |
 
 Full gameplay, settings, and source file list: **[docs/albw-port.md](docs/albw-port.md)**.
