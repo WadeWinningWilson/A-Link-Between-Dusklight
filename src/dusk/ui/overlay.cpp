@@ -5,6 +5,7 @@
 #include "dusk/action_bindings.h"
 #include "controller_config.hpp"
 #include "dusk/livesplit.h"
+#include "dusk/settings.h"
 #include "dusk/speedrun.h"
 #include "fmt/format.h"
 #include "magic_enum.hpp"
@@ -194,7 +195,7 @@ static std::string FormatTime(OSTime ticks) {
     return fmt::format("{0:02}:{1:02}:{2:02}.{3:03}", t.hour, t.min, t.sec, t.msec);
 }
 
-Overlay::Overlay() : Document(kDocumentSource) {
+Overlay::Overlay() : Document(kDocumentSource, true) {
     mFpsCounter = mDocument->GetElementById("fps");
     mSpeedrunTimer = mDocument->GetElementById("speedrun-timer");
     mSpeedrunRta = mDocument->GetElementById("speedrun-rta");
@@ -317,6 +318,7 @@ void Overlay::update() {
     u32 count = 0;
     const bool showControllerWarning = PADGetIndexForPort(PAD_CHAN0) < 0 &&
                                        PADGetKeyButtonBindings(PAD_CHAN0, &count) == nullptr &&
+                                       !getSettings().game.enableTouchControls &&
                                        dynamic_cast<Window*>(top_document()) == nullptr &&
                                        dynamic_cast<WindowSmall*>(top_document()) == nullptr;
     if (showControllerWarning && mControllerWarning == nullptr) {
