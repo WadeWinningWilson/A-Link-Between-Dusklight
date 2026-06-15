@@ -4238,6 +4238,11 @@ static MemCardCheckFuncT MemCardCheckProc[] = {
     &dFile_select_c::MemCardErrYesNoCursorMoveAnm,
     &dFile_select_c::MemCardSaveDataClear,
 
+#if TARGET_PC
+    &dFile_select_c::MemCardAutoMakeGameFile,
+    &dFile_select_c::MemCardAutoMakeGameFileErrWait,
+#endif
+
     #if PLATFORM_WII || PLATFORM_SHIELD
     &dFile_select_c::nandStatCheck,
     &dFile_select_c::gameFileInitSel,
@@ -4321,11 +4326,33 @@ void dFile_select_c::MemCardStatCheck() {
         mDoMemCd_Load();
         mCardCheckProc = MEMCARDCHECKPROC_LOAD_WAIT;
         break;
+#if TARGET_PC
+    case 1: { // no save file
+        if (dusk::getSettings().game.instantSaves) {
+            field_0x03b1 = 1;
+            setInitSaveData();
+            dataSave();
+            mCardCheckProc = MEMCARDCHECKPROC_AUTO_MAKE_GAMEFILE;
+        } else {
+            errDispInitSet(22, 0);
+            field_0x0280 = true;
+            mNextCardCheckProc = MEMCARDCHECKPROC_MAKE_GAMEFILE_SEL;
+        }
+        break;
+    }
+    case 4: // card is writing
+        if (dusk::getSettings().game.instantSaves) {
+            field_0x03b1 = 1;
+            mCardCheckProc = MEMCARDCHECKPROC_AUTO_MAKE_GAMEFILE;
+        }
+        break;
+#else
     case 1:
         errDispInitSet(22, 0);
         field_0x0280 = true;
         mNextCardCheckProc = MEMCARDCHECKPROC_MAKE_GAMEFILE_SEL;
         break;
+#endif
     }
 #else
     switch (status) {
@@ -5030,6 +5057,33 @@ void dFile_select_c::MemCardMakeGameFileCheck() {
         field_0x03b1 = 0;
     }
 }
+
+#if TARGET_PC
+void dFile_select_c::MemCardAutoMakeGameFile() {
+    field_0x03b4 = mDoMemCd_SaveSync();
+    if (field_0x03b4 == 0) {
+        return;
+    }
+
+    field_0x03b1 = 0;
+    if (field_0x03b4 == 1) {
+        mDoMemCd_Load();
+        mCardCheckProc = MEMCARDCHECKPROC_LOAD_WAIT;
+    } else {
+        errDispInitSet(0x1A, 0);
+        field_0x0280 = false;
+        mWindowCloseMsgDispCb = NULL;
+        mKeyWaitMsgDispCb = NULL;
+        mNextCardCheckProc = MEMCARDCHECKPROC_AUTO_MAKE_GAMEFILE_ERR_WAIT;
+    }
+}
+
+void dFile_select_c::MemCardAutoMakeGameFileErrWait() {
+    mNextCardCheckProc = MEMCARDCHECKPROC_STAT_CHECK;
+    mKeyWaitCardCheckProc = MEMCARDCHECKPROC_MSG_WINDOW_CLOSE;
+    mCardCheckProc = MEMCARDCHECKPROC_ERRMSG_WAIT_KEY;
+}
+#endif
 
 #if PLATFORM_WII || PLATFORM_SHIELD
 void dFile_select_c::gameFileInitSel() {
