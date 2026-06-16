@@ -65,6 +65,7 @@
 #include "dusk/ui/overlay.hpp"
 #include "dusk/ui/prelaunch.hpp"
 #include "dusk/ui/preset.hpp"
+#include "dusk/ui/touch_controls.hpp"
 #include "dusk/ui/ui.hpp"
 #include "version.h"
 
@@ -75,7 +76,6 @@
 #include <dolphin/dvd.h>
 
 #include "SDL3/SDL_init.h"
-#include "SDL3/SDL_filesystem.h"
 #include "SDL3/SDL_iostream.h"
 #include "SDL3/SDL_misc.h"
 #include "cxxopts.hpp"
@@ -260,6 +260,13 @@ void main01(void) {
                 dusk::mouse::handle_event(event->sdl);
                 dusk::ui::handle_event(event->sdl);
                 dusk::g_imguiConsole.HandleSDLEvent(event->sdl);
+                break;
+            case AURORA_WINDOW_RESIZED:
+                if (dusk::getSettings().video.rememberWindowSize && !dusk::getSettings().video.enableFullscreen) {
+                    dusk::getSettings().video.lastWindowWidth.setValue(event->windowSize.width);
+                    dusk::getSettings().video.lastWindowHeight.setValue(event->windowSize.height);
+                    dusk::config::Save();
+                }
                 break;
             case AURORA_DISPLAY_SCALE_CHANGED:
                 dusk::ImGuiEngine_Initialize(event->windowSize.scale);
@@ -487,14 +494,6 @@ static void LanguageInit() {
     selectedLanguage = static_cast<u8>(dusk::getSettings().game.language.getValue());
 }
 
-static std::string asset_path(const char* assetName) {
-    const char* basePath = SDL_GetBasePath();
-    if (basePath != nullptr && basePath[0] != '\0') {
-        return std::string(basePath) + "res/" + assetName;
-    }
-    return std::string("res/") + assetName;
-}
-
 static void log_build_info() {
     DuskLog.info("Build: {} (rev {}, built {}, type {})", DUSK_WC_DESCRIBE, DUSK_WC_REVISION, DUSK_WC_DATE, DUSK_BUILD_TYPE);
     DuskLog.info("Platform: {}", DUSK_PLATFORM_NAME);
@@ -565,10 +564,17 @@ int game_main(int argc, char* argv[]) {
     // PADSetDefaultMapping(&defaultPadMapping, PAD_TYPE_STANDARD);
 
     {
-        // Load mappings from https://github.com/mdqinc/SDL_GameControllerDB
-        const auto mappingsPath = asset_path("gamecontrollerdb.txt");
-        if (SDL_AddGamepadMappingsFromFile(mappingsPath.c_str()) < 0) {
-            DuskLog.warn("Failed to load gamecontrollerdb.txt: {}", SDL_GetError());
+        const auto mappingsPath = dusk::ConfigPath / "gamecontrollerdb.txt";
+        std::error_code ec;
+        if (std::filesystem::exists(mappingsPath, ec)) {
+            const auto mappingsPathString = dusk::io::fs_path_to_string(mappingsPath);
+            if (SDL_AddGamepadMappingsFromFile(mappingsPathString.c_str()) < 0) {
+                DuskLog.warn("Failed to load gamecontrollerdb.txt from '{}': {}",
+                    mappingsPathString, SDL_GetError());
+            }
+        } else if (ec) {
+            DuskLog.warn("Failed to inspect gamecontrollerdb.txt in data folder '{}': {}",
+                dusk::io::fs_path_to_string(mappingsPath), ec.message());
         }
     }
 
@@ -582,12 +588,25 @@ int game_main(int argc, char* argv[]) {
         config.appName = dusk::AppName;
         config.userPath = reinterpret_cast<const char*>(userPathString.c_str());
         config.cachePath = reinterpret_cast<const char*>(cachePathString.c_str());
+#ifdef DUSK_ASSET_DIR
+        config.resourcesPath = DUSK_ASSET_DIR;
+#endif
         config.vsync = dusk::getSettings().video.enableVsync;
         config.startFullscreen = dusk::getSettings().video.enableFullscreen;
         config.windowPosX = -1;
         config.windowPosY = -1;
-        config.windowWidth = defaultWindowWidth * 2;
-        config.windowHeight = defaultWindowHeight * 2;
+
+        const int lastWindowWidth = dusk::getSettings().video.lastWindowWidth.getValue();
+        const int lastWindowHeight = dusk::getSettings().video.lastWindowHeight.getValue();
+
+        if (dusk::getSettings().video.rememberWindowSize && lastWindowWidth > 0 && lastWindowHeight > 0) {
+            config.windowWidth = lastWindowWidth;
+            config.windowHeight = lastWindowHeight;
+        } else {
+            config.windowWidth = defaultWindowWidth * 2;
+            config.windowHeight = defaultWindowHeight * 2;
+        }
+
         config.desiredBackend = ResolveDesiredBackend(parsed_arg_options);
         config.logCallback = &aurora_log_callback;
         config.logLevel = startupLogLevel;
@@ -649,6 +668,7 @@ int game_main(int argc, char* argv[]) {
     dusk::texture_replacements::reload();
     dusk::ui::initialize();
     dusk::ui::push_document(std::make_unique<dusk::ui::Overlay>(), true, true);
+    dusk::ui::push_document(std::make_unique<dusk::ui::TouchControls>(), false, true);
     dusk::ui::push_document(std::make_unique<dusk::ui::MenuBar>(), false);
 
     // Invalidate a bad saved isoPath so that Dusklight can't get blocked from starting up.

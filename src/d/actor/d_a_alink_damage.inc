@@ -193,38 +193,29 @@ int daAlink_c::setDamagePoint(int i_dmgAmount, BOOL i_checkZoraMag, BOOL i_setDm
 
     if (checkMagicArmorNoDamage()) {
 #if TARGET_PC
-        // ============================================
-        // MODIFIED CODE — ALBW Port
-        // Deity Armor upgrade (rupees > 5000): each hit costs 2500 rupees
-        // and does NOT drain the ALBW meter, allowing back-to-back blocks
-        // with no recovery window. Once rupees fall to 5000 or below,
-        // Deity Armor deactivates and regular Magic Armor behavior resumes:
-        // first hit drains the meter to zero and costs 500 rupees;
-        // subsequent hits deal normal damage until the meter recovers.
-        // freeMagicArmor cheat skips all costs regardless of armor tier.
-        // ============================================
-        if (!dusk::getSettings().game.freeMagicArmor) {
-            const bool deityActive = dComIfGs_isItemFirstBit((u8)dItemNo_DEITY_ARMOR_e)
-                                     && dComIfGs_getRupee() > 5000;
-            if (deityActive) {
-                // Deity Armor: 2500 rupee cost, meter is NOT drained
-                s32 newRupees = (s32)dComIfGs_getRupee() - 2500;
-                dComIfGs_setRupee((u16)(newRupees < 0 ? 0 : newRupees));
-            } else {
-                // Regular Magic Armor: instant meter drain + 500 rupee cost
-                dMeter2_onALBWArmorHit();
-                s32 newRupees = (s32)dComIfGs_getRupee() - 500;
-                dComIfGs_setRupee((u16)(newRupees < 0 ? 0 : newRupees));
+        switch (dusk::getSettings().game.armorRupeeDrain.getValue()) {
+            case dusk::MagicArmorMode::ALBW: {
+                const bool deityActive = dComIfGs_isItemFirstBit((u8)dItemNo_DEITY_ARMOR_e) &&
+                                         dComIfGs_getRupee() > 5000;
+                if (deityActive) {
+                    s32 newRupees = (s32)dComIfGs_getRupee() - 2500;
+                    dComIfGs_setRupee((u16)(newRupees < 0 ? 0 : newRupees));
+                } else {
+                    dMeter2_onALBWArmorHit();
+                    s32 newRupees = (s32)dComIfGs_getRupee() - 500;
+                    dComIfGs_setRupee((u16)(newRupees < 0 ? 0 : newRupees));
+                }
+                i_dmgAmount = 0;
+                break;
             }
+            case dusk::MagicArmorMode::INVINCIBLE:
+                i_dmgAmount = 0;
+                break;
+            default:
+                dComIfGp_setItemRupeeCount(-i_dmgAmount * 10);
+                break;
         }
-        i_dmgAmount = 0;
-        // ============================================
-        // MODIFIED CODE ENDS HERE
-        // ============================================
 #else
-        if (dusk::getSettings().game.freeMagicArmor) {
-            i_dmgAmount = 0;
-        }
         dComIfGp_setItemRupeeCount(-i_dmgAmount * 10);
 #endif
     } else
@@ -232,6 +223,11 @@ int daAlink_c::setDamagePoint(int i_dmgAmount, BOOL i_checkZoraMag, BOOL i_setDm
     if (!mpHIO->mDamage.m.mInvincible && g_debugHpMode == 0)
     #endif
     {
+#if TARGET_PC
+        if(checkMagicArmorWearAbility() && dusk::getSettings().game.armorRupeeDrain.getValue() == dusk::MagicArmorMode::DOUBLE_DEFENSE) {
+            i_dmgAmount /= 2;
+        }
+#endif
         dComIfGp_setItemLifeCount(-i_dmgAmount, 0);
     }
 
@@ -312,32 +308,27 @@ BOOL daAlink_c::checkIcePolygonDamage(cBgS_PolyInfo* i_poly) {
 
 BOOL daAlink_c::checkMagicArmorNoDamage() {
 #if TARGET_PC
-    // ============================================
-    // MODIFIED CODE — ALBW Port
-    // Deity Armor upgrade: while the Deity Armor flag is set and the player
-    // holds more than 5000 rupees, each hit is blocked without consuming
-    // the ALBW meter (no recovery window). Below the 5000-rupee threshold,
-    // Deity Armor deactivates and regular Magic Armor rules apply:
-    //   1. Wearing the armor (not wolf, not cutscene)
-    //   2. Meter not in post-hit recovery (dMeter2_canALBWArmorBlock)
-    //   3. Player can afford the 500-rupee hit cost
-    // freeMagicArmor cheat bypasses all requirements.
-    // ============================================
-    if (!checkMagicArmorWearAbility()) return FALSE;
-
-    if (dComIfGs_isItemFirstBit((u8)dItemNo_DEITY_ARMOR_e)) {
-        // Deity Armor mode: active above 5000 rupees (or with cheat)
-        if (dComIfGs_getRupee() > 5000 || dusk::getSettings().game.freeMagicArmor) {
-            return TRUE;
-        }
-        // Rupees ≤ 5000: fall through to regular Magic Armor check
+    if (!checkMagicArmorWearAbility()) {
+        return false;
     }
 
-    return dMeter2_canALBWArmorBlock() &&
-           (dComIfGs_getRupee() >= 500 || dusk::getSettings().game.freeMagicArmor);
-    // ============================================
-    // MODIFIED CODE ENDS HERE
-    // ============================================
+    switch (dusk::getSettings().game.armorRupeeDrain.getValue()) {
+        case dusk::MagicArmorMode::ALBW:
+            if (dComIfGs_isItemFirstBit((u8)dItemNo_DEITY_ARMOR_e) && dComIfGs_getRupee() > 5000) {
+                return true;
+            }
+            return dMeter2_canALBWArmorBlock() && dComIfGs_getRupee() >= 500;
+        case dusk::MagicArmorMode::NORMAL:
+            return !checkMagicArmorHeavy();
+        case dusk::MagicArmorMode::ON_DAMAGE:
+            return dComIfGs_getRupee() != 0;
+        case dusk::MagicArmorMode::DOUBLE_DEFENSE:
+            return false;
+        case dusk::MagicArmorMode::INVINCIBLE:
+            return true;
+        case dusk::MagicArmorMode::COSMETIC:
+            return false;
+    }
 #else
     return checkMagicArmorWearAbility() && !checkMagicArmorHeavy();
 #endif

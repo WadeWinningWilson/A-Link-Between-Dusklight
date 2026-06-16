@@ -12907,17 +12907,21 @@ void daAlink_c::setMagicArmorBrk(int i_status) {
 
 BOOL daAlink_c::checkMagicArmorHeavy() const {
 #if TARGET_PC
-    // ============================================
-    // MODIFIED CODE — ALBW Port
-    // "Heavy" (movement slow + gray hue) only while the armor is actively
-    // in its post-hit recovery state (sALBWArmorDepleted). Having fewer
-    // than 500 rupees blocks the next activation but does not slow Link.
-    // freeMagicArmor cheat bypasses the depleted check entirely.
-    // ============================================
-    return checkMagicArmorWearAbility() && dMeter2_isALBWArmorDepleted() && !dusk::getSettings().game.freeMagicArmor;
-    // ============================================
-    // MODIFIED CODE ENDS HERE
-    // ============================================
+    if (!checkMagicArmorWearAbility()) {
+        return false;
+    }
+
+    switch (dusk::getSettings().game.armorRupeeDrain.getValue()) {
+        case dusk::MagicArmorMode::ALBW:
+            return dMeter2_isALBWArmorDepleted();
+        case dusk::MagicArmorMode::NORMAL:
+            return dComIfGs_getRupee() == 0;
+        case dusk::MagicArmorMode::ON_DAMAGE:
+        case dusk::MagicArmorMode::DOUBLE_DEFENSE:
+        case dusk::MagicArmorMode::INVINCIBLE:
+        case dusk::MagicArmorMode::COSMETIC:
+            return false;
+    }
 #else
     return checkMagicArmorWearAbility() && dComIfGs_getRupee() == 0;
 #endif
@@ -15063,6 +15067,8 @@ void daAlink_c::deleteEquipItem(BOOL i_isPlaySound, BOOL i_isDeleteKantera) {
 #if TARGET_PC
     mIBChainInterpPrevValid = false;
     mIBChainInterpCurrValid = false;
+    mHsChainInterpPrevValid = false;
+    mHsChainInterpCurrValid = false;
 #endif
     field_0x0774 = NULL;
     field_0x0778 = NULL;
@@ -19104,17 +19110,45 @@ int daAlink_c::execute() {
             field_0x2fb8 = 0;
 
 #if TARGET_PC
-            // This handles rupee drain and transitions between rupees/no rupees
-            // We can skip all of that if the magic armor doesn't use rupees
-            if (!dusk::getSettings().game.freeMagicArmor && checkMagicArmorWearAbility() && mClothesChangeWaitTimer == 0) {
+            const auto armorMode = dusk::getSettings().game.armorRupeeDrain.getValue();
+            if ((armorMode == dusk::MagicArmorMode::ALBW || armorMode == dusk::MagicArmorMode::NORMAL) &&
+                checkMagicArmorWearAbility() && mClothesChangeWaitTimer == 0)
 #else
-            if (checkMagicArmorWearAbility() && mClothesChangeWaitTimer == 0) {
+            if (checkMagicArmorWearAbility() && mClothesChangeWaitTimer == 0)
 #endif
-#if !TARGET_PC
-                // ============================================
-                // ORIGINAL CODE — ALBW Port: passive per-frame rupee drain
-                // suppressed on PC. On PC the full cost is billed on hit instead.
-                // ============================================
+            {
+#if TARGET_PC
+                if (armorMode == dusk::MagicArmorMode::NORMAL) {
+                    if (checkMagicArmorNoDamage() && !checkEventRun()) {
+                        if (field_0x2fc3 == 0) {
+                            field_0x2fc3 = 10;
+                            dComIfGp_setItemRupeeCount(-1);
+                        } else {
+                            field_0x2fc3--;
+                        }
+                    }
+
+                    if (dComIfGs_getRupee() == 0 && field_0x2fd7 != 0) {
+                        setMagicArmorBrk(0);
+                        seStartOnlyReverb(Z2SE_AL_M_ARMER_TURNOFF);
+                        mZ2Link.setLinkState(5);
+                    } else if (dComIfGs_getRupee() != 0 && field_0x2fd7 == 0) {
+                        setMagicArmorBrk(1);
+                        seStartOnlyReverb(Z2SE_AL_M_ARMER_RECOVER);
+                        mZ2Link.setLinkState(4);
+                    }
+                } else if (armorMode == dusk::MagicArmorMode::ALBW) {
+                    if (dMeter2_isALBWArmorDepleted() && field_0x2fd7 != 0) {
+                        setMagicArmorBrk(0);
+                        seStartOnlyReverb(Z2SE_AL_M_ARMER_TURNOFF);
+                        mZ2Link.setLinkState(5);
+                    } else if (!dMeter2_isALBWArmorDepleted() && dComIfGs_getRupee() >= 500 && field_0x2fd7 == 0) {
+                        setMagicArmorBrk(1);
+                        seStartOnlyReverb(Z2SE_AL_M_ARMER_RECOVER);
+                        mZ2Link.setLinkState(4);
+                    }
+                }
+#else
                 if (checkMagicArmorNoDamage() && !checkEventRun()) {
                     if (field_0x2fc3 == 0) {
                         field_0x2fc3 = 10;
@@ -19123,32 +19157,7 @@ int daAlink_c::execute() {
                         field_0x2fc3--;
                     }
                 }
-                // ============================================
-                // ORIGINAL CODE ENDS HERE
-                // ============================================
-#endif
 
-#if TARGET_PC
-                // ============================================
-                // MODIFIED CODE — ALBW Port
-                // Hue driven by sALBWArmorDepleted (set on hit, cleared when
-                // meter is full + rupees ≥ 500) rather than raw rupee count.
-                // Also requires ≥ 500 rupees to show active hue, so the armor
-                // appears gray if the player can no longer afford activation.
-                // ============================================
-                if (dMeter2_isALBWArmorDepleted() && field_0x2fd7 != 0) {
-                    setMagicArmorBrk(0);
-                    seStartOnlyReverb(Z2SE_AL_M_ARMER_TURNOFF);
-                    mZ2Link.setLinkState(5);
-                } else if (!dMeter2_isALBWArmorDepleted() && dComIfGs_getRupee() >= 500 && field_0x2fd7 == 0) {
-                    setMagicArmorBrk(1);
-                    seStartOnlyReverb(Z2SE_AL_M_ARMER_RECOVER);
-                    mZ2Link.setLinkState(4);
-                }
-                // ============================================
-                // MODIFIED CODE ENDS HERE
-                // ============================================
-#else
                 if (dComIfGs_getRupee() == 0 && field_0x2fd7 != 0) {
                     setMagicArmorBrk(0);
                     seStartOnlyReverb(Z2SE_AL_M_ARMER_TURNOFF);
@@ -20213,23 +20222,37 @@ int daAlink_c::draw() {
                 dComIfGd_getOpaListDark()->entryImm(mpHookChain, 0);
 
 #if TARGET_PC
-                if (dusk::frame_interp::is_enabled() &&
-                    mEquipItem == dItemNo_IRONBALL_e &&
-                    mIronBallChainPos != NULL && mIronBallChainAngle != NULL)
-                {
-                    if (mIBChainInterpCurrValid) {
-                        memcpy(mIBChainInterpPrevPos, mIBChainInterpCurrPos, IRON_BALL_CHAIN_COUNT * sizeof(cXyz));
-                        memcpy(mIBChainInterpPrevAngle, mIBChainInterpCurrAngle, IRON_BALL_CHAIN_COUNT * sizeof(csXyz));
-                        mIBChainInterpPrevHandRoot = mIBChainInterpCurrHandRoot;
-                        mIBChainInterpPrevValid = true;
+                if (dusk::frame_interp::is_enabled()) {
+                    if (mEquipItem == dItemNo_IRONBALL_e &&
+                        mIronBallChainPos != NULL && mIronBallChainAngle != NULL)
+                    {
+                        if (mIBChainInterpCurrValid) {
+                            memcpy(mIBChainInterpPrevPos, mIBChainInterpCurrPos, IRON_BALL_CHAIN_COUNT * sizeof(cXyz));
+                            memcpy(mIBChainInterpPrevAngle, mIBChainInterpCurrAngle, IRON_BALL_CHAIN_COUNT * sizeof(csXyz));
+                            mIBChainInterpPrevHandRoot = mIBChainInterpCurrHandRoot;
+                            mIBChainInterpPrevValid = true;
+                        }
+
+                        memcpy(mIBChainInterpCurrPos, mIronBallChainPos, IRON_BALL_CHAIN_COUNT * sizeof(cXyz));
+                        memcpy(mIBChainInterpCurrAngle, mIronBallChainAngle, IRON_BALL_CHAIN_COUNT * sizeof(csXyz));
+                        mIBChainInterpCurrHandRoot = mHookshotTopPos;
+                        mIBChainInterpCurrValid = true;
+
+                        dusk::frame_interp::add_interpolation_callback(&ironBallChainInterpCallback, this);
+                    } else {
+                        if (mHsChainInterpCurrValid) {
+                            mHsChainInterpPrevTop = mHsChainInterpCurrTop;
+                            mHsChainInterpPrevRoot = mHsChainInterpCurrRoot;
+                            mHsChainInterpPrevSubRoot = mHsChainInterpCurrSubRoot;
+                            mHsChainInterpPrevSubTop = mHsChainInterpCurrSubTop;
+                            mHsChainInterpPrevValid = true;
+                        }
+                        mHsChainInterpCurrTop = mHookshotTopPos;
+                        mHsChainInterpCurrRoot = mHeldItemRootPos;
+                        mHsChainInterpCurrSubRoot = field_0x3810;
+                        mHsChainInterpCurrSubTop = mIronBallBgChkPos;
+                        mHsChainInterpCurrValid = true;
                     }
-
-                    memcpy(mIBChainInterpCurrPos, mIronBallChainPos, IRON_BALL_CHAIN_COUNT * sizeof(cXyz));
-                    memcpy(mIBChainInterpCurrAngle, mIronBallChainAngle, IRON_BALL_CHAIN_COUNT * sizeof(csXyz));
-                    mIBChainInterpCurrHandRoot = mHookshotTopPos;
-                    mIBChainInterpCurrValid = true;
-
-                    dusk::frame_interp::add_interpolation_callback(&ironBallChainInterpCallback, this);
                 }
 #endif
             }

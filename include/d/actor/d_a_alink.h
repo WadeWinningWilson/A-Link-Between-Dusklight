@@ -4579,6 +4579,18 @@ public:
     cXyz mIBChainInterpCurrHandRoot;
     bool mIBChainInterpPrevValid;
     bool mIBChainInterpCurrValid;
+
+    cXyz mHsChainInterpPrevTop;
+    cXyz mHsChainInterpCurrTop;
+    cXyz mHsChainInterpPrevRoot;
+    cXyz mHsChainInterpCurrRoot;
+    cXyz mHsChainInterpPrevSubRoot;
+    cXyz mHsChainInterpCurrSubRoot;
+    cXyz mHsChainInterpPrevSubTop;
+    cXyz mHsChainInterpCurrSubTop;
+    bool mHsChainInterpPrevValid;
+    bool mHsChainInterpCurrValid;
+
     bool mIsRollstab = false;
     // ============================================
     // NEW CODE — ALBW Port
