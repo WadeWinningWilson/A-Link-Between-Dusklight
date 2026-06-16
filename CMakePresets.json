@@ -544,7 +544,15 @@
           "type": "FILEPATH",
           "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
         },
-        "VCPKG_TARGET_TRIPLET": "x64-windows"
+        "VCPKG_TARGET_TRIPLET": "x64-windows",
+        "TRACY_ENABLE": {
+          "type": "BOOL",
+          "value": true
+        },
+        "TRACY_ON_DEMAND": {
+          "type": "BOOL",
+          "value": true
+        }
       }
     },
     {
