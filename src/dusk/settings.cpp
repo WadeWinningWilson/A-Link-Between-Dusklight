@@ -95,6 +95,9 @@ UserSettings g_userSettings = {
         .mouseCameraSensitivity {"game.mouseCameraSensitivity", 1.0f},
         .invertMouseY {"game.invertMouseY", false},
         .freeCamera {"game.freeCamera", false},
+        .enableTouchControls {"game.enableTouchControls", false},
+        .enableMenuPointer {"game.enableMenuPointer", true},
+        .touchControlsLayout {"game.touchControlsLayout", ui::ControlLayout{}},
         .invertCameraXAxis {"game.invertCameraXAxis", false},
         .invertCameraYAxis {"game.invertCameraYAxis", false},
         .invertFirstPersonXAxis {"game.invertFirstPersonXAxis", false},
@@ -103,6 +106,8 @@ UserSettings g_userSettings = {
         .invertAirSwimY {"game.invertAirSwimY", false},
         .freeCameraXSensitivity {"game.freeCameraXSensitivity", 1.0f},
         .freeCameraYSensitivity {"game.freeCameraYSensitivity", 1.0f},
+        .touchCameraXSensitivity {"game.touchCameraXSensitivity", 1.0f},
+        .touchCameraYSensitivity {"game.touchCameraYSensitivity", 1.0f},
         .debugFlyCam {"game.debugFlyCam", false},
         .debugFlyCamLockEvents {"game.debugFlyCamLockEvents", true},
         .allowBackgroundInput {"game.allowBackgroundInput", true},
@@ -175,6 +180,18 @@ UserSettings g_userSettings = {
             ActionBindConfigVar{"actionBindings.callMidna_port1", PAD_NATIVE_BUTTON_INVALID},
             ActionBindConfigVar{"actionBindings.callMidna_port2", PAD_NATIVE_BUTTON_INVALID},
             ActionBindConfigVar{"actionBindings.callMidna_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
+        .openMapScreen {
+            ActionBindConfigVar{"actionBindings.openMapScreen_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.openMapScreen_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.openMapScreen_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.openMapScreen_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
+        .toggleMinimap {
+            ActionBindConfigVar{"actionBindings.toggleMinimap_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.toggleMinimap_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.toggleMinimap_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.toggleMinimap_port3", PAD_NATIVE_BUTTON_INVALID},
         },
         .openDusklightMenu {
             ActionBindConfigVar{"actionBindings.openDusklightMenu_port0", PAD_NATIVE_BUTTON_INVALID},
@@ -252,6 +269,8 @@ void registerSettings() {
     Register(g_userSettings.game.invertAirSwimY);
     Register(g_userSettings.game.freeCameraXSensitivity);
     Register(g_userSettings.game.freeCameraYSensitivity);
+    Register(g_userSettings.game.touchCameraXSensitivity);
+    Register(g_userSettings.game.touchCameraYSensitivity);
     Register(g_userSettings.game.minimalHUD);
     Register(g_userSettings.game.hudScale);
     Register(g_userSettings.game.pauseOnFocusLost);
@@ -316,6 +335,9 @@ void registerSettings() {
     Register(g_userSettings.game.mouseCameraSensitivity);
     Register(g_userSettings.game.invertMouseY);
     Register(g_userSettings.game.freeCamera);
+    Register(g_userSettings.game.enableTouchControls);
+    Register(g_userSettings.game.enableMenuPointer);
+    Register(g_userSettings.game.touchControlsLayout);
     Register(g_userSettings.game.debugFlyCam);
     Register(g_userSettings.game.debugFlyCamLockEvents);
     Register(g_userSettings.game.allowBackgroundInput);
@@ -343,6 +365,14 @@ void registerSettings() {
     Register(g_userSettings.actionBindings.callMidna[1]);
     Register(g_userSettings.actionBindings.callMidna[2]);
     Register(g_userSettings.actionBindings.callMidna[3]);
+    Register(g_userSettings.actionBindings.openMapScreen[0]);
+    Register(g_userSettings.actionBindings.openMapScreen[1]);
+    Register(g_userSettings.actionBindings.openMapScreen[2]);
+    Register(g_userSettings.actionBindings.openMapScreen[3]);
+    Register(g_userSettings.actionBindings.toggleMinimap[0]);
+    Register(g_userSettings.actionBindings.toggleMinimap[1]);
+    Register(g_userSettings.actionBindings.toggleMinimap[2]);
+    Register(g_userSettings.actionBindings.toggleMinimap[3]);
     Register(g_userSettings.actionBindings.openDusklightMenu[0]);
     Register(g_userSettings.actionBindings.openDusklightMenu[1]);
     Register(g_userSettings.actionBindings.openDusklightMenu[2]);

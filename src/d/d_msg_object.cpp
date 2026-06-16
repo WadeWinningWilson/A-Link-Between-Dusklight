@@ -36,7 +36,9 @@
 #include "dusk/randomizer/game/tools.h"
 #include "dusk/randomizer/game/verify_item_functions.h"
 #include "dusk/version.hpp"
+#include "dusk/menu_pointer.h"
 #include "dusk/settings.h"
+#include "dusk/version.hpp"
 #include <vector>
 #include <array>
 #include <algorithm>
@@ -1174,7 +1176,20 @@ void dMsgObject_c::selectProc() {
             dComIfGp_setAStatusForce(0x2a, 0);
         }
     }
-    if (mDoCPd_c::getTrigA(0)) {
+#if TARGET_PC
+    jmessage_tReference* pRef = (jmessage_tReference*)mpRenProc->getReference();
+    u8 pointerChoice = 0xFF;
+    bool pointerConfirm = dusk::menu_pointer::consume_dialog_click(pointerChoice) &&
+                          pointerChoice < pRef->getSelectNum();
+    if (pointerConfirm) {
+        pRef->setSelectPos(pointerChoice);
+    }
+#endif
+    if (mDoCPd_c::getTrigA(0)
+#if TARGET_PC
+        || pointerConfirm
+#endif
+    ) {
         if (getSelectCursorPosLocal() != 0xff) {
             field_0x1a3 = 1;
         }
@@ -1196,7 +1211,9 @@ void dMsgObject_c::selectProc() {
         }
         field_0x1a3 = 2;
     }
+#ifndef TARGET_PC
     jmessage_tReference* pRef = (jmessage_tReference*)mpRenProc->getReference();
+#endif
     if (getStatusLocal() == 8) {
         if (isMidonaMessage() && field_0x1a3 != 0) {
             if (field_0x1a3 == 2 && getSelectCancelPos() == 3) {
