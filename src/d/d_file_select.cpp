@@ -30,7 +30,6 @@
 #include "dusk/ui/modal.hpp"
 #include "dusk/ui/rando_config.hpp"
 #include "dusk/ui/ui.hpp"
-#endif
 
 namespace {
 constexpr u8 pointer_target(u8 group, u8 index) noexcept {

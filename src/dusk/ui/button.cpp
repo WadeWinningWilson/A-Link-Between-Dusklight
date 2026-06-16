@@ -23,6 +23,10 @@ Button::Button(Rml::Element* parent, Props props, const Rml::String& tagName)
     update_props(std::move(props));
 }
 
+Rml::String Button::get_text() {
+    return mProps.text;
+}
+
 void Button::set_text(const Rml::String& text) {
     if (mProps.text != text) {
         mRoot->SetInnerRML(escape(text));
