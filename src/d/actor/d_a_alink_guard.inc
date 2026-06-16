@@ -8,6 +8,7 @@
 #include "d/actor/d_a_obj_gra2.h"
 #include "d/actor/d_a_npc_kn.h"
 #if TARGET_PC
+#include "d/d_albw_combat.h"
 #include "d/d_albw_shield.h"
 #endif
 
@@ -408,7 +409,8 @@ int daAlink_c::procGuardAttackInit() {
     }
 
 #if TARGET_PC
-    if (!dShield_tryBeginGuardAttack()) {
+    if (dShield_isParryCombatEnabled() && mDemo.getDemoMode() != daPy_demo_c::DEMO_GUARD_ATTACK_e &&
+        !dShield_tryBeginGuardAttack()) {
         return 0;
     }
 #endif
@@ -475,9 +477,18 @@ int daAlink_c::procGuardAttack() {
     BOOL var_r29;
     if (mEquipItem == 0x103 && !checkMagneBootsOn()) {
         var_r29 = TRUE;
+#if TARGET_PC
+        if (doTrigger() ||
+            (dShield_isParryCombatEnabled() && dAlbw_isHiddenSkillReworkEnabled() &&
+             checkCutHeadState() && doButton()))
+        {
+            mProcVar3.field_0x300e = 1;
+        }
+#else
         if (doTrigger()) {
             mProcVar3.field_0x300e = 1;
         }
+#endif
     } else {
         var_r29 = FALSE;
     }
@@ -522,7 +533,15 @@ int daAlink_c::procGuardAttack() {
 
         if (framectrl->getFrame() > field_0x3484) {
             onModeFlg(4);
+#if TARGET_PC
+            // Helm Splitter chains from the slash-check window only; skip the
+            // earlier cancel-window checkNextAction path to avoid double entry.
+            if (!(var_r29 && dAlbw_isHiddenSkillReworkEnabled() && checkCutHeadState())) {
+                checkNextAction(1);
+            }
+#else
             checkNextAction(1);
+#endif
         } else if (framectrl->getFrame() >= field_0x3478 && framectrl->getFrame() < field_0x347c) {
             if (mProcVar5.field_0x3012 == 0) {
                 mNormalSpeed = field_0x3480;

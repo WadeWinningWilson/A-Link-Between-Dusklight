@@ -154,6 +154,8 @@ struct UserSettings {
         ConfigVar<bool> manualShielding;
         // Phase 4: LoP-style parry, bash charges, ALBW rewards/penalties. Off = vanilla guard slip only.
         ConfigVar<bool> shieldParryCombat;
+        // Helm punish flow, hidden-skill dispatch, ALBW meter costs, Jump Strike charge gate.
+        ConfigVar<bool> hiddenSkillRework;
         ConfigVar<bool> shieldDurability;
         // Halve wallet on death and spawn a Tear-of-Light recovery orb (F_0625 gate unchanged).
         ConfigVar<bool> deathRecoveryOrb;
@@ -169,13 +171,22 @@ struct UserSettings {
         ConfigVar<int> damageMultiplier;
         // ============================================
         // NEW CODE — ALBW Port
-        // Per-category enemy HP multipliers (1–16×, default 1 = off).
-        // Applied in d_cc_uty.cc via dAlbwHP_applyMult().
+        // Per-category true max-HP multipliers (1–16×, default 1 = off).
+        // Applied once per enemy in fopAc_Execute via dAlbwHP_tryApplyTrueMaxHp().
         // ============================================
         ConfigVar<int> hpMultNormal;
         ConfigVar<int> hpMultMidBoss;
         ConfigVar<int> hpMultBoss;
         ConfigVar<int> hpMultFinalBoss;
+        // Global Link attack-power divisor (1–16×, default 1 = off).
+        // Applied in d_cc_uty.cpp via dAlbwHP_applyMult().
+        ConfigVar<int> linkDamageDecreaseMult;
+        // On-screen HP readout while Z-targeting (health / max HP / category mult).
+        ConfigVar<bool> showLockonHpDebug;
+        // File log of Darknut ALBW bash/guard-break state (Documents/dusklight/albw_darknut_debug.txt).
+        ConfigVar<bool> showDarknutBashDebug;
+        // Right stick cycles nearby battle enemies instead of manual lock-on camera.
+        ConfigVar<bool> stickCycleLockon;
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================

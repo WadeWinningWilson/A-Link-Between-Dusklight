@@ -93,6 +93,21 @@ static constexpr f32 kWheelIconBaselinePx = 48.0f;
 static constexpr f32 kRowLetterIconBoxMaxW = 34.0f;
 static constexpr f32 kRowWheelIconInsetY   = 2.0f;
 static constexpr f32 kRowFrameInsetX  = 6.0f;
+// Gap (0-640 canvas px) the list scissor leaves before the parchment. The flame_* bars already
+// span nearly the full area; the scissor — not the bar width — is what clips them short. Tunable.
+static constexpr f32 kRowFrameGapBeforeParchment = 6.0f;
+// Footer tagline / action-hint font height as a fraction of the footer bar height. Tunable.
+static constexpr f32 kFooterFontHeightRatio = 0.42f;
+// Footer content split: center tagline gets this fraction, right A/B hint the remainder. Tunable.
+static constexpr f32 kFooterCenterFraction  = 0.70f;
+// Uniform rightward nudge of the whole footer (stick + tagline + A/B), in 0-640 canvas px. Tunable.
+static constexpr f32 kFooterContentShiftX   = 16.0f;
+// Per-element fine positioning (0-640 canvas px). +x right, +y down. All tunable.
+static constexpr f32 kFooterStickOffsetX    = 18.0f;   // nunchuk stick: nudge right
+static constexpr f32 kFooterTaglineOffsetX  = 22.0f;   // "Hylians..." tagline: nudge right
+static constexpr f32 kFooterTaglineOffsetY  = 7.0f;    // tagline: nudge down
+static constexpr f32 kFooterActionsOffsetX  = -16.0f;  // A: Buy/ B: Exit: nudge left
+static constexpr f32 kFooterActionsOffsetY  = 7.0f;    // A/B hints: nudge down
 
 using LetAreaBounds = dALBWPaneBounds;
 
@@ -1130,6 +1145,14 @@ static void rehideShopFooterPanes(J2DScreen* baseScreen, J2DScreen* sdwScreen, J
     static const u64 kBaseSlotTags[] = {
         MULTI_CHAR('fwpstex1'), MULTI_CHAR('fwp_tex1'), MULTI_CHAR('fgp_tex1'),
         MULTI_CHAR('fgps_tx1'),
+        // Hide ONLY the leaked glyphs/text of the vanilla page-nav footer —
+        // the GC L/R buttons (g_lbtn_n / g_rbtn_n), the GC + Wii hint text
+        // (g_text_n / w_text_n), and the Wii scroll arrows / cross (yaji_l /
+        // yaji_r / wi_juji).  The g_base / w_base black slot backgrounds are
+        // deliberately left visible so the footer keeps its dark backing.
+        MULTI_CHAR('g_lbtn_n'), MULTI_CHAR('g_rbtn_n'), MULTI_CHAR('g_text_n'),
+        MULTI_CHAR('w_text_n'), MULTI_CHAR('wi_juji'),  MULTI_CHAR('yaji_l'),
+        MULTI_CHAR('yaji_r'),
     };
     for (int i = 0; i < (int)(sizeof(kBaseSlotTags) / sizeof(kBaseSlotTags[0])); ++i) {
         hideFooterSlotTree(baseScreen, kBaseSlotTags[i]);
@@ -1308,6 +1331,91 @@ static void drawFooterTextBlock(J2DGrafContext* gfx, JUTFont* font, const LetAre
 }
 
 // ============================================
+// NEW CODE — ALBW Port (TEMP shop layout diagnostic — Build 1)
+// One-shot dump to Documents/dusklight/albw_shop_layout_debug.txt of the
+// list/parchment geometry and every visible footer-band pane on the base /
+// shadow / menu screens.  Feeds Part A (flame_* width + list scissor) and
+// Bug 2 (exact leaked L/R footer pane tags).  Remove once both are tuned.
+// ============================================
+static void decodePaneTag(u64 tag, char out[9]) {
+    int n = 0;
+    for (int shift = 56; shift >= 0; shift -= 8) {
+        const char c = (char)((tag >> shift) & 0xFF);
+        if (c != '\0') {
+            out[n++] = c;
+        }
+    }
+    out[n] = '\0';
+}
+
+static void dumpFooterBandPanes(FILE* fp, J2DPane* pane, const char* screenName, f32 bandTop,
+                                f32 bandBot) {
+    if (!pane) {
+        return;
+    }
+    if (pane->isVisible()) {
+        const LetAreaBounds b = calcPaneScreenBounds(pane);
+        if (b.valid && (b.y + b.h) >= bandTop && b.y <= bandBot) {
+            char tag[9];
+            decodePaneTag(pane->mInfoTag, tag);
+            fprintf(fp, "  [%-4s] tag='%s' x=%.1f y=%.1f w=%.1f h=%.1f\n", screenName, tag, b.x, b.y,
+                    b.w, b.h);
+        }
+    }
+    for (J2DPane* c = pane->getFirstChildPane(); c; c = c->getNextChildPane()) {
+        dumpFooterBandPanes(fp, c, screenName, bandTop, bandBot);
+    }
+}
+
+static void dumpShopLayoutDebug(J2DScreen* baseScreen, J2DScreen* sdwScreen, J2DScreen* menuScreen,
+                                const LetAreaBounds& area, f32 listW, f32 descX, f32 descW,
+                                const LetAreaBounds& footerBar, J2DPicture* const* rowFrames,
+                                f32 listScissorX, f32 listScissorW) {
+    char path[512];
+    path[0] = '\0';
+    const char* user = getenv("USERPROFILE");
+    if (user && user[0] != '\0') {
+        snprintf(path, sizeof(path), "%s/Documents/dusklight/albw_shop_layout_debug.txt", user);
+    } else {
+        strncpy(path, "albw_shop_layout_debug.txt", sizeof(path) - 1);
+    }
+    FILE* fp = fopen(path, "w");
+    if (!fp) {
+        return;
+    }
+    fprintf(fp, "--- ALBW shop layout debug ---\n");
+    fprintf(fp, "area:        x=%.1f y=%.1f w=%.1f h=%.1f\n", area.x, area.y, area.w, area.h);
+    fprintf(fp, "listW=%.1f descX=%.1f descW=%.1f\n", listW, descX, descW);
+    fprintf(fp, "listScissor: x=%.1f w=%.1f rightEdge=%.1f\n", listScissorX, listScissorW,
+            listScissorX + listScissorW);
+    fprintf(fp, "footerBar:   x=%.1f y=%.1f w=%.1f h=%.1f valid=%d\n", footerBar.x, footerBar.y,
+            footerBar.w, footerBar.h, (int)footerBar.valid);
+    for (int i = 0; i < 6; ++i) {
+        if (rowFrames[i]) {
+            const LetAreaBounds b = calcPaneScreenBounds(rowFrames[i]);
+            // local width/height = the pane's own mBounds (pre-screen-scale); typeID tells us if
+            // it's a plain J2DPicture (stretches to bounds) or a window/other (does not).
+            fprintf(fp,
+                    "flame_%02d:    canvas[x=%.1f y=%.1f w=%.1f h=%.1f] local[w=%.1f h=%.1f] "
+                    "type=%u valid=%d\n",
+                    i, b.x, b.y, b.w, b.h, rowFrames[i]->getWidth(), rowFrames[i]->getHeight(),
+                    (unsigned)rowFrames[i]->getTypeID(), (int)b.valid);
+        }
+    }
+    const f32 bandTop = footerBar.valid ? footerBar.y - 12.0f : area.y + area.h - 60.0f;
+    const f32 bandBot =
+        footerBar.valid ? footerBar.y + footerBar.h + 12.0f : area.y + area.h + 60.0f;
+    fprintf(fp, "footer-band visible panes [%.1f..%.1f]:\n", bandTop, bandBot);
+    dumpFooterBandPanes(fp, baseScreen, "base", bandTop, bandBot);
+    dumpFooterBandPanes(fp, sdwScreen, "sdw", bandTop, bandBot);
+    dumpFooterBandPanes(fp, menuScreen, "menu", bandTop, bandBot);
+    fclose(fp);
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
+// ============================================
 // NEW CODE — ALBW Port (Footer draw — single horizontal bar)
 // bar = full-width strip derived from base.blo footer textbox Y/H.
 // Stick icon: left-anchored square (min(bar.w, bar.h) * 0.92f).
@@ -1323,7 +1431,7 @@ static void drawShopFooter(J2DGrafContext* gfx, J2DPicture* stickPic, const LetA
     // Square nunchuk stick icon — left-anchored, height-constrained
     const f32 iconSide = std::min(bar.w, bar.h) * 0.92f;
     if (stickPic) {
-        const f32 iconX = bar.x + 4.0f;
+        const f32 iconX = bar.x + 4.0f + kFooterStickOffsetX;
         const f32 iconY = bar.y + (bar.h - iconSide) * 0.5f;
         stickPic->show();
         stickPic->draw(iconX, iconY, iconSide, iconSide, false, false, false);
@@ -1335,18 +1443,31 @@ static void drawShopFooter(J2DGrafContext* gfx, J2DPicture* stickPic, const LetA
     }
 
     // ============================================
-    // Cursor-defined footer content
-    // ─────────────────────────────────────────────────────────────────
-    // Full bar:  bar.x, bar.y, bar.w, bar.h  (screen coordinates)
-    // After stick icon:
-    //   const f32 contentX = bar.x + 4.0f + iconSide + 4.0f;
-    //   const f32 contentW = bar.w - (contentX - bar.x);
-    // Draw each section:
-    //   LetAreaBounds slot = { x, bar.y, w, bar.h, true };
-    //   drawFooterTextBlock(gfx, font, slot, "text", fontSzX, fontSzY, goldTildes);
-    // ─────────────────────────────────────────────────────────────────
-    // TODO(Cursor): define button hints and tagline layout here.
+    // Footer content — centred tagline + right-side action hints.
+    // Layout: [stick] [center: tagline] [right: A/B hints].  Each text zone
+    // is a sub-rect of the bar; drawFooterTextBlock centres text within it.
+    // Up/down scroll arrows beside the stick are a follow-up refinement.
     // ============================================
+    const f32 contentX = bar.x + 4.0f + iconSide + 6.0f;
+    const f32 contentW = (bar.x + bar.w) - contentX;
+    if (contentW <= 8.0f) {
+        return;
+    }
+
+    static constexpr const char* kFooterTagline = "\"Hylians are raving about our service!\"";
+    static constexpr const char* kFooterActions = "A: Buy/ B: Exit";
+
+    const f32 fontSz  = bar.h * kFooterFontHeightRatio;
+    const f32 centerW = contentW * kFooterCenterFraction;
+    const f32 rightW  = contentW - centerW;
+
+    const LetAreaBounds centerSlot = { contentX + kFooterTaglineOffsetX,
+                                       bar.y + kFooterTaglineOffsetY, centerW, bar.h, true };
+    drawFooterTextBlock(gfx, font, centerSlot, kFooterTagline, fontSz, fontSz, false);
+
+    const LetAreaBounds rightSlot = { contentX + centerW + kFooterActionsOffsetX,
+                                      bar.y + kFooterActionsOffsetY, rightW, bar.h, true };
+    drawFooterTextBlock(gfx, font, rightSlot, kFooterActions, fontSz, fontSz, false);
 }
 // ============================================
 // NEW CODE ENDS HERE
@@ -1646,9 +1767,37 @@ void dALBWShop_c::create() {
 }
 
 void dALBWShop_c::applyListColumnLayout(f32 areaX, f32 listW) {
-    const f32 frameW = listW - kRowFrameInsetX * 2.0f;
+    // Extend the row bars toward the parchment. flame_* draws its window to the
+    // resized local width frameW; its on-screen right edge works out to
+    //   nb.x + (frameW / baseW) * nb.w   (nb = native screen bounds).
+    // The old frameW = listW - inset tied the bar to the narrow list column,
+    // landing the right edge well short of the parchment. Solve frameW so the
+    // bar lands just before the parchment instead. Price layout below is
+    // unchanged — it reads the native (pre-resize) frame bounds, so the price
+    // keeps its tuned position regardless of the new bar length.
+    // Target bar width is computed ONCE per row and cached.  calcPaneScreenBounds()
+    // reflects the prior frame's resize(), so recomputing frameW from the live
+    // bounds every frame forms a feedback loop that makes the bars (and the price
+    // that tracks them) flicker.  The first frame reads the native (pre-resize)
+    // bounds; every frame after reuses the cached width so resize() is constant.
+    static f32 sCachedFrameW[6] = {-1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f};
+    const f32 descX        = areaX + listW + kListDescGap;
+    const f32 barDrawRight = descX - kRowFrameGapBeforeParchment;  // 0-640 canvas
     for (int i = 0; i < 6; ++i) {
+        f32 frameW = listW - kRowFrameInsetX * 2.0f;  // fallback (old behaviour)
         if (mpRowFrame[i] && mRowFrameBaseW[i] > 1.0f) {
+            if (sCachedFrameW[i] <= 0.0f) {
+                const LetAreaBounds nb = calcPaneScreenBounds(mpRowFrame[i]);  // native on first frame
+                if (nb.valid && nb.w > 1.0f) {
+                    const f32 frac = (barDrawRight - nb.x) / nb.w;
+                    if (frac > 0.05f) {
+                        sCachedFrameW[i] = frac * mRowFrameBaseW[i];
+                    }
+                }
+            }
+            if (sCachedFrameW[i] > 0.0f) {
+                frameW = sCachedFrameW[i];
+            }
             mpRowFrame[i]->resize(frameW, mRowFrameBaseH[i]);
         }
         if (mpRowPriceMgr[i]) {
@@ -2325,18 +2474,41 @@ void dALBWShop_c::draw() {
             mpRowPrice[i]->show();
         }
     }
-    drawShopFooter(gfx, mpFooterStickPic, mFooterBar);
-
     // Vanilla letter UI: list scissored to let_area (left); parchment only on the right.
     // Without both scissors, letter_window_* BLOs cover the full frame as an overlay.
     u32 savedL = 0, savedT = 0, savedW = 0, savedH = 0;
     GXGetScissor(&savedL, &savedT, &savedW, &savedH);
 
     const LetAreaBounds area = calcPaneScreenBounds(mLetAreaPane);
+
+    // ============================================
+    // NEW CODE — ALBW Port (Footer anchor — Bug 1 fix)
+    // Anchor the footer strip to the let_area interior, not the full screen,
+    // so the stick + content stay inside the ornate frame.  Keep the probed
+    // Y/H (vanilla footer band).  Drawn last (below) so it sits on top.
+    // ============================================
+    LetAreaBounds footerBar = mFooterBar;
+    if (area.valid && footerBar.valid) {
+        footerBar.x = area.x;
+        footerBar.w = area.w;
+    }
+    // Nudge the whole footer (stick + tagline + A/B) right to sit over the
+    // vanilla footer slot region rather than hugging the let_area left edge.
+    footerBar.x += kFooterContentShiftX;
+
     if (area.valid) {
         const f32 listW = area.w * kListColumnRatio;
         const f32 descX = area.x + listW + kListDescGap;
         const f32 descW = area.w - listW - kListDescGap;
+
+        // TEMP one-shot layout diagnostic (Build 1) — geometry + footer L/R tags.
+        static bool sLayoutDumped = false;
+        if (!sLayoutDumped) {
+            sLayoutDumped = true;
+            dumpShopLayoutDebug(mpBaseScreen, mpSdwScreen, mpMenuScreen, area, listW, descX, descW,
+                                footerBar, mpRowFrame, area.x - kListIconScissorPad,
+                                listW + kListIconScissorPad);
+        }
 
         applyListColumnLayout(area.x, listW);
         for (int row = 0; row < 6; ++row) {
@@ -2345,8 +2517,11 @@ void dALBWShop_c::draw() {
         updateRowLetters(visCount, sel);
 
         // Item list: left column + icon column (icons sit slightly left of let_area origin).
-        const f32 listScissorX = area.x - kListIconScissorPad;
-        const f32 listScissorW = listW + kListIconScissorPad;
+        // The flame_* bars span nearly the whole area; extend the scissor right edge to just
+        // before the parchment so they read full-length instead of being clipped at listW.
+        const f32 listScissorX     = area.x - kListIconScissorPad;
+        const f32 listScissorRight = descX - kRowFrameGapBeforeParchment;
+        const f32 listScissorW     = listScissorRight - listScissorX;
         gfx->scissor(listScissorX, area.y, listScissorW, area.h);
         gfx->setScissor();
         suppressFifthRowFooterOverlap(mpMenuScreen, mpRowPrice[4]);
@@ -2403,6 +2578,9 @@ void dALBWShop_c::draw() {
         }
     }
 
+    // Custom footer last so it draws on top of the rest of the HUD. Scissor is
+    // already restored here, so the stick + text are unclipped.
+    drawShopFooter(gfx, mpFooterStickPic, footerBar);
 }
 
 #endif // TARGET_PC_NATIVE_UI

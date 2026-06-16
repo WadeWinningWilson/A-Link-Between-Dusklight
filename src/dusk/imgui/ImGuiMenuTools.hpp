@@ -27,6 +27,7 @@ namespace dusk {
         void ShowSaveEditor();
         void ShowStateShare();
         void ShowInputViewer();
+        void ShowLockonHpOverlay();
         void ShowActorSpawner();
 
     private:
@@ -48,6 +49,8 @@ namespace dusk {
 
 		bool m_showPlayerInfo = false;
 		int m_playerInfoOverlayCorner = 1; // top-right
+
+		int m_lockonHpOverlayCorner = 0; // top-left
 
 		bool m_showSaveEditor = false;
         ImGuiSaveEditor m_saveEditor;

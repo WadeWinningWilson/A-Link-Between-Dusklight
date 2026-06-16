@@ -10,6 +10,7 @@
 #if TARGET_PC
 
 class daAlink_c;
+class fopEn_enemy_c;
 
 bool dShield_isParryCombatEnabled();
 bool dShield_isDurabilityEnabled();
@@ -43,9 +44,38 @@ f32 dShield_getDurabilityMeterWidthScale();
 
 bool dShield_onShieldHit(daAlink_c* i_link, int i_atSpl, fopAc_ac_c* i_attacker);
 
+// Guard-break tier (AtSpl 9/10/11): defer vanilla instant break for parry-eligible enemies.
+// Mount/spear actors (King Bulblin, horseback Ganondorf) keep vanilla behavior.
+bool dShield_shouldDeferGuardBreak(int i_atSpl, fopAc_ac_c* i_attacker);
+
+// Failed block on a deferred guard-break attack: ALBW/charge penalty, heavy durability drain.
+// Returns true when caller should run procGuardBreakInit().
+bool dShield_onFailedGuardBreakBlock(daAlink_c* i_link, int i_atSpl, fopAc_ac_c* i_attacker);
+
 void dShield_onFailedGuardBlock(fopAc_ac_c* i_attacker);
 
 bool dShield_tryBeginGuardAttack();
+
+// Set when the current bash spend opens a chain at full charges (before decrement).
+bool dShield_consumeLastBashSpendFromFullBar();
+// Set when the current bash spend opens a chain at bashThreshold or higher (before decrement).
+bool dShield_consumeLastBashSpendOpenedAtThreshold();
+
+// Full-bar punish tier (P1 guard-break bash, Helm Splitter when parry combat is on).
+bool dShield_canUseFullBarPunish();
+bool dShield_hasFullBarPunishPending();
+bool dShield_hasThresholdPunishPending();
+bool dShield_hasFullBarBashInFlight();
+void dShield_clearFullBarPunishPending();
+bool dShield_tryConsumeThresholdPunish();
+bool dShield_chargeHelmSplitterMeterOnce();
+void dShield_clearHelmSplitterMeterCharge();
+bool dShield_tryGrantHelmPunishCredit(fopEn_enemy_c* i_enemy);
+bool dShield_hasHelmPunishPending();
+bool dShield_hasHelmPunishOnTarget(fopEn_enemy_c* i_enemy);
+bool dShield_tryConsumeFullBarPunish();
+
+bool dShield_tryBeginHelmSplitter();
 
 void dShield_onGuardAttackConnect();
 

@@ -11,7 +11,12 @@
 #include "ImGuiEngine.hpp"
 #include "d/actor/d_a_alink.h"
 #include "d/actor/d_a_horse.h"
+#include "d/d_albw_hp_mult.h"
+#include "d/d_attention.h"
 #include "d/d_com_inf_game.h"
+#include "f_op/f_op_actor.h"
+#include "f_pc/f_pc_manager.h"
+#include "f_pc/f_pc_name.h"
 #include "dusk/data.hpp"
 #include "dusk/dusk.h"
 #include "dusk/main.h"
@@ -319,6 +324,148 @@ namespace dusk {
             ShowCornerContextMenu(m_playerInfoOverlayCorner, m_debugOverlayCorner);
         }
 
+        ImGui::End();
+        ImGui::PopFont();
+    }
+
+    namespace {
+    const char* lockonHpCategoryName(dAlbwHP_Category cat) {
+        switch (cat) {
+        case dAlbwHP_MID_BOSS:
+            return "Mid-Boss";
+        case dAlbwHP_BOSS:
+            return "Boss";
+        case dAlbwHP_FINAL:
+            return "Final Boss";
+        default:
+            return "Common";
+        }
+    }
+
+    const char* lockonDarknutPhaseName(dAlbwHP_DarknutPhase phase) {
+        switch (phase) {
+        case dAlbwHP_Darknut_ARMORED:
+            return "Armored";
+        case dAlbwHP_Darknut_TRANSITION:
+            return "Transition";
+        case dAlbwHP_Darknut_UNARMORED:
+            return "Unarmored";
+        default:
+            return "Unknown";
+        }
+    }
+
+    bool isLiveLockonActor(fopAc_ac_c* actor) {
+        if (actor == NULL || !fopAcM_IsActor(actor)) {
+            return false;
+        }
+
+        const fpc_ProcID procId = fpcM_GetID(actor);
+        return procId != fpcM_ERROR_PROCESS_ID_e && fpcM_IsExecuting(procId);
+    }
+
+    bool isPlaySceneActive() {
+        return fpcM_SearchByName(fpcNm_PLAY_SCENE_e) != NULL;
+    }
+
+    int countBattleLockonTargets(dAttention_c* attention) {
+        int battleCount = 0;
+        const int lockonCount = attention->GetLockonCount();
+        for (int i = 0; i < lockonCount; i++) {
+            dAttList_c* entry = attention->GetLockonList(i);
+            if (entry == NULL) {
+                continue;
+            }
+
+            fopAc_ac_c* actor = entry->getActor();
+            if (isLiveLockonActor(actor) && fopAcM_GetGroup(actor) == fopAc_ENEMY_e &&
+                (actor->attention_info.flags & fopAc_AttnFlag_BATTLE_e) != 0)
+            {
+                battleCount++;
+            }
+        }
+        return battleCount;
+    }
+    }  // namespace
+
+    void ImGuiMenuTools::ShowLockonHpOverlay() {
+        if (!getSettings().game.showLockonHpDebug.getValue() || !dusk::IsGameLaunched ||
+            !isPlaySceneActive())
+        {
+            return;
+        }
+
+        dAttention_c* attention = dComIfGp_getAttention();
+        if (attention == NULL || !attention->LockonTruth()) {
+            return;
+        }
+
+        fopAc_ac_c* target = attention->LockonTarget(0);
+        if (!isLiveLockonActor(target)) {
+            return;
+        }
+
+        ImGui::PushFont(ImGuiEngine::fontMono);
+
+        ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDecoration |
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing |
+            ImGuiWindowFlags_NoNav;
+        if (m_lockonHpOverlayCorner != -1) {
+            SetOverlayWindowLocation(m_lockonHpOverlayCorner);
+            windowFlags |= ImGuiWindowFlags_NoMove;
+        }
+
+        ImGui::SetNextWindowBgAlpha(0.65f);
+        if (ImGui::Begin("Lock-on HP", nullptr, windowFlags)) {
+            const char* name = fopAcM_getProcNameString(target);
+            if (name == NULL) {
+                name = "?";
+            }
+
+            const s16 profName = fopAcM_GetName(target);
+            const dAlbwHP_Category category = dAlbwHP_getCategory(profName);
+            const int trueHpMult = dAlbwHP_getTrueHpMult(profName);
+            const dAlbwHP_LockonDisplay hpDisplay = dAlbwHP_getLockonDisplayHp(target);
+            const int battleTargets = countBattleLockonTargets(attention);
+
+            ImGui::Text("Lock-on Target");
+            ImGui::Separator();
+            ImGuiStringViewText(fmt::format("Name: {}\n", name));
+
+            if (hpDisplay.darknutPhase != dAlbwHP_Darknut_NONE) {
+                ImGuiStringViewText(fmt::format("Phase: {}\n",
+                                                lockonDarknutPhaseName(hpDisplay.darknutPhase)));
+
+                if (hpDisplay.darknutPhase == dAlbwHP_Darknut_ARMORED) {
+                    ImGuiStringViewText(fmt::format("Armor: {} / {} remaining\n",
+                                                    hpDisplay.current, hpDisplay.max));
+                } else if (hpDisplay.darknutPhase == dAlbwHP_Darknut_TRANSITION) {
+                    ImGuiStringViewText("Armor: complete\n");
+                } else if (hpDisplay.darknutPhase == dAlbwHP_Darknut_UNARMORED) {
+                    ImGuiStringViewText(fmt::format("Internal: {} / {}\n", hpDisplay.current,
+                                                    hpDisplay.max));
+                    ImGuiStringViewText("(internal damage meter)\n");
+                }
+
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.65f, 0.65f, 0.65f, 1.0f));
+                ImGuiStringViewText(fmt::format("HP (actor): {} / {}\n", hpDisplay.actorHealth,
+                                                hpDisplay.actorHealthMax));
+                ImGui::PopStyleColor();
+            } else {
+                ImGuiStringViewText(
+                    fmt::format("HP: {} / {}\n", hpDisplay.current, hpDisplay.max));
+                if (hpDisplay.customMeter) {
+                    ImGuiStringViewText("(internal damage meter)\n");
+                }
+            }
+            ImGuiStringViewText(
+                fmt::format("Category: {}\n", lockonHpCategoryName(category)));
+            ImGuiStringViewText(fmt::format("True HP mult: {}x\n", trueHpMult));
+            ImGuiStringViewText(
+                fmt::format("Battle targets nearby: {}\n", battleTargets));
+
+            ShowCornerContextMenu(m_lockonHpOverlayCorner, m_playerInfoOverlayCorner);
+        }
         ImGui::End();
         ImGui::PopFont();
     }

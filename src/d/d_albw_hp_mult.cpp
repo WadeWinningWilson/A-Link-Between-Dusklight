@@ -1,28 +1,31 @@
 /**
  * d_albw_hp_mult.cpp
- * ALBW Port — Enemy HP multiplier: category tables and intercept logic.
+ * ALBW Port — True max-HP scaling and Link damage decrease.
  *
- * Each enemy actor profile name is mapped to one of four categories.
- * The corresponding Dusk settings slider (1–16×) divides the incoming
- * attack power before it is subtracted from the enemy's health field,
- * making the enemy effectively harder to kill without touching HP values
- * directly. The max(1,...) floor ensures no hit ever deals 0 damage.
+ * True HP: each enemy actor is scaled once on init (health + field_0x560
+ * multiplied by its category slider). 1-HP actors are left unchanged.
  *
- * Actor IDs follow the game actor list (Proc Name in d_a_*.cpp).
- * In-game names verified against actor-list spreadsheet + @brief headers.
+ * Link damage decrease: global attack-power divisor at the collision
+ * intercept in d_cc_uty.cpp (independent of category HP sliders).
  */
 
 #if TARGET_PC
 
 #include "d/d_albw_hp_mult.h"
 #include "dusk/settings.h"
+#include "d/actor/d_a_b_tn.h"
+#include "f_op/f_op_actor.h"
+#include "f_pc/f_pc_manager.h"
 #include "f_pc/f_pc_name.h"
 #include <algorithm>
 #include <cstddef>
+#include <unordered_set>
 
 // ============================================
 // NEW CODE — ALBW Port
 // ============================================
+
+static std::unordered_set<fpc_ProcID> s_trueHpApplied;
 
 // ---------------------------------------------------------------------------
 // Mid-boss list — gatekeepers and story minibosses (same tier everywhere).
@@ -67,7 +70,6 @@ static const s16 sBoss[] = {
 
 // ---------------------------------------------------------------------------
 // Final boss list — Hyrule Castle / Hyrule Field finale.
-// Bespoke parry/durability rules for FINAL may come later; 2× durability now.
 // ---------------------------------------------------------------------------
 static const s16 sFinalBoss[] = {
     fpcNm_B_GND_e, // 0x20E Ganondorf (horseback)
@@ -87,6 +89,22 @@ static bool inList(const s16* list, std::size_t count, s16 name) {
 }
 
 #define IN(arr, name) inList(arr, std::size(arr), name)
+
+static void markTrueHpProcessed(fpc_ProcID procId) {
+    s_trueHpApplied.insert(procId);
+}
+
+static bool isTrueHpProcessed(fpc_ProcID procId) {
+    return s_trueHpApplied.find(procId) != s_trueHpApplied.end();
+}
+
+static s16 scaleHpField(s16 value, int mult) {
+    if (value <= 1 || mult <= 1) {
+        return value;
+    }
+    const int scaled = static_cast<int>(value) * mult;
+    return static_cast<s16>(std::min(scaled, 32767));
+}
 
 dAlbwHP_Category dAlbwHP_getCategory(s16 profName) {
     if (IN(sFinalBoss, profName)) {
@@ -121,12 +139,129 @@ static int getCategoryMult(dAlbwHP_Category cat) {
     }
 }
 
+int dAlbwHP_getTrueHpMult(s16 profName) {
+    const int mult = getCategoryMult(dAlbwHP_getCategory(profName));
+    return mult > 1 ? mult : 1;
+}
+
+s16 dAlbwHP_scaleHpValue(s16 profName, s16 hp) {
+    return scaleHpField(hp, dAlbwHP_getTrueHpMult(profName));
+}
+
+dAlbwHP_LockonDisplay dAlbwHP_getLockonDisplayHp(fopAc_ac_c* actor) {
+    dAlbwHP_LockonDisplay display = {
+        .current = 0,
+        .max = 0,
+        .customMeter = false,
+        .darknutPhase = dAlbwHP_Darknut_NONE,
+        .actorHealth = 0,
+        .actorHealthMax = 0,
+    };
+
+    if (actor == NULL) {
+        return display;
+    }
+
+    display.current = actor->health;
+    display.max = actor->field_0x560 > 0 ? actor->field_0x560 : actor->health;
+    display.actorHealth = display.current;
+    display.actorHealthMax = display.max;
+
+    if (fopAcM_GetName(actor) == fpcNm_B_TN_e) {
+        const daB_TN_c* darknut = (const daB_TN_c*)actor;
+        const int armorTotal = darknut->albwArmorTotal();
+
+        if (darknut->albwUsesInternalDamageMeter()) {
+            const int maxDamage = darknut->albwInternalDamageMax();
+            const int taken = darknut->albwInternalDamageTaken();
+            const int remaining = maxDamage - taken;
+            display.darknutPhase = dAlbwHP_Darknut_UNARMORED;
+            display.max = (s16)std::min(maxDamage, 32767);
+            display.current = (s16)std::max(0, std::min(remaining, 32767));
+            display.customMeter = true;
+        } else if (darknut->albwIsTransitionPhase()) {
+            display.darknutPhase = dAlbwHP_Darknut_TRANSITION;
+            display.max = (s16)armorTotal;
+            display.current = 0;
+            display.customMeter = true;
+        } else if (darknut->albwIsArmoredPhase()) {
+            const int armorRemaining = darknut->albwArmorRemaining();
+            display.darknutPhase = dAlbwHP_Darknut_ARMORED;
+            display.max = (s16)armorTotal;
+            display.current = (s16)std::max(0, std::min(armorRemaining, 32767));
+            display.customMeter = true;
+        }
+    }
+
+    return display;
+}
+
+void dAlbwHP_tryApplyTrueMaxHp(fopAc_ac_c* actor) {
+    if (actor == NULL || !fopAcM_IsActor(actor)) {
+        return;
+    }
+
+    const fpc_ProcID procId = fpcM_GetID(actor);
+    if (procId == fpcM_ERROR_PROCESS_ID_e || !fpcM_IsExecuting(procId)) {
+        return;
+    }
+    if (isTrueHpProcessed(procId)) {
+        return;
+    }
+
+    if (fopAcM_GetGroup(actor) != fopAc_ENEMY_e) {
+        markTrueHpProcessed(procId);
+        return;
+    }
+
+    const s16 profName = fopAcM_GetName(actor);
+    if (dAlbwHP_getCategory(profName) == dAlbwHP_EXCLUDED) {
+        markTrueHpProcessed(procId);
+        return;
+    }
+
+    if (actor->health <= 0) {
+        return;
+    }
+
+    if (actor->health <= 1) {
+        markTrueHpProcessed(procId);
+        return;
+    }
+
+    const int mult = dAlbwHP_getTrueHpMult(profName);
+    if (mult <= 1) {
+        markTrueHpProcessed(procId);
+        return;
+    }
+
+    actor->health = scaleHpField(actor->health, mult);
+    if (actor->field_0x560 > 1) {
+        actor->field_0x560 = scaleHpField(actor->field_0x560, mult);
+    } else if (actor->field_0x560 > 0) {
+        actor->field_0x560 = actor->health;
+    }
+
+    markTrueHpProcessed(procId);
+}
+
+void dAlbwHP_onActorDelete(fpc_ProcID procId) {
+    s_trueHpApplied.erase(procId);
+}
+
+static int getLinkDamageDecreaseMult() {
+    const int mult = dusk::getSettings().game.linkDamageDecreaseMult.getValue();
+    return mult > 1 ? mult : 1;
+}
+
 int dAlbwHP_applyMult(s16 profName, int attackPower) {
+    (void)profName;
+
     if (attackPower <= 0) {
         return attackPower;
     }
 
-    const int mult = getCategoryMult(dAlbwHP_getCategory(profName));
+    const int mult = getLinkDamageDecreaseMult();
     if (mult <= 1) {
         return attackPower;
     }
@@ -134,8 +269,8 @@ int dAlbwHP_applyMult(s16 profName, int attackPower) {
 }
 
 int dAlbwHP_getRawMult(s16 profName) {
-    const int mult = getCategoryMult(dAlbwHP_getCategory(profName));
-    return mult > 1 ? mult : 1;
+    (void)profName;
+    return getLinkDamageDecreaseMult();
 }
 
 u16 dAlbwHP_applyDurabilityMult(s16 profName, u16 damage) {

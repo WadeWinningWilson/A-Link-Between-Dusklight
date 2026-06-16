@@ -40,6 +40,7 @@ UserSettings g_userSettings = {
         .noSwordRecoil {"game.noSwordRecoil", false},
         .manualShielding {"game.manualShielding", false},
         .shieldParryCombat {"game.shieldParryCombat", true},
+        .hiddenSkillRework {"game.hiddenSkillRework", true},
         .shieldDurability {"game.shieldDurability", false},
         .deathRecoveryOrb {"game.deathRecoveryOrb", false},
         .wolfLinkCombat {"game.wolfLinkCombat", false},
@@ -50,6 +51,10 @@ UserSettings g_userSettings = {
         .hpMultMidBoss    {"game.hpMultMidBoss",    1},
         .hpMultBoss       {"game.hpMultBoss",       1},
         .hpMultFinalBoss  {"game.hpMultFinalBoss",  1},
+        .linkDamageDecreaseMult {"game.linkDamageDecreaseMult", 1},
+        .showLockonHpDebug {"game.showLockonHpDebug", false},
+        .showDarknutBashDebug {"game.showDarknutBashDebug", false},
+        .stickCycleLockon {"game.stickCycleLockon", false},
         .noHeartDrops {"game.noHeartDrops", false},
         .noAmmoDrops  {"game.noAmmoDrops",  true},
         .instantDeath {"game.instantDeath", false},
@@ -238,6 +243,7 @@ void registerSettings() {
     Register(g_userSettings.game.noSwordRecoil);
     Register(g_userSettings.game.manualShielding);
     Register(g_userSettings.game.shieldParryCombat);
+    Register(g_userSettings.game.hiddenSkillRework);
     Register(g_userSettings.game.shieldDurability);
     Register(g_userSettings.game.deathRecoveryOrb);
     Register(g_userSettings.game.wolfLinkCombat);
@@ -248,6 +254,10 @@ void registerSettings() {
     Register(g_userSettings.game.hpMultMidBoss);
     Register(g_userSettings.game.hpMultBoss);
     Register(g_userSettings.game.hpMultFinalBoss);
+    Register(g_userSettings.game.linkDamageDecreaseMult);
+    Register(g_userSettings.game.showLockonHpDebug);
+    Register(g_userSettings.game.showDarknutBashDebug);
+    Register(g_userSettings.game.stickCycleLockon);
     Register(g_userSettings.game.noHeartDrops);
     Register(g_userSettings.game.noAmmoDrops);
     Register(g_userSettings.game.instantDeath);

@@ -131,6 +131,30 @@ public:
     int CreateHeap();
     int create();
 
+#if TARGET_PC
+    static constexpr int ALBW_ARMOR_PIECE_COUNT = 12;
+
+    bool albwIsArmoredPhase() const { return mActionMode1 < ACT_CHANGEDEMO; }
+    bool albwIsTransitionPhase() const { return mActionMode1 == ACT_CHANGEDEMO; }
+    bool albwUsesInternalDamageMeter() const { return mActionMode1 >= ACT_CHASEL; }
+    int albwArmorTotal() const { return ALBW_ARMOR_PIECE_COUNT; }
+    int albwArmorBroken() const;
+    int albwArmorRemaining() const;
+    int albwInternalDamageMax() const { return field_0x700; }
+    int albwInternalDamageTaken() const { return field_0x6fc; }
+    bool albwApplyPhase1BashGuardBreak();
+    bool albwApplyPhase2BashGuardBreak();
+    int albwTryApplyBashGuardBreakFromHit();
+    bool albwHandleParryCombatBashShieldHit(dCcD_Sph* i_sph, cCcD_Obj* i_atObj);
+    void albwBeginGuardOpenWindow(u8 i_frames);
+    void albwFinishBashGuardBreakFromHit(cCcD_Obj* i_atObj, int i_result);
+    void albwApplyPendingPhase1GuardBreak();
+    bool albwIsPhase1AttackVulnerable() const;
+    bool albwIsPhase1BashTargetState() const;
+    bool albwIsUnarmoredPhase() const { return mNextBreakPart >= 11; }
+    void albwDebugLogEvent(const char* event) const;
+#endif
+
 private:
     /* 0x05AC */ request_of_phase_process_class mPhaseReq1;
     /* 0x05B4 */ request_of_phase_process_class mPhaseReq2;

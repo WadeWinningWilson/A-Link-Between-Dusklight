@@ -8,6 +8,10 @@
 #include "SSystem/SComponent/c_math.h"
 
 #include "dusk/settings.h"
+#if TARGET_PC
+#include "d/d_albw_combat.h"
+#include "d/d_albw_shield.h"
+#endif
 
 enum daAlink_CutNmParamType {
     CUT_NM_PARAM_VERTICAL,
@@ -792,9 +796,59 @@ BOOL daAlink_c::checkCutCancelNextMode(int param_0) {
     return 0;
 }
 
-BOOL daAlink_c::checkDoCutAction() {
-    fopAc_ac_c* enemy = mTargetedActor;
+#if TARGET_PC
+static bool canReleaseJumpStrikeCharge(daAlink_c* i_link) {
+    (void)i_link;
+    return dAlbw_isJumpStrikeChargeReady();
+}
+#endif
 
+BOOL daAlink_c::checkDoCutAction() {
+#if TARGET_PC
+    if (dAlbw_isHiddenSkillReworkEnabled()) {
+        CONAV_CUT_SNAPSHOT(this, "doCut", "enter-rework");
+
+        if (mProcID == PROC_CUT_HEAD || mProcID == PROC_CUT_HEAD_LAND) {
+            return TRUE;
+        }
+
+        if (mProcID == PROC_CUT_LARGE_JUMP_CHARGE) {
+            if (checkDownAttackState()) {
+                return procCutDownInit();
+            }
+
+            if (!canReleaseJumpStrikeCharge(this)) {
+                CONAV_LOG("cut", "checkDoCutAction charge-hold deny frame=%.1f",
+                          mUnderFrameCtrl[0].getFrame());
+                return TRUE;
+            }
+
+            CONAV_LOG("cut", "checkDoCutAction -> procCutLargeJumpInit frame=%.1f",
+                      mUnderFrameCtrl[0].getFrame());
+            return procCutLargeJumpInit();
+        }
+
+        // Ending Blow and Helm Splitter outrank Jump Strike charge when both are unlocked.
+        if (checkDownAttackState()) {
+            return procCutDownInit();
+        }
+
+        if (checkCutHeadState()) {
+            return procCutHeadInit();
+        }
+
+        if (doButton() && (dComIfGs_isEventBit(dSv_event_flag_c::F_0343) ||
+                           checkNoResetFlg3(FLG3_TRANING_CUT_LARGE_JUMP)))
+        {
+            CONAV_LOG("cut", "checkDoCutAction -> procCutLargeJumpChargeInit do=1");
+            return procCutLargeJumpChargeInit();
+        }
+
+        CONAV_LOG("cut", "checkDoCutAction -> procCutJumpInit(FALSE) rework=1 do=%d",
+                  doButton() ? 1 : 0);
+        return procCutJumpInit(FALSE);
+    }
+#endif
     if (doButton() && (dComIfGs_isEventBit(dSv_event_flag_c::F_0343) || checkNoResetFlg3(FLG3_TRANING_CUT_LARGE_JUMP))) {
         return procCutLargeJumpChargeInit();
     } else if (checkDownAttackState()) {
@@ -813,15 +867,20 @@ BOOL daAlink_c::checkCutBackState() {
 BOOL daAlink_c::checkCutHeadState() {
     fopEn_enemy_c* enemy = (fopEn_enemy_c*)mTargetedActor;
 
-    return ((!checkBootsOrArmorHeavy()
-             && enemy != NULL
-             && (dComIfGs_isEventBit(dSv_event_flag_c::F_0341)
-                || checkNoResetFlg3(FLG3_TRANING_CUT_HEAD)
-                )
-            )
-            && fopAcM_GetGroup(enemy) == fopAc_ENEMY_e
-            )
-            && enemy->checkHeadLockFlg();
+    if (checkBootsOrArmorHeavy() || enemy == NULL ||
+        !(dComIfGs_isEventBit(dSv_event_flag_c::F_0341) || checkNoResetFlg3(FLG3_TRANING_CUT_HEAD)) ||
+        fopAcM_GetGroup(enemy) != fopAc_ENEMY_e)
+    {
+        return FALSE;
+    }
+
+#if TARGET_PC
+    if (dShield_isParryCombatEnabled() && dAlbw_isHiddenSkillReworkEnabled()) {
+        return dShield_hasHelmPunishOnTarget(enemy);
+    }
+#endif
+
+    return enemy->checkHeadLockFlg();
 }
 
 BOOL daAlink_c::checkDownAttackState() {
@@ -864,6 +923,10 @@ BOOL daAlink_c::checkCutLargeTurnState() const {
 }
 
 void daAlink_c::cancelCutCharge() {
+#if TARGET_PC
+    CONAV_CUT_SNAPSHOT(this, "cut", "cancelCutCharge");
+    dAlbw_resetJumpStrikeChargeReady();
+#endif
     if (mComboCutCount == 4) {
         resetCombo(TRUE);
         checkNextAction(0);
@@ -1156,30 +1219,19 @@ int daAlink_c::procCutNormal() {
 
 int daAlink_c::procCutFinishInit(int i_type) {
 #if TARGET_PC
-    // ============================================
-    // NEW CODE — ALBW Port
-    // Finisher moves branch by type:
-    //   Mortal Draw A/B — hidden skills: require a fully charged meter
-    //     (sALBWMeter >= sOilMaxVar).  Cost is 1/2 base (5450 units).
-    //   All other finishers (left, vertical, stab, right) — normal sword
-    //     attacks: drain 1/6 base (1817 units) like procCutNormalInit.
-    // In both cases, gate failure returns 1 to keep the current proc alive
-    // so the tired-state path in checkRestHPAnime() can engage if needed.
-    // ============================================
     if (i_type == CUT_FINISH_PARAM_MORTAL_DRAW_A || i_type == CUT_FINISH_PARAM_MORTAL_DRAW_B) {
-        if (!dMeter2_canALBWHiddenSkill()) {
-            return 1;
+        if (dAlbw_isHiddenSkillReworkEnabled()) {
+            if (!dMeter2_canALBWHiddenSkill()) {
+                return 1;
+            }
+            dMeter2_onALBWHiddenSkill();
         }
-        dMeter2_onALBWHiddenSkill();
     } else {
         if (!dMeter2_canALBWSword()) {
             return 1;
         }
         dMeter2_onALBWSword();
     }
-    // ============================================
-    // NEW CODE ENDS HERE
-    // ============================================
 #endif
     static daAlink_cutParamTbl const cutParamTable[6] = {
         {
@@ -1667,6 +1719,8 @@ int daAlink_c::procCutReverse() {
 }
 
 int daAlink_c::procCutJumpInit(BOOL i_isAirCut) {
+    CONAV_CUT_SNAPSHOT(this, "cut", i_isAirCut ? "procCutJumpInit-air" : "procCutJumpInit");
+    CONAV_LOG("cut", "procCutJumpInit air=%d", i_isAirCut ? 1 : 0);
     // ============================================
     // NEW CODE — ALBW Port
     // Block jump sword attacks when meter is exhausted.
@@ -1701,6 +1755,7 @@ int daAlink_c::procCutJumpInit(BOOL i_isAirCut) {
 }
 
 int daAlink_c::procCutJump() {
+    CONAV_CUT_SNAPSHOT(this, "cutframe", "cutJump");
     daPy_frameCtrl_c* framectrl = mUnderFrameCtrl;
 
     if (current.angle.y == shape_angle.y && changeCutReverseProc(ANM_CUT_JUMP)) {
@@ -2010,6 +2065,11 @@ int daAlink_c::procCutTurnCharge() {
 }
 
 int daAlink_c::procCutTurnMoveInit(BOOL param_0) {
+#if TARGET_PC
+    CONAV_LOG("cut", "procCutTurnMoveInit param=%d uf=%.2f ready=%d", param_0 ? 1 : 0,
+              mUnderFrameCtrl[0].getFrame(), dAlbw_peekJumpStrikeChargeReady() ? 1 : 0);
+#endif
+    CONAV_CUT_SNAPSHOT(this, "cut", param_0 ? "turnMoveInit-js" : "turnMoveInit-spin");
     commonProcInit(PROC_CUT_TURN_MOVE);
 
     if (checkZeroSpeedF()) {
@@ -2065,6 +2125,7 @@ int daAlink_c::procCutTurnMove() {
     BOOL var_r4 = m_nSwordBtk->getFrame() >= 14.0f || mProcVar0.field_0x3008 >= 14.0f;
 
     if (mProcVar2.field_0x300c != 0) {
+        CONAV_CUT_SNAPSHOT(this, "cutframe", "turnMove-js");
         if (checkDownAttackState() && !var_r4) {
             setDoStatusEmphasys(BUTTON_STATUS_FINISH);
         } else if (checkCutHeadState() && !var_r4) {
@@ -2081,6 +2142,7 @@ int daAlink_c::procCutTurnMove() {
             dComIfGp_evmng_cutEnd(mAlinkStaffId);
         }
     } else if ((mProcVar2.field_0x300c == 0 && swordButton()) || (mProcVar2.field_0x300c != 0 && doButton())) {
+        CONAV_LOG("cut", "procCutTurnMove branch=move-hold var_r4=%d", var_r4 ? 1 : 0);
         f32 var_f30 = 0.0f;
         f32 var_f31 = 1.0f;
         onResetFlg0(RFLG0_UNK_10);
@@ -2155,13 +2217,25 @@ int daAlink_c::procCutTurnMove() {
         }
     } else if (var_r4) {
         if (mProcVar2.field_0x300c != 0) {
+            CONAV_LOG("cut", "procCutTurnMove branch=var_r4-js slam");
+            CONAV_CUT_SNAPSHOT(this, "cut", "turnMove-varR4-js");
             procCutLargeJumpInit();
         } else {
+            CONAV_LOG("cut", "procCutTurnMove branch=var_r4-spin");
             procCutTurnInit(0, 1);
         }
     } else if (mProcVar2.field_0x300c != 0) {
-        checkDoCutAction();
+        CONAV_LOG("cut", "procCutTurnMove branch=js-release-no-varR4");
+#if TARGET_PC
+        if (dAlbw_isHiddenSkillReworkEnabled()) {
+            cancelCutCharge();
+        } else
+#endif
+        {
+            checkDoCutAction();
+        }
     } else {
+        CONAV_LOG("cut", "procCutTurnMove branch=cancel-spin");
         cancelCutCharge();
     }
 
@@ -2174,18 +2248,12 @@ int daAlink_c::procCutDownInit() {
         return 1;
     }
 #if TARGET_PC
-    // ============================================
-    // NEW CODE — ALBW Port
-    // Jump Strike is a hidden skill — requires a full meter before entry.
-    // Costs 1/2 base meter (5450 units).
-    // ============================================
-    if (!dMeter2_canALBWHiddenSkill()) {
-        return 1;
+    if (dAlbw_isHiddenSkillReworkEnabled()) {
+        if (!dMeter2_canALBWHiddenSkill()) {
+            return 1;
+        }
+        dMeter2_onALBWHiddenSkill();
     }
-    dMeter2_onALBWHiddenSkill();
-    // ============================================
-    // NEW CODE ENDS HERE
-    // ============================================
 #endif
     commonProcInit(PROC_CUT_DOWN);
     resetCombo(TRUE);
@@ -2375,20 +2443,26 @@ int daAlink_c::procCutHeadInit() {
         return 1;
     }
 #if TARGET_PC
-    // ============================================
-    // NEW CODE — ALBW Port
-    // Helm Splitter is a hidden skill — requires a full meter before entry.
-    // Costs 1/2 base meter (5450 units).
-    // ============================================
-    if (!dMeter2_canALBWHiddenSkill()) {
+    if (mProcID == PROC_CUT_HEAD || mProcID == PROC_CUT_HEAD_LAND) {
         return 1;
     }
-    dMeter2_onALBWHiddenSkill();
-    // ============================================
-    // NEW CODE ENDS HERE
-    // ============================================
-#endif
+
+    if (dAlbw_isHiddenSkillReworkEnabled()) {
+        if (!dMeter2_canALBWHiddenSkill()) {
+            return 0;
+        }
+
+        if (dShield_isParryCombatEnabled() && !dShield_tryBeginHelmSplitter()) {
+            return 0;
+        }
+
+        dShield_chargeHelmSplitterMeterOnce();
+    }
+
     commonProcInit(PROC_CUT_HEAD);
+#else
+    commonProcInit(PROC_CUT_HEAD);
+#endif
     resetCombo(TRUE);
     setSingleAnimeParam(ANM_CUT_HEAD_JUMP, &mpHIO->mCut.mCutHead.m.mJumpAnm);
     setSpecialGravity(mpHIO->mCut.mCutHead.m.mGravity, maxFallSpeed, 0);
@@ -2483,9 +2557,19 @@ int daAlink_c::procCutHeadLand() {
         if (mDemo.getDemoMode() == daPy_demo_c::DEMO_CUT_HEAD_e) {
             dComIfGp_evmng_cutEnd(mAlinkStaffId);
         } else {
+#if TARGET_PC
+            if (dAlbw_isHiddenSkillReworkEnabled()) {
+                dShield_clearHelmSplitterMeterCharge();
+            }
+#endif
             checkNextAction(0);
         }
     } else if (frameCtrl->getFrame() > mpHIO->mCut.mCutHead.m.mLandAnm.mCancelFrame) {
+#if TARGET_PC
+        if (dAlbw_isHiddenSkillReworkEnabled()) {
+            dShield_clearHelmSplitterMeterCharge();
+        }
+#endif
         checkNextAction(1);
     }
 
@@ -2494,26 +2578,23 @@ int daAlink_c::procCutHeadLand() {
 
 int daAlink_c::procCutLargeJumpChargeInit() {
 #if TARGET_PC
-    // ============================================
-    // NEW CODE — ALBW Port
-    // Great Spin (Large Jump Charge) is a hidden skill — requires a full
-    // meter (sALBWMeter >= sOilMaxVar) to begin charging.  Costs 1/2 base
-    // meter (5450 units).  Gate failure keeps Link in his current airborne
-    // proc; the tired state engages if sALBWLocked when he lands.
-    // ============================================
-    if (!dMeter2_canALBWHiddenSkill()) {
-        return 1;
+    if (dAlbw_isHiddenSkillReworkEnabled()) {
+        if (!dMeter2_canALBWHiddenSkill()) {
+            return 1;
+        }
+        dMeter2_onALBWHiddenSkill();
     }
-    dMeter2_onALBWHiddenSkill();
-    // ============================================
-    // NEW CODE ENDS HERE
-    // ============================================
 #endif
+    CONAV_LOG("cut", "procCutLargeJumpChargeInit");
+    CONAV_CUT_SNAPSHOT(this, "cut", "chargeInit");
     commonProcInit(PROC_CUT_LARGE_JUMP_CHARGE);
     setSingleAnimeParam(ANM_CUT_JUMP_LARGE_CHARGE, &mpHIO->mCut.mCutLargeJump.m.mChargeAnm);
     mNormalSpeed = 0.0f;
     current.angle.y = shape_angle.y;
     mProcVar2.field_0x300c = mpHIO->mCut.m.mNormalSwingDuration;
+#if TARGET_PC
+    dAlbw_resetJumpStrikeChargeReady();
+#endif
     return 1;
 }
 
@@ -2521,6 +2602,14 @@ int daAlink_c::procCutLargeJumpCharge() {
     if (checkGroundSpecialMode()) {
         return 1;
     }
+
+#if TARGET_PC
+    if (dAlbw_isHiddenSkillReworkEnabled() && checkAnmEnd(&mUnderFrameCtrl[0])) {
+        dAlbw_setJumpStrikeChargeReady();
+    }
+#endif
+
+    CONAV_CUT_SNAPSHOT(this, "cutframe", "charge");
 
     if (checkDownAttackState()) {
         setDoStatusEmphasys(BUTTON_STATUS_FINISH);
@@ -2533,9 +2622,33 @@ int daAlink_c::procCutLargeJumpCharge() {
     setSwordChargeVoiceSe();
 
     if (!doButton() && mDemo.getDemoMode() != daPy_demo_c::DEMO_UNK_92_e) {
-        checkDoCutAction();
+#if TARGET_PC
+        if (dAlbw_isHiddenSkillReworkEnabled() && !canReleaseJumpStrikeCharge(this)) {
+            CONAV_LOG("cut", "procCutLargeJumpCharge early-release cancel frame=%.1f",
+                      mUnderFrameCtrl[0].getFrame());
+            cancelCutCharge();
+        } else
+#endif
+        {
+            CONAV_LOG("cut", "procCutLargeJumpCharge release frame=%.1f do=0",
+                      mUnderFrameCtrl[0].getFrame());
+            checkDoCutAction();
+        }
     } else if (checkAnmEnd(&mUnderFrameCtrl[0])) {
-        procCutTurnMoveInit(1);
+#if TARGET_PC
+        if (dAlbw_isHiddenSkillReworkEnabled()) {
+            if (!dAlbw_isJumpStrikeChargeReady()) {
+                CONAV_LOG("cut", "procCutLargeJumpCharge turn-move deny frame=%.1f",
+                          mUnderFrameCtrl[0].getFrame());
+                cancelCutCharge();
+            } else {
+                procCutTurnMoveInit(1);
+            }
+        } else
+#endif
+        {
+            procCutTurnMoveInit(1);
+        }
     }
 
     return 1;
@@ -2548,6 +2661,22 @@ int daAlink_c::procCutLargeJumpInit() {
         return 1;
     }
 
+#if TARGET_PC
+    if (dAlbw_isHiddenSkillReworkEnabled() && mDemo.getDemoMode() != daPy_demo_c::DEMO_CUT_LARGE_JUMP_e) {
+        if (!dAlbw_tryConsumeJumpStrikeChargeReady()) {
+            CONAV_LOG("cut", "procCutLargeJumpInit denied proc=%d frame=%.1f",
+                      mProcID, mUnderFrameCtrl[0].getFrame());
+            CONAV_CUT_SNAPSHOT(this, "cut", "largeJumpInit-DENIED");
+            if (mProcID == PROC_CUT_LARGE_JUMP_CHARGE || mProcID == PROC_CUT_TURN_MOVE) {
+                cancelCutCharge();
+            }
+            return 0;
+        }
+    }
+#endif
+
+    CONAV_LOG("cut", "procCutLargeJumpInit OK");
+    CONAV_CUT_SNAPSHOT(this, "cut", "largeJumpInit-OK");
     commonProcInit(PROC_CUT_LARGE_JUMP);
     setSingleAnimeParam(ANM_CUT_JUMP_LARGE_START, &mpHIO->mCut.mCutLargeJump.m.mChargeMoveAnm);
     field_0x3588 = l_halfAtnWaitBaseAnime;
@@ -2567,6 +2696,7 @@ int daAlink_c::procCutLargeJumpInit() {
 }
 
 int daAlink_c::procCutLargeJump() {
+    CONAV_CUT_SNAPSHOT(this, "cutframe", "largeJump");
     daPy_frameCtrl_c* frameCtrl = &mUnderFrameCtrl[0];
 
     if (mProcVar4.field_0x3010 != 0) {

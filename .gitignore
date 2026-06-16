@@ -38,6 +38,10 @@ compile_commands.json
 *.exe
 *.zip
 
+# CoNavigate dev traces (never commit session logs)
+**/conavigate/
+conavigate_session.log
+
 # MacOS
 .DS_Store
 

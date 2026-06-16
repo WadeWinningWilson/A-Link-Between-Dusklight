@@ -286,6 +286,11 @@ public:
     void keepLock(int timer) { mAttnBlockTimer = timer; }
     bool Lockon() { return LockonTruth() || chkFlag(0x20000000); }  // only matches with -O2?
 
+#if TARGET_PC
+    // Right-stick target cycle among nearby battle enemies (ALBW setting).
+    void tryStickCycleBattleLockon();
+#endif
+
     static type_tbl_entry loc_type_tbl[3];
     static type_tbl_entry act_type_tbl[5];
     static dist_entry dist_table[234];

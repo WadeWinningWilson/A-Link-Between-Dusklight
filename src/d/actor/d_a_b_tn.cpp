@@ -16,6 +16,13 @@
 #include "f_op/f_op_camera_mng.h"
 #if TARGET_PC
 #include "d/d_albw_enemy_rupee.h"
+#include "d/d_albw_hp_mult.h"
+#include "d/d_albw_shield.h"
+#include "dusk/settings.h"
+#include "SSystem/SComponent/c_counter.h"
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
 #endif
 
 class daB_TN_HIO_c {
@@ -914,9 +921,21 @@ int daB_TN_c::checkBck(int i_index) {
 }
 
 void daB_TN_c::setActionMode(int i_mode1, int i_mode2) {
+#if TARGET_PC
+    const bool keepHeadLock = field_0xaa2 != 0 && field_0xaa8;
+    if (!keepHeadLock) {
+        offHeadLockFlg();
+    }
+#else
     offHeadLockFlg();
+#endif
     mActionMode1 = i_mode1;
     mActionMode2 = i_mode2;
+#if TARGET_PC
+    if (keepHeadLock) {
+        onHeadLockFlg();
+    }
+#endif
 }
 
 void daB_TN_c::setSwordAtBit(int param_1) {
@@ -967,6 +986,9 @@ void daB_TN_c::setBodyShield() {
     bool check = true;
 
     player = (daPy_py_c*)daPy_getPlayerActorClass();
+    if (mNextBreakPart >= 11) {
+        field_0xa91 = false;
+    }
     if (mActionMode1 <= 1) {
         for (int i = 0; i < 3; i++) {
             mSphA[i].OnTgShield();
@@ -976,6 +998,7 @@ void daB_TN_c::setBodyShield() {
         mSphC.OnTgSetBit();
 
     } else if (mActionMode1 < 8) {
+        int iVar3 = false;
         if (!(daPy_py_c::checkNowWolf() || player->getCutType() == daPy_py_c::CUT_TYPE_TWIRL) &&
             player->getCutCount() >= 4)
         {
@@ -987,8 +1010,6 @@ void daB_TN_c::setBodyShield() {
         if (!field_0xa91 || abs((s16)(fopAcM_searchPlayerAngleY(this) - shape_angle.y)) > 0x3000) {
             check = false;
         }
-
-        int iVar3 = false;
         if (player->getCutType() == daPy_py_c::CUT_TYPE_HEAD_JUMP ||
             player->getCutType() == daPy_py_c::CUT_TYPE_MORTAL_DRAW_B ||
             player->getCutType() == daPy_py_c::CUT_TYPE_MORTAL_DRAW_A || mTimer12 != 0)
@@ -1226,9 +1247,229 @@ void daB_TN_c::setDamage(dCcD_Sph* i_sph, int param_2) {
 }
 
 void daB_TN_c::setShieldEffect(dCcD_Sph* i_sph) {
-    def_se_set(&mSound, mAtInfo.mpCollider, 42, this);
+    def_se_set(&mSound, i_sph->GetTgHitObj(), 42, this);
     dComIfGp_setHitMark(2, this, i_sph->GetTgHitPosP(), NULL, NULL, 0);
 }
+
+#if TARGET_PC
+static const char* albwDarknutAction1Name(int i_mode) {
+    switch (i_mode) {
+    case daB_TN_c::ACT_ROOMDEMO:
+        return "ROOMDEMO";
+    case daB_TN_c::ACT_OPENING:
+        return "OPENING";
+    case daB_TN_c::ACT_WAITH:
+        return "WAITH";
+    case daB_TN_c::ACT_CHASEH:
+        return "CHASEH";
+    case daB_TN_c::ACT_ATTACKH:
+        return "ATTACKH";
+    case daB_TN_c::ACT_ATTACKSHIELDH:
+        return "ATKSHIELDH";
+    case daB_TN_c::ACT_GUARDH:
+        return "GUARDH";
+    case daB_TN_c::ACT_DAMAGEH:
+        return "DAMAGEH";
+    case daB_TN_c::ACT_CHANGEDEMO:
+        return "CHANGEDEMO";
+    case daB_TN_c::ACT_CHASEL:
+        return "CHASEL";
+    case daB_TN_c::ACT_ATTACKL:
+        return "ATTACKL";
+    case daB_TN_c::ACT_ATTACKSHIELDL:
+        return "ATKSHIELDL";
+    case daB_TN_c::ACT_GUARDL:
+        return "GUARDL";
+    case daB_TN_c::ACT_DAMAGEL:
+        return "DAMAGEL";
+    case daB_TN_c::ACT_ENDING:
+        return "ENDING";
+    case daB_TN_c::ACT_YOROKE:
+        return "YOROKE";
+    default:
+        return "?";
+    }
+}
+
+void daB_TN_c::albwDebugLogEvent(const char* event) const {
+    if (!dusk::getSettings().game.showDarknutBashDebug.getValue()) {
+        return;
+    }
+
+    static bool sResetDone = false;
+
+    char path[512];
+    path[0] = '\0';
+    const char* user = getenv("USERPROFILE");
+    if (user && user[0] != '\0') {
+        snprintf(path, sizeof(path), "%s/Documents/dusklight/albw_darknut_debug.txt", user);
+    } else {
+        strncpy(path, "albw_darknut_debug.txt", sizeof(path) - 1);
+    }
+
+    FILE* fp = fopen(path, sResetDone ? "a" : "w");
+    if (!fp) {
+        fp = fopen("albw_darknut_debug.txt", sResetDone ? "a" : "w");
+    }
+    if (!fp) {
+        return;
+    }
+    if (!sResetDone) {
+        sResetDone = true;
+        fprintf(fp, "--- ALBW Darknut bash/guard-break debug ---\n");
+    }
+
+    const f32 animFrame = mpModelMorf2 != NULL ? mpModelMorf2->getFrame() : -1.0f;
+    const int animStop = mpModelMorf2 != NULL && mpModelMorf2->isStop() ? 1 : 0;
+
+    fprintf(fp,
+            "f=%06d evt=%s act=%s/%d a2=%d shield=%d headLock=%d punish=%d flags=0x%02x break=%d "
+            "anim=%.1f stop=%d bash=%u/%u pending=%d inFlight=%d\n",
+            g_Counter.mCounter0, event, albwDarknutAction1Name(mActionMode1), mActionMode1,
+            mActionMode2, field_0xa91 ? 1 : 0, field_0xaa8 ? 1 : 0, field_0xaa2, field_0xa9d,
+            mNextBreakPart, animFrame, animStop, dShield_getBashCharges(),
+            dShield_getMaxBashCharges(), dShield_hasFullBarPunishPending() ? 1 : 0,
+            dShield_hasFullBarBashInFlight() ? 1 : 0);
+    fclose(fp);
+}
+
+void daB_TN_c::albwBeginGuardOpenWindow(u8 i_frames) {
+    field_0xaa2 = i_frames;
+    if (mTimer5 < 60) {
+        mTimer5 = 60;
+    }
+    albwDebugLogEvent("open_window");
+}
+
+void daB_TN_c::albwFinishBashGuardBreakFromHit(cCcD_Obj* i_atObj, int i_result) {
+    if (i_result == 1) {
+        if (mActionMode1 == ACT_GUARDH) {
+            setActionMode(ACT_GUARDH, ACTION2_0_e);
+            albwDebugLogEvent("finish_p1_immediate");
+        } else {
+            field_0xa9d |= 0x80;
+            field_0xa9d |= 0x40;
+            albwDebugLogEvent("finish_p1_deferred");
+        }
+    } else if (i_result == 2) {
+        albwDebugLogEvent("finish_p2_yoroke");
+    }
+
+    def_se_set(&mSound, i_atObj, 42, this);
+}
+
+void daB_TN_c::albwApplyPendingPhase1GuardBreak() {
+    if ((field_0xa9d & 0x80) == 0) {
+        return;
+    }
+
+    field_0xa9d &= (u8)~0x80;
+    setSwordAtBit(0);
+    setActionMode(ACT_GUARDH, ACTION2_0_e);
+    albwDebugLogEvent("apply_pending");
+}
+
+bool daB_TN_c::albwIsPhase1AttackVulnerable() const {
+    return mNextBreakPart < 11 && !field_0xa91 &&
+           (mActionMode1 == ACT_ATTACKH || mActionMode1 == ACT_ATTACKSHIELDH);
+}
+
+bool daB_TN_c::albwIsPhase1BashTargetState() const {
+    switch (mActionMode1) {
+    case ACT_GUARDH:
+    case ACT_CHASEH:
+    case ACT_ATTACKH:
+    case ACT_ATTACKSHIELDH:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool daB_TN_c::albwApplyPhase1BashGuardBreak() {
+    if (!dShield_isParryCombatEnabled() || !dShield_tryGrantHelmPunishCredit(this)) {
+        return false;
+    }
+
+    albwBeginGuardOpenWindow(90);
+    return true;
+}
+
+bool daB_TN_c::albwApplyPhase2BashGuardBreak() {
+    if (!dShield_isParryCombatEnabled() || !dShield_tryGrantHelmPunishCredit(this)) {
+        return false;
+    }
+
+    albwBeginGuardOpenWindow(75);
+    return true;
+}
+
+int daB_TN_c::albwTryApplyBashGuardBreakFromHit() {
+    if (!dShield_isParryCombatEnabled()) {
+        return 0;
+    }
+
+    if (mActionMode1 == ACT_CHANGEDEMO || mActionMode1 == ACT_ENDING) {
+        return 0;
+    }
+
+    if (!albwIsUnarmoredPhase() && albwIsPhase1BashTargetState()) {
+        if (!albwApplyPhase1BashGuardBreak()) {
+            albwDebugLogEvent("try_p1_fail");
+            return 0;
+        }
+
+        field_0xaa8 = true;
+        onHeadLockFlg();
+        albwDebugLogEvent("try_p1_ok");
+        return 1;
+    }
+
+    if (albwIsUnarmoredPhase() && mActionMode1 >= ACT_CHASEL && mActionMode1 != ACT_CHANGEDEMO &&
+        mActionMode1 != ACT_ENDING)
+    {
+        if (!albwApplyPhase2BashGuardBreak()) {
+            albwDebugLogEvent("try_p2_fail");
+            return 0;
+        }
+
+        field_0xaa8 = true;
+        onHeadLockFlg();
+        setSwordAtBit(0);
+        setActionMode(ACT_YOROKE, ACTION2_0_e);
+        albwDebugLogEvent("try_p2_ok");
+        return 2;
+    }
+
+    albwDebugLogEvent("try_no_match");
+    return 0;
+}
+
+bool daB_TN_c::albwHandleParryCombatBashShieldHit(dCcD_Sph* i_sph, cCcD_Obj* i_atObj) {
+    if (!dShield_isParryCombatEnabled()) {
+        return false;
+    }
+
+    albwDebugLogEvent("shield_hit");
+    const int guardBreakResult = albwTryApplyBashGuardBreakFromHit();
+    if (guardBreakResult != 0) {
+        albwFinishBashGuardBreakFromHit(i_atObj, guardBreakResult);
+        return true;
+    }
+
+    if (field_0xaa2 == 0) {
+        field_0xaa8 = false;
+    }
+    setShieldEffect(i_sph);
+    mTimer9 = 15;
+    albwDebugLogEvent("shield_clang");
+    return true;
+}
+
+static bool albwDarknutAtHitIsShieldBash(cCcD_Obj* i_atHitObj) {
+    return i_atHitObj != NULL && i_atHitObj->ChkAtType(AT_TYPE_SHIELD_ATTACK);
+}
+#endif
 
 void daB_TN_c::damage_check() {
     mStts1.Move();
@@ -1236,6 +1477,17 @@ void daB_TN_c::damage_check() {
     for (int i = 0; i < 4; i++) {
         if (mSwordSphs[i].ChkAtHit()) {
             field_0xa9a = true;
+#if TARGET_PC
+            cCcD_Obj* atHitObj = mSwordSphs[i].GetAtHitObj();
+            if (albwDarknutAtHitIsShieldBash(atHitObj)) {
+                albwDebugLogEvent("dmg_sword");
+                const int guardBreakResult = albwTryApplyBashGuardBreakFromHit();
+                if (guardBreakResult != 0) {
+                    albwFinishBashGuardBreakFromHit(atHitObj, guardBreakResult);
+                    return;
+                }
+            }
+#endif
             if (mSwordSphs[i].ChkAtShieldHit() && mSwordSphs[i].GetAtSpl() == 10) {
                 setSwordAtBit(0);
                 m_attack_tn = this;
@@ -1246,6 +1498,18 @@ void daB_TN_c::damage_check() {
 
     if (mCps.ChkAtHit()) {
         field_0xa9a = true;
+#if TARGET_PC
+        cCcD_Obj* atHitObj = mCps.GetAtHitObj();
+        if (albwDarknutAtHitIsShieldBash(atHitObj)) {
+            albwDebugLogEvent("dmg_cps");
+            const int guardBreakResult = albwTryApplyBashGuardBreakFromHit();
+            if (guardBreakResult != 0) {
+                setSwordAtBit(0);
+                albwFinishBashGuardBreakFromHit(atHitObj, guardBreakResult);
+                return;
+            }
+        }
+#endif
         if (mCps.ChkAtShieldHit() && mCps.GetAtSpl() == 10) {
             setSwordAtBit(0);
             m_attack_tn = this;
@@ -1254,6 +1518,18 @@ void daB_TN_c::damage_check() {
 
     if (mSphC.ChkAtHit() && !mSphC.ChkAtShieldHit()) {
         field_0xa9a = true;
+#if TARGET_PC
+        cCcD_Obj* atHitObj = mSphC.GetAtHitObj();
+        if (albwDarknutAtHitIsShieldBash(atHitObj)) {
+            albwDebugLogEvent("dmg_sphc");
+            const int guardBreakResult = albwTryApplyBashGuardBreakFromHit();
+            if (guardBreakResult != 0) {
+                mSphC.ClrAtHit();
+                albwFinishBashGuardBreakFromHit(atHitObj, guardBreakResult);
+                return;
+            }
+        }
+#endif
         mSound.startCreatureSound(Z2SE_EN_TN_ATK_NO_DMG, 0, -1);
         mSphC.ClrAtHit();
         m_attack_tn = this;
@@ -1318,17 +1594,32 @@ void daB_TN_c::damage_check() {
         cut_type != daPy_py_c::CUT_TYPE_MORTAL_DRAW_A)
     {
         def_se_set(&mSound, mSphC.GetTgHitObj(), 42, this);
-        field_0xaa8 = false;
         if (mSphC.GetTgHitObj()->ChkAtType(AT_TYPE_SHIELD_ATTACK)) {
+#if TARGET_PC
+            if (dShield_isParryCombatEnabled()) {
+                if (albwHandleParryCombatBashShieldHit(&mSphC, mSphC.GetTgHitObj())) {
+                    return;
+                }
+                if (albwIsPhase1AttackVulnerable()) {
+                    albwDebugLogEvent("dmg_sphc_attack_clang");
+                    setShieldEffect(&mSphC);
+                    mTimer9 = 15;
+                    return;
+                }
+                return;
+            }
+#endif
             if (mActionMode1 != ACT_GUARDH) {
                 return;
             }
 
-            if (mActionMode1 == ACT_GUARDH && field_0xaa8) {
+            if (field_0xaa8) {
                 return;
             }
 
             field_0xaa8 = true;
+        } else {
+            field_0xaa8 = false;
         }
 
         setActionMode(ACT_GUARDH, ACTION2_0_e);
@@ -1363,6 +1654,11 @@ void daB_TN_c::damage_check() {
                         return;
                     }
 
+#if TARGET_PC
+                    if (albwHandleParryCombatBashShieldHit(&dStack_160, dStack_160.GetTgHitObj())) {
+                        return;
+                    }
+#endif
                     field_0xaa8 = true;
                     def_se_set(&mSound, dStack_160.GetTgHitObj(), 42, this);
                 } else {
@@ -1374,6 +1670,13 @@ void daB_TN_c::damage_check() {
                 return;
 
             } else if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_SHIELD_ATTACK)) {
+#if TARGET_PC
+                if (dShield_isParryCombatEnabled()) {
+                    if (albwHandleParryCombatBashShieldHit(&dStack_160, dStack_160.GetTgHitObj())) {
+                        return;
+                    }
+                }
+#endif
                 setShieldEffect(&dStack_160);
                 mTimer9 = 0x14;
                 return;
@@ -1387,6 +1690,11 @@ void daB_TN_c::damage_check() {
             }
         } else {
             if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_SHIELD_ATTACK)) {
+#if TARGET_PC
+                if (albwHandleParryCombatBashShieldHit(&dStack_160, dStack_160.GetTgHitObj())) {
+                    return;
+                }
+#endif
                 field_0xaa8 = true;
                 def_se_set(&mSound, dStack_160.GetTgHitObj(), 42, this);
                 setActionMode(ACT_GUARDL, ACTION2_0_e);
@@ -1450,7 +1758,13 @@ void daB_TN_c::damage_check() {
     }
 
     if (mAtInfo.mpCollider) {
+#if TARGET_PC
+        if (field_0xaa2 == 0) {
+            field_0xaa8 = false;
+        }
+#else
         field_0xaa8 = false;
+#endif
         if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_BOOMERANG) ||
             mAtInfo.mpCollider->ChkAtType(AT_TYPE_40))
         {
@@ -1526,6 +1840,20 @@ void daB_TN_c::damage_check() {
             } else {
                 setDamage(&dStack_160, 1);
             }
+#if TARGET_PC
+        } else if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_SHIELD_ATTACK)) {
+            if (dShield_isParryCombatEnabled()) {
+                if (albwHandleParryCombatBashShieldHit(&dStack_160, mAtInfo.mpCollider)) {
+                    return;
+                }
+            }
+
+            setShieldEffect(&dStack_160);
+            if (mActionMode1 < 8) {
+                mTimer9 = 0x14;
+            }
+            return;
+#endif
         }
     }
 }
@@ -2090,7 +2418,15 @@ void daB_TN_c::executeChaseH() {
         }
 
         setSwordAtBit(0);
+#if TARGET_PC
+        if (field_0xaa2 == 0) {
+            field_0xa91 = true;
+        } else {
+            field_0xa91 = false;
+        }
+#else
         field_0xa91 = true;
+#endif
         break;
 
     case ACTION2_8_e:
@@ -2480,8 +2816,21 @@ void daB_TN_c::executeAttackH() {
         }
 
         if (mpModelMorf2->isStop()) {
-            setActionMode(ACT_CHASEH, ACTION2_0_e);
-            field_0xa91 = true;
+#if TARGET_PC
+            if ((field_0xa9d & 0x80) == 0)
+#endif
+            {
+                setActionMode(ACT_CHASEH, ACTION2_0_e);
+                field_0xa91 = true;
+#if TARGET_PC
+                albwDebugLogEvent("attack_a1->chase");
+#endif
+            }
+#if TARGET_PC
+            else {
+                albwDebugLogEvent("attack_a1_stop_blocked");
+            }
+#endif
         }
         break;
 
@@ -2522,8 +2871,21 @@ void daB_TN_c::executeAttackH() {
         }
 
         if (mpModelMorf2->isStop()) {
-            setActionMode(ACT_CHASEH, ACTION2_0_e);
-            field_0xa91 = true;
+#if TARGET_PC
+            if ((field_0xa9d & 0x80) == 0)
+#endif
+            {
+                setActionMode(ACT_CHASEH, ACTION2_0_e);
+                field_0xa91 = true;
+#if TARGET_PC
+                albwDebugLogEvent("attack_a2->chase");
+#endif
+            }
+#if TARGET_PC
+            else {
+                albwDebugLogEvent("attack_a2_stop_blocked");
+            }
+#endif
         }
     }
 }
@@ -2566,14 +2928,23 @@ void daB_TN_c::executeAttackShieldH() {
 void daB_TN_c::executeGuardH() {
     cXyz sp18;
     switch (mActionMode2) {
-    case ACTION2_0_e:
+    case ACTION2_0_e: {
         setSwordAtBit(0);
         mSphC.OffAtSetBit();
-        field_0xa91 = true;
+        field_0xa91 = mNextBreakPart < 11;
 
-        mDoMtx_stack_c::copy(mpModelMorf2->getModel()->getAnmMtx(18));
-        mDoMtx_stack_c::multVecZero(&sp18);
-        current.pos.set(sp18.x, current.pos.y, sp18.z);
+#if TARGET_PC
+        const bool skipGuardSnap = (field_0xa9d & 0x40) != 0;
+        if (skipGuardSnap) {
+            field_0xa9d &= (u8)~0x40;
+            albwDebugLogEvent("guardH_init_skip_snap");
+        } else
+#endif
+        {
+            mDoMtx_stack_c::copy(mpModelMorf2->getModel()->getAnmMtx(18));
+            mDoMtx_stack_c::multVecZero(&sp18);
+            current.pos.set(sp18.x, current.pos.y, sp18.z);
+        }
 
         mActionMode2 = ACTION2_1_e;
         speedF = 0.0f;
@@ -2586,8 +2957,14 @@ void daB_TN_c::executeGuardH() {
             setBck(BCK_TNA_GUARD, 0, 0.0f, 1.0f);
         }
         break;
+    }
 
     case ACTION2_1_e:
+#if TARGET_PC
+        if (field_0xaa2 != 0) {
+            field_0xa91 = false;
+        }
+#endif
         if (field_0xaa8) {
             onHeadLockFlg();
         } else {
@@ -2601,6 +2978,12 @@ void daB_TN_c::executeGuardH() {
             daPy_getPlayerActorClass()->getCutType() != daPy_py_c::CUT_TYPE_HEAD_JUMP)
         {
             setActionMode(ACT_CHASEH, ACTION2_0_e);
+#if TARGET_PC
+            if (field_0xaa2 != 0) {
+                field_0xa91 = false;
+            }
+            albwDebugLogEvent("guardH_done->chase");
+#endif
         }
     }
 }
@@ -3196,6 +3579,11 @@ void daB_TN_c::initChaseL(int param_1) {
 }
 
 bool daB_TN_c::checkAttackAble() {
+#if TARGET_PC
+    if (field_0xaa2 != 0) {
+        return false;
+    }
+#endif
     if (fopAcM_searchPlayerDistance(this) < 500.0f &&
         abs((s16)(fopAcM_searchPlayerAngleY(this) - shape_angle.y)) < 0x3000)
     {
@@ -3403,7 +3791,15 @@ void daB_TN_c::executeChaseL() {
         }
 
         setSwordAtBit(0);
+#if TARGET_PC
+        if (field_0xaa2 == 0) {
+            field_0xa91 = true;
+        } else {
+            field_0xa91 = false;
+        }
+#else
         field_0xa91 = true;
+#endif
         break;
 
     case ACTION2_3_e:
@@ -4156,7 +4552,15 @@ void daB_TN_c::executeYoroke() {
         } else if (mCutJumpStatus == 2 && player->checkCutJumpMode() &&
                    !player->checkCutJumpCancelTurn() && fopAcM_searchPlayerDistance(this) < 350.0f)
         {
+#if TARGET_PC
+            if (mNextBreakPart < 11) {
+                setActionMode(ACT_CHASEH, ACTION2_0_e);
+            } else {
+                setActionMode(ACT_CHASEL, ACTION2_0_e);
+            }
+#else
             setActionMode(ACT_CHASEL, ACTION2_0_e);
+#endif
             if (player->speedF < 28.0f) {
                 initChaseL(6);
                 break;
@@ -4173,8 +4577,22 @@ void daB_TN_c::executeYoroke() {
         }
 
         if (mpModelMorf2->isStop()) {
+#if TARGET_PC
+            if (mNextBreakPart < 11) {
+                setActionMode(ACT_CHASEH, ACTION2_0_e);
+            } else {
+                setActionMode(ACT_CHASEL, ACTION2_0_e);
+            }
+
+            if (field_0xaa2 == 0) {
+                field_0xa91 = true;
+            } else {
+                field_0xa91 = false;
+            }
+#else
             setActionMode(ACT_CHASEL, ACTION2_0_e);
             field_0xa91 = true;
+#endif
         }
     }
 }
@@ -4436,6 +4854,23 @@ void daB_TN_c::executeZakoEnding() {
     }
 }
 
+#if TARGET_PC
+int daB_TN_c::albwArmorBroken() const {
+    int broken = mNextBreakPart;
+    if (broken < 0) {
+        broken = 0;
+    }
+    if (broken > ALBW_ARMOR_PIECE_COUNT) {
+        broken = ALBW_ARMOR_PIECE_COUNT;
+    }
+    return broken;
+}
+
+int daB_TN_c::albwArmorRemaining() const {
+    return albwArmorTotal() - albwArmorBroken();
+}
+#endif
+
 void daB_TN_c::action() {
     daPy_py_c* player = daPy_getPlayerActorClass();
 
@@ -4451,8 +4886,14 @@ void daB_TN_c::action() {
         mTimer13 = 30;
     }
 
+#if TARGET_PC
+    albwApplyPendingPhase1GuardBreak();
+#endif
     damage_check();
-    field_0x700 = l_HIO.field_0x24;
+    field_0x700 = (int)l_HIO.field_0x24;
+#if TARGET_PC
+    field_0x700 = dAlbwHP_scaleHpValue(fpcNm_B_TN_e, (s16)field_0x700);
+#endif
     mUpdateWaistAngle = false;
     mChkCoHitOK = false;
     mSphCSmallFlag = false;
@@ -4885,6 +5326,24 @@ int daB_TN_c::execute() {
     if (mTimer12 != 0) {
         mTimer12--;
     }
+
+    if (field_0xaa2 != 0) {
+        if (field_0xaa2 == 1) {
+#if TARGET_PC
+            albwDebugLogEvent("punish_expired");
+            dShield_clearFullBarPunishPending();
+            field_0xaa8 = false;
+            offHeadLockFlg();
+#endif
+        }
+        field_0xaa2--;
+    }
+
+#if TARGET_PC
+    if (field_0xaa2 != 0 && field_0xaa8) {
+        onHeadLockFlg();
+    }
+#endif
 
     if (mTimer13 != 0) {
         mTimer13--;

@@ -18,6 +18,8 @@
 #include "dusk/settings.h"
 #include "d/actor/d_a_alink.h"
 #include "d/d_albw_hp_mult.h"
+#include "d/d_albw_lockout.h"
+#include "d/d_meter2_info.h"
 #include "d/d_albw_wolf_stun.h"
 #include "d/d_albw_wolf_combat.h"
 #include "d/d_albw_wolf_charge_hud.h"
@@ -443,25 +445,35 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* i_enemy, dCcU_AtInfo* i_AtInfo) {
         }
         // ============================================
         // NEW CODE — ALBW Port
-        // Enemy HP multiplier intercept. Runs after all attack-power
-        // modifiers (Master Sword ×2, sword upgrade, light-arrow override)
-        // and after the invincibleEnemies zero-out above. Divides the final
-        // mAttackPower by the per-category setting so the enemy effectively
-        // takes fewer HP points per hit. The max(1,...) floor in
-        // dAlbwHP_applyMult() guarantees every hit still deals at least 1
-        // damage, preserving instant kills on 1-HP actors at any multiplier.
-        // Actors in dAlbwHP_EXCLUDED pass through unchanged.
+        // Link damage decrease intercept. Runs after all attack-power
+        // modifiers and after the invincibleEnemies zero-out above.
+        // Divides mAttackPower by linkDamageDecreaseMult (global, default 1×).
+        // Independent of per-category true max-HP sliders.
         // ============================================
         if (i_AtInfo->mAttackPower > 0 && fopAcM_GetGroup(i_enemy) == fopAc_ENEMY_e) {
             i_AtInfo->mAttackPower =
                 dAlbwHP_applyMult(fopAcM_GetName(i_enemy), i_AtInfo->mAttackPower);
         }
+        if (dMeter2_isALBWLocked() && i_AtInfo->mAttackPower > 0 &&
+            fopAcM_GetGroup(i_enemy) == fopAc_ENEMY_e && i_AtInfo->mpCollider != NULL) {
+            u32 atType = 0;
+            if (i_AtInfo->mpCollider->ChkAtType(AT_TYPE_ARROW)) {
+                atType = AT_TYPE_ARROW;
+            } else if (i_AtInfo->mpCollider->ChkAtType(AT_TYPE_BOMB)) {
+                atType = AT_TYPE_BOMB;
+            } else if (i_AtInfo->mpCollider->ChkAtType(AT_TYPE_IRON_BALL)) {
+                atType = AT_TYPE_IRON_BALL;
+            }
+            if (atType != 0) {
+                dAlbwLockout_applyAttackPowerBoost(i_AtInfo->mAttackPower, atType);
+            }
+        }
         // Wolf field attack damage modifier.
-        // Runs after all other attack-power adjustments (including the HP
-        // multiplier division above) so the split is applied to the
+        // Runs after all other attack-power adjustments (including Link
+        // damage decrease above) so the split is applied to the
         // fully-resolved value.
         //
-        // The HP multiplier already divided mAttackPower by rawMult.
+        // Link damage decrease already divided mAttackPower by rawMult.
         // To express charge damage as  base × rawMult × fraction  we
         // multiply by rawMult² here, which cancels the division and then
         // scales forward:  (base / rawMult) × rawMult² × fraction

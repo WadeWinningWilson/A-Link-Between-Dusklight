@@ -14,6 +14,7 @@
 
 #if TARGET_PC
 #include "dusk/settings.h"
+#include "f_op/f_op_actor.h"
 #endif
 
 #define DRAW_TYPE_YELLOW 0
@@ -773,6 +774,115 @@ fopAc_ac_c* dAttention_c::nextAttention() {
     return LockonTarget(0);
 }
 
+#if TARGET_PC
+#include "f_pc/f_pc_manager.h"
+#include "f_pc/f_pc_name.h"
+
+namespace {
+static bool isLiveActor(fopAc_ac_c* actor) {
+    if (actor == NULL || !fopAcM_IsActor(actor)) {
+        return false;
+    }
+
+    const fpc_ProcID procId = fpcM_GetID(actor);
+    return procId != fpcM_ERROR_PROCESS_ID_e && fpcM_IsExecuting(procId);
+}
+
+static bool isBattleEnemy(fopAc_ac_c* actor) {
+    return isLiveActor(actor) && fopAcM_GetGroup(actor) == fopAc_ENEMY_e &&
+           (actor->attention_info.flags & fopAc_AttnFlag_BATTLE_e) != 0;
+}
+
+static bool isPlaySceneActive() {
+    return fpcM_SearchByName(fpcNm_PLAY_SCENE_e) != NULL;
+}
+
+static int s_stickCycleCooldown = 0;
+static f32 s_prevStickX = 0.0f;
+}  // namespace
+
+void dAttention_c::tryStickCycleBattleLockon() {
+    if (!dusk::getSettings().game.stickCycleLockon.getValue()) {
+        return;
+    }
+
+    if (!isPlaySceneActive() || dComIfGp_event_runCheck() || dComIfGp_isPauseFlag()) {
+        s_prevStickX = 0.0f;
+        return;
+    }
+
+    if (mAttnStatus != EState_LOCK || !LockonTruth()) {
+        s_prevStickX = 0.0f;
+        return;
+    }
+
+    if (s_stickCycleCooldown > 0) {
+        s_stickCycleCooldown--;
+        return;
+    }
+
+    const f32 stickX = mDoCPd_c::getSubStickX(mPadNo);
+    const f32 threshold = 0.45f;
+
+    if (fabsf(stickX) < threshold) {
+        s_prevStickX = stickX;
+        return;
+    }
+
+    if (fabsf(s_prevStickX) >= threshold) {
+        s_prevStickX = stickX;
+        return;
+    }
+
+    const int direction = stickX > 0.0f ? 1 : -1;
+    s_prevStickX = stickX;
+
+    // Cycle within the existing lock-on list only. Rebuilding the list here
+    // (initList/makeList) during warps or scene transitions caused crashes.
+    int battleIndices[8];
+    int battleCount = 0;
+    for (int i = 0; i < mLockonCount && battleCount < 8; i++) {
+        if (isBattleEnemy(mLockOnList[i].getActor())) {
+            battleIndices[battleCount++] = i;
+        }
+    }
+
+    if (battleCount <= 1) {
+        return;
+    }
+
+    int curBattleIdx = -1;
+    for (int i = 0; i < battleCount; i++) {
+        if (battleIndices[i] == mLockOnOffset) {
+            curBattleIdx = i;
+            break;
+        }
+    }
+
+    if (curBattleIdx < 0) {
+        mLockOnOffset = battleIndices[direction > 0 ? 0 : battleCount - 1];
+    } else {
+        curBattleIdx += direction;
+        if (curBattleIdx < 0) {
+            curBattleIdx = battleCount - 1;
+        } else if (curBattleIdx >= battleCount) {
+            curBattleIdx = 0;
+        }
+        mLockOnOffset = battleIndices[curBattleIdx];
+    }
+
+    fopAc_ac_c* target = LockonTarget(0);
+    if (!isBattleEnemy(target)) {
+        return;
+    }
+
+    mLockTargetID = LockonTargetPId(0);
+    field_0x32e = 15;
+    setFlag(0x8);
+    s_stickCycleCooldown = 10;
+}
+#endif
+
 int dAttention_c::freeAttention() {
     mLockTargetID = fpcM_ERROR_PROCESS_ID_e;
     initList(0xFFFFFFFF);
@@ -1414,6 +1524,9 @@ int dAttention_c::Run() {
 
     if (mAttnStatus == EState_LOCK) {
         dComIfGp_onCameraAttentionStatus(mPadNo, 1);
+#if TARGET_PC
+        tryStickCycleBattleLockon();
+#endif
     } else {
         dComIfGp_offCameraAttentionStatus(mPadNo, 1);
     }

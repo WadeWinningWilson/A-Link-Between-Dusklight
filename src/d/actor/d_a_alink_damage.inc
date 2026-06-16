@@ -700,14 +700,25 @@ BOOL daAlink_c::checkDamageAction() {
             }
 
             if ((mProcID != PROC_GUARD_ATTACK || (tghit_ac_name != fpcNm_E_TK_BALL_e && tghit_ac_name != fpcNm_KN_BULLET_e)) && !checkModeFlg(0x4000000)) {
+#if TARGET_PC
+                if ((at_spl == 10 || at_spl == 11 || at_spl == 9) &&
+                    !dShield_shouldDeferGuardBreak(at_spl, tghit_ac))
+                {
+                    return procGuardBreakInit();
+                }
+#else
                 if (at_spl == 10 || at_spl == 11 || at_spl == 9) {
                     return procGuardBreakInit();
                 }
+#endif
 
                 if (!armor_no_dmg) {
 #if TARGET_PC
                     if (dShield_onShieldHit(this, at_spl, tghit_ac)) {
                         return 0;
+                    }
+                    if (dShield_onFailedGuardBreakBlock(this, at_spl, tghit_ac)) {
+                        return 1;
                     }
                     dShield_onFailedGuardBlock(tghit_ac);
 #endif

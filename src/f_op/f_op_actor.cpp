@@ -15,9 +15,14 @@
 #include "f_op/f_op_actor_tag.h"
 #include "f_op/f_op_draw_tag.h"
 #include "f_pc/f_pc_manager.h"
+#include "f_pc/f_pc_name.h"
 #include "f_pc/f_pc_debug_sv.h"
 #include "c/c_dylink.h"
 #include "m_Do/m_Do_printf.h"
+
+#if TARGET_PC
+#include "d/d_albw_hp_mult.h"
+#endif
 
 #if DEBUG
 class print_error_check_c {
@@ -364,6 +369,12 @@ static int fopAc_Execute(void* i_this) {
         dKy_depth_dist_set(actor);
     }
 
+#if TARGET_PC
+    if (fopAcM_GetGroup(actor) == fopAc_ENEMY_e && fpcM_SearchByName(fpcNm_PLAY_SCENE_e) != NULL) {
+        dAlbwHP_tryApplyTrueMaxHp(actor);
+    }
+#endif
+
     #if DEBUG
     char message[40];
     char name[dStage_NAME_LENGTH];
@@ -429,6 +440,10 @@ static int fopAc_Delete(void* i_this) {
         dComIfG_Bgsp().ChkDeleteActorRegist(actor);
         dComIfG_Ccsp()->ChkActor(actor);
         #endif
+
+#if TARGET_PC
+        dAlbwHP_onActorDelete(fpcM_GetID(actor));
+#endif
     }
 
     return ret;

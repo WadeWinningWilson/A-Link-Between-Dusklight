@@ -7,10 +7,12 @@
 
 #include "d/dolzel.h" // IWYU pragma: keep
 #include "d/d_albw_shield.h"
+#include "d/d_albw_combat.h"
 #include "d/d_albw_hp_mult.h"
 #include "d/d_albw_wolf_combat.h"
 #include "d/actor/d_a_alink.h"
 #include "d/d_com_inf_game.h"
+#include "d/d_cc_d.h"
 #include "d/d_item_data.h"
 #include "d/d_meter2.h"
 #include "d/d_meter2_info.h"
@@ -18,13 +20,21 @@
 #include "d/d_meter_HIO.h"
 #include "d/d_pane_class.h"
 #include "dusk/settings.h"
+#include "f_op/f_op_actor.h"
+#include "f_pc/f_pc_manager.h"
+#include "SSystem/SComponent/c_counter.h"
 #include "Z2AudioLib/Z2Instances.h"
 #include "Z2AudioLib/Z2SeMgr.h"
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <climits>
 #include "JSystem/J2DGraph/J2DGrafContext.h"
 #include "JSystem/J2DGraph/J2DScreen.h"
 #include "JSystem/JKernel/JKRHeap.h"
 #include "f_op/f_op_actor.h"
 #include "f_op/f_op_actor_mng.h"
+#include "f_pc/f_pc_name.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -192,6 +202,28 @@ bool sWasGuardActive = false;
 u8 sBashCharges = 0;
 u8 sBashDenyFlashFrames = 0;
 bool sBashSpendChainActive = false;
+bool sLastBashSpendFromFullBar = false;
+bool sLastBashSpendOpenedAtThreshold = false;
+bool sFullBarPunishPending = false;
+bool sThresholdPunishPending = false;
+bool sFullBarBashInFlight = false;
+bool sHelmAlbwCharged = false;
+fpc_ProcID sHelmPunishTargetId = fpcM_ERROR_PROCESS_ID_e;
+dAlbwHelmBashTier sHelmPunishTier = dAlbwHelmBash_THRESHOLD;
+u16 sPunishWindowFrames = 0;
+static constexpr u16 HELM_PUNISH_WINDOW_FRAMES = 75;
+static constexpr f32 HELM_HEAD_LOCK_Y_OFFSET = 130.0f;
+
+void setEnemyHeadLockForHelm(fopEn_enemy_c* i_enemy) {
+    if (i_enemy == NULL) {
+        return;
+    }
+
+    cXyz lockPos(i_enemy->eyePos);
+    lockPos.y += HELM_HEAD_LOCK_Y_OFFSET;
+    i_enemy->setHeadLockPos(&lockPos);
+    i_enemy->onHeadLockFlg();
+}
 u8 sLastLoggedEquipShield = 0xFF;
 
 u16 sShieldDurability = 0;
@@ -268,6 +300,41 @@ void logChargeEvent(const char* i_event) {
               dComIfGs_getSelectEquipShield(), dComIfGs_getSelectEquipShield(),
               (unsigned)shieldTierFromLink(link), cfg.maxCharges, sBashCharges, cfg.bashThreshold,
               sBashSpendChainActive ? 1 : 0, dMeter2_getALBWMeterValue(), dMeter2_getALBWMaxValue());
+}
+
+static void dShield_debugLogToFile(const char* fmt, ...) {
+    if (!dusk::getSettings().game.showDarknutBashDebug.getValue()) {
+        return;
+    }
+
+    static bool sResetDone = false;
+
+    char path[512];
+    path[0] = '\0';
+    const char* user = getenv("USERPROFILE");
+    if (user && user[0] != '\0') {
+        snprintf(path, sizeof(path), "%s/Documents/dusklight/albw_darknut_debug.txt", user);
+    } else {
+        strncpy(path, "albw_darknut_debug.txt", sizeof(path) - 1);
+    }
+
+    FILE* fp = fopen(path, sResetDone ? "a" : "w");
+    if (!fp) {
+        fp = fopen("albw_darknut_debug.txt", sResetDone ? "a" : "w");
+    }
+    if (!fp) {
+        return;
+    }
+    if (!sResetDone) {
+        sResetDone = true;
+        fprintf(fp, "--- ALBW Darknut + shield bash debug ---\n");
+    }
+
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(fp, fmt, args);
+    va_end(args);
+    fclose(fp);
 }
 
 void logEquipTierIfChanged(const daAlink_c* i_link) {
@@ -426,6 +493,15 @@ bool isInParryWindow() {
 
 bool isGuardBreakAttack(int i_atSpl) {
     return i_atSpl == 9 || i_atSpl == 10 || i_atSpl == 11;
+}
+
+bool isMountSpearGuardBreakExempt(fopAc_ac_c* i_attacker) {
+    if (i_attacker == NULL) {
+        return false;
+    }
+
+    const s16 name = fopAcM_GetName(i_attacker);
+    return name == fpcNm_E_RDB_e || name == fpcNm_B_GND_e;
 }
 
 bool isMeterGameplayHudVisible() {
@@ -627,6 +703,15 @@ void dShield_resetSession() {
     sBashCharges = 0;
     sBashDenyFlashFrames = 0;
     sBashSpendChainActive = false;
+    sLastBashSpendFromFullBar = false;
+    sLastBashSpendOpenedAtThreshold = false;
+    sFullBarPunishPending = false;
+    sThresholdPunishPending = false;
+    sFullBarBashInFlight = false;
+    sHelmAlbwCharged = false;
+    sHelmPunishTargetId = fpcM_ERROR_PROCESS_ID_e;
+    sHelmPunishTier = dAlbwHelmBash_THRESHOLD;
+    sPunishWindowFrames = 0;
     sDenyPikariFrame = 0.0f;
     sCombatEnemyIDs.clear();
     sCombatLastRoomNo = -1;
@@ -673,8 +758,25 @@ void dShield_updateGuardTracking(daAlink_c* i_link) {
         registerCombatEnemy(i_link->getAtnActor());
     }
 
+    if (dShield_hasHelmPunishPending()) {
+        fopAc_ac_c* target = i_link->mTargetedActor;
+        if (target == NULL || fopAcM_GetID(target) != sHelmPunishTargetId) {
+            dShield_clearFullBarPunishPending();
+        } else if (fopAcM_GetGroup(target) == fopAc_ENEMY_e) {
+            setEnemyHeadLockForHelm((fopEn_enemy_c*)target);
+        }
+    }
+
     if (sBashDenyFlashFrames > 0) {
         sBashDenyFlashFrames--;
+    }
+
+    if (sPunishWindowFrames > 0) {
+        sPunishWindowFrames--;
+        if (sPunishWindowFrames == 0) {
+            dShield_clearFullBarPunishPending();
+            sHelmPunishTargetId = fpcM_ERROR_PROCESS_ID_e;
+        }
     }
 }
 
@@ -685,7 +787,8 @@ bool dShield_onShieldHit(daAlink_c* i_link, int i_atSpl, fopAc_ac_c* i_attacker)
 
     registerCombatEnemy(i_attacker);
 
-    if (!i_link->checkUpperGuardAnime() || isGuardBreakAttack(i_atSpl)) {
+    if (!i_link->checkUpperGuardAnime() ||
+        (isGuardBreakAttack(i_atSpl) && !dShield_shouldDeferGuardBreak(i_atSpl, i_attacker))) {
         return false;
     }
 
@@ -810,6 +913,40 @@ void dShield_onFailedGuardBlock(fopAc_ac_c* i_attacker) {
     }
 }
 
+bool dShield_shouldDeferGuardBreak(int i_atSpl, fopAc_ac_c* i_attacker) {
+    return dShield_isParryCombatEnabled() && isGuardBreakAttack(i_atSpl) &&
+           !isMountSpearGuardBreakExempt(i_attacker);
+}
+
+bool dShield_onFailedGuardBreakBlock(daAlink_c* i_link, int i_atSpl, fopAc_ac_c* i_attacker) {
+    if (!dShield_shouldDeferGuardBreak(i_atSpl, i_attacker) || i_link == NULL) {
+        return false;
+    }
+
+    registerCombatEnemy(i_attacker);
+    dShield_onFailedGuardBlock(i_attacker);
+
+    if (dShield_isDurabilityEnabled() && i_link->checkShieldGet() &&
+        i_link->mEquipItem != dItemNo_IRONBALL_e) {
+        syncDurabilityToEquip(i_link);
+        if (!sShieldBroken) {
+            const DurabilityTierConfig cfg = durabilityTierConfig(shieldTierFromLink(i_link));
+            if (cfg.maxHp != 0) {
+                const u16 drain = (u16)((cfg.drainBlock * 3) / 2);
+                if (applyDurabilityDamage(i_link, drain, i_attacker)) {
+                    dShield_destroyFromDurability(i_link);
+                }
+            }
+        }
+    }
+
+    if (!i_link->checkGuardBreakMode()) {
+        i_link->procGuardBreakInit();
+    }
+
+    return true;
+}
+
 void dShield_repairDurabilityFraction(int numerator, int denominator) {
     if (!dShield_isDurabilityEnabled() || numerator <= 0 || denominator <= 0) {
         return;
@@ -887,6 +1024,10 @@ f32 dShield_getDurabilityMeterWidthScale() {
 }
 
 bool dShield_tryBeginGuardAttack() {
+    sLastBashSpendFromFullBar = false;
+    sLastBashSpendOpenedAtThreshold = false;
+    sHelmPunishTargetId = fpcM_ERROR_PROCESS_ID_e;
+
     if (!dShield_isParryCombatEnabled()) {
         return true;
     }
@@ -902,7 +1043,11 @@ bool dShield_tryBeginGuardAttack() {
         return false;
     }
 
-    const bool canOpenChain = sBashCharges >= cfg.bashThreshold;
+    const u8 chargesBeforeSpend = sBashCharges;
+    const bool openingChain = !sBashSpendChainActive;
+    const bool atFullBar = chargesBeforeSpend >= cfg.maxCharges;
+    const bool atThreshold = chargesBeforeSpend >= cfg.bashThreshold;
+    const bool canOpenChain = atThreshold;
     const bool canContinueChain = sBashSpendChainActive;
 
     if (!canOpenChain && !canContinueChain) {
@@ -910,7 +1055,26 @@ bool dShield_tryBeginGuardAttack() {
         sDenyPikariFrame = 0.0f;
         playBashDenySe();
         logChargeEvent("bash-deny");
+        dShield_debugLogToFile("f=%06d evt=bash-deny at=%u/%u chain=%d\n", g_Counter.mCounter0,
+                               chargesBeforeSpend, cfg.maxCharges, sBashSpendChainActive ? 1 : 0);
         return false;
+    }
+
+    if (openingChain) {
+        sLastBashSpendFromFullBar = atFullBar;
+        sLastBashSpendOpenedAtThreshold = atThreshold;
+        sFullBarBashInFlight = atFullBar;
+    } else {
+        if (atFullBar) {
+            sLastBashSpendFromFullBar = true;
+            sFullBarBashInFlight = true;
+        } else if (sFullBarBashInFlight) {
+            sLastBashSpendFromFullBar = true;
+        }
+
+        if (atThreshold) {
+            sLastBashSpendOpenedAtThreshold = true;
+        }
     }
 
     if (!sBashSpendChainActive) {
@@ -923,7 +1087,207 @@ bool dShield_tryBeginGuardAttack() {
     }
 
     logChargeEvent("bash-start");
+    dShield_debugLogToFile(
+        "f=%06d evt=bash-start at=%u/%u after=%u open=%d chain=%d full=%d pending=%d inFlight=%d "
+        "lastFull=%d\n",
+        g_Counter.mCounter0, chargesBeforeSpend, cfg.maxCharges, sBashCharges, openingChain ? 1 : 0,
+        sBashSpendChainActive ? 1 : 0, atFullBar ? 1 : 0, sFullBarPunishPending ? 1 : 0,
+        sFullBarBashInFlight ? 1 : 0, sLastBashSpendFromFullBar ? 1 : 0);
     return true;
+}
+
+bool dShield_consumeLastBashSpendFromFullBar() {
+    if (!sLastBashSpendFromFullBar) {
+        dShield_debugLogToFile("f=%06d evt=gb-consume fail pending=%d inFlight=%d bash=%u/%u\n",
+                               g_Counter.mCounter0, sFullBarPunishPending ? 1 : 0,
+                               sFullBarBashInFlight ? 1 : 0, sBashCharges,
+                               dShield_getMaxBashCharges());
+        return false;
+    }
+
+    sLastBashSpendFromFullBar = false;
+    sFullBarBashInFlight = false;
+    sFullBarPunishPending = true;
+    dShield_debugLogToFile("f=%06d evt=gb-consume ok pending=1 bash=%u/%u\n", g_Counter.mCounter0,
+                           sBashCharges, dShield_getMaxBashCharges());
+    return true;
+}
+
+void dShield_clearFullBarPunishPending() {
+    sFullBarPunishPending = false;
+    sThresholdPunishPending = false;
+    sFullBarBashInFlight = false;
+    sPunishWindowFrames = 0;
+    sHelmPunishTargetId = fpcM_ERROR_PROCESS_ID_e;
+}
+
+void dShield_clearHelmSplitterMeterCharge() {
+    sHelmAlbwCharged = false;
+}
+
+bool dShield_chargeHelmSplitterMeterOnce() {
+    if (sHelmAlbwCharged) {
+        return true;
+    }
+
+    const int albwBefore = dMeter2_getALBWMeterValue();
+    dMeter2_onALBWHiddenSkill();
+    dMeter2_commitALBWHiddenSkillIfPending();
+    sHelmAlbwCharged = true;
+    dShield_debugLogToFile("f=%06d evt=helm-drain bash=%u/%u albw=%d->%d\n", g_Counter.mCounter0,
+                           sBashCharges, dShield_getMaxBashCharges(), albwBefore,
+                           dMeter2_getALBWMeterValue());
+    return true;
+}
+
+bool dShield_hasFullBarPunishPending() {
+    return sFullBarPunishPending;
+}
+
+bool dShield_hasThresholdPunishPending() {
+    return sThresholdPunishPending;
+}
+
+bool dShield_hasHelmPunishPending() {
+    return sFullBarPunishPending || sThresholdPunishPending;
+}
+
+bool dShield_hasHelmPunishOnTarget(fopEn_enemy_c* i_enemy) {
+    if (i_enemy == NULL || !dShield_hasHelmPunishPending()) {
+        return false;
+    }
+
+    return sHelmPunishTargetId == fopAcM_GetID(i_enemy);
+}
+
+bool dShield_canUseFullBarPunish() {
+    if (!dShield_isParryCombatEnabled()) {
+        return true;
+    }
+
+    return sFullBarPunishPending;
+}
+
+bool dShield_tryConsumeFullBarPunish() {
+    if (!dShield_isParryCombatEnabled()) {
+        return true;
+    }
+
+    if (!sFullBarPunishPending) {
+        return false;
+    }
+
+    sFullBarPunishPending = false;
+    sFullBarBashInFlight = false;
+    logChargeEvent("full-punish");
+    return true;
+}
+
+bool dShield_tryConsumeThresholdPunish() {
+    if (!dShield_isParryCombatEnabled()) {
+        return true;
+    }
+
+    if (!sThresholdPunishPending) {
+        return false;
+    }
+
+    sThresholdPunishPending = false;
+    logChargeEvent("threshold-punish");
+    return true;
+}
+
+bool dShield_consumeLastBashSpendOpenedAtThreshold() {
+    if (!sLastBashSpendOpenedAtThreshold) {
+        dShield_debugLogToFile("f=%06d evt=p2-consume fail bash=%u/%u threshold=%d\n",
+                               g_Counter.mCounter0, sBashCharges, dShield_getMaxBashCharges(),
+                               sLastBashSpendOpenedAtThreshold ? 1 : 0);
+        return false;
+    }
+
+    sLastBashSpendOpenedAtThreshold = false;
+    sThresholdPunishPending = true;
+    dShield_debugLogToFile("f=%06d evt=p2-consume ok pending=1 bash=%u/%u\n", g_Counter.mCounter0,
+                           sBashCharges, dShield_getMaxBashCharges());
+    return true;
+}
+
+bool dShield_hasFullBarBashInFlight() {
+    return sFullBarBashInFlight;
+}
+
+bool dShield_tryGrantHelmPunishCredit(fopEn_enemy_c* i_enemy) {
+    if (!dShield_isParryCombatEnabled() || !dAlbw_isHiddenSkillReworkEnabled() || i_enemy == NULL) {
+        return false;
+    }
+
+    const fpc_ProcID enemyId = fopAcM_GetID(i_enemy);
+    if (sHelmPunishTargetId == enemyId && dShield_hasHelmPunishPending()) {
+        return true;
+    }
+
+    const dAlbwHelmBashTier tier = dAlbwCombat_getHelmBashTier(i_enemy);
+    const bool granted = tier == dAlbwHelmBash_MAX ? dShield_consumeLastBashSpendFromFullBar()
+                                                   : dShield_consumeLastBashSpendOpenedAtThreshold();
+    if (!granted) {
+        dShield_debugLogToFile("f=%06d evt=helm-credit-deny tier=%d bash=%u/%u thr=%u\n",
+                               g_Counter.mCounter0, (int)tier, sBashCharges,
+                               dShield_getMaxBashCharges(), dShield_getBashThreshold());
+        return false;
+    }
+
+    sHelmPunishTargetId = enemyId;
+    sHelmPunishTier = tier;
+    sPunishWindowFrames = HELM_PUNISH_WINDOW_FRAMES;
+    setEnemyHeadLockForHelm(i_enemy);
+    dShield_debugLogToFile("f=%06d evt=helm-credit-ok tier=%d window=%u bash=%u/%u\n",
+                           g_Counter.mCounter0, (int)tier, sPunishWindowFrames, sBashCharges,
+                           dShield_getMaxBashCharges());
+    return true;
+}
+
+bool dShield_tryBeginHelmSplitter() {
+    if (!dShield_isParryCombatEnabled() || !dAlbw_isHiddenSkillReworkEnabled()) {
+        return true;
+    }
+
+    daAlink_c* link = daAlink_getAlinkActorClass();
+    fopEn_enemy_c* enemy =
+        link != NULL ? (fopEn_enemy_c*)link->mTargetedActor : NULL;
+
+    if (!dShield_hasHelmPunishOnTarget(enemy)) {
+        sBashDenyFlashFrames = 12;
+        sDenyPikariFrame = 0.0f;
+        playBashDenySe();
+        logChargeEvent("helm-deny");
+        dShield_debugLogToFile("f=%06d evt=helm-deny-wrong-target pending=%d target=%d credit=%d\n",
+                               g_Counter.mCounter0, dShield_hasHelmPunishPending() ? 1 : 0,
+                               enemy != NULL ? (int)fopAcM_GetID(enemy) : -1,
+                               (int)sHelmPunishTargetId);
+        return false;
+    }
+
+    const dAlbwHelmBashTier tier = sHelmPunishTier;
+    const bool consumed = tier == dAlbwHelmBash_MAX ? dShield_tryConsumeFullBarPunish()
+                                                    : dShield_tryConsumeThresholdPunish();
+    if (consumed) {
+        sHelmPunishTargetId = fpcM_ERROR_PROCESS_ID_e;
+        sPunishWindowFrames = 0;
+        dShield_clearHelmSplitterMeterCharge();
+        dShield_debugLogToFile("f=%06d evt=helm-ok tier=%d bash=%u/%u\n", g_Counter.mCounter0,
+                               (int)tier, sBashCharges, dShield_getMaxBashCharges());
+        return true;
+    }
+
+    sBashDenyFlashFrames = 12;
+    sDenyPikariFrame = 0.0f;
+    playBashDenySe();
+    logChargeEvent("helm-deny");
+    dShield_debugLogToFile("f=%06d evt=helm-deny pending=%d inFlight=%d bash=%u/%u\n",
+                           g_Counter.mCounter0, sFullBarPunishPending ? 1 : 0,
+                           sFullBarBashInFlight ? 1 : 0, sBashCharges,
+                           dShield_getMaxBashCharges());
+    return false;
 }
 
 void dShield_onGuardAttackConnect() {
@@ -931,13 +1295,22 @@ void dShield_onGuardAttackConnect() {
         return;
     }
 
-    const int albwBefore = dMeter2_getALBWMeterValue();
-    dMeter2_addALBWFraction(BASH_ALBW_HIT_GAIN_NUM, BASH_ALBW_HIT_GAIN_DEN);
-    logChargeEvent("bash-hit");
-    OS_REPORT("[dShield] bash-hit ALBW %d -> %d (+%d max %d)\n", albwBefore,
-              dMeter2_getALBWMeterValue(),
-              (dMeter2_getALBWMaxValue() * BASH_ALBW_HIT_GAIN_NUM) / BASH_ALBW_HIT_GAIN_DEN,
-              dMeter2_getALBWMaxValue());
+    grantBashAlbwOnce();
+
+    daAlink_c* link = daAlink_getAlinkActorClass();
+    if (link == NULL) {
+        return;
+    }
+
+    cCcD_Obj* hitObj = link->mGuardAtCps.GetAtHitObj();
+    if (hitObj == NULL) {
+        return;
+    }
+
+    fopAc_ac_c* hitActor = hitObj->GetAc();
+    if (hitActor != NULL && fopAcM_GetGroup(hitActor) == fopAc_ENEMY_e) {
+        dShield_tryGrantHelmPunishCredit((fopEn_enemy_c*)hitActor);
+    }
 }
 
 u8 dShield_getBashCharges() {

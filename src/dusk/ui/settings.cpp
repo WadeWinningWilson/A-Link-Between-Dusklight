@@ -1155,15 +1155,15 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             });
         // ============================================
         // NEW CODE — ALBW Port
-        // Enemy HP multiplier sliders (1–16×, one per category).
-        // Each divides attack power at the collision intercept in
-        // d_cc_uty.cpp so effective enemy health scales up without
-        // touching any HP values directly.
+        // True max-HP multipliers (1–16× per category) and global Link
+        // damage decrease. Both default to 1× (vanilla). True HP is applied
+        // once per enemy in fopAc_Execute; Link damage decrease divides
+        // attack power in d_cc_uty.cpp.
         // ============================================
         leftPane.add_section("ALBW Settings");
         leftPane.register_control(
             leftPane.add_child<NumberButton>(NumberButton::Props{
-                .key = "Enemy HP ×",
+                .key = "Common HP ×",
                 .getValue = [] { return getSettings().game.hpMultNormal.getValue(); },
                 .setValue =
                     [](int value) {
@@ -1183,8 +1183,9 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             rightPane, [](Pane& pane) {
                 pane.clear();
                 pane.add_text(
-                    "Scales HP of standard enemies: Bokoblins, Stalfos, "
-                    "Lizalfos, Keese, and all other regular encounters.");
+                    "Multiplies max HP of standard enemies: Bokoblins, Stalfos, "
+                    "Lizalfos, Keese, and all other regular encounters. "
+                    "1× is vanilla; only newly spawned enemies pick up changes.");
             });
         leftPane.register_control(
             leftPane.add_child<NumberButton>(NumberButton::Props{
@@ -1208,7 +1209,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             rightPane, [](Pane& pane) {
                 pane.clear();
                 pane.add_text(
-                    "Scales HP of sub-bosses: Ook, Dangoro, Death Sword, "
+                    "Multiplies max HP of sub-bosses: Ook, Dangoro, Death Sword, "
                     "Deku Toad, Skull Kid, King Bulblin, Darkhammer, "
                     "Twilit Bloat, Phantom Zant, etc.");
             });
@@ -1234,7 +1235,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             rightPane, [](Pane& pane) {
                 pane.clear();
                 pane.add_text(
-                    "Scales HP of dungeon bosses: Diababa, Fyrus, Morpheel, "
+                    "Multiplies max HP of dungeon bosses: Diababa, Fyrus, Morpheel, "
                     "Stallord, Blizzeta, Armogohma, Argorok, and Zant.");
             });
         leftPane.register_control(
@@ -1259,9 +1260,44 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             rightPane, [](Pane& pane) {
                 pane.clear();
                 pane.add_text(
-                    "Scales HP of the final boss sequence: Dark Beast Ganon "
+                    "Multiplies max HP of the final boss sequence: Dark Beast Ganon "
                     "and the Ganondorf sword fight on Hyrule Castle rooftop.");
             });
+        leftPane.register_control(
+            leftPane.add_child<NumberButton>(NumberButton::Props{
+                .key = "Link Damage Decrease ×",
+                .getValue = [] { return getSettings().game.linkDamageDecreaseMult.getValue(); },
+                .setValue =
+                    [](int value) {
+                        getSettings().game.linkDamageDecreaseMult.setValue(value);
+                        config::Save();
+                    },
+                .isDisabled = [] { return getSettings().game.speedrunMode; },
+                .isModified =
+                    [] {
+                        return getSettings().game.linkDamageDecreaseMult.getValue() !=
+                               getSettings().game.linkDamageDecreaseMult.getDefaultValue();
+                    },
+                .min = 1,
+                .max = 16,
+                .suffix = "×",
+            }),
+            rightPane, [](Pane& pane) {
+                pane.clear();
+                pane.add_text(
+                    "Divides Link's attack power against all enemies (1× is vanilla). "
+                    "Stacks with true HP multipliers if both are raised. "
+                    "Independent of enemy category.");
+            });
+        addOption("Show Lock-on HP Debug", getSettings().game.showLockonHpDebug,
+            "While Z-targeting, shows the locked enemy's current HP, max HP, ALBW category, "
+            "and true HP multiplier in a small on-screen overlay.");
+        addOption("Darknut Bash Debug Log", getSettings().game.showDarknutBashDebug,
+            "Logs Darknut bash/guard-break state and shield bash-start charge snapshots to "
+            "Documents/dusklight/albw_darknut_debug.txt (truncated once per session).");
+        addOption("Stick Cycle Lock-on", getSettings().game.stickCycleLockon,
+            "While Z-targeting, right stick left/right cycles between nearby enemies that are "
+            "in combat with you instead of manually rotating the lock-on camera.");
         addOption("No Ammo Drops", getSettings().game.noAmmoDrops,
             "Bombs, arrows, and seeds will not drop from enemies. Magic pickups (seed drops) replace them.");
         addOption("Manual Shielding", getSettings().game.manualShielding,
@@ -1270,6 +1306,10 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Shield Parry & Bash Charges", getSettings().game.shieldParryCombat,
             "Perfect-guard timing earns bash charges and ALBW meter. Failed blocks cost meter "
             "and charges. Off uses traditional TP guard (no parry economy).");
+        addOption("Hidden Skill Rework", getSettings().game.hiddenSkillRework,
+            "Reworks hidden skill combat: Helm Splitter bash punish flow, finisher dispatch "
+            "priority, ALBW meter costs, and Jump Strike charge requirement. "
+            "Warning: Game combat may break without this setting turned on and hidden skills acquired.");
         addOption("Shield Durability", getSettings().game.shieldDurability,
             "Shield HP by tier; failed blocks drain it. Hylian repairs on parry and takes more "
             "damage per hit. Break at 0 uses guard break (replaces vanilla slip counter).");

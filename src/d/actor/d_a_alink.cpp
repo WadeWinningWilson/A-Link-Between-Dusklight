@@ -53,7 +53,9 @@
 
 #if TARGET_PC
 #include "d/d_albw_death_rupee.h"
+#include "d/d_albw_combat.h"
 #include "d/d_albw_shield.h"
+#include "dusk/conavigate.h"
 #include "d/d_albw_wolf_stun.h"
 #include "d/d_albw_wolf_combat.h"
 #include "d/d_albw_wolf_charge_hud.h"
@@ -9804,20 +9806,15 @@ BOOL daAlink_c::checkRestHPAnime() {
 #if TARGET_PC
     // ============================================
     // NEW CODE — ALBW Port
-    // Depleted ALBW meter (sALBWLocked) also triggers the tired-panting idle
-    // animation (ANM_WAIT_TIRED). The same preconditions as the original HP
-    // check apply — not guarding, no active upper animation, not targeting,
-    // not in a cutscene/demo — so combat and event scenes feel natural.
-    // Animation clears automatically once the meter recovers past sOilBaseMax
-    // and sALBWLocked is cleared. Wolf Link is excluded per ALBW port scope.
-    // ============================================
+    // Movement exhaustion (below sOilBaseMax while refilling) triggers tired idle.
+    // Lockout may continue until the meter reaches sOilMaxVar.
     if (!checkWolf()
         && !checkPlayerGuard()
         && (checkNoUpperAnime() || checkHorseTiredAnime())
         && mTargetedActor == NULL
         && !checkWindSpeedOnAngle()
         && !checkPlayerDemoMode()
-        && dMeter2_isALBWLocked())
+        && dMeter2_isALBWMovementExhausted())
     {
         return true;
     }
@@ -11699,6 +11696,18 @@ int daAlink_c::checkNormalAction() {
         return 1;
     }
 
+#if TARGET_PC
+    if (dShield_isParryCombatEnabled() && dAlbw_isHiddenSkillReworkEnabled() &&
+        dComIfGp_getDoStatus() == BUTTON_STATUS_HELM_SPLITTER && doButton() &&
+        checkCutHeadState())
+    {
+        const int helmResult = procCutHeadInit();
+        if (helmResult != 0) {
+            return helmResult;
+        }
+    }
+#endif
+
     if (doTrigger()) {
         if (dComIfGp_getDoStatus() == BUTTON_STATUS_UNK_137) {
             orderPeep();
@@ -11828,15 +11837,20 @@ int daAlink_c::checkNormalAction() {
         } else if (dComIfGp_getDoStatus() == BUTTON_STATUS_HELM_SPLITTER) {
             if (checkWolf()) {
                 return procWolfJumpAttackInit(1);
-            } else {
-                return checkDoCutAction();
             }
+#if TARGET_PC
+            if (dShield_isParryCombatEnabled() && dAlbw_isHiddenSkillReworkEnabled()) {
+                return procCutHeadInit();
+            }
+#endif
+            return checkDoCutAction();
         } else if (dComIfGp_getDoStatus() == BUTTON_STATUS_UNK_139) {
             return procWolfJumpAttackInit(1);
         } else if (dComIfGp_getDoStatus() == BUTTON_STATUS_DRAW) {
             changeCutFast();
             return 1;
         } else if (dComIfGp_getDoStatus() == BUTTON_STATUS_UNK_134) {
+            CONAV_CUT_SNAPSHOT(this, "normal", "doStatus134->checkDoCutAction");
             return checkDoCutAction();
         } else if (dComIfGp_getDoStatus() == BUTTON_STATUS_HOWL) {
             return procWolfHowlDemoInit();
@@ -11899,6 +11913,14 @@ BOOL daAlink_c::checkItemAction() {
         }
     } else {
 #if TARGET_PC
+        // Manual guard: ZR+B shield bash (charge economy). Replaces vanilla R bash when parry combat is on.
+        if (manualShieldAttackTrigger() && checkGuardActionChange()
+            && !checkUpperReadyThrowAnime() && !checkModeFlg(0x70C52) && checkShieldGet() && !checkNotBattleStage()
+            && (mLinkAcch.ChkGroundHit() || checkMagneBootsOn()))
+        {
+            return procGuardAttackInit();
+        }
+#else
         // Manual guard: B is shield bash only (no sword), no Ordon training flag required.
         if (manualShieldAttackTrigger() && checkGuardActionChange()
             && !checkUpperReadyThrowAnime() && !checkModeFlg(0x70C52) && checkShieldGet() && !checkNotBattleStage()
@@ -12022,6 +12044,9 @@ BOOL daAlink_c::checkItemAction() {
                 && !checkModeFlg(0x70C52)
                 && checkShieldGet()
                 && !checkNotBattleStage()
+#if TARGET_PC
+                && !dShield_isParryCombatEnabled()
+#endif
             ) && ((mLinkAcch.ChkGroundHit() || checkMagneBootsOn()) && dComIfGp_getRStatus() == 0)
             )
         {
@@ -12912,17 +12937,8 @@ BOOL daAlink_c::checkHeavyStateOn(BOOL param_0, BOOL param_1) {
 #if TARGET_PC
             // ============================================
             // NEW CODE — ALBW Port
-            // Depleted ALBW meter (sALBWLocked) puts human Link into the heavy
-            // movement state: reduced roll rate, swim speed, run speed, etc.
-            // This reuses the same slow-movement hook used by Iron Boots and
-            // Magic Armor post-hit recovery, giving a consistent "exhausted"
-            // feel. Clears automatically when sALBWLocked is reset.
-            // Wolf Link is excluded per ALBW port scope.
-            // ============================================
-            || (dMeter2_isALBWLocked() && !checkWolf())
-            // ============================================
-            // NEW CODE ENDS HERE
-            // ============================================
+            // Movement exhaustion until sOilBaseMax; lockout may continue until full max.
+            || (dMeter2_isALBWMovementExhausted() && !checkWolf())
 #endif
             )
         {
@@ -19261,7 +19277,14 @@ int daAlink_c::execute() {
                         setWallGrabStatus(BUTTON_STATUS_GRAB, checkChainEmphasys());
                     }
 
-                    if (dComIfGp_getRStatus() == BUTTON_STATUS_SHIELD_ATTACK && checkShieldAttackEmphasys() == 0) {
+#if TARGET_PC
+                    if (dShield_isParryCombatEnabled() &&
+                        dComIfGp_getRStatus() == BUTTON_STATUS_SHIELD_ATTACK) {
+                        setRStatus(BUTTON_STATUS_NONE);
+                    } else
+#endif
+                    if (dComIfGp_getRStatus() == BUTTON_STATUS_SHIELD_ATTACK &&
+                        checkShieldAttackEmphasys() == 0) {
                         setRStatus(BUTTON_STATUS_NONE);
                     }
                 }

@@ -4987,6 +4987,14 @@ bool dCamera_c::lockonCamera(s32 param_0) {
     f32 fVar43 = 1.0f - fabsf(mPadInfo.mCStick.mLastPosY);
     f32 fVar44;
 
+#if TARGET_PC
+    if (dusk::getSettings().game.stickCycleLockon.getValue() && attention != NULL &&
+        attention->Lockon())
+    {
+        fVar43 = 1.0f;
+    }
+#endif
+
     if (bVar1) {
         if (mCurCamStyleTimer == 0) {
             lockon->field_0x5c = 0.01f;
@@ -5093,6 +5101,14 @@ bool dCamera_c::lockonCamera(s32 param_0) {
     if (mCamParam.Flag(param_0, 0x40)) {
         sp158 = 0.0f;
     }
+
+#if TARGET_PC
+    if (dusk::getSettings().game.stickCycleLockon.getValue() && attention != NULL &&
+        attention->Lockon())
+    {
+        sp158 = 0.0f;
+    }
+#endif
 
     if (mPadInfo.mCStick.mLastPosY > mCamSetup.mCStick.SwTHH()) {
         if (mCStickUpLatch != 1) {

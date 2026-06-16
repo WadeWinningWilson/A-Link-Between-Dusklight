@@ -177,6 +177,8 @@ set(DOLZEL_FILES
         src/d/d_albw_dialogue.cpp
         src/d/d_albw_ui_text.cpp
         src/d/d_albw_hp_mult.cpp
+        src/d/d_albw_combat.cpp
+        src/d/d_albw_lockout.cpp
         src/d/d_albw_enemy_rupee.cpp
         src/d/d_albw_shield.cpp
         src/d/d_albw_wolf_stun.cpp
@@ -1433,6 +1435,7 @@ set(DUSK_FILES
         src/d/actor/d_a_alink_dusk.cpp
         src/dusk/asserts.cpp
         src/dusk/config.cpp
+        src/dusk/conavigate.cpp
         src/dusk/crash_handler.cpp
         src/dusk/crash_reporting.cpp
         src/dusk/data.cpp
