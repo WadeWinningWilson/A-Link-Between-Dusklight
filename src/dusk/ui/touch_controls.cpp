@@ -156,6 +156,10 @@ bool player_attention_locked() noexcept {
     return player != nullptr && (player->checkAttentionLock() || player->checkEnemyAttentionLock());
 }
 
+bool hawkeye_active() noexcept {
+    return dCamera_c::isAimActive() && dComIfGp_checkPlayerStatus0(0, 0x200000);
+}
+
 bool item_wheel_active() noexcept {
     return dMeter2Info_getWindowStatus() == 2;
 }
@@ -174,7 +178,7 @@ enum class StickOutput {
 };
 
 StickOutput stick_output_mode() noexcept {
-    if (fishing_controls_active()) {
+    if (fishing_controls_active() || hawkeye_active()) {
         return StickOutput::CStick;
     }
     return StickOutput::MainStick;
@@ -693,7 +697,7 @@ void TouchControls::sync_touch_state() noexcept {
 
     sync_l_lock_state();
     const bool aimActive = dCamera_c::isAimActive();
-    if (aimActive && mMoveTouch.active) {
+    if (aimActive && !hawkeye_active() && mMoveTouch.active) {
         if (!mCameraTouch.active) {
             mCameraTouch = mMoveTouch;
             mCameraTouch.start = mMoveTouch.current;
@@ -1208,7 +1212,26 @@ void TouchControls::handle_touch_down(Rml::Event& event) noexcept {
     }
 
     const auto id = touch_event_id(event);
+    const auto dimensions = context->GetDimensions();
+    const float top = mSafeInsets.top + kAnalogZoneTopDp * touch_dp_scale();
+    const float bottom = static_cast<float>(dimensions.y) - mSafeInsets.bottom -
+                         kAnalogZoneBottomDp * touch_dp_scale();
+    const auto width = static_cast<float>(dimensions.x);
+    const bool inAnalogZone = position.y >= top && position.y <= bottom;
+    const bool inLeftZone = position.x < width * kLeftZoneWidth;
     if (dCamera_c::isAimActive()) {
+        if (hawkeye_active() && inAnalogZone && inLeftZone) {
+            if (!mMoveTouch.active) {
+                mMoveTouch = {
+                    .id = id,
+                    .start = position,
+                    .current = position,
+                    .active = true,
+                };
+            }
+            return;
+        }
+
         if (!mCameraTouch.active) {
             mCameraTouch = {
                 .id = id,
@@ -1220,16 +1243,11 @@ void TouchControls::handle_touch_down(Rml::Event& event) noexcept {
         return;
     }
 
-    const auto dimensions = context->GetDimensions();
-    const float top = mSafeInsets.top + kAnalogZoneTopDp * touch_dp_scale();
-    const float bottom = static_cast<float>(dimensions.y) - mSafeInsets.bottom -
-                         kAnalogZoneBottomDp * touch_dp_scale();
-    if (position.y < top || position.y > bottom) {
+    if (!inAnalogZone) {
         return;
     }
 
-    const auto width = static_cast<float>(dimensions.x);
-    if (!mMoveTouch.active && position.x < width * kLeftZoneWidth) {
+    if (!mMoveTouch.active && inLeftZone) {
         mMoveTouch = {
             .id = id,
             .start = position,
