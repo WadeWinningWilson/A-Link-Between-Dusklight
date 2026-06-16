@@ -57,6 +57,7 @@
 #include "d/d_albw_shield.h"
 #include "dusk/conavigate.h"
 #include "d/d_albw_wolf_stun.h"
+#include "d/d_albw_lockout.h"
 #include "d/d_albw_wolf_combat.h"
 #include "d/d_albw_wolf_charge_hud.h"
 #include "dusk/action_bindings.h"
@@ -18664,6 +18665,7 @@ int daAlink_c::execute() {
         // No-op when no enemies are currently stunned.
         // ============================================
         dAlbwWolfStun_update();
+        dAlbwLockout_update();
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================

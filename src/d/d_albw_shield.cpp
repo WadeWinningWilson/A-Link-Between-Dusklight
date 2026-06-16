@@ -908,7 +908,7 @@ void dShield_onFailedGuardBlock(fopAc_ac_c* i_attacker) {
 
     logChargeEvent(loss > 1 ? "fail--" : "fail-");
 
-    if (link != NULL && dMeter2_getALBWMeterValue() <= 0) {
+    if (link != NULL && dMeter2_isALBWDepleted()) {
         link->procGuardBreakInit();
     }
 }

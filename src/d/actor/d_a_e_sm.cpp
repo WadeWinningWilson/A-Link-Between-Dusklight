@@ -7,11 +7,15 @@
 
 #include "d/actor/d_a_e_sm.h"
 #include "d/d_cc_d.h"
+#include "d/d_cc_uty.h"
 #include "d/d_camera.h"
 #include "d/actor/d_a_arrow.h"
 #include "Z2AudioLib/Z2Instances.h"
 #include "f_op/f_op_camera_mng.h"
 #include <cstring>
+#if TARGET_PC
+#include "d/d_albw_lockout.h"
+#endif
 
 enum E_SM_RES_File_ID {
     /* BCK */
@@ -357,6 +361,18 @@ void daE_SM_c::SmDamageCheck() {
         field_0x97c = 0.0f;
         field_0x980 = 2500.0f;
         mCoSm.OffAtSetBit();
+
+#if TARGET_PC
+        if (dAlbwLockout_isRangedOpened(this) &&
+            (mAtInfo.mpCollider->ChkAtType(AT_TYPE_ARROW) ||
+             mAtInfo.mpCollider->ChkAtType(AT_TYPE_BOMB) ||
+             mAtInfo.mpCollider->ChkAtType(AT_TYPE_IRON_BALL))) {
+            cc_at_check(this, &mAtInfo);
+            mAction = ACTION_DAMAGE;
+            cLib_addCalc2(&field_0x69c, 0.0f, 0.05f, 100.0f);
+            return;
+        }
+#endif
 
         s16 sVar2;
         if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_ARROW)) {

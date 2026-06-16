@@ -129,11 +129,12 @@ static bool sALBWPlayerIdle = false;
 // ============================================
 // NEW CODE — ALBW Port
 // Meter lockout latch.
-// Set when sALBWMeter clamps to 0; cleared when sALBWMeter reaches sOilMaxVar.
-// All canALBW* gates check !sALBWLocked so sword/agility/normal items stay blocked
-// until the meter is full. Lockout item perks override selected gates while latched.
-// sALBWMovementExhausted: heavy movement + tired idle until sOilBaseMax (10900).
-// sALBWArmorDepleted clears at sOilBaseMax so armor hue restores before lockout ends.
+// Set when internal sALBWMeter reaches zero or below (debt); cleared at sOilMaxVar.
+// Spending may push the meter negative on the action that caused depletion; HUD
+// shows max(0, internal) until debt is repaid. Lockout blocks new sword/agility/
+// hidden-skill actions; the proc already in progress is not interrupted.
+// Spinner and Dominion Rod are blocked while internal meter <= 0.
+// sALBWMovementExhausted clears at sOilBaseMax; lockout perks still apply until full.
 // ============================================
 static bool sALBWLocked = false;
 static bool sALBWMovementExhausted = false;
@@ -178,8 +179,12 @@ static int  sPrevUpgradeSteps  = 0;
 // Meter capacity: heart/armor tiers + one sword-swing (1817) per main dungeon clear.
 static constexpr int kALBWHeartArmorTierBonus = 8480;
 static constexpr int kALBWDungeonClearBonus   = 1817;
-static constexpr int kALBWRecoveryBase        = 109;
-static constexpr int kALBWRecoveryPerStep     = 164;  // 10 steps → 2.5× base (273/100ms)
+// Normal passive recovery (pre-lockout): scales with meter upgrades (~10s base at 109/100ms).
+static constexpr int kALBWRecoveryBase    = 109;
+static constexpr int kALBWRecoveryPerStep = 164;  // 10 steps → 2.5× base (273/100ms)
+// Lockout-only passive recovery: 7s debt/empty → sOilBaseMax, then 3s for expanded portion.
+static constexpr int kALBWLockoutBaseRecoveryTicks   = 70;  // 70 × 100ms = 7.0s
+static constexpr int kALBWLockoutExpandRecoveryTicks = 30;  // 30 × 100ms = 3.0s
 
 static const int kALBWDungeonClearBitIdx[] = {
     55,  64,  78, 265, 266, 267, 268, 570,
@@ -227,6 +232,44 @@ static int computeALBWMeterMax() {
     return maxVal;
 }
 
+static int albwDisplayMeter() {
+    return sALBWMeter > 0 ? sALBWMeter : 0;
+}
+
+static void albwRefreshLockoutState(bool i_playDecSound) {
+    if (sALBWMeter <= 0) {
+        if (i_playDecSound && !sALBWLocked) {
+            Z2GetAudioMgr()->seStart(
+                Z2SE_MAGIC_METER_DEC, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
+            sALBWRecoverSoundActive = false;
+            dAlbwLockout_onBegin();
+        }
+        sALBWLocked = true;
+        sALBWMovementExhausted = true;
+    }
+
+    if (sALBWMovementExhausted && sALBWMeter >= sOilBaseMax) {
+        sALBWMovementExhausted = false;
+    }
+    if (sALBWLocked && sALBWMeter >= sOilMaxVar) {
+        sALBWLocked = false;
+        dAlbwLockout_onEnd();
+    }
+    if (sALBWArmorDepleted && sALBWMeter >= sOilBaseMax) {
+        sALBWArmorDepleted = false;
+    }
+
+    if (sALBWMeter > sOilMaxVar) {
+        sALBWMeter = sOilMaxVar;
+    }
+}
+
+static void albwDrainMeter(int amount, const std::chrono::steady_clock::time_point& i_now) {
+    sALBWMeter -= amount;
+    sLastRecoveryTime = i_now;
+    albwRefreshLockoutState(true);
+}
+
 static int computeALBWRecoveryRate() {
     // Scale passive recovery with current meter capacity, not how it was earned.
     const int expansion    = sOilMaxVar - sOilBaseMax;
@@ -237,6 +280,19 @@ static int computeALBWRecoveryRate() {
     constexpr int kVanillaMaxSteps = 10;
     return kALBWRecoveryBase +
            (expansion * kALBWRecoveryPerStep * kVanillaMaxSteps) / (maxExpansion * 10);
+}
+
+static int albwLockoutRecoveryRate() {
+    if (sALBWMeter < sOilBaseMax) {
+        return sOilBaseMax / kALBWLockoutBaseRecoveryTicks;
+    }
+
+    const int expansion = sOilMaxVar - sOilBaseMax;
+    if (expansion <= 0) {
+        return sOilBaseMax / kALBWLockoutBaseRecoveryTicks;
+    }
+
+    return expansion / kALBWLockoutExpandRecoveryTicks;
 }
 // ============================================
 // NEW CODE ENDS HERE
@@ -260,6 +316,9 @@ static int computeALBWRecoveryRate() {
 #if TARGET_PC
 void dMeter2_onALBWSling() {
     sSlingMade = true;
+    if (sALBWLocked) {
+        dAlbwLockout_onSlingFired();
+    }
 }
 
 void dMeter2_onALBWBoom() {
@@ -304,43 +363,40 @@ static bool dMeter2_isALBWLockoutZTargetRecovery() {
     return attn != NULL && attn->Lockon();
 }
 
-// Continuous-drain items blocked for the entire lockout (no special re-entry).
-bool dMeter2_canALBWSpinner() { return !sALBWLocked; }
-bool dMeter2_canALBWDomRod() { return !sALBWLocked; }
+// Continuous-drain items are forced off when internal meter is at or below zero.
+bool dMeter2_canALBWSpinner() { return sALBWMeter > 0; }
+bool dMeter2_canALBWDomRod() { return sALBWMeter > 0; }
 
 bool dMeter2_canALBWSling() {
     if (sALBWLocked) {
-        return true;
+        return dAlbwLockout_canFireSling();
     }
-    return sALBWMeter >= 3633;
+    return true;
 }
 
 bool dMeter2_canALBWBoom() {
-    if (sALBWLocked) {
-        return sALBWMeter >= sOilBaseMax / 2;
-    }
-    return sALBWMeter >= 2725;
+    return true;
 }
 
 bool dMeter2_canALBWArrow() {
     if (sALBWLocked) {
         return dAlbwLockout_canFireBow();
     }
-    return sALBWMeter >= 5450;
+    return true;
 }
 
 bool dMeter2_canALBWBomb() {
     if (sALBWLocked) {
         return true;
     }
-    return sALBWMeter >= 5450;
+    return true;
 }
 
 bool dMeter2_canALBWIronball() {
     if (sALBWLocked) {
         return sALBWMeter >= albwLockoutMeterPct(93);
     }
-    return sALBWMeter >= sOilMaxVar / 2;
+    return true;
 }
 // ============================================
 // NEW CODE — ALBW Port
@@ -375,28 +431,24 @@ bool dMeter2_canALBWHookshot() {
     if (sALBWLocked) {
         return true;
     }
-    return sALBWMeter >= 2725;
+    return true;
 }
 
 bool dMeter2_canALBWDoubleHookshot() {
     if (sALBWLocked) {
         return dAlbwLockout_canUseDoubleHookshot();
     }
-    return sALBWMeter >= 1362;
+    return true;
 }
 // ============================================
 // NEW CODE — ALBW Port
 // Sword and agility drain signals and gates.
 // Signal functions set the flag for moveKantera() to consume this frame.
 // Gate functions let the procInit caller decide whether to proceed:
-//   canALBWSword/Sidestep/BackJump/RollJump: blocked only while sALBWLocked
-//     (meter hit zero); minimum thresholds match their per-use drain amounts.
-//   canALBWHiddenSkill: blocked only while sALBWLocked, same as normal sword
-//     attacks. Hidden Skills cost 1/2 base meter (5450) and can be used at
-//     any meter level — if the drain pushes the meter to zero the animation
-//     finishes first, then Link enters the exhausted state. He must wait until
-//     the meter fully replenishes (sOilBaseMax) before Hidden Skills are
-//     available again.
+//   canALBWSword/Sidestep/BackJump/RollJump/HiddenSkill: blocked while sALBWLocked
+//     (internal meter at or below zero). No minimum meter while unlocked — a
+//     started action may push the meter into debt; lockout blocks the next action.
+//   Ranged/items: no minimum while unlocked; lockout perks apply while locked.
 // ============================================
 void dMeter2_onALBWSword()       { sSwordSwing  = true; }
 void dMeter2_onALBWSidestep()    { sSidestep    = true; }
@@ -415,23 +467,16 @@ static void commitALBWHiddenSkillDrain(const std::chrono::steady_clock::time_poi
         return;
     }
 
-    sALBWMeter -= 5450;
+    albwDrainMeter(5450, i_now);
     sHiddenSkill = false;
-    sLastRecoveryTime = i_now;
 }
 
 void dMeter2_commitALBWHiddenSkillIfPending() {
     commitALBWHiddenSkillDrain(std::chrono::steady_clock::now());
 }
-// ============================================
-// NEW CODE — ALBW Port
-// All sword and agility gates (including Hidden Skills) check only the
-// lockout latch, not a minimum meter amount. This lets the action execute
-// even when the remaining meter is less than its own drain cost — the drain
-// may push the meter below zero, clamping it to 0 and latching sALBWLocked,
-// after which checkRestHPAnime() triggers tired state at the end of the
-// animation. The lock clears once sALBWMeter recovers to sOilBaseMax.
-// ============================================
+// Sword, agility, and hidden skills: no minimum meter while lockout is clear
+// (drain may push internal meter into debt). Once internal hits zero, lockout
+// latches and NEW actions are blocked — the current animation still finishes.
 bool dMeter2_canALBWSword()       { return !sALBWLocked; }
 bool dMeter2_canALBWSidestep()    { return !sALBWLocked; }
 bool dMeter2_canALBWBackJump()    { return !sALBWLocked; }
@@ -482,6 +527,7 @@ void dMeter2_onALBWArmorHit() {
     sALBWMeter         = 0;
     sALBWArmorDepleted = true;
     sLastRecoveryTime  = std::chrono::steady_clock::now();
+    albwRefreshLockoutState(true);
 }
 bool dMeter2_isALBWArmorDepleted() { return sALBWArmorDepleted; }
 bool dMeter2_canALBWArmorBlock()   { return !sALBWArmorDepleted && sALBWMeter > 0; }
@@ -530,16 +576,17 @@ bool dMeter2_isInCombatEncounter() {
 // ============================================
 void dMeter2_addALBWFraction(int numerator, int denominator) {
     int amount = (sOilMaxVar * numerator) / denominator;
-    sALBWMeter = cLib_minMaxLimit<int>(sALBWMeter + amount, 0, sOilMaxVar);
+    sALBWMeter += amount;
+    albwRefreshLockoutState(false);
 }
 
 void dMeter2_subALBWFraction(int numerator, int denominator) {
     int amount = (sOilMaxVar * numerator) / denominator;
-    sALBWMeter = cLib_minMaxLimit<int>(sALBWMeter - amount, 0, sOilMaxVar);
+    albwDrainMeter(amount, std::chrono::steady_clock::now());
 }
 
 int dMeter2_getALBWMeterValue() {
-    return sALBWMeter;
+    return albwDisplayMeter();
 }
 
 int dMeter2_getALBWMaxValue() {
@@ -1692,24 +1739,16 @@ void dMeter2_c::moveKantera() {
         // ============================================
 
         if (sArrowMade) {
-            sALBWMeter -= 5450;
+            albwDrainMeter(5450, sNow);
             sArrowMade = false;
-            sLastRecoveryTime = sNow;
         } else if (sBombAmmo) {
-            // ============================================
-            // NEW CODE — ALBW Port
-            // 50% of sOilBaseMax (5450). A doubled meter
-            // takes exactly 4 bombs to fully deplete.
-            // ============================================
-            sALBWMeter -= 5450;
+            albwDrainMeter(5450, sNow);
             sBombAmmo = false;
-            sLastRecoveryTime = sNow;
         } else if (sBoomThrow) {
             if (sALBWLocked) {
                 dMeter2_addALBWFraction(3, 20);
             } else {
-                sALBWMeter -= 2725;
-                sLastRecoveryTime = sNow;
+                albwDrainMeter(2725, sNow);
             }
             sBoomThrow = false;
         }
@@ -1719,33 +1758,17 @@ void dMeter2_c::moveKantera() {
         // Drain value 3633 (1/3 meter, 3 shots to drain) — testing value.
         // ============================================
         else if (sSlingMade) {
-            if (sALBWLocked) {
-                dMeter2_addALBWFraction(1, 20);
-                if (dShield_isDurabilityEnabled() &&
-                    sALBWMeter >= albwLockoutMeterPct(95)) {
-                    dShield_repairDurabilityFraction(1, 20);
-                }
-            } else {
-                sALBWMeter -= 3633;
-                sLastRecoveryTime = sNow;
-            }
+            albwDrainMeter(3633, sNow);
             sSlingMade = false;
         } else if (sIronballThrow) {
-            // ============================================
-            // NEW CODE — ALBW Port
-            // Cost scales with sOilMaxVar so a doubled meter
-            // takes 4 throws to deplete (same ratio as bombs
-            // but relative to current ceiling, not base).
-            // ============================================
-            sALBWMeter -= sOilMaxVar / 2;
+            albwDrainMeter(sOilMaxVar / 2, sNow);
             sIronballThrow = false;
-            sLastRecoveryTime = sNow;
         } else if (sHookshotFire) {
-            // Single clawshot: fixed sOilBaseMax/4 = 2725 regardless of meter expansion
-            sALBWMeter -= 2725; sHookshotFire = false; sLastRecoveryTime = sNow;
+            albwDrainMeter(2725, sNow);
+            sHookshotFire = false;
         } else if (sDoubleHookshotFire) {
-            // Double clawshot: fixed sOilBaseMax/8 = 1362 regardless of meter expansion
-            sALBWMeter -= 1362; sDoubleHookshotFire = false; sLastRecoveryTime = sNow;
+            albwDrainMeter(1362, sNow);
+            sDoubleHookshotFire = false;
         }
         // ============================================
         // NEW CODE — ALBW Port
@@ -1756,19 +1779,18 @@ void dMeter2_c::moveKantera() {
         // reset sLastRecoveryTime to defer recovery until the next interval.
         // ============================================
         else if (sSwordSwing) {
-            // Normal swing / stab / base finisher: 1/6 sOilBaseMax = 1817
-            sALBWMeter -= 1817; sSwordSwing = false; sLastRecoveryTime = sNow;
+            albwDrainMeter(1817, sNow);
+            sSwordSwing = false;
         } else if (sSidestep) {
-            // Sidestep left/right: 1/5 sOilBaseMax = 2180
-            sALBWMeter -= 2180; sSidestep = false; sLastRecoveryTime = sNow;
+            albwDrainMeter(2180, sNow);
+            sSidestep = false;
         } else if (sBackJump) {
-            // Backward sidestep / back jump: 1/3 sOilBaseMax = 3633
-            sALBWMeter -= 3633; sBackJump = false; sLastRecoveryTime = sNow;
+            albwDrainMeter(3633, sNow);
+            sBackJump = false;
         } else if (sRollJump) {
-            // Roll/spin jump: 1/3 sOilBaseMax = 3633
-            sALBWMeter -= 3633; sRollJump = false; sLastRecoveryTime = sNow;
+            albwDrainMeter(3633, sNow);
+            sRollJump = false;
         } else if (sHiddenSkill) {
-            // Hidden skill (Mortal Draw, Jump Strike, Helm Splitter, Great Spin): 1/2 sOilBaseMax = 5450
             commitALBWHiddenSkillDrain(sNow);
         }
         // ============================================
@@ -1793,9 +1815,8 @@ void dMeter2_c::moveKantera() {
                 sNow - sLastSpinnerDrainTime).count();
             if (msSpin >= 100) {
                 int rate = (sOilMaxVar <= 10900) ? 156 : (sOilMaxVar <= 16350) ? 164 : 88;
-                sALBWMeter -= rate;
+                albwDrainMeter(rate, sNow);
                 sLastSpinnerDrainTime = sNow;
-                sLastRecoveryTime     = sNow;
             }
             sSpinnerActive = false;
         }
@@ -1815,9 +1836,8 @@ void dMeter2_c::moveKantera() {
             auto msDom = std::chrono::duration_cast<std::chrono::milliseconds>(
                 sNow - sLastDomRodDrainTime).count();
             if (msDom >= 100) {
-                sALBWMeter       -= 36;
+                albwDrainMeter(36, sNow);
                 sLastDomRodDrainTime = sNow;
-                sLastRecoveryTime    = sNow;
             }
             sDomRodActive = false;
         }
@@ -1825,66 +1845,20 @@ void dMeter2_c::moveKantera() {
         // NEW CODE ENDS HERE
         // ============================================
 
-        if (sALBWMeter < 0) {
-            sALBWMeter = 0;
-        }
         // ============================================
         // NEW CODE — ALBW Port
-        // Latch the lockout the moment the meter reaches zero.
-        // MAGIC_METER_DEC fires once on the false → true flag transition
-        // so it plays exactly once per full-depletion event.
-        // Cleared below once recovery reaches sOilBaseMax.
+        // Passive recovery: normal rates while unlocked; faster 7s/3s rates during lockout.
+        // Internal meter may be negative (debt); HUD shows max(0, internal).
         // ============================================
-        if (sALBWMeter <= 0) {
-            if (!sALBWLocked) {
-                Z2GetAudioMgr()->seStart(
-                    Z2SE_MAGIC_METER_DEC, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
-                sALBWRecoverSoundActive = false; // allow RECOVER on next refill cycle
-                dAlbwLockout_onBegin();
-            }
-            sALBWLocked = true;
-            sALBWMovementExhausted = true;
-        }
-        // ============================================
-        // NEW CODE ENDS HERE
-        // ============================================
-
-        if (sALBWMeter > sOilMaxVar) {
-            sALBWMeter = sOilMaxVar;
-        }
-
-        // ============================================
-        // MODIFIED CODE — ALBW Port (fix: framerate-dependent recovery)
-        // Old code incremented a frame counter and recovered +500 per frame,
-        // making recovery scale directly with FPS (instant at high framerates).
-        // Now uses wall-clock time with a base rate of 36 units per 100ms.
-        // Drain events reset sLastRecoveryTime to delay recovery by one interval.
-        //
-        // Audio: MAGIC_METER_RECOVER plays on every 100ms recovery tick
-        // (both normal and expanding paths), looping audibly while the meter
-        // refills. MAGIC_METER_FINISH plays once on the tick the meter first
-        // reaches sOilMaxVar (full), replacing that tick's RECOVER call.
-        //
-        // ============================================
-        // NEW CODE — ALBW Port
-        // Recovery rate scales with meter upgrade level.
-        // Each unlock (10 hearts, magic armor) adds 55 units per 100ms tick:
-        //   0 unlocks: 109/100ms → 10.0s from zero to sOilBaseMax
-        //   1 unlock:  164/100ms → 6.65s
-        //   2 unlocks: 219/100ms → ~5.0s (4.98s)
-        // sALBWExpanding (level-up fill animation) intentionally stays at
-        // the flat 36 rate — it's a visual event, not a gameplay gate.
-        // Passive recovery scales with all upgrade steps (max 2.5× at 10).
-        // ============================================
-        const int sBaseRecovery = computeALBWRecoveryRate();
+        const int sNormalRecovery = computeALBWRecoveryRate();
         const bool sALBWGuarding = dMeter2_isALBWRecoveryPausedByGuard();
         bool allowPassiveRecovery = !sALBWGuarding;
-        int sRecoveryRate = sBaseRecovery;
+        int sRecoveryRate = sALBWLocked ? albwLockoutRecoveryRate() : sNormalRecovery;
 
         if (sALBWLocked) {
             allowPassiveRecovery = allowPassiveRecovery && dMeter2_isALBWLockoutZTargetRecovery();
         } else if (sALBWPlayerIdle) {
-            sRecoveryRate = (sBaseRecovery * 105) / 100;
+            sRecoveryRate = (sNormalRecovery * 105) / 100;
         }
 
         sALBWPlayerIdle = false;
@@ -1894,13 +1868,16 @@ void dMeter2_c::moveKantera() {
             if (allowPassiveRecovery && msElapsed >= 100) {
                 sALBWMeter += 36;
                 sLastRecoveryTime = sNow;
+                albwRefreshLockoutState(false);
                 if (sALBWMeter >= sOilMaxVar) {
                     sALBWMeter     = sOilMaxVar;
                     sALBWExpanding = false;
                     sALBWRecoverSoundActive = false;
                     Z2GetAudioMgr()->seStart(
                         Z2SE_MAGIC_METER_FINISH, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
-                } else if (mpMeterDraw->getMeterGaugeAlphaRate(1) > 0.0f && !sALBWRecoverSoundActive) {
+                } else if (mpMeterDraw->getMeterGaugeAlphaRate(1) > 0.0f && !sALBWRecoverSoundActive &&
+                           sALBWMeter >= 0)
+                {
                     sALBWRecoverSoundActive = true;
                     if (sALBWLocked) {
                         Z2GetAudioMgr()->seStart(
@@ -1915,12 +1892,13 @@ void dMeter2_c::moveKantera() {
         } else if (allowPassiveRecovery && msElapsed >= 100 && sALBWMeter < sOilMaxVar && !sMeterinc) {
             sALBWMeter += sRecoveryRate;
             sLastRecoveryTime = sNow;
+            albwRefreshLockoutState(false);
             if (sALBWMeter >= sOilMaxVar) {
                 sALBWMeter = sOilMaxVar;
                 sALBWRecoverSoundActive = false;
                 Z2GetAudioMgr()->seStart(
                     Z2SE_MAGIC_METER_FINISH, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
-            } else if (!sALBWRecoverSoundActive) {
+            } else if (!sALBWRecoverSoundActive && sALBWMeter >= 0) {
                 sALBWRecoverSoundActive = true;
                 Z2GetAudioMgr()->seStartLevel(
                     Z2SE_MAGIC_METER_RECOVER, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
@@ -1978,37 +1956,12 @@ void dMeter2_c::moveKantera() {
         }
 
         // ============================================
-        // NEW CODE — ALBW Port
-        // Clear lockout and armor-depleted flags once the meter recovers
-        // to at least sOilBaseMax (the base meter size). This way players
-        // with an upgraded meter (up to 21800) do not have to wait for the
-        // full expanded meter to refill — only the original 10900 worth.
-        // Armor depleted also requires >= 500 rupees to re-arm.
-        // Both flags share the same sOilBaseMax threshold so items and
-        // armor hue restore at exactly the same moment.
-        // No sound here — MAGIC_METER_RECOVER is already looping per tick
-        // and MAGIC_METER_FINISH fires separately when meter hits sOilMaxVar.
-        // ============================================
-        if (sALBWMovementExhausted && sALBWMeter >= sOilBaseMax) {
-            sALBWMovementExhausted = false;
-        }
-        if (sALBWLocked && sALBWMeter >= sOilMaxVar) {
-            sALBWLocked = false;
-            dAlbwLockout_onEnd();
-        }
-        if (sALBWArmorDepleted && sALBWMeter >= sOilBaseMax) {
-            // Rupee check intentionally omitted: affordability for the NEXT block
-            // is already enforced in checkMagicArmorNoDamage(). Keeping a rupee
-            // gate here caused the heavy/gray state to persist at full meter when
-            // the player happened to be < 500 rupees — unintended exhausted lock.
-            sALBWArmorDepleted = false;
-        }
-        // ============================================
         // NEW CODE ENDS HERE
         // ============================================
 
+        const int displayMeter = albwDisplayMeter();
         s32 nativeMax = dComIfGs_getMaxOil();
-        mNowOil = (nativeMax > 0) ? (s32)((f32)sALBWMeter / (f32)sOilMaxVar * (f32)nativeMax) : 0;
+        mNowOil = (nativeMax > 0) ? (s32)((f32)displayMeter / (f32)sOilMaxVar * (f32)nativeMax) : 0;
         mMaxOil = nativeMax;
         draw_kantera = true;
         // ============================================
@@ -2037,7 +1990,7 @@ void dMeter2_c::moveKantera() {
                                    (f32)sOilBaseMax)
                 : kVisualMeterBaseWidth;
             const s16 barCur = (sOilMaxVar > 0)
-                ? static_cast<s16>((f32)sALBWMeter / (f32)sOilMaxVar * (f32)barMax)
+                ? static_cast<s16>((f32)albwDisplayMeter() / (f32)sOilMaxVar * (f32)barMax)
                 : 0;
             mpMeterDraw->drawMagic(barMax, barCur, x_pos, y_pos);
             mpMeterDraw->setAlphaMagicChange(false);

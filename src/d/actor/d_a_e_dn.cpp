@@ -14,6 +14,9 @@
 #include "f_op/f_op_actor_enemy.h"
 #include "Z2AudioLib/Z2Instances.h"
 #include <cstring>
+#if TARGET_PC
+#include "d/d_albw_lockout.h"
+#endif
 
 class daE_DN_HIO_c : public JORReflexible {
 public:
@@ -1185,6 +1188,9 @@ static void e_dn_fight_run(e_dn_class* i_this) {
 
     u8 def = 0;
     learn_check = i_this->learn;
+#if TARGET_PC
+    if (!dAlbwLockout_isRangedOpened(&i_this->actor))
+#endif
     if (fpcM_Search(shot_s_sub, i_this) != NULL || ((i_this->learn & 0x1000) != 0 && daPy_getPlayerActorClass()->checkHookshotShootReturnMode())) {
         def = 1;
         OS_REPORT(" DEF ON !!\n");

@@ -12,6 +12,7 @@
 #include <cstring>
 #if TARGET_PC
 #include "d/d_albw_enemy_rupee.h"
+#include "d/d_albw_lockout.h"
 #endif
 
 enum E_st_RES_File_ID {
@@ -2032,6 +2033,11 @@ static void e_st_g_wind(e_st_class* i_this) {
             break;
         
         case G_WIND_PHASE_WINDDAMAGE:
+#if TARGET_PC
+            if (dAlbwLockout_isBoomerangStunActive(a_this)) {
+                break;
+            }
+#endif
             if (i_this->mpModelMorf->isStop()) {
                 i_this->mAction = ACTION_G_FIGHT;
                 i_this->mActionPhase = PHASE_INIT;
@@ -2192,7 +2198,9 @@ static void damage_check_g(e_st_class* i_this) {
         if (i_this->mAtInfo.mpCollider->ChkAtType(AT_TYPE_BOOMERANG)) {
             i_this->mAction = ACTION_G_WIND;
             i_this->mActionPhase = PHASE_INIT;
-            i_this->mInvulnerabilityTimer = 10;
+            i_this->mInvulnerabilityTimer =
+                dAlbwLockout_getBoomerangStunFrames(10);
+            dAlbwLockout_onBoomerangHitNative(a_this);
             return;
         }
 

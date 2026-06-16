@@ -164,7 +164,13 @@ When **Enemy Death Rupees** is on:
 
 Planned work after v0.55, in rough priority order:
 
-### 1. Health & ALBW meter upgrades (Postman shop)
+### 1. Merge upstream Dusklight v1.3.1
+
+Rebase / submodule sync with **[TwilitRealm/dusklight v1.3.1](https://github.com/TwilitRealm/dusklight/releases)** (2026-05-27 hotfix on 1.3.0): config save/load fixes, Arbiter's Grounds / Hyrule Castle chain geometry, text-input clear-with-Enter, and other engine fixes.
+
+**Touch points:** git submodule / merge base, conflict pass on shared files (`m_Do_main`, actor infra, settings, build presets), full rebuild and smoke test (Postman shop, meter HUD, wolf combat, Darknut parry).
+
+### 2. Health & ALBW meter upgrades (Postman shop)
 
 Extend **Postman's Lending Service** (or a dedicated shop mode) so Link can **buy permanent upgrades** — not rentals:
 
@@ -175,15 +181,19 @@ Extend **Postman's Lending Service** (or a dedicated shop mode) so Link can **bu
 
 **Touch points (starting points):** `d_albw_rental.cpp` / `d_albw_shop.cpp` (catalog + purchase flow), `d_com_inf_game.cpp` / save flags for heart pieces, `d_meter2.cpp` for meter max, wallet checks via existing rupee APIs.
 
-### 2. Actual enemy HP multiplier
+### 3. Actual enemy HP multiplier (deferred)
 
 Replace (or offer alongside) today's **attack-power division** intercept in `dAlbwHP_applyMult()` with **real max-HP scaling** on enemies at spawn or init — so 16× means 16× HP without integer-division plateaus or the `max(1, …)` floor distorting time-to-kill.
 
-**Why:** Current divide-by-mult approach saturates early on normal sword hits (see maintainer discussion: damage hits 1 per hit once multiplier ≥ ⌊attackPower/2⌋ + 1). True HP mult keeps high slider values meaningful across all attack strengths.
+**Why:** Current divide-by-mult approach saturates early on normal sword hits (see maintainer discussion: damage hits 1 per hit once multiplier ≥ ⌊attackPower/2⌋ + 1). True HP mult keeps high slider values meaningful across all attack strengths. `dAlbwHP_tryApplyTrueMaxHp()` exists but the divide path in `d_cc_uty.cpp` is still active — finish migration after Dusklight merge.
 
 **Touch points:** `d_albw_hp_mult.cpp`, enemy init paths (`health` / `mMaxHp` fields per actor), `d_cc_uty.cpp` (remove or gate divide path), wolf charge scaling in `d_cc_uty.cpp` (today uses `dAlbwHP_getRawMult()` to undo the divide).
 
-### 3. Zant & Ganon boss changes
+### 4. Lockout boomerang — visual “ranged open” feedback (future)
+
+Gameplay debuff (`dAlbwLockout_onBoomerangHit`, 4s window) is in; **no dedicated VFX/HUD yet**. Later: enemy shimmer / status icon / lock-on tint while `dAlbwLockout_isRangedOpened()` so players know bow / bomb / iron ball will connect before the timer expires.
+
+### 5. Zant & Ganon boss changes
 
 ALBW-specific fight tuning for the **Zant** and **Ganon / Ganondorf** finale — phase scripts, damage expectations, and durability rules that still treat Zant as excluded from wolf combat overrides (`fpcNm_B_ZANT_e` in `d_cc_uty.cpp`).
 

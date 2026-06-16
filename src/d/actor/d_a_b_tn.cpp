@@ -17,6 +17,7 @@
 #if TARGET_PC
 #include "d/d_albw_enemy_rupee.h"
 #include "d/d_albw_hp_mult.h"
+#include "d/d_albw_lockout.h"
 #include "d/d_albw_shield.h"
 #include "dusk/settings.h"
 #include "SSystem/SComponent/c_counter.h"
@@ -986,9 +987,6 @@ void daB_TN_c::setBodyShield() {
     bool check = true;
 
     player = (daPy_py_c*)daPy_getPlayerActorClass();
-    if (mNextBreakPart >= 11) {
-        field_0xa91 = false;
-    }
     if (mActionMode1 <= 1) {
         for (int i = 0; i < 3; i++) {
             mSphA[i].OnTgShield();
@@ -1580,7 +1578,12 @@ void daB_TN_c::damage_check() {
                 mAtInfo.mpCollider->ChkAtType(AT_TYPE_40) ||
                 mAtInfo.mpCollider->ChkAtType(AT_TYPE_HOOKSHOT))
             {
-                mTimer9 = 15;
+                mTimer9 = dAlbwLockout_getBoomerangStunFrames(15);
+            }
+
+            if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_BOOMERANG) ||
+                mAtInfo.mpCollider->ChkAtType(AT_TYPE_40)) {
+                dAlbwLockout_onBoomerangHitNative(this);
             }
         }
 
@@ -1689,6 +1692,28 @@ void daB_TN_c::damage_check() {
                 mTimer12 = 60;
             }
         } else {
+#if TARGET_PC
+            if (field_0xaa2 == 0 && dStack_160.ChkTgShield()) {
+#else
+            if (dStack_160.ChkTgShield()) {
+#endif
+                if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_SHIELD_ATTACK)) {
+#if TARGET_PC
+                    if (albwHandleParryCombatBashShieldHit(&dStack_160, dStack_160.GetTgHitObj())) {
+                        return;
+                    }
+#endif
+                    field_0xaa8 = true;
+                    def_se_set(&mSound, dStack_160.GetTgHitObj(), 42, this);
+                } else {
+                    field_0xaa8 = false;
+                    setShieldEffect(&dStack_160);
+                }
+
+                setActionMode(ACT_GUARDL, ACTION2_0_e);
+                return;
+            }
+
             if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_SHIELD_ATTACK)) {
 #if TARGET_PC
                 if (albwHandleParryCombatBashShieldHit(&dStack_160, dStack_160.GetTgHitObj())) {
@@ -1701,7 +1726,11 @@ void daB_TN_c::damage_check() {
                 return;
             }
 
+#if TARGET_PC
+            if (field_0xaa2 == 0 && field_0xa91) {
+#else
             if (field_0xa91) {
+#endif
                 if (mCutFlag || (getCutType() & 4) != 0) {
                     setShieldEffect(&dStack_160);
                     if (mCutFlag) {
@@ -1768,12 +1797,18 @@ void daB_TN_c::damage_check() {
         if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_BOOMERANG) ||
             mAtInfo.mpCollider->ChkAtType(AT_TYPE_40))
         {
+            dAlbwLockout_onBoomerangHitNative(this);
             if (mActionMode1 < 8) {
-                mTimer9 = 15;
+                mTimer9 = dAlbwLockout_getBoomerangStunFrames(15);
             } else {
                 setActionMode(ACT_GUARDL, ACTION2_10_e);
             }
         } else if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_BOMB)) {
+#if TARGET_PC
+            if (dAlbwLockout_isRangedOpened(this)) {
+                setDamage(&dStack_160, 2);
+            } else
+#endif
             if (mActionMode1 < 8) {
                 if (mNextBreakPart >= 11 ||
                     abs((s16)(cLib_targetAngleY(
@@ -1821,6 +1856,11 @@ void daB_TN_c::damage_check() {
                 setActionMode(ACT_DAMAGEL, mNextActionMode2);
             }
         } else if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_IRON_BALL)) {
+#if TARGET_PC
+            if (dAlbwLockout_isRangedOpened(this)) {
+                setDamage(&dStack_160, 2);
+            } else
+#endif
             if (!bVar1) {
                 setShieldEffect(&dStack_160);
                 if (mActionMode1 < 8) {
@@ -1832,6 +1872,11 @@ void daB_TN_c::damage_check() {
                 setDamage(&dStack_160, 2);
             }
         } else if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_ARROW)) {
+#if TARGET_PC
+            if (dAlbwLockout_isRangedOpened(this)) {
+                setDamage(&dStack_160, 1);
+            } else
+#endif
             if (mActionMode1 < 8) {
                 setShieldEffect(&dStack_160);
             } else if (bVar1 == 0 || mTimer10 != 0) {
@@ -3628,6 +3673,12 @@ bool daB_TN_c::checkNextMove() {
         iVar1 = 1;
     }
 
+#if TARGET_PC
+    if (dAlbwLockout_isRangedOpened(this)) {
+        iVar1 = 0;
+    }
+#endif
+
     if (iVar1) {
         if ((s16)(sVar7 - shape_angle.y) < 0) {
             initChaseL(13);
@@ -4341,7 +4392,13 @@ void daB_TN_c::executeGuardL() {
         speedF = 0.0f;
 
         if (mActionMode2 == ACTION2_0_e) {
+#if TARGET_PC
+            if (field_0xaa2 == 0) {
+                field_0xa91 = true;
+            }
+#else
             field_0xa91 = true;
+#endif
 
             u32 mCutType = getCutType();
             if ((mCutType & 16) != 0) {
@@ -4380,7 +4437,13 @@ void daB_TN_c::executeGuardL() {
     case ACTION2_1_e:
         field_0xa91 = false;
 
-        if (player->getCutType() != daPy_py_c::CUT_TYPE_HEAD_JUMP && abs(mPlayerAngleY) < 0x3000) {
+#if TARGET_PC
+        if (field_0xaa2 == 0 &&
+#else
+        if (
+#endif
+            player->getCutType() != daPy_py_c::CUT_TYPE_HEAD_JUMP && abs(mPlayerAngleY) < 0x3000)
+        {
             field_0xa91 = true;
         }
 

@@ -29,8 +29,10 @@ Inspired by CaptainKittyCa2’s ALBW meter mod work. Base game by [TwilitRealm](
 | Enemy HP multipliers — Normal / Mid-Boss / Boss / Final (optional) | ✅ |
 | Enemy Death Rupees + native “+n” HUD popup (optional) | ✅ |
 | Colossal Wallet / final pricing pass | ⏳ |
+| Upstream Dusklight v1.3.1 merge | ⏳ |
 | Postman shop — buy heart & ALBW meter upgrades (escalating costs) | ⏳ |
-| Enemy HP multiplier — true max-HP scaling (replace divide-by-mult) | ⏳ |
+| Lockout boomerang — visual ranged-open feedback | ⏳ |
+| Enemy HP multiplier — finish true max-HP migration | ⏳ |
 | Zant & Ganon finale boss changes | ⏳ |
 
 Full gameplay, settings, and source file list: **[docs/albw-port.md](docs/albw-port.md)** (includes **Next on the docket**).

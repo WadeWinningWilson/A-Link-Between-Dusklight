@@ -12,6 +12,9 @@
 #include "f_op/f_op_actor_enemy.h"
 #include "Z2AudioLib/Z2Instances.h"
 #include <cstring>
+#if TARGET_PC
+#include "d/d_albw_lockout.h"
+#endif
 
 enum E_ww_RES_File_ID {
     /* BCK */
@@ -319,6 +322,9 @@ void daE_WW_c::damage_check() {
 
         if (var_r29 != NULL) {
             mAtInfo.mpCollider = var_r29;
+#if TARGET_PC
+            if (!dAlbwLockout_isRangedOpened(this))
+#endif
             if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_IRON_BALL) != 0) {
                 if (fopAcM_GetName(dCc_GetAc(mAtInfo.mpCollider->GetAc())) == fpcNm_Obj_Carry_e) {
                     S16_ADD(health, 150);
@@ -573,6 +579,11 @@ static void* s_obj_sub(void* i_proc, void* i_data) {
 }
 
 bool daE_WW_c::checkSideStep() {
+#if TARGET_PC
+    if (dAlbwLockout_isRangedOpened(this)) {
+        return false;
+    }
+#endif
     cXyz* temp_r3;
 
     if (dComIfGp_checkPlayerStatus0(0, 0x4000) != 0) {
