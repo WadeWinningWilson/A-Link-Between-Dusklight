@@ -47,6 +47,7 @@
 #include <system_error>
 #include <thread>
 #include "SSystem/SComponent/c_API.h"
+#include "dusk/android_frame_rate.hpp"
 #include "dusk/app_info.hpp"
 #include "dusk/crash_handler.h"
 #include "dusk/crash_reporting.h"
@@ -555,6 +556,7 @@ int game_main(int argc, char* argv[]) {
         dusk::resetForSpeedrunMode();
     }
     ApplyCVarOverrides(parsed_arg_options["cvar"]);
+    dusk::android::update_surface_frame_rate();
     dusk::crash_reporting::initialize();
     dusk::crash_handler::install();
     // TODO: How to handle this?

@@ -1418,6 +1418,8 @@ set(DUSK_FILES
         include/dusk/scope_guard.hpp
         src/dusk/dvd_asset.cpp
         src/d/actor/d_a_alink_dusk.cpp
+        src/dusk/android_frame_rate.hpp
+        src/dusk/android_frame_rate.cpp
         src/dusk/asserts.cpp
         src/dusk/batch.cpp
         src/dusk/batch.hpp

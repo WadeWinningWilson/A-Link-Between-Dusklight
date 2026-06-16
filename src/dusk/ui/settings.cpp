@@ -6,6 +6,7 @@
 #include "dusk/app_info.hpp"
 #include "dusk/audio/DuskAudioSystem.h"
 #include "dusk/audio/DuskDsp.hpp"
+#include "dusk/android_frame_rate.hpp"
 #include "dusk/config.hpp"
 #include "dusk/hotkeys.h"
 #include "dusk/data.hpp"
@@ -478,14 +479,19 @@ SelectButton& config_percent_select(Pane& leftPane, Pane& rightPane, ConfigVar<f
 
 SelectButton& config_int_select(Pane& leftPane, Pane& rightPane, ConfigVar<int>& var,
     Rml::String key, Rml::String helpText, int min, int max, int step = 5,
-    std::function<bool()> isDisabled = {}, std::string suffix = "") {
+    std::function<bool()> isDisabled = {}, std::function<void(int)> onChange = {},
+    std::string suffix = "") {
     auto& button = leftPane.add_child<NumberButton>(NumberButton::Props{
         .key = std::move(key),
         .getValue = [&var] { return var; },
         .setValue =
-            [&var, min, max](int value) {
-                var.setValue(std::clamp(value, min, max));
+            [&var, min, max, callback = std::move(onChange)](int value) {
+                const int clampedValue = std::clamp(value, min, max);
+                var.setValue(clampedValue);
                 config::Save();
+                if (callback) {
+                    callback(clampedValue);
+                }
             },
         .isDisabled = std::move(isDisabled),
         .isModified = [&var] { return var.getValue() != var.getDefaultValue(); },
@@ -929,6 +935,7 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                         .on_pressed([i] {
                             mDoAud_seStartMenu(kSoundItemChange);
                             getSettings().game.enableFrameInterpolation.setValue(static_cast<FrameInterpMode>(i));
+                            android::update_surface_frame_rate();
                             config::Save();
                         });
                 }
@@ -936,7 +943,8 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             });
         config_int_select(leftPane, rightPane, getSettings().video.maxFrameRate,
             "Framerate Cap", "Limit the framerate to the specified value.", 30, 540, 1,
-            [] { return getSettings().game.enableFrameInterpolation.getValue() != FrameInterpMode::Capped; });
+            [] { return getSettings().game.enableFrameInterpolation.getValue() != FrameInterpMode::Capped; },
+            [](int) { android::update_surface_frame_rate(); });
         config_bool_select(leftPane, rightPane, getSettings().game.enableMapBackground,
             {
                 .key = "Enable Mini-Map Shadows",
