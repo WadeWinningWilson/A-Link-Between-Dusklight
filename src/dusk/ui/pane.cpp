@@ -202,4 +202,42 @@ void Pane::clear() {
     finalized = false;
 }
 
+float Pane::get_focused_child_y() {
+    float childToFocusY = -1.f;
+    for (const auto& child : children()) {
+        if (child->root()->IsPseudoClassSet("focus")) {
+            childToFocusY = child->root()->GetAbsoluteTop();
+        }
+    }
+    return childToFocusY;
+}
+
+// Focuses the child closest to the given y position
+bool Pane::focus_closest_child(float posY) {
+    Rml::Element* closestchild = nullptr;
+    // If the y-pos is less than 0, focus the middle child
+    if (posY < 0.f && !children().empty()) {
+        closestchild = children().at(children().size() / 2)->root();
+    // Otherwise, choose the closest one
+    } else if (posY >= 0.f) {
+        float closestRightChildDistance = std::numeric_limits<float>::max();
+        for (const auto& child : children()) {
+            float distance = std::abs(posY - child->root()->GetAbsoluteTop());
+            if (distance < closestRightChildDistance) {
+                closestchild = child->root();
+                closestRightChildDistance = distance;
+            }
+        }
+    }
+
+    // If we found a child, focus it
+    if (closestchild) {
+        closestchild->SetPseudoClass("focus-visible", true);
+        closestchild->Focus();
+        return true;
+    }
+
+    return false;
+}
+
 }  // namespace dusk::ui

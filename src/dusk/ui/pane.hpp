@@ -34,6 +34,13 @@ public:
     void finalize();
     void clear();
 
+    // Returns the y-position of the first focused child
+    float get_focused_child_y();
+
+    // Focuses the child closest to the given y position
+    // Returns true if a child was focused, false otherwise
+    bool focus_closest_child(float posY);
+
 private:
     Type mType;
     bool mBottomSpacer = true;
