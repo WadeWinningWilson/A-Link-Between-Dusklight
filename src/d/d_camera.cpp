@@ -7505,7 +7505,7 @@ static bool sTouchFreeCameraActive = false;
 
 bool dCamera_c::isAimActive() {
     auto* link = daAlink_getAlinkActorClass();
-    return link != nullptr && link->checkAimContext() &&
+    return link != nullptr && link->checkAimInputContext() &&
            dComIfGp_checkCameraAttentionStatus(link->field_0x317c, 0x10);
 }
 

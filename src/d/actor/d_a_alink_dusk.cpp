@@ -176,7 +176,7 @@ bool daAlink_c::checkAimContext() {
     }
 }
 
-bool daAlink_c::checkTouchAimCaptureContext() {
+bool daAlink_c::checkAimInputContext() {
     switch (mProcID) {
     case PROC_HOOKSHOT_ROOF_WAIT:
     case PROC_HOOKSHOT_WALL_WAIT:
