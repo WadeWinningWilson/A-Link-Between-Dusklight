@@ -123,7 +123,7 @@ BOOL daAlink_c::setBodyAngleToCamera() {
             }
 
 #if TARGET_PC
-            if (dusk::getSettings().game.enableMouseAim && checkAimContext()) {
+            if (dusk::getSettings().game.enableMouseAim && checkAimInputContext()) {
                 sp8 = mBodyAngle.x;
             } else
 #endif
@@ -142,7 +142,7 @@ BOOL daAlink_c::setBodyAngleToCamera() {
 #if TARGET_PC
         if ((dusk::getSettings().game.enableGyroAim ||
              dusk::getSettings().game.enableMouseAim) &&
-             checkAimContext())
+             checkAimInputContext())
         {
             f32 gyro_scale = 1.0f;
             if (checkWolfEyeUp()) {
@@ -174,7 +174,7 @@ BOOL daAlink_c::setBodyAngleToCamera() {
             }
         }
 
-        if (dusk::getSettings().game.enableTouchControls && checkAimContext()) {
+        if (dusk::getSettings().game.enableTouchControls && checkAimInputContext()) {
             f32 touchYawDp = 0.0f;
             f32 touchPitchDp = 0.0f;
             if (dusk::touch_camera::consume_delta(touchYawDp, touchPitchDp)) {

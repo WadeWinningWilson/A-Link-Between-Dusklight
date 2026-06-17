@@ -195,9 +195,13 @@ Document& push_document(std::unique_ptr<Document> doc, bool show, bool passive) 
     return ret;
 }
 
-void show_top_document() noexcept {
+void focus_top_document(bool show) noexcept {
     if (auto* doc = top_document()) {
-        doc->show();
+        if (show) {
+            doc->show();
+        } else {
+            doc->focus();
+        }
     }
     input::sync_input_block();
 }
@@ -210,13 +214,13 @@ bool any_document_visible() noexcept {
 bool is_prelaunch_open() noexcept {
     return std::any_of(sDocumentStack.begin(), sDocumentStack.end(), [](const auto& doc) {
         const auto* prelaunch = dynamic_cast<const Prelaunch*>(doc.get());
-        return prelaunch != nullptr && !prelaunch->pending_close() && !prelaunch->closed();
+        return prelaunch != nullptr && prelaunch->active();
     });
 }
 
 Document* top_document() noexcept {
     for (auto& doc : std::views::reverse(sDocumentStack)) {
-        if (!doc->closed() && !doc->pending_close()) {
+        if (doc->active()) {
             return doc.get();
         }
     }
@@ -259,7 +263,7 @@ void update() noexcept {
                                   context->GetFocusElement() == context->GetRootElement()))
     {
         for (auto& doc : std::views::reverse(sDocumentStack)) {
-            if (!doc->closed() && !doc->pending_close() && doc->focus()) {
+            if (doc->active() && doc->focus()) {
                 break;
             }
         }

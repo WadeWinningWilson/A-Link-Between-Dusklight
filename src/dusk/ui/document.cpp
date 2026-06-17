@@ -3,9 +3,7 @@
 #include "aurora/rmlui.hpp"
 #include "ui.hpp"
 
-#include "Z2AudioLib/Z2SeMgr.h"
 #include "m_Do/m_Do_audio.h"
-#include <imgui.h>
 
 namespace dusk::ui {
 namespace {
@@ -30,19 +28,19 @@ Document::Document(const Rml::String& source, bool passive)
                 return;
             }
             const auto cmd = map_nav_event(event);
-            if (cmd != NavCommand::Menu && !visible()) {
+            if (cmd != NavCommand::Menu && (!visible() || !active())) {
                 event.StopImmediatePropagation();
             }
         },
         true);
-    const auto blockUnlessVisible = [this](Rml::Event& event) {
-        if (!visible()) {
+    const auto blockUnlessActive = [this](Rml::Event& event) {
+        if (!visible() || !active()) {
             event.StopImmediatePropagation();
         }
     };
-    listen(Rml::EventId::Mouseover, blockUnlessVisible, true);
-    listen(Rml::EventId::Click, blockUnlessVisible, true);
-    listen(Rml::EventId::Scroll, blockUnlessVisible, true);
+    listen(Rml::EventId::Mouseover, blockUnlessActive, true);
+    listen(Rml::EventId::Click, blockUnlessActive, true);
+    listen(Rml::EventId::Scroll, blockUnlessActive, true);
 
     listen(Rml::EventId::Keydown, [this](Rml::Event& event) {
         if (mPassive) {
@@ -124,9 +122,16 @@ bool Document::visible() const {
     return *mDocument->GetProperty(Rml::PropertyId::Visibility) == Rml::Style::Visibility::Visible;
 }
 
+bool Document::active() const {
+    return !mClosed && !mPendingClose;
+}
+
 bool Document::handle_nav_event(Rml::Event& event) {
+    if (!active()) {
+        return false;
+    }
     const auto cmd = map_nav_event(event);
-    if (cmd == NavCommand::None) {
+    if (cmd == NavCommand::None || (cmd != NavCommand::Menu && !visible())) {
         return false;
     }
     return handle_nav_command(event, cmd);
