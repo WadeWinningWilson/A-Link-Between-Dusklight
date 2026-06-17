@@ -47,6 +47,7 @@
 #include <system_error>
 #include <thread>
 #include "SSystem/SComponent/c_API.h"
+#include "dusk/android_frame_rate.hpp"
 #include "dusk/app_info.hpp"
 #include "dusk/crash_handler.h"
 #include "dusk/crash_reporting.h"
@@ -334,11 +335,21 @@ void main01(void) {
             mDoAud_Execute();
         }
 
+        aurora_end_frame();
+
+        FrameMark;
+
+#ifdef DUSK_DISCORD
+        dusk::discord::run_callbacks();
+        dusk::discord::update_presence();
+#endif
+
         static Limiter main_loop_limiter;
         static double last_fps_setting = 0.0;
         static Limiter::duration_t target_ns = 0;
 
         if (dusk::getSettings().game.enableFrameInterpolation.getValue() == dusk::FrameInterpMode::Capped && !dusk::getTransientSettings().skipFrameRateLimit) {
+            ZoneScopedN("Frame limiter");
             double current_fps = dusk::getSettings().video.maxFrameRate.getValue();
             if (current_fps != last_fps_setting) {
                 last_fps_setting = current_fps;
@@ -350,16 +361,6 @@ void main01(void) {
         } else {
             main_loop_limiter.Reset();
         }
-
-        aurora_end_frame();
-
-
-        FrameMark;
-
-#ifdef DUSK_DISCORD
-        dusk::discord::run_callbacks();
-        dusk::discord::update_presence();
-#endif
     } while (dusk::IsRunning);
 
     exit:;
@@ -558,6 +559,7 @@ int game_main(int argc, char* argv[]) {
         dusk::resetForSpeedrunMode();
     }
     ApplyCVarOverrides(parsed_arg_options["cvar"]);
+    dusk::android::update_surface_frame_rate();
     dusk::crash_reporting::initialize();
     dusk::crash_handler::install();
     // TODO: How to handle this?

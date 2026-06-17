@@ -18,6 +18,7 @@ public:
     virtual void update();
     virtual bool focus();
     virtual bool visible() const;
+    virtual bool active() const;
 
     void listen(Rml::Element* element, Rml::EventId event, ScopedEventListener::Callback callback,
         bool capture = false);
@@ -41,12 +42,11 @@ public:
         push_document(std::move(document));
         hide(false);
     }
-    void pop() {
+    void pop(bool show = true) {
         hide(true);
-        show_top_document();
+        focus_top_document(show);
     }
 
-    bool pending_close() const { return mPendingClose; }
     bool closed() const { return mClosed; }
 
     bool handle_nav_event(Rml::Event& event);
