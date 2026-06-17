@@ -1,4 +1,6 @@
 #include "dusk/autosave.h"
+
+#include "dusk/config.hpp"
 #include "dusk/ui/ui.hpp"
 #include "imgui/ImGuiConsole.hpp"
 
@@ -50,6 +52,13 @@ bool writeAutoSave() {
     dComIfGs_putSave(stageNo);
     dComIfGs_setMemoryToCard(mSaveBuffer, dComIfGs_getDataNum());
     mDoMemCdRWm_SetCheckSumGameData(mSaveBuffer, dComIfGs_getDataNum());
+
+    // Save randomizer hash
+    dusk::getSettings().randomizer.seedHashes[dComIfGs_getDataNum()].setValue(randomizer_GetContext().mHash);
+    dusk::config::Save();
+    if (randomizer_IsActive()) {
+        g_randomizerState.mFileNum = dComIfGs_getDataNum();
+    }
 
     u8* save = mSaveBuffer;
     for (int i = 0; i < 3; i++) {
