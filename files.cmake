@@ -181,9 +181,11 @@ set(DOLZEL_FILES
         src/d/d_albw_lockout.cpp
         src/d/d_albw_enemy_rupee.cpp
         src/d/d_albw_shield.cpp
+        src/d/d_albw_boss.cpp
         src/d/d_albw_wolf_stun.cpp
         src/d/d_albw_wolf_charge_hud.cpp
         src/d/d_albw_rupee_popup.cpp
+        src/d/d_albw_boss_hp_hud.cpp
         src/d/d_kankyo.cpp
         src/d/d_kyeff.cpp
         src/d/d_kyeff2.cpp
@@ -1439,7 +1441,6 @@ set(DUSK_FILES
         src/dusk/batch.cpp
         src/dusk/batch.hpp
         src/dusk/config.cpp
-        src/dusk/conavigate.cpp
         src/dusk/crash_handler.cpp
         src/dusk/crash_reporting.cpp
         src/dusk/data.cpp

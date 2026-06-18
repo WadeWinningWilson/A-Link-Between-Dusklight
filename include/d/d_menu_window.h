@@ -28,6 +28,7 @@ BOOL dMw_A_TRIGGER();
 BOOL dMw_B_TRIGGER();
 BOOL dMw_Z_TRIGGER();
 BOOL dMw_START_TRIGGER();
+u8 dMw_getRingCursorItem();
 BOOL dMw_LEFT_TRIGGER();
 BOOL dMw_RIGHT_TRIGGER();
 void dMw_onPauseWindow();
@@ -192,6 +193,7 @@ public:
     void offShowFlag() { mShowFlag &= ~1; }
     bool isShowFlag() { return (mShowFlag & 1) != 0; }
     bool isFadeNowCheck() { return mDoGph_gInf_c::getFader()->getStatus() == 1; }
+    u8 getRingCursorItem() const;
 
 private:
     /* 0x0FC */ int field_0xfc;

@@ -17,6 +17,7 @@
 #include "f_op/f_op_msg_mng.h"
 #include "Z2AudioLib/Z2Instances.h"
 #if TARGET_PC
+#include "d/d_albw_boss.h"
 #include "d/d_albw_enemy_rupee.h"
 #endif
 
@@ -242,6 +243,25 @@ static void damage_check(b_gm_class* i_this) {
             i_this->mAtInfo.mpCollider = i_this->mCoreSph.GetTgHitObj();
             cc_at_check(i_this, &i_this->mAtInfo);
 
+#if TARGET_PC
+            bool chipOnlyOnCeiling = false;
+            if (dAlbwBossRefinement_isEnabled() && i_this->mAtInfo.mpCollider != NULL &&
+                i_this->mAtInfo.mpCollider->ChkAtType(AT_TYPE_ARROW))
+            {
+                dAlbwBoss_armogohmaOnBowCoreHit(a_this);
+                if (dAlbwBoss_armogohmaIsOnCeiling(a_this) &&
+                    !dAlbwBoss_armogohmaTakeCeilingDropPending())
+                {
+                    chipOnlyOnCeiling = true;
+                }
+            }
+
+            if (chipOnlyOnCeiling) {
+                i_this->mInvincibilityTimer = 5;
+                return;
+            }
+#endif
+
             i_this->mInvincibilityTimer = 10;
             i_this->mInvincibilityTimer = 5;
             i_this->mAction = ACTION_DAMAGE;
@@ -275,6 +295,9 @@ static void damage_check(b_gm_class* i_this) {
                             fpcM_Search(s_ko_del, i_this);
                             Z2GetAudioMgr()->bgmStop(0x1E, 0);
                         } else {
+#if TARGET_PC
+                            dAlbwBoss_armogohmaOnRodHit(a_this, i_this->mHitCount);
+#endif
                             i_this->mMode = 10;
                             i_this->field_0x1ad5 = 2;
                             i_this->mDemoMode = 20;
@@ -476,10 +499,23 @@ static void b_gm_move(b_gm_class* i_this) {
                 if (i_this->mTimers[2] != 0) {
                     i_this->mTimers[0] = 0;
                     i_this->mMode = 4;
+#if TARGET_PC
+                } else if ((dAlbwBossRefinement_isEnabled() &&
+                            dAlbwBoss_armogohmaTryBeginEggPhase(i_this)) ||
+                           (!dAlbwBossRefinement_isEnabled() &&
+                            (i_this->field_0x1ad5 == 2 || dComIfGs_getArrowNum() <= 3)))
+                {
+                    i_this->mAction = ACTION_KOGOMA;
+                    i_this->mMode = 0;
+                    if (!dAlbwBossRefinement_isEnabled()) {
+                        i_this->field_0x1ad5 = 1;
+                    }
+#else
                 } else if (i_this->field_0x1ad5 == 2 || dComIfGs_getArrowNum() <= 3) {
                     i_this->mAction = ACTION_KOGOMA;
                     i_this->mMode = 0;
                     i_this->field_0x1ad5 = 1;
+#endif
                 } else {
                     i_this->mTimers[0] = 0;
                     i_this->mMode = 4;
@@ -1497,6 +1533,7 @@ static void demo_camera(b_gm_class* i_this) {
             fopAcM_createWarpHole(&pos, &angle, fopAcM_GetRoomNo(a_this), 1, 1, 0xFF);
             dComIfGs_onStageBossEnemy();
 #if TARGET_PC
+            dAlbwBoss_onArmogohmaVictory();
             dAlbwEnemyRupees_tryGrantFightVictory(fpcNm_B_GM_e);
 #endif
         }
@@ -1620,6 +1657,10 @@ static int daB_GM_Execute(b_gm_class* i_this) {
     }
 
     fopAc_ac_c* a_this = (fopAc_ac_c*)i_this;
+
+#if TARGET_PC
+    dAlbwBoss_armogohmaEnsureInitialized(a_this);
+#endif
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     cXyz spD4, spC8;
 
@@ -2206,6 +2247,10 @@ static int daB_GM_Create(fopAc_ac_c* i_this) {
         i_this->health = 500;
         i_this->field_0x560 = 500;
 
+#if TARGET_PC
+        dAlbwBoss_armogohmaResetFightState();
+#endif
+
         a_this->mAcch.Set(fopAcM_GetPosition_p(i_this), fopAcM_GetOldPosition_p(i_this), i_this, 1, &a_this->mAcchCir, fopAcM_GetSpeed_p(i_this), NULL, NULL);
         a_this->mAcchCir.SetWall(200.0f, 100.0f);
 
@@ -2222,6 +2267,10 @@ static int daB_GM_Create(fopAc_ac_c* i_this) {
         a_this->field_0x73c.y = 2520.0f;
         i_this->current.pos.y = 2520.0f;
         a_this->mTargetMovePos = i_this->current.pos;
+
+#if TARGET_PC
+        dAlbwBoss_tryApplyActorBootstrap(fpcNm_B_GM_e, i_this);
+#endif
 
         daB_GM_Execute(a_this);
     }

@@ -20,6 +20,7 @@
 #include "dusk/frame_interpolation.h"
 #include "dusk/settings.h"
 #if TARGET_PC
+#include "d/d_albw_boss.h"
 #include "dusk/achievements.h"
 #endif
 
@@ -1590,7 +1591,11 @@ static BOOL b_gnd_g_attack(b_gnd_class* i_this) {
         angle_step = 0x800;
         i_this->field_0x2698 = 2;
 
+#if TARGET_PC
+        if (dAlbwBossRefinement_playerHasBossSword() && i_this->mPlayerDistXZ < 600.0f) {
+#else
         if (player->checkMasterSwordEquip() && i_this->mPlayerDistXZ < 600.0f) {
+#endif
             dComIfGp_setDoStatusForce(107, 0);
             i_this->field_0x2740 = 1;
         }
@@ -1634,7 +1639,11 @@ static BOOL b_gnd_g_attack(b_gnd_class* i_this) {
             i_this->mMoveMode = 0;
         }
 
+#if TARGET_PC
+        if (anm_frame < 28 && dAlbwBossRefinement_playerHasBossSword()) {
+#else
         if (anm_frame < 28 && player->checkMasterSwordEquip()) {
+#endif
             dComIfGp_setDoStatusForce(107, 0);
             i_this->field_0x2740 = 1;
             if (cc_pl_cut_bit_get() == 0x100 && player->speed.y < 0.0f) {
@@ -2086,7 +2095,11 @@ static void b_gnd_g_down(b_gnd_class* i_this) {
             i_this->mMoveMode = 2;
             i_this->field_0xc44[0] = 200;
 
+#if TARGET_PC
+            if (dAlbwBossRefinement_playerHasBossSword()) {
+#else
             if (daPy_getPlayerActorClass()->checkMasterSwordEquip()) {
+#endif
                 e_this->onDownFlg();
             }
             return;
@@ -2105,7 +2118,11 @@ static void b_gnd_g_down(b_gnd_class* i_this) {
             Z2GetAudioMgr()->bgmStop(30, 0);
         }
 
+#if TARGET_PC
+        if (i_this->field_0xc44[0] != 0 && dAlbwBossRefinement_playerHasBossSword()) {
+#else
         if (i_this->field_0xc44[0] != 0 && daPy_getPlayerActorClass()->checkMasterSwordEquip()) {
+#endif
             return;
         }
 
@@ -2643,7 +2660,11 @@ static void action(b_gnd_class* i_this) {
             i_this->mMoveMode = 0;
         }
     } else {
+#if TARGET_PC
+        if (!dAlbwBossRefinement_playerHasBossSword()) {
+#else
         if (!daPy_py_c::checkMasterSwordEquip()) {
+#endif
             i_this->mDamageInvulnerabilityTimer = 10;
         }
 
@@ -2680,7 +2701,11 @@ static void action(b_gnd_class* i_this) {
                 cut_type = 0;
             }
 
+#if TARGET_PC
+            if (!dAlbwBossRefinement_playerHasBossSword()) {
+#else
             if (!daPy_py_c::checkMasterSwordEquip()) {
+#endif
                 cut_type = 0;
             }
 

@@ -88,6 +88,12 @@ constexpr std::array kMenuScalingModeLabels = {
     "Dusklight",
 };
 
+constexpr std::array kParryIconModes = {
+    "Spur Only",
+    "Spur+Shield",
+    "Shield Only",
+};
+
 constexpr std::array kMagicArmorModes = {
     "Normal",
     "On Damage",
@@ -1405,6 +1411,9 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Recommended once per playthrough. Halves heart container and heart-piece "
             "set rewards; adds Postman heart and stamina upgrades. Disables dungeon ALBW "
             "meter growth in favor of shop purchases.");
+        addOption("Boss Refinement", getSettings().game.bossRefinement,
+            "Treat Ordon, Wooden, and Master swords as valid boss swords (Zant, Ganondorf, "
+            "Argorok). Future layers add Zant tool phases and Ganondorf duel redesign.");
         addSpeedrunDisabledOption(
             "Instant Death", getSettings().game.instantDeath, "Any hit will instantly kill you.");
         addSpeedrunDisabledOption("No Heart Drops", getSettings().game.noHeartDrops,
@@ -1771,6 +1780,51 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         add_speedrun_disabled_option(leftPane, rightPane, getSettings().game.recordingMode,
             "Recording Mode",
             "Disables the game HUD and all background music.<br/><br/>Useful for recording footage.");
+
+        leftPane.add_section("ALBW Visuals");
+        leftPane.register_control(
+            leftPane.add_select_button({
+                .key = "Parry Icons",
+                .getValue =
+                    [] {
+                        return kParryIconModes[static_cast<u8>(
+                            getSettings().game.parryIconsMode.getValue())];
+                    },
+                .isModified =
+                    [] {
+                        const auto& mode = getSettings().game.parryIconsMode;
+                        return mode.getValue() != mode.getDefaultValue();
+                    },
+            }),
+            rightPane, [](Pane& pane) {
+                for (int i = 0; i < static_cast<int>(kParryIconModes.size()); ++i) {
+                    pane
+                        .add_button({
+                            .text = kParryIconModes[i],
+                            .isSelected =
+                                [i] {
+                                    return getSettings().game.parryIconsMode.getValue() ==
+                                           static_cast<ParryIcons>(i);
+                                },
+                        })
+                        .on_pressed([i] {
+                            mDoAud_seStartMenu(kSoundItemChange);
+                            getSettings().game.parryIconsMode.setValue(static_cast<ParryIcons>(i));
+                            config::Save();
+                        });
+                }
+                pane.add_rml(
+                    "<br/>Icon shown for shield-bash charges (parry combat).<br/><br/>"
+                    "<b>Spur Only</b>: original Epona-spur graphic.<br/>"
+                    "<b>Spur+Shield</b>: spur with your equipped shield's emblem.<br/>"
+                    "<b>Shield Only</b>: just the shield emblem.");
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.bossHealthBars,
+            {
+                .key = "Boss Health Bars",
+                .helpText = "Show a health bar with the boss name for major boss fights. "
+                            "Scales with the Boss HP and Boss Refinement settings.",
+            });
     });
 }
 

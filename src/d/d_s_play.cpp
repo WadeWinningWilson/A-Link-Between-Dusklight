@@ -40,10 +40,12 @@
 #include "JSystem/JKernel/JKRAramArchive.h"
 
 #if TARGET_PC
+#include "d/d_albw_boss.h"
 #include "d/d_albw_death_rupee.h"
 #include "dusk/autosave.h"
 #include "dusk/memory.h"
 #include "dusk/ui/ui.hpp"
+#include <cstdlib>
 #endif
 
 #if DEBUG
@@ -1169,6 +1171,10 @@ static int phase_1(dScnPly_c* i_this) {
     }
 
     dComIfGp_offEnableNextStage();
+
+#if TARGET_PC
+    dAlbwBoss_onStageLoad();
+#endif
 
     // Stage: Faron Woods, Room: Faron Spring
     if (!strcmp(dComIfGp_getStartStageName(), "F_SP108") && dComIfGp_getStartStageRoomNo() == 1 &&

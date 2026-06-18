@@ -43,6 +43,7 @@
 #include "SSystem/SComponent/c_counter.h"
 #include <cstring>
 
+#include <cstdlib>
 #include <filesystem>
 #include <system_error>
 #include <thread>
@@ -84,7 +85,6 @@
 #include "dusk/audio/DuskAudioSystem.h"
 #include "dusk/audio/DuskDsp.hpp"
 #include "dusk/config.hpp"
-#include "dusk/conavigate.h"
 #include "dusk/speedrun.h"
 #include "dusk/settings.h"
 #include "dusk/texture_replacements.hpp"
@@ -245,6 +245,9 @@ void main01(void) {
         // 1. Update Window Events
         const AuroraEvent* event = aurora_update();
         while (true) {
+            if (event == nullptr) {
+                goto eventsDone;
+            }
             switch (event->type) {
             case AURORA_NONE:
                 goto eventsDone;
@@ -364,7 +367,6 @@ void main01(void) {
     } while (dusk::IsRunning);
 
     exit:;
-    dusk::conavigate::shutdown();
     dusk::ui::shutdown();
 }
 
@@ -554,7 +556,6 @@ int game_main(int argc, char* argv[]) {
     log_build_info();
 
     dusk::config::LoadFromUserPreferences();
-    dusk::conavigate::tryStartFromEnv();
     if (dusk::getSettings().game.speedrunMode) {
         dusk::resetForSpeedrunMode();
     }
@@ -654,7 +655,6 @@ int game_main(int argc, char* argv[]) {
     // Run ImGui UI loop if Aurora couldn't initialize a backend
     if (auroraInfo.backend == BACKEND_NULL) {
         launchUILoop();
-        dusk::conavigate::shutdown();
         dusk::crash_reporting::shutdown();
         dusk::ShutdownFileLogging();
         fflush(stdout);
@@ -735,7 +735,6 @@ int game_main(int argc, char* argv[]) {
 
             // pre game launch ui main loop
             if (!launchUILoop()) {
-                dusk::conavigate::shutdown();
                 dusk::crash_reporting::shutdown();
                 dusk::ShutdownFileLogging();
                 fflush(stdout);
@@ -802,7 +801,6 @@ int game_main(int argc, char* argv[]) {
 
     main01();
 
-    dusk::conavigate::shutdown();
     dusk::MoviePlayerShutdown();
 
     dusk::crash_reporting::shutdown();

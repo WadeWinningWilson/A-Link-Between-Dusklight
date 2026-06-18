@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file d_menu_ring.cpp
  * @brief dolzel2 Menu - Item Wheel
  * 
@@ -1920,6 +1920,15 @@ u8 dMenu_Ring_c::getCursorPos(u8 i_slotNo) {
         }
     }
     return 0xff;
+}
+
+u8 dMenu_Ring_c::getHighlightedItem() const {
+    if (mItemsTotal == 0 || mCurrentSlot >= mItemsTotal) {
+        return dItemNo_NONE_e;
+    }
+
+    const u8 invSlot = mItemSlots[mCurrentSlot];
+    return dComIfGs_getItem(invSlot, false);
 }
 
 /** @details

@@ -31,7 +31,11 @@
 #include <climits>
 #include "JSystem/J2DGraph/J2DGrafContext.h"
 #include "JSystem/J2DGraph/J2DScreen.h"
+#include "JSystem/J2DGraph/J2DPicture.h"
+#include "JSystem/JUtility/TColor.h"
 #include "JSystem/JKernel/JKRHeap.h"
+#include "JSystem/JKernel/JKRArchive.h"
+#include "res/Layout/itemicon.h"
 #include "f_op/f_op_actor.h"
 #include "f_op/f_op_actor_mng.h"
 #include "f_pc/f_pc_name.h"
@@ -248,6 +252,13 @@ struct BashHudLayout {
 };
 
 BashHudResources sHud;
+
+// Which shield tier's icon is currently applied to the bash HUD panes.
+// Drives a texture refresh when the equipped shield changes.
+ShieldTier sHudIconTier = ShieldTier::None;
+// Parry-icon mode currently applied (-1 = none yet). On change the HUD is
+// rebuilt so the original spur texture / starburst visibility are restored.
+int sHudAppliedMode = -1;
 
 BashHudLayout computeBashHudLayout() {
     BashHudLayout layout = {BASH_ICON_SCALE_FALLBACK * g_drawHIO.mSpurIconScale,
@@ -597,6 +608,223 @@ bool shouldShowBashHud() {
     return isShieldAuxHudVisible(link);
 }
 
+// ============================================
+// NEW CODE — ALBW Port
+// Bash HUD icon = shield icon matching the equipped shield. The spur
+// graphics (haku_n / haku_b_n) are kept as the draw/scale/placement/flash
+// carriers; only their texture is swapped, so all existing HUD behaviour
+// is preserved. The empty (off) icon is greyed via setBlackWhite; the
+// filled (on) icon shows full colour.
+// ============================================
+
+// Item-icon BTI for each shield tier (itemicon.arc, resident in-world). The
+// enum names are misleading: WOOD_SHIELD (0x2A) = Ordon, SHIELD (0x2B) = shop
+// Wooden. Each tier gets its OWN matching icon.
+//   Ordon  -> ttdelunotate_s3tc (the Ordon-shield icon; loads by INDEX only,
+//             its by-name lookup fails on the odd "_s3tc" name)
+//   Wooden -> ni_kinotate_48     (wood-shield icon)
+//   Hylian -> ni_hairianotate_48 (Hylian-shield icon)
+const char* shieldIconBtiForTier(ShieldTier tier) {
+    switch (tier) {
+    case ShieldTier::Ordon:
+        return "ttdelunotate_s3tc.bti";
+    case ShieldTier::Wooden:
+        return "ni_kinotate_48.bti";
+    case ShieldTier::Hylian:
+        return "ni_hairianotate_48.bti";
+    default:
+        return NULL;
+    }
+}
+
+// itemicon.arc resource index for each tier — used as a by-index fallback when
+// the by-name lookup fails (the Ordon icon's name does not resolve). -1 = none.
+int shieldIconIndexForTier(ShieldTier tier) {
+    switch (tier) {
+    case ShieldTier::Ordon:
+        return dRes_INDEX_ITEMICON_BTI_TTDELUNOTATE_S3_TC_e;
+    case ShieldTier::Wooden:
+        return dRes_INDEX_ITEMICON_BTI_NI_KINOTATE_48_e;
+    case ShieldTier::Hylian:
+        return dRes_INDEX_ITEMICON_BTI_NI_HAIRIANOTATE_48_e;
+    default:
+        return -1;
+    }
+}
+
+// Find the first J2DPicture (typeID 18) in a pane subtree. haku_n may be the
+// picture itself or a container wrapping it; recursing covers both.
+J2DPicture* findFirstPicture(J2DPane* pane) {
+    if (pane == NULL) {
+        return NULL;
+    }
+    if (pane->getTypeID() == 18) {
+        return static_cast<J2DPicture*>(pane);
+    }
+    for (J2DPane* c = pane->getFirstChildPane(); c != NULL; c = c->getNextChildPane()) {
+        if (J2DPicture* p = findFirstPicture(c)) {
+            return p;
+        }
+    }
+    return NULL;
+}
+
+// Hide every J2DPicture in the subtree EXCEPT i_keep — used by Shield Only to
+// suppress the spur starburst while keeping the shield-target picture.
+void hideOtherPictures(J2DPane* pane, J2DPicture* i_keep) {
+    if (pane == NULL) {
+        return;
+    }
+    if (pane->getTypeID() == 18 && pane != i_keep) {
+        pane->hide();
+    }
+    for (J2DPane* c = pane->getFirstChildPane(); c != NULL; c = c->getNextChildPane()) {
+        hideOtherPictures(c, i_keep);
+    }
+}
+
+void shieldIconDbg(const char* fmt, ...);  // TEMP fwd decl (defined below)
+
+// Apply the current parry-icon mode to both HUD panes for shield tier i_tier.
+//   Spur Only   -> leave the original spur texture untouched.
+//   Spur+Shield -> swap the inner picture to the shield emblem, keep starburst.
+//   Shield Only -> swap to shield emblem AND hide the starburst.
+// The HUD is rebuilt on mode change (see draw), so this only ever adds state.
+void applyParryIcons(ShieldTier i_tier) {
+    const dusk::ParryIcons mode = dusk::getSettings().game.parryIconsMode.getValue();
+    sHudIconTier = i_tier;
+    sHudAppliedMode = static_cast<int>(mode);
+
+    if (mode == dusk::ParryIcons::SpurOnly) {
+        return;  // original spur graphic, no shield
+    }
+
+    const char* bti = shieldIconBtiForTier(i_tier);
+    if (bti == NULL || sHud.mpIconOn == NULL || sHud.mpIconOff == NULL) {
+        return;
+    }
+    JKRArchive* arc = dComIfGp_getItemIconArchive();
+    if (arc == NULL) {
+        return;
+    }
+    ResTIMG* timg = static_cast<ResTIMG*>(arc->getResource('TIMG', bti));
+    if (timg == NULL) {
+        const int idx = shieldIconIndexForTier(i_tier);
+        if (idx >= 0) {
+            timg = static_cast<ResTIMG*>(arc->getIdxResource(idx));
+        }
+    }
+    shieldIconDbg("apply: tier=%d mode=%d selEquip=0x%X bti=%s arc=%p timg=%p\n", (int)i_tier,
+                  (int)mode, (unsigned)dComIfGs_getSelectEquipShield(), bti, (void*)arc,
+                  (void*)timg);
+    if (timg == NULL) {
+        return;
+    }
+
+    const bool shieldOnly = (mode == dusk::ParryIcons::ShieldOnly);
+
+    if (J2DPicture* on = findFirstPicture(sHud.mpIconOn->getPanePtr())) {
+        on->changeTexture(timg, 0);
+        on->setBlackWhite(JUtility::TColor(0, 0, 0, 0), JUtility::TColor(255, 255, 255, 255));
+        if (shieldOnly) {
+            hideOtherPictures(sHud.mpIconOn->getPanePtr(), on);
+        }
+    }
+    if (J2DPicture* off = findFirstPicture(sHud.mpIconOff->getPanePtr())) {
+        off->changeTexture(timg, 0);
+        // Greyed/desaturated for the unearned (empty) charge slot.
+        off->setBlackWhite(JUtility::TColor(0, 0, 0, 0), JUtility::TColor(105, 105, 105, 255));
+        if (shieldOnly) {
+            hideOtherPictures(sHud.mpIconOff->getPanePtr(), off);
+        }
+    }
+}
+
+// TEMP diagnostic: log shield-icon detection/apply to
+// Documents/dusklight/albw_shield_icon_debug.txt so we can see why normal-play
+// shields don't trigger the icon. Remove once the cause is found.
+void shieldIconDbg(const char* fmt, ...) {
+    char path[512];
+    path[0] = '\0';
+    const char* user = getenv("USERPROFILE");
+    if (user != NULL && user[0] != '\0') {
+        snprintf(path, sizeof(path), "%s/Documents/dusklight/albw_shield_icon_debug.txt", user);
+    } else {
+        strncpy(path, "albw_shield_icon_debug.txt", sizeof(path) - 1);
+    }
+    static bool sReset = false;
+    FILE* fp = fopen(path, sReset ? "a" : "w");
+    if (fp == NULL) {
+        return;
+    }
+    if (!sReset) {
+        sReset = true;
+        fprintf(fp, "--- ALBW shield icon detection ---\n");
+    }
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(fp, fmt, args);
+    va_end(args);
+    fclose(fp);
+}
+
+// TEMP diagnostic: dump the haku_n / haku_b_n pane subtrees once so we can
+// identify the starburst pane vs the shield-target picture for the 3 parry
+// icon modes. Writes Documents/dusklight/albw_haku_debug.txt. Remove after.
+void hakuDumpWalk(FILE* fp, J2DPane* p, int depth) {
+    if (p == NULL) {
+        return;
+    }
+    char tag[9];
+    int n = 0;
+    const u64 t = p->mInfoTag;
+    for (int s = 56; s >= 0; s -= 8) {
+        const char c = (char)((t >> s) & 0xFF);
+        if (c != '\0') {
+            tag[n++] = c;
+        }
+    }
+    tag[n] = '\0';
+    fprintf(fp, "%*stag='%s' type=%u w=%.1f h=%.1f vis=%d\n", depth * 2, "", tag,
+            (unsigned)p->getTypeID(), p->getWidth(), p->getHeight(), (int)p->isVisible());
+    for (J2DPane* c = p->getFirstChildPane(); c != NULL; c = c->getNextChildPane()) {
+        hakuDumpWalk(fp, c, depth + 1);
+    }
+}
+
+void dumpHakushaSubtree() {
+    static bool sDumped = false;
+    if (sDumped) {
+        return;
+    }
+    char path[512];
+    path[0] = '\0';
+    const char* user = getenv("USERPROFILE");
+    if (user != NULL && user[0] != '\0') {
+        snprintf(path, sizeof(path), "%s/Documents/dusklight/albw_haku_debug.txt", user);
+    } else {
+        strncpy(path, "albw_haku_debug.txt", sizeof(path) - 1);
+    }
+    FILE* fp = fopen(path, "w");
+    if (fp == NULL) {
+        return;
+    }
+    sDumped = true;
+    fprintf(fp, "--- hakusha pane subtree ---\n");
+    if (sHud.mpIconOn != NULL && sHud.mpIconOn->getPanePtr() != NULL) {
+        fprintf(fp, "[On / haku_n]\n");
+        hakuDumpWalk(fp, sHud.mpIconOn->getPanePtr(), 1);
+    }
+    if (sHud.mpIconOff != NULL && sHud.mpIconOff->getPanePtr() != NULL) {
+        fprintf(fp, "[Off / haku_b_n]\n");
+        hakuDumpWalk(fp, sHud.mpIconOff->getPanePtr(), 1);
+    }
+    fclose(fp);
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
 void deleteBashHud() {
     if (sHud.mpIconOn != NULL) {
         JKR_DELETE(sHud.mpIconOn);
@@ -611,6 +839,8 @@ void deleteBashHud() {
         sHud.mpIconScreen = NULL;
     }
     sHud.ready = false;
+    sHudIconTier = ShieldTier::None;  // force icon re-apply when the HUD is rebuilt
+    sHudAppliedMode = -1;
 }
 
 bool ensureBashHud() {
@@ -664,6 +894,8 @@ bool ensureBashHud() {
     applyBashIconScales(computeBashHudLayout());
     sHud.mpIconOn->show();
     sHud.mpIconOff->show();
+
+    dumpHakushaSubtree();  // TEMP: one-shot pane map for the 3 parry-icon modes
 
     sHud.ready = true;
     return true;
@@ -989,13 +1221,20 @@ void dShield_destroyFromDurability(daAlink_c* i_link) {
     dMeter2Info_setShield(dItemNo_NONE_e, true);
     i_link->stickArrowIncrement(1);
 
-    if (destroyedShield == dItemNo_WOOD_SHIELD_e || destroyedShield == dItemNo_SHIELD_e) {
-        i_link->setWoodShieldBurnOutEffect();
-        i_link->seStartOnlyReverb(Z2SE_AL_WOOD_SHIELD_BURN);
-    }
+    // ============================================
+    // NEW CODE — ALBW Port
+    // Durability break, all tiers (Ordon / Wooden / Hylian): play a wood-shield
+    // *break* SE for every shield — not just the two wood tiers — to read as a
+    // snap rather than a burn. The vanilla burn-out particle effect and the
+    // "your shield burned up" floating message (2047) are both intentionally
+    // dropped here. This path only runs while the shield-durability setting is
+    // on; the vanilla fire-burn path (d_a_alink.cpp) is untouched, so disabling
+    // the setting restores stock burn behaviour. If this SE doesn't sit well
+    // in-game, swap Z2SE_OBJ_WOODSHIELD_BREAK for a more suitable break sound.
+    // ============================================
+    i_link->seStartOnlyReverb(Z2SE_OBJ_WOODSHIELD_BREAK);
 
-    dMeter2Info_setFloatingMessage(2047, 90, false);
-    OS_REPORT("[dShield] durability destroy item=%u (msg 2047)\n", destroyedShield);
+    OS_REPORT("[dShield] durability destroy item=%u (break SE, no msg)\n", destroyedShield);
 }
 
 bool dShield_shouldDrawDurabilityHud() {
@@ -1362,8 +1601,36 @@ void dShield_drawBashCharges() {
     // NEW CODE ENDS HERE
     // ============================================
 
+    // Parry-icon mode change → rebuild the HUD so the original spur texture and
+    // starburst visibility are restored before the new mode is applied.
+    const int desiredMode = static_cast<int>(dusk::getSettings().game.parryIconsMode.getValue());
+    if (sHud.ready && desiredMode != sHudAppliedMode) {
+        deleteBashHud();
+    }
+
     if (!shouldShowBashHud() || !ensureBashHud()) {
         return;
+    }
+
+    // Keep the HUD icon matching the equipped shield + selected mode
+    // (re-applies on shield swap or mode change).
+    const ShieldTier curIconTier = shieldTierFromLink(link);
+    // TEMP: log raw detection on change so we can see what normal-play shields report.
+    {
+        static u8 sLastSel = 0xFE;
+        static int sLastTier = -99;
+        const u8 selNow = dComIfGs_getSelectEquipShield();
+        if (selNow != sLastSel || (int)curIconTier != sLastTier) {
+            sLastSel = selNow;
+            sLastTier = (int)curIconTier;
+            shieldIconDbg("draw: selEquip=0x%X tier=%d hudTier=%d arc=%s mode=%d\n", (unsigned)selNow,
+                          (int)curIconTier, (int)sHudIconTier,
+                          link != NULL && link->mShieldArcName != NULL ? link->mShieldArcName : "?",
+                          desiredMode);
+        }
+    }
+    if (curIconTier != sHudIconTier || desiredMode != sHudAppliedMode) {
+        applyParryIcons(curIconTier);
     }
 
     const u8 maxCharges = dShield_getMaxBashCharges();
@@ -1403,10 +1670,25 @@ void dShield_drawBashCharges() {
 
     dMeter2Draw_c* meterDraw = meter != NULL ? meter->getMeterDrawPtr() : NULL;
 
+    // Shield Only renders through the OFF pane for BOTH states: the lit-spur ON
+    // pane (haku03) mangles a normal icon texture into static, while the dim-spur
+    // OFF pane (haku17) renders it cleanly. Brightness conveys filled vs empty.
+    const bool shieldOnlyMode =
+        (sHudAppliedMode == static_cast<int>(dusk::ParryIcons::ShieldOnly));
+
     for (int i = 0; i < maxCharges; i++) {
         const bool filled = (u8)i < charges;
 
-        if (filled) {
+        if (shieldOnlyMode) {
+            sHud.mpIconOn->hide();
+            sHud.mpIconOff->show();
+            sHud.mpIconOff->setAlphaRate(1.0f);
+            if (J2DPicture* off = findFirstPicture(sHud.mpIconOff->getPanePtr())) {
+                off->setBlackWhite(JUtility::TColor(0, 0, 0, 0),
+                                   filled ? JUtility::TColor(255, 255, 255, 255)
+                                          : JUtility::TColor(105, 105, 105, 255));
+            }
+        } else if (filled) {
             sHud.mpIconOn->show();
             sHud.mpIconOff->hide();
             sHud.mpIconOn->setAlphaRate(1.0f);

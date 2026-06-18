@@ -2,7 +2,7 @@
 
 #include "d/d_albw_combat.h"
 #include "d/actor/d_a_b_tn.h"
-#include "dusk/conavigate.h"
+#include "dusk/trace_noop.h"
 #include "dusk/settings.h"
 #include "f_op/f_op_actor.h"
 #include "f_pc/f_pc_manager.h"

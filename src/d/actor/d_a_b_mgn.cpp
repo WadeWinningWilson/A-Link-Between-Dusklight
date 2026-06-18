@@ -13,6 +13,7 @@
 #include "m_Do/m_Do_graphic.h"
 #include "f_op/f_op_actor_enemy.h"
 #if TARGET_PC
+#include "d/d_albw_boss.h"
 #include "d/d_albw_enemy_rupee.h"
 #endif
 
@@ -1126,7 +1127,11 @@ void daB_MGN_c::damage_check() {
                 }
     
                 u8 var_r29 = 0;
+#if TARGET_PC
+                if (dAlbwBossRefinement_colliderCountsAsMasterSword((dCcD_GObjInf*)mAtInfo.mpCollider)) {
+#else
                 if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_MASTER_SWORD)) {
+#endif
                     if (mAtInfo.mpCollider->GetAtAtp() >= 4) {
                         if (player->getSwordAtUpTime() != 0) {
                             var_r29 = 4;

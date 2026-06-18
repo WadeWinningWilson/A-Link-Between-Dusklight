@@ -13,6 +13,9 @@
 #include "d/actor/d_a_obj_life_container.h"
 #include "d/actor/d_a_obj_ystone.h"
 #include <cstring>
+#if TARGET_PC
+#include "d/d_albw_boss.h"
+#endif
 
 static DUSK_CONST char* l_arcName = "ef_Portal";
 
@@ -476,6 +479,9 @@ int daObjBossWarp_c::demoProc() {
             disappear(0);
             break;
         case 3:  // SCENE_CHG
+#if TARGET_PC
+            dAlbwBoss_requestWarpBootstrap(dComIfGp_getStartStageName());
+#endif
             int scene;
             if (isFirst()) {
                 scene = getSceneListNo();

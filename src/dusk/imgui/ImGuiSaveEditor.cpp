@@ -68,8 +68,10 @@ namespace dusk {
         { dItemNo_DUNGEON_BACK_e, {"Ooccoo Jr.", ITEMTYPE_EQUIP_e} },
         { dItemNo_SWORD_e, {"Ordon Sword"} },
         { dItemNo_MASTER_SWORD_e, {"Master Sword"} },
-        { dItemNo_WOOD_SHIELD_e, {"Wooden Shield"} },
-        { dItemNo_SHIELD_e, {"Ordon Shield"} },
+        // Enum names are misleading: WOOD_SHIELD (0x2A) is the Ordon house-quest shield,
+        // SHIELD (0x2B) is the shop "Wooden" shield. Label by true identity, not enum name.
+        { dItemNo_WOOD_SHIELD_e, {"Ordon Shield"} },
+        { dItemNo_SHIELD_e, {"Wooden Shield"} },
         { dItemNo_HYLIA_SHIELD_e, {"Hylian Shield"} },
         { dItemNo_TKS_LETTER_e, {"Ooccoo's Note", ITEMTYPE_EQUIP_e} },
         { dItemNo_WEAR_CASUAL_e, {"Ordon Clothes"} },

@@ -381,6 +381,7 @@ template class ConfigImpl<dusk::FrameInterpMode>;
 template class ConfigImpl<dusk::MenuScaling>;
 template class ConfigImpl<dusk::Resampler>;
 template class ConfigImpl<dusk::MagicArmorMode>;
+template class ConfigImpl<dusk::ParryIcons>;
 template class ConfigImpl<dusk::ui::ControlLayout>;
 }  // namespace dusk::config
 

@@ -520,6 +520,11 @@ public:
     int getSelectNum() { return mSelectNum; }
     void setUseType(u8 type) { mUseType = type; }
 
+#if TARGET_PC
+    bool driveCanLoadSlot(u8 slot) const;
+    void driveLoadSlot(u8 slot);
+#endif
+
     /* 0x0004 */ u8 field_0x04[4];
     /* 0x0008 */ JKRArchive* mpArchive;
     /* 0x000C */ dFile_select3D_c* mpFileSelect3d;

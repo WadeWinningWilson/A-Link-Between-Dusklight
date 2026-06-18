@@ -28,6 +28,7 @@
 #include "d/d_albw_shield.h"
 #include "d/d_albw_wolf_charge_hud.h"
 #include "d/d_albw_rupee_popup.h"
+#include "d/d_albw_boss_hp_hud.h"
 #include "dusk/action_bindings.h"
 #include "JSystem/JUtility/TColor.h"
 #endif
@@ -876,6 +877,7 @@ void dMeter2Draw_c::draw() {
         dAlbwWolfChargeHud_draw();
         dShield_drawBashCharges();
         dAlbwRupeePopup_draw();
+        dAlbwBossHpHud_draw();
     }
 #endif
 }

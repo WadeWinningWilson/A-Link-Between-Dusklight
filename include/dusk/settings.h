@@ -61,6 +61,13 @@ enum class MagicArmorMode : u8 {
     ALBW = 5,
 };
 
+// ALBW parry/bash charge HUD icon style.
+enum class ParryIcons : u8 {
+    SpurOnly = 0,    // original Epona-spur graphic
+    SpurShield = 1,  // spur starburst + shield emblem composited
+    ShieldOnly = 2,  // shield emblem only (starburst hidden)
+};
+
 namespace config {
 template <>
 struct ConfigEnumRange<BloomMode> {
@@ -108,6 +115,12 @@ template <>
 struct ConfigEnumRange<MagicArmorMode> {
     static constexpr auto min = MagicArmorMode::NORMAL;
     static constexpr auto max = MagicArmorMode::ALBW;
+};
+
+template <>
+struct ConfigEnumRange<ParryIcons> {
+    static constexpr auto min = ParryIcons::SpurOnly;
+    static constexpr auto max = ParryIcons::ShieldOnly;
 };
 
 template <>
@@ -177,6 +190,12 @@ struct UserSettings {
         ConfigVar<bool> enemyDeathRupees;
         // Master Quest: Postman heart/stamina upgrades; halved heart container/piece grants.
         ConfigVar<bool> masterQuest;
+        // Boss Refinement: any-sword boss damage gates; future Zant/Ganon redesign layers.
+        ConfigVar<bool> bossRefinement;
+        // Parry/bash charge HUD icon style: spur only, spur+shield, or shield only.
+        ConfigVar<ParryIcons> parryIconsMode;
+        // Boss health bar HUD (name + bar) for main dungeon bosses / Ganondorf duel.
+        ConfigVar<bool> bossHealthBars;
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================

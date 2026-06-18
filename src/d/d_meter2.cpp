@@ -1,3 +1,4 @@
+#include <cstdlib>
 /**
  * d_meter2.cpp
  * Main UI handler
@@ -1975,6 +1976,7 @@ void dMeter2_c::moveKantera() {
         // MODIFIED CODE ENDS HERE
         // ============================================
     }
+moveKantera_skip_albw_pc:
 #endif
     // ============================================
     // NEW CODE ENDS HERE

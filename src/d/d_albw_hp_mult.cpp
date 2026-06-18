@@ -12,6 +12,7 @@
 #if TARGET_PC
 
 #include "d/d_albw_hp_mult.h"
+#include "d/d_albw_boss.h"
 #include "dusk/settings.h"
 #include "d/actor/d_a_b_tn.h"
 #include "f_op/f_op_actor.h"
@@ -166,6 +167,12 @@ dAlbwHP_LockonDisplay dAlbwHP_getLockonDisplayHp(fopAc_ac_c* actor) {
     display.max = actor->field_0x560 > 0 ? actor->field_0x560 : actor->health;
     display.actorHealth = display.current;
     display.actorHealthMax = display.max;
+
+    if (fopAcM_GetName(actor) == fpcNm_B_GM_e) {
+        dAlbwBoss_armogohmaFillDisplayHp(actor, &display.current, &display.max);
+        display.actorHealth = display.current;
+        display.actorHealthMax = display.max;
+    }
 
     if (fopAcM_GetName(actor) == fpcNm_B_TN_e) {
         const daB_TN_c* darknut = (const daB_TN_c*)actor;

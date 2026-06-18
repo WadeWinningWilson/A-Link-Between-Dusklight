@@ -7,7 +7,6 @@
 #include "JSystem/JAWExtSystem/JAWExtSystem.h"
 #include "SSystem/SComponent/c_lib.h"
 #include "d/d_com_inf_game.h"
-#include "dusk/conavigate.h"
 #include "f_ap/f_ap_game.h"
 #include "m_Do/m_Do_Reset.h"
 #include "m_Do/m_Do_main.h"
@@ -114,8 +113,6 @@ void mDoCPd_c::read() {
         interface2++;
 #endif
     }
-
-    dusk::conavigate::onPadFrame();
 }
 
 void mDoCPd_c::convert(interface_of_controller_pad* pInterface, JUTGamePad* pPad) {

@@ -12,6 +12,9 @@
 #include "d/actor/d_a_player.h"
 #include "d/d_cc_d.h"
 #include "d/d_tresure.h"
+#if TARGET_PC
+#include "d/d_albw_boss.h"
+#endif
 
 static u8 const unused[12] = {};
 
@@ -241,7 +244,12 @@ int daCstatue_c::create() {
         mParam2 = (fopAcM_GetParam(this) >> 20) & 0x3f;
 
         if (mType == daCstatueType_Normal && !checkStateFlg0(daCstatue_FLG0_400)) {
+#if TARGET_PC
+            const bool skipSwitchGate = dAlbwBoss_isArmogohmaWarpBootstrap();
+            if (!skipSwitchGate && mParam0 != 0xff && !fopAcM_isSwitch(this, mParam0)) {
+#else
             if (mParam0 != 0xff && !fopAcM_isSwitch(this, mParam0)) {
+#endif
                 return cPhs_ERROR_e;
             }
             int minSwitch;
@@ -251,11 +259,18 @@ int daCstatue_c::create() {
                 minSwitch = mParam0 + 1;
             }
             for (int iSwitch = 6; iSwitch >= minSwitch; iSwitch--) {
+#if TARGET_PC
+                if (!skipSwitchGate && fopAcM_isSwitch(this, iSwitch)) {
+#else
                 if (fopAcM_isSwitch(this, iSwitch)) {
+#endif
                     return cPhs_ERROR_e;
                 }
             }
         } else if (mType == daCstatueType_Normal2 && mParam0 != 0xff &&
+#if TARGET_PC
+                   !dAlbwBoss_isArmogohmaWarpBootstrap() &&
+#endif
                    fopAcM_isSwitch(this, this->mParam0))
         {
             return cPhs_ERROR_e;

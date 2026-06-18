@@ -55,7 +55,7 @@
 #include "d/d_albw_death_rupee.h"
 #include "d/d_albw_combat.h"
 #include "d/d_albw_shield.h"
-#include "dusk/conavigate.h"
+#include "dusk/trace_noop.h"
 #include "d/d_albw_wolf_stun.h"
 #include "d/d_albw_lockout.h"
 #include "d/d_albw_wolf_combat.h"

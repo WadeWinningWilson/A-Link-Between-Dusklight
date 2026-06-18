@@ -224,6 +224,27 @@ static BOOL dMw_isMenuRing() {
     return false;
 }
 
+u8 dMw_c::getRingCursorItem() const {
+    if (mpMenuRing == NULL) {
+        return dItemNo_NONE_e;
+    }
+
+    return mpMenuRing->getHighlightedItem();
+}
+
+u8 dMw_getRingCursorItem() {
+    if (dMeter2Info_getWindowStatus() != 2) {
+        return dItemNo_NONE_e;
+    }
+
+    dMw_c* menu_window = dMeter2Info_getMenuWindowClass();
+    if (menu_window == NULL) {
+        return dItemNo_NONE_e;
+    }
+
+    return menu_window->getRingCursorItem();
+}
+
 typedef void (dMw_c::*initFunc)(u8);
 initFunc init_proc[] = {
     &dMw_c::key_wait_init,

@@ -63,6 +63,7 @@ public:
     void setCombineBomb(int);
     void drawNumber(int, int, f32, f32);
     u8 getItem(int, u8);
+    u8 getHighlightedItem() const;
     void setDoStatus(u8);
     bool isMixItemOn();
     bool isMixItemOff();

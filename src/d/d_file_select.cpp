@@ -6060,3 +6060,22 @@ void dFile_select3D_c::calcViewMtx(Mtx param_0) {
     cXyz pos2(0.0f, 1.0f, 0.0f);
     cMtx_lookAt(param_0, &pos1, &cXyz::Zero, &pos2, 0);
 }
+
+#if TARGET_PC
+bool dFile_select_c::driveCanLoadSlot(u8 slot) const {
+    return mDataSelProc == DATASELPROC_DATA_SELECT && slot < SAVEDATA_NUM && !mIsNoData[slot] &&
+           !mIsSelectEnd;
+}
+
+void dFile_select_c::driveLoadSlot(u8 slot) {
+    if (!driveCanLoadSlot(slot)) {
+        return;
+    }
+
+    mSelectNum = slot;
+    dComIfGs_setCardToMemory((u8*)mSaveData, slot);
+    dComIfGs_setDataNum(slot);
+    mIsSelectEnd = true;
+    mDataSelProc = DATASELPROC_NEXT_MODE_WAIT;
+}
+#endif

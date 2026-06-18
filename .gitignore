@@ -2,6 +2,9 @@
 .idea/
 .vs/
 
+# Claude Code (local settings + agent data — never commit)
+.claude/
+
 # Caches
 __pycache__
 .mypy_cache
@@ -42,6 +45,12 @@ compile_commands.json
 **/conavigate/
 conavigate_session.log
 
+# Local automation / CoNavigate backup (move off-machine manually)
+local_dev_backup/
+
+# ALBW mod local backups — keep these local, never commit
+albw_backup_*/
+
 # MacOS
 .DS_Store
 
@@ -57,3 +66,7 @@ conavigate_session.log
 pipeline_cache.bin
 
 extract
+
+# Trailer PNG assets (local copies; see docs/trailer-handoff.md)
+trailer/assets/*
+!trailer/assets/.gitkeep

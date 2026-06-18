@@ -49,6 +49,9 @@ UserSettings g_userSettings = {
         .wolfLinkCombat {"game.wolfLinkCombat", false},
         .enemyDeathRupees {"game.enemyDeathRupees", false},
         .masterQuest {"game.masterQuest", false},
+        .bossRefinement {"game.bossRefinement", false},
+        .parryIconsMode {"game.parryIconsMode", ParryIcons::SpurShield},
+        .bossHealthBars {"game.bossHealthBars", false},
         .damageMultiplier {"game.damageMultiplier", 1},
         .hpMultNormal     {"game.hpMultNormal",     1},
         .hpMultMidBoss    {"game.hpMultMidBoss",    1},
@@ -272,6 +275,9 @@ void registerSettings() {
     Register(g_userSettings.game.wolfLinkCombat);
     Register(g_userSettings.game.enemyDeathRupees);
     Register(g_userSettings.game.masterQuest);
+    Register(g_userSettings.game.bossRefinement);
+    Register(g_userSettings.game.parryIconsMode);
+    Register(g_userSettings.game.bossHealthBars);
     Register(g_userSettings.game.damageMultiplier);
     Register(g_userSettings.game.hpMultNormal);
     Register(g_userSettings.game.hpMultMidBoss);

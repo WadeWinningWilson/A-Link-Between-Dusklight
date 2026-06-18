@@ -51,6 +51,10 @@ public:
     void doPreLoadSetup();
     void changeGameScene();
 
+#if TARGET_PC
+    dFile_select_c* getFileSelectForDrive() { return dFs_c; }
+#endif
+
     #if VERSION == VERSION_GCN_PAL
     void bmg_data_set();
     void tex_data_set();

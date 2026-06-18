@@ -24,6 +24,7 @@
 #include "d/d_albw_wolf_combat.h"
 #include "d/d_albw_wolf_charge_hud.h"
 #include "d/d_albw_enemy_rupee.h"
+#include "d/d_albw_boss.h"
 #endif
 
 static int plCutLRC[58] = {
@@ -518,6 +519,10 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* i_enemy, dCcU_AtInfo* i_AtInfo) {
                     i_AtInfo->mAttackPower = 1;
                 }
             }
+        }
+        // Boss Refinement: Armogohma core arrow hits chip 4% in dAlbwBoss_armogohmaOnBowCoreHit().
+        if (dAlbwBoss_armogohmaShouldSuppressVanillaArrowDamage(i_enemy, i_AtInfo)) {
+            i_AtInfo->mAttackPower = 0;
         }
         // ============================================
         // NEW CODE ENDS HERE

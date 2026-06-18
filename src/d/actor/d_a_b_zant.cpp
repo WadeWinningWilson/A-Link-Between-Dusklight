@@ -19,6 +19,7 @@
 #include "JSystem/JAudio2/JAUSectionHeap.h"
 #include <cmath>
 #if TARGET_PC
+#include "d/d_albw_boss.h"
 #include "d/d_albw_enemy_rupee.h"
 #endif
 
@@ -336,7 +337,11 @@ bool daB_ZANT_c::checkBigDamage() {
     daPy_py_c* player = daPy_getPlayerActorClass();
     BOOL taken_big_dmg = false;
 
+#if TARGET_PC
+    if (dAlbwBossRefinement_colliderCountsAsMasterSword((dCcD_GObjInf*)mAtInfo.mpCollider)) {
+#else
     if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_NORMAL_SWORD) && daPy_py_c::checkMasterSwordEquip()) {
+#endif
         if (mAtInfo.mpCollider->GetAtAtp() >= 4) {
             taken_big_dmg = true;
         } else if (player->getSwordAtUpTime() != 0) {
@@ -366,9 +371,15 @@ int daB_ZANT_c::checkDamageType() {
         return DMGTYPE_BOOMERANG;
     }
 
+#if TARGET_PC
+    if (dAlbwBossRefinement_colliderCountsAsMasterSword((dCcD_GObjInf*)mAtInfo.mpCollider)) {
+        return DMGTYPE_SWORD;
+    }
+#else
     if (mAtInfo.mpCollider->ChkAtType(AT_TYPE_MASTER_SWORD)) {
         return DMGTYPE_SWORD;
     }
+#endif
 
     return DMGTYPE_MISC;
 }
@@ -465,7 +476,11 @@ void daB_ZANT_c::damage_check() {
 
             health = prev_hp;
 
+#if TARGET_PC
+            if (!dAlbwBossRefinement_colliderCountsAsMasterSword((dCcD_GObjInf*)mAtInfo.mpCollider)) {
+#else
             if (!mAtInfo.mpCollider->ChkAtType(AT_TYPE_MASTER_SWORD)) {
+#endif
                 dScnPly_c::setPauseTimer(0);
             }
 
@@ -675,7 +690,11 @@ void daB_ZANT_c::ice_damage_check() {
                     int dmg_amount = prev_hp - health;
                     health = prev_hp;
 
+#if TARGET_PC
+                    if (!dAlbwBossRefinement_colliderCountsAsMasterSword((dCcD_GObjInf*)mAtInfo.mpCollider)) {
+#else
                     if (!mAtInfo.mpCollider->ChkAtType(AT_TYPE_MASTER_SWORD)) {
+#endif
                         dScnPly_c::setPauseTimer(0);
                     }
 
