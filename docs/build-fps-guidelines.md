@@ -118,3 +118,4 @@ If field is **~50–70** on RelWithDebInfo with clean env, suspect **wrong exe, 
 | [performance-handoff.md](performance-handoff.md) | Drive oracle, hitch investigation, profiler next steps |
 | [performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md) | Full drive evidence (Tracks B–J) |
 | [future-performance-leaning.md](future-performance-leaning.md) | Original suspicions + ineffective-methods note |
+| [commit-and-push.md](commit-and-push.md) | Fork remotes, commit/push workflow |

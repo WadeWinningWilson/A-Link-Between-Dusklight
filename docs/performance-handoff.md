@@ -230,5 +230,6 @@ Rebuild before commit if source changed during playtest: `build_run.bat`.
 | Doc | Topic |
 |-----|--------|
 | [build-fps-guidelines.md](build-fps-guidelines.md) | **Agent build & launch contract** |
+| [commit-and-push.md](commit-and-push.md) | Fork remotes, commit/push workflow |
 | [performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md) | Full evidence tables |
 | [future-performance-leaning.md](future-performance-leaning.md) | Original suspicions + ineffective-methods note |
