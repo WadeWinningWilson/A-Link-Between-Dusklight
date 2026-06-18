@@ -45,11 +45,26 @@ compile_commands.json
 **/conavigate/
 conavigate_session.log
 
+# CoNavigate / drive dev sources (local automation only — see local_dev_backup/)
+build_conavigate.bat
+docs/conavigate.md
+include/dusk/conavigate.h
+src/dusk/conavigate.cpp
+include/dusk/drive.h
+src/dusk/drive.cpp
+
 # Local automation / CoNavigate backup (move off-machine manually)
 local_dev_backup/
 
 # ALBW mod local backups — keep these local, never commit
 albw_backup_*/
+
+# ALBW temp debug dumps from dev sessions
+albw_*_debug.txt
+
+# Agent build logs
+build_stdout.txt
+build_stderr.txt
 
 # MacOS
 .DS_Store
