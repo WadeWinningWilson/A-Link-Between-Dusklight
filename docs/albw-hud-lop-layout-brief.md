@@ -1,10 +1,10 @@
 # Dusklight HUD — Lies of P layout implementation brief
 
 **For:** HUD / meter implementation agent  
+**FPS / build rules:** [hud-performance-handoff.md](hud-performance-handoff.md) — read before merging HUD changes; use build-analysis chat to validate ~144.  
 **Target:** `TARGET_PC` only (Dusklight / ALBW port)  
-**Reference mockups:**
-- Concept (simplified bars): `assets/dusklight-hud-lop-layout-mockup.png`
-- Vanilla icons: `assets/dusklight-hud-lop-layout-vanilla-mockup.png`
+**Reference mockup (in repo):**
+- [`docs/mockups/dusklight-hud-lop-layout-v3-shield-icons-mockup.png`](mockups/dusklight-hud-lop-layout-v3-shield-icons-mockup.png) — current layout target (shield icons, not spurs). See also [`mockups/README.md`](mockups/README.md).
 
 This brief describes how to recreate the LoP-inspired HUD **using existing TP BLO panes and ALBW draw paths**, not new art.
 

@@ -34,6 +34,7 @@
 #endif
 
 #if TARGET_PC
+#include "d/d_meter2.h"
 #include "dusk/settings.h"
 #include "dusk/ui/icon_provider.hpp"
 #include <algorithm>
@@ -91,7 +92,56 @@ void dAnchorHudScale(CPaneMgr* i_pane, HudCorner i_corner, f32* io_x, f32* io_y,
     *io_y += dirY * i_pane->getInitSizeY() * half;
 }
 
+// ============================================
+// NEW CODE — ALBW Port (Lies of Link HUD)
+// Gated relayout of the vanilla TP HUD into a Lies of P spatial arrangement (life/
+// meter/shield top-left, rupees top-right, bash shield icons + items bottom-left,
+// B-sword bottom-right). All offsets are HUD design-space, tuned in the Ordon field.
+// See docs/albw-hud-lop-layout-v3-instructions.md.
+// ============================================
+
+// Null-safe hide/show for the LoP ring-trim (button panes can be NULL in teardown).
+void lopHidePane(CPaneMgr* i_pane) {
+    if (i_pane != NULL) {
+        i_pane->hide();
+    }
+}
+void lopShowPane(CPaneMgr* i_pane) {
+    if (i_pane != NULL) {
+        i_pane->show();
+    }
+}
+
+// Bash shield-icon / wolf charge cluster: anchored to the (hidden but still
+// positioned) d-pad cross centre, offset to the left edge of the row right of Midna.
+static constexpr f32 kLopSpurAnchorOffX = 36.0f;   // first shield centre, right of Midna
+static constexpr f32 kLopSpurAnchorOffY = -16.0f;  // lift to sit even with the Midna icon row
+// Bottom-right button ring: pull back up after dropping it to the cross row so the
+// B box isn't clipped by the screen's bottom edge.
+static constexpr f32 kLopButtonRaiseY = 64.0f;
+// Durability bar gap below the shield-icon row bottoms.
+static constexpr f32 kLopDurabilityGapPx = 6.0f;
+// Item belt (X over Y) stacked just above the Midna icon. Offsets are global HUD px
+// relative to Midna's centre; the Y slot sits at OffY, the X slot a Gap higher.
+static constexpr f32 kLopItemBeltOffX = 0.0f;    // horizontal vs Midna centre
+static constexpr f32 kLopItemBeltOffY = -38.0f;  // Y item above Midna
+static constexpr f32 kLopItemBeltGap = 36.0f;    // X item above the Y item
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
 }  // namespace
+
+bool dLopHudOn() {
+    dMeter2_c* meter = dMeter2Info_getMeterClass();
+    if (meter != NULL) {
+        dMeter2Draw_c* draw = meter->getMeterDrawPtr();
+        if (draw != NULL) {
+            return draw->isLopHudActive();
+        }
+    }
+    return dusk::getSettings().game.lopHud.getValue();
+}
 #endif
 dMeter2Draw_c::dMeter2Draw_c(JKRExpHeap* mp_heap) {
     OS_REPORT("enter dMeter2Draw_c::dMeter2Draw_c(JKRExpHeap *mp_heap)\n");
@@ -609,6 +659,7 @@ void dMeter2Draw_c::init() {
 
 void dMeter2Draw_c::exec(u32 i_status) {
 #if TARGET_PC
+    mLopHudActive = dusk::getSettings().game.lopHud.getValue();
     // n_all keeps the vanilla scale. Scaling the root pane shrinks every child toward
     // its centred origin; per-child scaling in each drawXxx() path keeps each HUD group
     // anchored to its own pane origin and also pulls it toward the screen corner.
@@ -625,10 +676,37 @@ void dMeter2Draw_c::exec(u32 i_status) {
     }
 
 #if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port (Lies of Link HUD)
+    // LoP drops the action button ring from the top-right (now the wallet's corner)
+    // down to the bottom-right, level with the d-pad cross row. The vertical lift is
+    // measured once from the ring-vs-cross gap and held; divisor is the PARENT scale
+    // (the ring's own scale is ~0.55, which would over-lift), pulled back up so the
+    // B box isn't clipped.
+    // ============================================
+    const bool lopButtons = mLopHudActive;
+    f32 lopButtonLiftY = 0.0f;
+    if (lopButtons) {
+        static bool sLopBtnLiftCached = false;
+        static f32 sLopBtnLift = 0.0f;
+        if (!sLopBtnLiftCached && mpButtonParent != NULL && mpButtonParent->getPanePtr() != NULL &&
+            mpButtonCrossParent != NULL && mpButtonCrossParent->getPanePtr() != NULL) {
+            const Vec btnC = mpButtonParent->getGlobalVtxCenter(false, 0);
+            const Vec crossC = mpButtonCrossParent->getGlobalVtxCenter(false, 0);
+            const f32 parentSc = std::max(g_drawHIO.mParentScale, 0.001f);
+            sLopBtnLift = (crossC.y - btnC.y) / parentSc;
+            sLopBtnLiftCached = true;
+        }
+        lopButtonLiftY = sLopBtnLift - kLopButtonRaiseY;
+    }
+    const HudCorner buttonCorner = lopButtons ? HudCorner::BottomRight : HudCorner::TopRight;
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     if (i_status & 0x1000000) {
         f32 ringPosX = g_drawHIO.mRingHUDButtonsPosX;
-        f32 ringPosY = g_drawHIO.mRingHUDButtonsPosY;
-        dAnchorHudScale(mpButtonParent, HudCorner::TopRight, &ringPosX, &ringPosY);
+        f32 ringPosY = g_drawHIO.mRingHUDButtonsPosY + lopButtonLiftY;
+        dAnchorHudScale(mpButtonParent, buttonCorner, &ringPosX, &ringPosY);
         if (mButtonsPosX != ringPosX || mButtonsPosY != ringPosY) {
             mButtonsPosX = ringPosX;
             mButtonsPosY = ringPosY;
@@ -642,8 +720,8 @@ void dMeter2Draw_c::exec(u32 i_status) {
         }
     } else {
         f32 mainPosX = g_drawHIO.mMainHUDButtonsPosX;
-        f32 mainPosY = g_drawHIO.mMainHUDButtonsPosY;
-        dAnchorHudScale(mpButtonParent, HudCorner::TopRight, &mainPosX, &mainPosY);
+        f32 mainPosY = g_drawHIO.mMainHUDButtonsPosY + lopButtonLiftY;
+        dAnchorHudScale(mpButtonParent, buttonCorner, &mainPosX, &mainPosY);
         if (mButtonsPosX != mainPosX || mButtonsPosY != mainPosY) {
             mButtonsPosX = mainPosX;
             mButtonsPosY = mainPosY;
@@ -693,12 +771,122 @@ void dMeter2Draw_c::draw() {
     graf_ctx->setup2D();
 
 #if TARGET_PC
+    mLopHudActive = dusk::getSettings().game.lopHud.getValue();
+    mLopShieldAnchorValid = false;
+    if (mLopHudActive) {
+        // Anchor the shield row just to the RIGHT of the Midna icon, on its row
+        // (offsets are relative to Midna's centre). Cross / life are fallbacks only.
+        if (mpButtonMidona != NULL && mpButtonMidona->getPanePtr() != NULL) {
+            mLopShieldAnchor = mpButtonMidona->getGlobalVtxCenter(false, 0);
+            mLopShieldAnchor.x += kLopSpurAnchorOffX;
+            mLopShieldAnchor.y += kLopSpurAnchorOffY;
+            mLopShieldAnchorValid = true;
+        } else if (mpButtonCrossParent != NULL && mpButtonCrossParent->getPanePtr() != NULL) {
+            mLopShieldAnchor = mpButtonCrossParent->getGlobalVtxCenter(false, 0);
+            mLopShieldAnchor.x += kLopSpurAnchorOffX;
+            mLopShieldAnchor.y += kLopSpurAnchorOffY;
+            mLopShieldAnchorValid = true;
+        } else if (mpLifeParent != NULL && mpLifeParent->getPanePtr() != NULL) {
+            mLopShieldAnchor = mpLifeParent->getGlobalVtxCenter(false, 0);
+            mLopShieldAnchor.x += kLopSpurAnchorOffX;
+            mLopShieldAnchor.y += 360.0f;
+            mLopShieldAnchorValid = true;
+        }
+    }
+
     const bool touchControlsEnabled = dusk::getSettings().game.enableTouchControls;
     if (touchControlsEnabled) {
         mpButtonParent->hide();
     } else {
         mpButtonParent->show();
     }
+
+    // ============================================
+    // NEW CODE — ALBW Port (Lies of Link HUD)
+    // Strip the bottom-right action ring to just the B-sword box (mockup). Sweep the
+    // cont_n children hiding all but the B box + sword + Midna (catches the vine),
+    // then explicitly hide the A/X/Y/Z circles, item icons, labels and X/Y items
+    // (searched off the screen root). Vanilla's per-frame button draws set these
+    // visible in the move phase, so re-hide here right before the screen renders.
+    // ============================================
+    if (mLopHudActive && !touchControlsEnabled) {
+        if (mpButtonParent != NULL && mpButtonParent->getPanePtr() != NULL) {
+            for (J2DPane* c = mpButtonParent->getPanePtr()->getFirstChildPane(); c != NULL;
+                 c = c->getNextChildPane()) {
+                const u64 tag = c->mInfoTag;
+                // Keep the B box + sword, Midna, and the X/Y item icons (relocated to
+                // the bottom-left belt just below) — hide everything else (vine, A/Z).
+                if (tag != MULTI_CHAR('bbtn_n') && tag != MULTI_CHAR('b_text_b') &&
+                    tag != MULTI_CHAR('midona_n') && tag != MULTI_CHAR('x_itm_p') &&
+                    tag != MULTI_CHAR('y_itm_p')) {
+                    c->hide();
+                }
+            }
+        }
+        lopHidePane(mpButtonA);
+        lopHidePane(mpButtonXY[0]);
+        lopHidePane(mpButtonXY[1]);
+        lopHidePane(mpButtonXY[2]);
+        lopHidePane(mpBTextA);
+        lopHidePane(mpBTextXY[0]);
+        lopHidePane(mpBTextXY[1]);
+        lopHidePane(mpBTextXY[2]);
+        lopHidePane(mpTextA);
+        lopHidePane(mpTextB);
+        lopHidePane(mpTextXY[0]);
+        lopHidePane(mpTextXY[1]);
+        lopHidePane(mpTextXY[2]);
+        for (int i = 0; i < 5; i++) {
+            lopHidePane(mpAText[i]);
+        }
+
+        // Item belt: stack the X (top) / Y (bottom) item icons just above the Midna
+        // icon. They ride the bottom-right ring, so cache once the absolute paneTrans
+        // that lands each above Midna — the ring's local->global scale is measured
+        // empirically from the two slots' known natural positions (no guessed divisor).
+        if (mpButtonMidona != NULL && mpButtonMidona->getPanePtr() != NULL &&
+            mpItemXY[0] != NULL && mpItemXY[0]->getPanePtr() != NULL && mpItemXY[1] != NULL &&
+            mpItemXY[1]->getPanePtr() != NULL) {
+            static bool sBeltCached = false;
+            static f32 sBeltX[2] = {0.0f, 0.0f};
+            static f32 sBeltY[2] = {0.0f, 0.0f};
+            if (!sBeltCached) {
+                const Vec midna = mpButtonMidona->getGlobalVtxCenter(false, 0);
+                const Vec g0 = mpItemXY[0]->getGlobalVtxCenter(false, 0);
+                const Vec g1 = mpItemXY[1]->getGlobalVtxCenter(false, 0);
+                const f32 nx0 = mItemParams[0].pos_x + field_0x6ac[0];
+                const f32 ny0 = mItemParams[0].pos_y + field_0x6b8[0];
+                const f32 nx1 = mItemParams[1].pos_x + field_0x6ac[1];
+                const f32 ny1 = mItemParams[1].pos_y + field_0x6b8[1];
+                const f32 fallback = std::max(mButtonsScale * g_drawHIO.mParentScale, 0.001f);
+                const f32 dpx = nx1 - nx0;
+                const f32 dpy = ny1 - ny0;
+                f32 sx = (std::fabs(dpx) > 0.5f) ? ((g1.x - g0.x) / dpx) : fallback;
+                f32 sy = (std::fabs(dpy) > 0.5f) ? ((g1.y - g0.y) / dpy) : fallback;
+                if (std::fabs(sx) < 0.001f) {
+                    sx = fallback;
+                }
+                if (std::fabs(sy) < 0.001f) {
+                    sy = fallback;
+                }
+                for (int i = 0; i < 2; i++) {
+                    const Vec g = (i == 0) ? g0 : g1;
+                    const f32 nx = (i == 0) ? nx0 : nx1;
+                    const f32 ny = (i == 0) ? ny0 : ny1;
+                    const f32 tx = midna.x + kLopItemBeltOffX;
+                    const f32 ty = midna.y + kLopItemBeltOffY - (f32)(1 - i) * kLopItemBeltGap;
+                    sBeltX[i] = nx + (tx - g.x) / sx;
+                    sBeltY[i] = ny + (ty - g.y) / sy;
+                }
+                sBeltCached = true;
+            }
+            mpItemXY[0]->paneTrans(sBeltX[0], sBeltY[0]);
+            mpItemXY[1]->paneTrans(sBeltX[1], sBeltY[1]);
+        }
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
 #endif
 
     mpScreen->draw(0.0f, 0.0f, graf_ctx);
@@ -728,7 +916,8 @@ void dMeter2Draw_c::draw() {
     if (!touchControlsEnabled) {
 #endif
     for (int i = 0; i < 2; i++) {
-        if (mpItemXY[i] != NULL) {
+        // LoP hides the X/Y ring items, so skip their ammo-count digits too.
+        if (mpItemXY[i] != NULL && !mLopHudActive) {
             for (int j = 0; j < 3; j++) {
                 f32 temp_f30 = mItemParams[i].num_scale * 16.0f;
 #if TARGET_PC
@@ -752,7 +941,10 @@ void dMeter2Draw_c::draw() {
     }
 
     if (!dComIfGp_isPauseFlag() && mpButtonParent->getAlphaRate() != 0.0f) {
-        if (field_0x608 > 0.0f) {
+        // LoP keeps only the B box, so skip the A and X/Y pikari glows — those draw
+        // after the screen (bypassing the pane hide) and would flash where the
+        // hidden A / X / Y buttons used to be (e.g. on context A-actions like roll).
+        if (field_0x608 > 0.0f && !mLopHudActive) {
             drawPikari(mpBTextA, &field_0x608, g_drawHIO.mButtonAPikariScale,
                        g_drawHIO.mButtonAPikariFrontOuter, g_drawHIO.mButtonAPikariFrontInner,
                        g_drawHIO.mButtonAPikariBackOuter, g_drawHIO.mButtonAPikariBackInner,
@@ -767,7 +959,7 @@ void dMeter2Draw_c::draw() {
         }
 
         for (int i = 0; i < 2; i++) {
-            if (field_0x620[i] > 0.0f) {
+            if (field_0x620[i] > 0.0f && !mLopHudActive) {
                 drawPikari(mpBTextXY[i], &field_0x620[i], g_drawHIO.mButtonXYPikariScale,
                            g_drawHIO.mButtonXYPikariFrontOuter, g_drawHIO.mButtonXYPikariFrontInner,
                            g_drawHIO.mButtonXYPikariBackOuter, g_drawHIO.mButtonXYPikariBackInner,
@@ -1898,6 +2090,38 @@ bool dMeter2Draw_c::getShieldHudAnchorCenter(Vec* o_center) const {
         return false;
     }
 
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port (Lies of Link HUD)
+    // In LoP layout the bash shield icons + wolf charges leave the rupee corner and
+    // cluster bottom-left, on the (hidden but still positioned) d-pad cross. Same
+    // global vertex space as the HUD panes (widescreen / hud-scale safe).
+    // ============================================
+    if (mLopHudActive) {
+        if (mLopShieldAnchorValid) {
+            *o_center = mLopShieldAnchor;
+            return true;
+        }
+        if (mpButtonCrossParent != NULL && mpButtonCrossParent->getPanePtr() != NULL) {
+            Vec c = mpButtonCrossParent->getGlobalVtxCenter(false, 0);
+            c.x += kLopSpurAnchorOffX;
+            c.y += kLopSpurAnchorOffY;
+            *o_center = c;
+            return true;
+        }
+        if (mpLifeParent != NULL && mpLifeParent->getPanePtr() != NULL) {
+            Vec c = mpLifeParent->getGlobalVtxCenter(false, 0);
+            c.x += kLopSpurAnchorOffX;
+            c.y += 360.0f;
+            *o_center = c;
+            return true;
+        }
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
+
     if (mpRupeeKeyParent != NULL && mpRupeeKeyParent->getPanePtr() != NULL) {
         *o_center = mpRupeeKeyParent->getGlobalVtxCenter(false, 0);
         return true;
@@ -2119,6 +2343,11 @@ void dMeter2Draw_c::setAlphaMagicAnimeMax() {
     }
 }
 
+#if TARGET_PC
+// LoP durability: fine-tune offsets for the relocated bar (HUD design px).
+static constexpr f32 kLopDurabilityOffX = -8.0f;  // nudge left to align with icons
+#endif
+
 void dMeter2Draw_c::drawShieldDurabilityBelowAlbw() {
     if (!dShield_shouldDrawDurabilityHud() || dShield_getDurabilityMax() == 0 ||
         mMeterAlphaRate[0] <= 0.0f) {
@@ -2135,17 +2364,62 @@ void dMeter2Draw_c::drawShieldDurabilityBelowAlbw() {
         return;
     }
 
-    const f32 albwX = field_0x5e4[0];
-    const f32 albwY = field_0x5f0[0];
-    const f32 albwScaleY = field_0x5d8[0];
-    const f32 shieldY = albwY + mpMagicBase->getInitSizeY() * albwScaleY + 8.0f;
-
     const u16 cur = dShield_getDurability();
     const u16 max = dShield_getDurabilityMax();
     const s16 fill32 = (max > 0) ? (s16)((u32)cur * 32U / max) : 0;
-    const f32 widthScale = dShield_getDurabilityMeterWidthScale();
+    f32 widthScale = dShield_getDurabilityMeterWidthScale();
 
-    applyMagicMeterLayoutTransient(32, fill32, albwX, shieldY, widthScale, 0);
+    f32 barX, barY;
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port (Lies of Link HUD)
+    // LoP: keep the original kantera durability-meter style, but move it beneath the
+    // bottom-left shield-icon row. The row coords are GLOBAL; the kantera meter draws
+    // in its screen's local space (scale 1, fixed root offset vs the global ortho).
+    // Convert the global target to local by subtracting that offset — measured once
+    // from the just-drawn ALBW meter (its global corner0 minus its paneTrans). Width
+    // spans the shield row.
+    // ============================================
+    if (mLopHudActive) {
+        ShieldRowLayout row;
+        if (!dShield_getLastRowLayout(&row) || row.iconW < 1.0f) {
+            return;
+        }
+        const f32 rowSpan =
+            row.slotCount > 1 ? row.spacing * (f32)(row.slotCount - 1) + row.iconW : row.iconW;
+        const f32 targetX = row.firstCenterX - row.iconW * 0.5f + kLopDurabilityOffX;
+        const f32 targetY = row.centerY + row.iconW * 0.5f + kLopDurabilityGapPx;
+
+        static bool sKanteraOffCached = false;
+        static f32 sKanteraOffX = 0.0f;
+        static f32 sKanteraOffY = 0.0f;
+        if (!sKanteraOffCached) {
+            Mtx m;
+            J2DPane* mp = mpMagicParent->getPanePtr();
+            const Vec c0 = mpMagicParent->getGlobalVtx(mp, &m, 0, false, 0);
+            sKanteraOffX = c0.x - field_0x5e4[0];
+            sKanteraOffY = c0.y - field_0x5f0[0];
+            sKanteraOffCached = true;
+        }
+        barX = targetX - sKanteraOffX;
+        barY = targetY - sKanteraOffY;
+
+        const f32 baseW = mpMagicBase->getInitSizeX() * g_drawHIO.mMagicMeterScale;
+        widthScale = (baseW > 0.0f) ? (rowSpan / baseW) : widthScale;
+    } else
+#endif
+    {
+        const f32 albwX = field_0x5e4[0];
+        const f32 albwY = field_0x5f0[0];
+        const f32 albwScaleY = field_0x5d8[0];
+        barX = albwX;
+        barY = albwY + mpMagicBase->getInitSizeY() * albwScaleY + 8.0f;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+
+    applyMagicMeterLayoutTransient(32, fill32, barX, barY, widthScale, 0);
 
     switch (dShield_getDurabilityTierStyle()) {
     case 0:
@@ -2475,8 +2749,32 @@ void dMeter2Draw_c::drawRupee(s16 i_rupeeNum) {
 
     f32 rupeeKeyPosX = g_drawHIO.mRupeeKeyPosX;
     f32 rupeeKeyPosY = g_drawHIO.mRupeeKeyPosY;
-    // Rupees/keys read better anchored to the bottom-right corner than the top-right.
-    dAnchorHudScale(mpRupeeKeyParent, HudCorner::BottomRight, &rupeeKeyPosX, &rupeeKeyPosY);
+    // ============================================
+    // NEW CODE — ALBW Port (Lies of Link HUD)
+    // LoP lifts the wallet from the bottom-right to the top-right, level with the
+    // heart row. The lift is measured once from the wallet-vs-life row difference
+    // (in local paneTrans units) and held so it doesn't oscillate frame to frame.
+    // ============================================
+    HudCorner rupeeCorner = HudCorner::BottomRight;
+    if (mLopHudActive) {
+        static bool sLopRupeeYCached = false;
+        static f32 sLopRupeeYOffset = 0.0f;
+        if (!sLopRupeeYCached && mpLifeParent != NULL && mpLifeParent->getPanePtr() != NULL &&
+            mpRupeeKeyParent->getPanePtr() != NULL) {
+            const Vec lifeC = mpLifeParent->getGlobalVtxCenter(false, 0);
+            const Vec rupeeC = mpRupeeKeyParent->getGlobalVtxCenter(false, 0);
+            const f32 scl = std::max(mpRupeeKeyParent->getScaleY(), 0.001f);
+            sLopRupeeYOffset = (lifeC.y - rupeeC.y) / scl;
+            sLopRupeeYCached = true;
+        }
+        rupeeKeyPosY += sLopRupeeYOffset;
+        rupeeCorner = HudCorner::TopRight;
+    }
+    // Rupees/keys read better anchored to the bottom-right corner (top-right in LoP).
+    dAnchorHudScale(mpRupeeKeyParent, rupeeCorner, &rupeeKeyPosX, &rupeeKeyPosY);
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     mpRupeeKeyParent->paneTrans(rupeeKeyPosX, rupeeKeyPosY);
 #else
     mpRupeeKeyParent->scale(g_drawHIO.mRupeeKeyScale * field_0x718,
@@ -3137,10 +3435,67 @@ void dMeter2Draw_c::drawButtonCross(f32 i_posX, f32 i_posY) {
     f32 buttonCrossPosY = i_posY;
     dAnchorHudScale(mpButtonCrossParent, HudCorner::TopLeft, &buttonCrossPosX, &buttonCrossPosY);
     mpButtonCrossParent->paneTrans(buttonCrossPosX, buttonCrossPosY);
+
+    // ============================================
+    // NEW CODE — ALBW Port (Lies of Link HUD)
+    // Hide the whole d-pad cross cluster (+ graphic, ITEMS/MAP arrows + words, quick
+    // item slots) for a clean bottom-left. The Midna icon is a separate screen pane
+    // (midona_n) so it stays. Restored when the layout is off. The paneTrans above
+    // still ran, so Midna's cross-relative positioning is intact.
+    // ============================================
+    if (mLopHudActive) {
+        mpButtonCrossParent->hide();
+    } else {
+        mpButtonCrossParent->show();
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
 #else
     mpButtonCrossParent->paneTrans(i_posX, i_posY);
 #endif
 }
+
+#if TARGET_PC
+// ============================================
+// NEW CODE — ALBW Port (Lies of Link HUD)
+// Undo the bottom-right ring trim: show every cont_n child (vine + buttons) plus the
+// panes hidden off the screen root (item icons, labels), so when the layout toggles
+// off the vanilla button redraw can re-apply correct visibility. ju_ring5 stays
+// hidden (its init default). Called on toggle change from d_meter2.cpp.
+// ============================================
+void dMeter2Draw_c::lopRestoreButtonRing() {
+    if (mpButtonParent != NULL && mpButtonParent->getPanePtr() != NULL) {
+        for (J2DPane* c = mpButtonParent->getPanePtr()->getFirstChildPane(); c != NULL;
+             c = c->getNextChildPane()) {
+            if (c->mInfoTag != MULTI_CHAR('ju_ring5')) {
+                c->show();
+            }
+        }
+    }
+    lopShowPane(mpButtonA);
+    lopShowPane(mpButtonXY[0]);
+    lopShowPane(mpButtonXY[1]);
+    lopShowPane(mpButtonXY[2]);
+    lopShowPane(mpBTextA);
+    lopShowPane(mpBTextXY[0]);
+    lopShowPane(mpBTextXY[1]);
+    lopShowPane(mpBTextXY[2]);
+    lopShowPane(mpTextA);
+    lopShowPane(mpTextB);
+    lopShowPane(mpTextXY[0]);
+    lopShowPane(mpTextXY[1]);
+    lopShowPane(mpTextXY[2]);
+    lopShowPane(mpItemXY[0]);
+    lopShowPane(mpItemXY[1]);
+    for (int i = 0; i < 5; i++) {
+        lopShowPane(mpAText[i]);
+    }
+}
+#endif
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
 void dMeter2Draw_c::setAlphaButtonCrossAnimeMin() {
     if (mpButtonCrossParent->getAlphaRate() != 0.0f) {

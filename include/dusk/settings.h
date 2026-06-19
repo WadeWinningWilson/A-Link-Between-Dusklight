@@ -196,6 +196,10 @@ struct UserSettings {
         ConfigVar<ParryIcons> parryIconsMode;
         // Boss health bar HUD (name + bar) for main dungeon bosses / Ganondorf duel.
         ConfigVar<bool> bossHealthBars;
+        // Lies of Link HUD: relayout vanilla HUD into a Lies-of-P spatial arrangement
+        // (top-left life/meter/shield stack, top-right rupees, bottom-left items/spurs).
+        // Off = vanilla TP corner layout. See docs/albw-hud-lop-layout-brief.md.
+        ConfigVar<bool> lopHud;
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================

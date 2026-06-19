@@ -112,10 +112,12 @@ When **Boss Refinement OFF**: vanilla egg logic (`field_0x1ad5 == 2` / arrow cou
 - **Opening gates** (75/45/15) queue ceiling drop — verify drop animation actually fires
 - Arrow damage may still feel strong — check if vanilla `cc_at_check` path also reduces HP outside Boss Refinement chip
 
-### Armogohma HP bar (phase 2)
+### Armogohma HP bar (composite meter — planned)
 
-- Phase 1: `B_GM` body pool
-- Phase 2: routes to floor eye actor `E_GM` param 3 via `dAlbwBoss_armogohmaQueryHealthBar()`
+**Spec (no code yet):** [albw-armogohma-boss-bar-spec.md](albw-armogohma-boss-bar-spec.md)
+
+- One bar, both actors: phase 1 = `B_GM` refinement pool → **fillRatio 1.0..0.5**; phase 2 = `E_GM` TYPE_GOMA hit counter (`field_0xa74`) → **0.5..0.0**
+- HUD draws **`fillWidth = barW * fillRatio` only** — layout/name constants stay in `d_albw_boss_hp_hud.cpp`
 - Bow arrow vanilla damage suppressed in `d_cc_uty.cpp` when Refinement on; chip handled in `dAlbwBoss_armogohmaOnBowCoreHit()`
 
 ---
@@ -154,6 +156,7 @@ Integrates with `d_albw_shield.cpp` bash charge economy and `d_albw_lockout.cpp`
 - **File:** `src/d/d_albw_boss_hp_hud.cpp`
 - **HP source:** `dAlbwHP_getLockonDisplayHp(boss)` — do not duplicate HP math in HUD
 - **Art brief:** [albw-boss-hp-hud-tuning-brief.md](albw-boss-hp-hud-tuning-brief.md)
+- **Armogohma composite meter:** [albw-armogohma-boss-bar-spec.md](albw-armogohma-boss-bar-spec.md)
 
 Target look: Lies of P proportions — thin crimson fill `(176,8,8)`, translucent charcoal track `(18,18,22)` @ ~66% alpha, small white name with thin outline.
 

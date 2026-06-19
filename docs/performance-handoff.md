@@ -2,7 +2,9 @@
 
 **Read first:** [performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md) (full evidence tables Tracks B–J).
 
-**Build discipline:** [build-fps-guidelines.md](build-fps-guidelines.md) — canonical preset, launch hygiene, merge rules. Follow before reporting FPS or handing off a WIP build.
+**Build discipline:** [build-fps-guidelines.md](build-fps-guidelines.md) — canonical preset, launch hygiene, merge rules.
+
+**New instance?** For **build review / FPS optimization** (not feature implementation), use the **doc map** in [build-fps-guidelines.md](build-fps-guidelines.md) § “Doc map — read in this order”. HUD work also needs [hud-performance-handoff.md](hud-performance-handoff.md). This file is for hitch/profiler research; the build-analysis chat usually does not need Tracks B–J unless investigating cliffs.
 
 ## User goal (non-negotiable)
 

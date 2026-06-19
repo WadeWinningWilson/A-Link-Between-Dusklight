@@ -62,6 +62,9 @@ albw_backup_*/
 # ALBW temp debug dumps from dev sessions
 albw_*_debug.txt
 
+# Local-only captured diagnostic dumps (preserved for reference, never commit)
+Diagnostic files/
+
 # Agent build logs
 build_stdout.txt
 build_stderr.txt

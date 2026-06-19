@@ -1115,6 +1115,37 @@ int dMeter2_c::_execute() {
     moveLightDrop();
     moveRupee();
     moveKey();
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port (Lies of Link HUD)
+    // The A/B/R/Z and X/Y button groups only redraw on a status change, so flipping
+    // the layout toggle wouldn't restore the vanilla ring (nor re-apply the LoP
+    // trim). Invalidate their cached statuses on toggle change to force one redraw;
+    // each move function self-corrects its cache the same frame.
+    // ============================================
+    {
+        static bool sButtonsLopWasOn = false;
+        const bool lopOn = dusk::getSettings().game.lopHud.getValue();
+        if (sButtonsLopWasOn != lopOn) {
+            sButtonsLopWasOn = lopOn;
+            // Show every ring child first (restores the vine + decorations the LoP
+            // sweep hid — vanilla's button redraw doesn't manage those), then force
+            // the button groups to redraw so they re-apply correct visibility.
+            mpMeterDraw->lopRestoreButtonRing();
+            mDoStatus = 0xFF;
+            mAStatus = 0xFF;
+            mRStatus = 0xFF;
+            mZStatus = 0xFF;
+            mItemStatus[0] = 0xFF;
+            mItemStatus[1] = 0xFF;
+            mItemStatus[2] = 0xFF;
+            mItemStatus[3] = 0xFF;
+        }
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
     moveButtonXY();
     moveButtonA();
     moveButtonB();
@@ -2368,6 +2399,26 @@ void dMeter2_c::moveRupee() {
         draw_rupee = true;
     }
 
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port (Lies of Link HUD)
+    // drawRupee() (which carries the LoP top-right reposition) only runs when the
+    // wallet is animating. Force a re-layout when the layout toggle flips so the
+    // wallet snaps to / from the LoP corner without needing a rupee change.
+    // ============================================
+    {
+        static bool sRupeeLopWasOn = false;
+        const bool lopOn = dusk::getSettings().game.lopHud.getValue();
+        if (sRupeeLopWasOn != lopOn) {
+            sRupeeLopWasOn = lopOn;
+            draw_rupee = true;
+        }
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
+
     if (draw_rupee == true) {
         mpMeterDraw->drawRupee(mRupeeNum);
     }
@@ -3395,6 +3446,26 @@ void dMeter2_c::moveButtonCross() {
         }
         draw_cross = true;
     }
+
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port (Lies of Link HUD)
+    // drawButtonCross() carries the LoP show/hide of the whole cross cluster but
+    // only runs while the cross is animating. Force a re-layout on toggle change so
+    // the cross hides/restores without needing an item/map open animation.
+    // ============================================
+    {
+        static bool sCrossLopWasOn = false;
+        const bool lopOn = dusk::getSettings().game.lopHud.getValue();
+        if (sCrossLopWasOn != lopOn) {
+            sCrossLopWasOn = lopOn;
+            draw_cross = true;
+        }
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
 
     if (draw_cross == true) {
         mpMeterDraw->drawButtonCross(temp_f30, field_0x15c);

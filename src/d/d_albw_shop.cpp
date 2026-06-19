@@ -1330,90 +1330,6 @@ static void drawFooterTextBlock(J2DGrafContext* gfx, JUTFont* font, const LetAre
     font->popDrawState();
 }
 
-// ============================================
-// NEW CODE — ALBW Port (TEMP shop layout diagnostic — Build 1)
-// One-shot dump to Documents/dusklight/albw_shop_layout_debug.txt of the
-// list/parchment geometry and every visible footer-band pane on the base /
-// shadow / menu screens.  Feeds Part A (flame_* width + list scissor) and
-// Bug 2 (exact leaked L/R footer pane tags).  Remove once both are tuned.
-// ============================================
-static void decodePaneTag(u64 tag, char out[9]) {
-    int n = 0;
-    for (int shift = 56; shift >= 0; shift -= 8) {
-        const char c = (char)((tag >> shift) & 0xFF);
-        if (c != '\0') {
-            out[n++] = c;
-        }
-    }
-    out[n] = '\0';
-}
-
-static void dumpFooterBandPanes(FILE* fp, J2DPane* pane, const char* screenName, f32 bandTop,
-                                f32 bandBot) {
-    if (!pane) {
-        return;
-    }
-    if (pane->isVisible()) {
-        const LetAreaBounds b = calcPaneScreenBounds(pane);
-        if (b.valid && (b.y + b.h) >= bandTop && b.y <= bandBot) {
-            char tag[9];
-            decodePaneTag(pane->mInfoTag, tag);
-            fprintf(fp, "  [%-4s] tag='%s' x=%.1f y=%.1f w=%.1f h=%.1f\n", screenName, tag, b.x, b.y,
-                    b.w, b.h);
-        }
-    }
-    for (J2DPane* c = pane->getFirstChildPane(); c; c = c->getNextChildPane()) {
-        dumpFooterBandPanes(fp, c, screenName, bandTop, bandBot);
-    }
-}
-
-static void dumpShopLayoutDebug(J2DScreen* baseScreen, J2DScreen* sdwScreen, J2DScreen* menuScreen,
-                                const LetAreaBounds& area, f32 listW, f32 descX, f32 descW,
-                                const LetAreaBounds& footerBar, J2DPicture* const* rowFrames,
-                                f32 listScissorX, f32 listScissorW) {
-    char path[512];
-    path[0] = '\0';
-    const char* user = getenv("USERPROFILE");
-    if (user && user[0] != '\0') {
-        snprintf(path, sizeof(path), "%s/Documents/dusklight/albw_shop_layout_debug.txt", user);
-    } else {
-        strncpy(path, "albw_shop_layout_debug.txt", sizeof(path) - 1);
-    }
-    FILE* fp = fopen(path, "w");
-    if (!fp) {
-        return;
-    }
-    fprintf(fp, "--- ALBW shop layout debug ---\n");
-    fprintf(fp, "area:        x=%.1f y=%.1f w=%.1f h=%.1f\n", area.x, area.y, area.w, area.h);
-    fprintf(fp, "listW=%.1f descX=%.1f descW=%.1f\n", listW, descX, descW);
-    fprintf(fp, "listScissor: x=%.1f w=%.1f rightEdge=%.1f\n", listScissorX, listScissorW,
-            listScissorX + listScissorW);
-    fprintf(fp, "footerBar:   x=%.1f y=%.1f w=%.1f h=%.1f valid=%d\n", footerBar.x, footerBar.y,
-            footerBar.w, footerBar.h, (int)footerBar.valid);
-    for (int i = 0; i < 6; ++i) {
-        if (rowFrames[i]) {
-            const LetAreaBounds b = calcPaneScreenBounds(rowFrames[i]);
-            // local width/height = the pane's own mBounds (pre-screen-scale); typeID tells us if
-            // it's a plain J2DPicture (stretches to bounds) or a window/other (does not).
-            fprintf(fp,
-                    "flame_%02d:    canvas[x=%.1f y=%.1f w=%.1f h=%.1f] local[w=%.1f h=%.1f] "
-                    "type=%u valid=%d\n",
-                    i, b.x, b.y, b.w, b.h, rowFrames[i]->getWidth(), rowFrames[i]->getHeight(),
-                    (unsigned)rowFrames[i]->getTypeID(), (int)b.valid);
-        }
-    }
-    const f32 bandTop = footerBar.valid ? footerBar.y - 12.0f : area.y + area.h - 60.0f;
-    const f32 bandBot =
-        footerBar.valid ? footerBar.y + footerBar.h + 12.0f : area.y + area.h + 60.0f;
-    fprintf(fp, "footer-band visible panes [%.1f..%.1f]:\n", bandTop, bandBot);
-    dumpFooterBandPanes(fp, baseScreen, "base", bandTop, bandBot);
-    dumpFooterBandPanes(fp, sdwScreen, "sdw", bandTop, bandBot);
-    dumpFooterBandPanes(fp, menuScreen, "menu", bandTop, bandBot);
-    fclose(fp);
-}
-// ============================================
-// NEW CODE ENDS HERE
-// ============================================
 
 // ============================================
 // NEW CODE — ALBW Port (Footer draw — single horizontal bar)
@@ -2500,15 +2416,6 @@ void dALBWShop_c::draw() {
         const f32 listW = area.w * kListColumnRatio;
         const f32 descX = area.x + listW + kListDescGap;
         const f32 descW = area.w - listW - kListDescGap;
-
-        // TEMP one-shot layout diagnostic (Build 1) — geometry + footer L/R tags.
-        static bool sLayoutDumped = false;
-        if (!sLayoutDumped) {
-            sLayoutDumped = true;
-            dumpShopLayoutDebug(mpBaseScreen, mpSdwScreen, mpMenuScreen, area, listW, descX, descW,
-                                footerBar, mpRowFrame, area.x - kListIconScissorPad,
-                                listW + kListIconScissorPad);
-        }
 
         applyListColumnLayout(area.x, listW);
         for (int row = 0; row < 6; ++row) {

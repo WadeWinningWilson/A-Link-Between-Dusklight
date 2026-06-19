@@ -68,6 +68,9 @@ public:
     void setAlphaMagicAnimeMin();
     void setAlphaMagicAnimeMax();
     void drawShieldDurabilityBelowAlbw();
+    // LoP layout: show every cont_n ring child (undo the bottom-right trim) so the
+    // vanilla button redraw can then re-apply correct visibility. Called on toggle.
+    void lopRestoreButtonRing();
     bool getRupeeAnchorCenter(Vec* o_center) const;
     bool getShieldHudAnchorCenter(Vec* o_center) const;
     f32 getRupeeHudReferenceSize() const;
@@ -77,6 +80,7 @@ public:
     // centre Y of the rupee counter digits.
     bool getRupeeDigitMetrics(f32* o_width, f32* o_height, f32* o_advance,
                               f32* o_leftCenterX, f32* o_centerY) const;
+    bool isLopHudActive() const { return mLopHudActive; }
     // ============================================
     // NEW CODE ENDS HERE
     // ============================================
@@ -400,6 +404,9 @@ private:
     /* 0x860 */ u8 field_0x860[2];
 #if TARGET_PC
     bool mShowMidnaIcon{};
+    bool mLopHudActive{};
+    bool mLopShieldAnchorValid{};
+    Vec mLopShieldAnchor{};
     void applyMagicMeterSlot(u8 i_slot);
     void layoutMagicMeterSlot(u8 i_slot, s16 i_max, s16 i_fill, f32 i_posX, f32 i_posY,
                               f32 i_widthScale);
@@ -408,5 +415,9 @@ private:
                                         f32 i_widthScale, u8 i_alphaSlot);
 #endif
 };
+
+#if TARGET_PC
+bool dLopHudOn();
+#endif
 
 #endif /* D_METER_D_METER2_DRAW_H */

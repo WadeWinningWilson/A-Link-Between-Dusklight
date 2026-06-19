@@ -2,6 +2,8 @@
 
 **Audience:** You and Cursor agents. This fork is **`WadeWinningWilson/ALBW-Dusklight`**, not `TwilitRealm/dusklight`.
 
+**Build analysis chat:** After HUD/gameplay changes, validate FPS per [build-fps-guidelines.md](build-fps-guidelines.md) (and [hud-performance-handoff.md](hud-performance-handoff.md) if HUD touched) **before** commit. Doc map for reviewers: [build-fps-guidelines.md](build-fps-guidelines.md) § “Doc map”.
+
 **Related:** [build-fps-guidelines.md](build-fps-guidelines.md) (build before commit if gameplay changed), [performance-handoff.md](performance-handoff.md) (perf investigation only).
 
 ---

@@ -88,6 +88,24 @@ bool dShield_isBashSpendChainActive();
 
 void dShield_drawBashCharges();
 
+// ============================================
+// NEW CODE — ALBW Port (Lies of Link HUD)
+// Bounds of the last-drawn LoP shield-icon row in the HUD global ortho, so the
+// relocated durability bar can group with the icons (left-align + width + Y).
+// ============================================
+struct ShieldRowLayout {
+    f32 firstCenterX;  // global X of the first icon's center
+    f32 centerY;       // global Y of the icon row centre
+    f32 iconW;         // drawn icon width (≈ height)
+    f32 spacing;       // distance between icon centres
+    u8 slotCount;      // icons in the row
+    bool valid;
+};
+bool dShield_getLastRowLayout(ShieldRowLayout* o_row);
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
 #endif // TARGET_PC
 
 #endif // D_ALBW_SHIELD_H

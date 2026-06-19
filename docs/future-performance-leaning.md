@@ -2,7 +2,7 @@
 
 Tracking doc for restoring **stable 144 FPS in all play scenarios**. **User-confirmed golden baseline:** merge commit **`76b715abc6`** (Dusklight **v1.4.0** + ALBW) held **144 FPS consistently** — title, file select, overworld, combat (including bokoblins on main Hyrule Field), and **Armogohma**. Trust this baseline; current sub-60 field drops are **unacceptable**.
 
-**Status (2026-06-18):** Automated drive bisect **Tracks B–J complete** — see **[performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md)** and **[performance-handoff.md](performance-handoff.md)**. Mean FPS ~143.8–144 on good oracle sessions; **intermittent ~105 cliffs** (~17% of sessions) on both WIP and v1.4.1. **Next:** profiler on hitch frame. **Build discipline:** [build-fps-guidelines.md](build-fps-guidelines.md).
+**Status (2026-06-18):** Automated drive bisect **Tracks B–J complete** — see **[performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md)** and **[performance-handoff.md](performance-handoff.md)**. Mean FPS ~143.8–144 on good oracle sessions; **intermittent ~105 cliffs** (~17% of sessions) on both WIP and v1.4.1. **Next:** profiler on hitch frame. **Build discipline:** [build-fps-guidelines.md](build-fps-guidelines.md). **Build-analysis chat:** doc map in build-fps-guidelines § “Doc map”; HUD: [hud-performance-handoff.md](hud-performance-handoff.md).
 
 **Correct test scenes (confirmed):** main Hyrule Field — `F_SP121` room `0` point `0` (save-editor default); Armogohma — `D_MN06A`. Do not substitute other warps.
 

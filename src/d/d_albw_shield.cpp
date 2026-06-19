@@ -259,6 +259,26 @@ ShieldTier sHudIconTier = ShieldTier::None;
 // Parry-icon mode currently applied (-1 = none yet). On change the HUD is
 // rebuilt so the original spur texture / starburst visibility are restored.
 int sHudAppliedMode = -1;
+// Shield texture successfully applied this cycle. Shield Only draws ONLY when
+// true, so a transient frame (tier momentarily None) can't flash the spur.
+bool sHudShieldApplied = false;
+// Cached off-pane shield picture (avoids per-frame findFirstPicture in Shield Only).
+J2DPicture* sHudShieldOffPic = NULL;
+
+// ============================================
+// NEW CODE — ALBW Port (Lies of Link HUD)
+// Shield-row layout tuning + the last-drawn row bounds (HUD global ortho) so the
+// relocated durability bar can group with the icons. Tuned in the Ordon field.
+// ============================================
+static constexpr f32 kLopShieldIconScaleMul = 0.82f;  // slightly smaller than spur
+static constexpr f32 kLopShieldSpacingMul = 1.12f;    // gap as × drawn icon width
+static constexpr f32 kLopShieldRowDownPx = 16.0f;     // row offset below the anchor
+static ShieldRowLayout sLastShieldRow = {0.0f, 0.0f, 0.0f, 0.0f, 0, false};
+// dShield_getLastRowLayout() is defined outside this anonymous namespace (external
+// linkage) so d_meter2_draw.cpp's durability bar can read these bounds.
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
 BashHudLayout computeBashHudLayout() {
     BashHudLayout layout = {BASH_ICON_SCALE_FALLBACK * g_drawHIO.mSpurIconScale,
@@ -288,6 +308,22 @@ BashHudLayout computeBashHudLayout() {
     layout.iconScale = g_drawHIO.mSpurIconScale * (rupeeSize / hakushaBase);
     layout.spacing = rupeeSize * 1.08f;
     layout.rowOffsetY = rupeeSize * 1.12f;
+
+    // ============================================
+    // NEW CODE — ALBW Port (Lies of Link HUD)
+    // Bottom-left shield row: derive spacing from the *drawn pane width* (not rupee
+    // size) so the wider Ordon emblem panes don't overlap; shrink slightly; use a
+    // fixed vertical offset so the row sits under the item cluster.
+    // ============================================
+    if (dLopHudOn()) {
+        layout.iconScale *= kLopShieldIconScaleMul;
+        const f32 iconW = hakushaBase * layout.iconScale;
+        layout.spacing = iconW * kLopShieldSpacingMul;
+        layout.rowOffsetY = kLopShieldRowDownPx;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     return layout;
 }
 
@@ -694,13 +730,28 @@ void applyParryIcons(ShieldTier i_tier) {
     const dusk::ParryIcons mode = dusk::getSettings().game.parryIconsMode.getValue();
     sHudIconTier = i_tier;
     sHudAppliedMode = static_cast<int>(mode);
+    sHudShieldApplied = false;
+    sHudShieldOffPic = NULL;
 
-    if (mode == dusk::ParryIcons::SpurOnly) {
-        return;  // original spur graphic, no shield
+    if (mode == dusk::ParryIcons::SpurOnly || sHud.mpIconOn == NULL || sHud.mpIconOff == NULL) {
+        return;
+    }
+
+    J2DPicture* onPic = findFirstPicture(sHud.mpIconOn->getPanePtr());
+    J2DPicture* offPic = findFirstPicture(sHud.mpIconOff->getPanePtr());
+    const bool shieldOnly = (mode == dusk::ParryIcons::ShieldOnly);
+
+    if (shieldOnly) {
+        if (onPic) {
+            hideOtherPictures(sHud.mpIconOn->getPanePtr(), onPic);
+        }
+        if (offPic) {
+            hideOtherPictures(sHud.mpIconOff->getPanePtr(), offPic);
+        }
     }
 
     const char* bti = shieldIconBtiForTier(i_tier);
-    if (bti == NULL || sHud.mpIconOn == NULL || sHud.mpIconOff == NULL) {
+    if (bti == NULL) {
         return;
     }
     JKRArchive* arc = dComIfGp_getItemIconArchive();
@@ -714,30 +765,20 @@ void applyParryIcons(ShieldTier i_tier) {
             timg = static_cast<ResTIMG*>(arc->getIdxResource(idx));
         }
     }
-    shieldIconDbg("apply: tier=%d mode=%d selEquip=0x%X bti=%s arc=%p timg=%p\n", (int)i_tier,
-                  (int)mode, (unsigned)dComIfGs_getSelectEquipShield(), bti, (void*)arc,
-                  (void*)timg);
     if (timg == NULL) {
         return;
     }
 
-    const bool shieldOnly = (mode == dusk::ParryIcons::ShieldOnly);
-
-    if (J2DPicture* on = findFirstPicture(sHud.mpIconOn->getPanePtr())) {
-        on->changeTexture(timg, 0);
-        on->setBlackWhite(JUtility::TColor(0, 0, 0, 0), JUtility::TColor(255, 255, 255, 255));
-        if (shieldOnly) {
-            hideOtherPictures(sHud.mpIconOn->getPanePtr(), on);
-        }
+    if (onPic) {
+        onPic->changeTexture(timg, 0);
+        onPic->setBlackWhite(JUtility::TColor(0, 0, 0, 0), JUtility::TColor(255, 255, 255, 255));
     }
-    if (J2DPicture* off = findFirstPicture(sHud.mpIconOff->getPanePtr())) {
-        off->changeTexture(timg, 0);
-        // Greyed/desaturated for the unearned (empty) charge slot.
-        off->setBlackWhite(JUtility::TColor(0, 0, 0, 0), JUtility::TColor(105, 105, 105, 255));
-        if (shieldOnly) {
-            hideOtherPictures(sHud.mpIconOff->getPanePtr(), off);
-        }
+    if (offPic) {
+        offPic->changeTexture(timg, 0);
+        offPic->setBlackWhite(JUtility::TColor(0, 0, 0, 0), JUtility::TColor(105, 105, 105, 255));
+        sHudShieldOffPic = offPic;
     }
+    sHudShieldApplied = true;
 }
 
 // TEMP diagnostic: log shield-icon detection/apply to
@@ -839,8 +880,10 @@ void deleteBashHud() {
         sHud.mpIconScreen = NULL;
     }
     sHud.ready = false;
-    sHudIconTier = ShieldTier::None;  // force icon re-apply when the HUD is rebuilt
+    sHudIconTier = ShieldTier::None;
     sHudAppliedMode = -1;
+    sHudShieldApplied = false;
+    sHudShieldOffPic = NULL;
 }
 
 bool ensureBashHud() {
@@ -918,6 +961,23 @@ void tickDenyPikari() {
 }
 
 } // namespace
+
+// ============================================
+// NEW CODE — ALBW Port (Lies of Link HUD)
+// External-linkage accessor for the last-drawn shield-row bounds (filled inside the
+// anonymous namespace by dShield_drawBashCharges) so the relocated durability bar in
+// d_meter2_draw.cpp can group beneath the icons.
+// ============================================
+bool dShield_getLastRowLayout(ShieldRowLayout* o_row) {
+    if (o_row == NULL || !sLastShieldRow.valid) {
+        return false;
+    }
+    *o_row = sLastShieldRow;
+    return true;
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
 bool dShield_isParryCombatEnabled() {
     return dusk::getSettings().game.shieldParryCombat;
@@ -1659,8 +1719,30 @@ void dShield_drawBashCharges() {
         }
     }
     const f32 totalWidth = layout.spacing * (f32)(maxCharges - 1);
-    f32 posX = rupeeCenter.x - totalWidth * 0.5f;
-    const f32 posY = rupeeCenter.y - layout.rowOffsetY;
+    // ============================================
+    // NEW CODE — ALBW Port (Lies of Link HUD)
+    // LoP left-aligns the row (first icon centre = anchor) and drops it below the
+    // anchor; vanilla centres the row above the wallet. Cache the row bounds so the
+    // durability bar can group beneath the icons (see drawShieldDurabilityBelowAlbw).
+    // ============================================
+    const bool lopRow = dLopHudOn();
+    f32 posX = lopRow ? rupeeCenter.x : (rupeeCenter.x - totalWidth * 0.5f);
+    const f32 posY =
+        lopRow ? (rupeeCenter.y + layout.rowOffsetY) : (rupeeCenter.y - layout.rowOffsetY);
+    if (lopRow) {
+        const f32 hakushaBase = sHud.mpIconOn->getInitSizeX() * sHud.mpIconOn->getInitScaleX();
+        sLastShieldRow.firstCenterX = posX;
+        sLastShieldRow.centerY = posY;
+        sLastShieldRow.iconW = hakushaBase * layout.iconScale;
+        sLastShieldRow.spacing = layout.spacing;
+        sLastShieldRow.slotCount = maxCharges;
+        sLastShieldRow.valid = true;
+    } else {
+        sLastShieldRow.valid = false;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
 
     J2DGrafContext* grafCtx = dComIfGp_getCurrentGrafPort();
     if (grafCtx == NULL) {
@@ -1680,14 +1762,18 @@ void dShield_drawBashCharges() {
         const bool filled = (u8)i < charges;
 
         if (shieldOnlyMode) {
+            if (!sHudShieldApplied || sHudShieldOffPic == NULL) {
+                sHud.mpIconOn->hide();
+                sHud.mpIconOff->hide();
+                posX += layout.spacing;
+                continue;
+            }
             sHud.mpIconOn->hide();
             sHud.mpIconOff->show();
             sHud.mpIconOff->setAlphaRate(1.0f);
-            if (J2DPicture* off = findFirstPicture(sHud.mpIconOff->getPanePtr())) {
-                off->setBlackWhite(JUtility::TColor(0, 0, 0, 0),
-                                   filled ? JUtility::TColor(255, 255, 255, 255)
-                                          : JUtility::TColor(105, 105, 105, 255));
-            }
+            sHudShieldOffPic->setBlackWhite(JUtility::TColor(0, 0, 0, 0),
+                                            filled ? JUtility::TColor(255, 255, 255, 255)
+                                                   : JUtility::TColor(105, 105, 105, 255));
         } else if (filled) {
             sHud.mpIconOn->show();
             sHud.mpIconOff->hide();

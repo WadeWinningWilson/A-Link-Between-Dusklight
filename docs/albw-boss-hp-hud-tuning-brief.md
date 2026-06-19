@@ -5,10 +5,10 @@
 **Setting gate:** `dusk::getSettings().game.bossHealthBars`  
 **HP source (do not change):** `dAlbwHP_getLockonDisplayHp(boss)` — single source of truth  
 
-**Reference screenshots (workspace assets):**
-- **Current in-game (too-large name, opaque maroon track):** `Screenshot_2026-06-17_010352` — Armogohma fight
-- **Target aesthetic (LoP):** `Screenshot_2026-06-17_003850` — Parade Master bar: thin, wide, deep crimson fill, translucent dark track, name tight above bar
-- **Target mockup (Armogohma, boss HUD only):** `assets/dusklight-boss-hp-bar-tuning-mockup.png` — same arena screenshot with tuned bar/name; all other HUD unchanged
+**Reference mockup (in repo):**
+- [`docs/mockups/dusklight-boss-hp-bar-tuning-mockup.png`](mockups/dusklight-boss-hp-bar-tuning-mockup.png) — Armogohma arena; tuned bar/name only; agents should **Read** this file path
+
+**External references (optional):** LoP Parade Master bar aesthetic — thin wide crimson fill, translucent charcoal empty track, name 2–4 px above bar.
 
 **Status:** Basic reactive bar works. This pass is **visual polish only** — geometry constants, colors, alpha, name scale/gap. Do not duplicate HP math.
 

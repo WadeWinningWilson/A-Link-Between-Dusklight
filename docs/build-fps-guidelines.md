@@ -2,6 +2,34 @@
 
 **Audience:** Cursor agents and anyone building uncommitted WIP. Goal: keep **~139–144 FPS mean** under natural user play without the **~50–127 tank** that often follows agent builds.
 
+**Role:** This is the **build-analysis chat** doc set. Feature agents (HUD, bosses, combat) implement; **this chat** reviews builds, diagnoses FPS drift, and optimizes in place. If you are a new instance and the user sent you here after a build — read the map below before changing code.
+
+---
+
+## Doc map — read in this order
+
+| Order | Doc | When to use |
+|-------|-----|-------------|
+| **1** | **[build-fps-guidelines.md](build-fps-guidelines.md)** (this file) | Every build review: preset, launch hygiene, validation checklist |
+| **2** | **[hud-performance-handoff.md](hud-performance-handoff.md)** | HUD / meter / shield / `game.lopHud` changes — per-frame rules, LoP cache patterns |
+| **3** | **[performance-handoff.md](performance-handoff.md)** | Intermittent hitches (~105 cliffs), profiler follow-up, drive oracle (research only) |
+| **4** | **[commit-and-push.md](commit-and-push.md)** | Commit/push to `upstream` (ALBW-Dusklight fork); never-commit list |
+| **5** | **[performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md)** | Historical drive evidence if you need SHAs / what was ruled out |
+| **6** | **[albw-hud-lop-layout-brief.md](albw-hud-lop-layout-brief.md)** | LoP layout *behavior* spec (feature agent); cross-ref §2 for FPS |
+
+**Feature-specific briefs** (read only if the diff touches that area): `boss-fights-handoff.md`, `albw-boss-hp-hud-tuning-brief.md`, `albw-hud-lop-layout-v3-instructions.md`.
+
+### Build-review workflow (same as the long-running analysis chat)
+
+1. `git status` + `git diff --stat` — scope the change.
+2. `build_run.bat` — confirm RelWithDebInfo compiles.
+3. Grep for regressions: `dusk/drive`, `dusk/conavigate`, per-frame `findFirstPicture`, repeated `getSettings().game.*.getValue()` in `draw()`/`exec()`.
+4. Ask user (or infer from diff): did FPS drift with **`lopHud` Off**? Off = shared hot path; On = LoP-only branches.
+5. Optimize **in place** — do not revert features to fix FPS (see [hud-performance-handoff.md](hud-performance-handoff.md) hard constraint).
+6. Report: build pass/fail, likely cause, what you changed, what to playtest.
+
+**Do not** run full drive matrices unless the user asks — oracle lives under `local_dev_backup/` (gitignored).
+
 **Not covered here:** intermittent ~105 FPS hitches during Armogohma observe (~17% of oracle sessions). See [performance-handoff.md](performance-handoff.md) for profiler follow-up.
 
 ---
@@ -119,3 +147,4 @@ If field is **~50–70** on RelWithDebInfo with clean env, suspect **wrong exe, 
 | [performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md) | Full drive evidence (Tracks B–J) |
 | [future-performance-leaning.md](future-performance-leaning.md) | Original suspicions + ineffective-methods note |
 | [commit-and-push.md](commit-and-push.md) | Fork remotes, commit/push workflow |
+| [hud-performance-handoff.md](hud-performance-handoff.md) | **LoP HUD FPS — for Claude/feature agents** |

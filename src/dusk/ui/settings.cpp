@@ -1825,6 +1825,13 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .helpText = "Show a health bar with the boss name for major boss fights. "
                             "Scales with the Boss HP and Boss Refinement settings.",
             });
+        config_bool_select(leftPane, rightPane, getSettings().game.lopHud,
+            {
+                .key = "Lies of Link HUD",
+                .helpText = "Rearrange the HUD into a Lies of P-style layout: life, stamina "
+                            "and shield stacked top-left, rupees top-right, items and bash "
+                            "spurs bottom-left. Off keeps the vanilla corner layout.",
+            });
     });
 }
 

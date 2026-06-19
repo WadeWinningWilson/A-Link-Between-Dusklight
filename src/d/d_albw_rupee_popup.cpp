@@ -43,42 +43,6 @@
 // NEW CODE — ALBW Port
 // ============================================
 
-// ---------------------------------------------------------------------------
-// File-based debug log (OS_REPORT is compiled out in non-DEBUG builds).
-// Written to Documents/dusklight/albw_rupee_debug.txt, truncated once per
-// session.  Same pattern as the death-recovery-orb log.
-// ---------------------------------------------------------------------------
-static void rupeeDebugLog(const char* fmt, ...) {
-    static bool sResetDone = false;
-
-    char path[512];
-    path[0] = '\0';
-    const char* user = getenv("USERPROFILE");
-    if (user && user[0] != '\0') {
-        snprintf(path, sizeof(path), "%s/Documents/dusklight/albw_rupee_debug.txt", user);
-    } else {
-        strncpy(path, "albw_rupee_debug.txt", sizeof(path) - 1);
-    }
-
-    FILE* fp = fopen(path, sResetDone ? "a" : "w");
-    if (!fp) {
-        fp = fopen("albw_rupee_debug.txt", sResetDone ? "a" : "w");
-    }
-    if (!fp) {
-        return;
-    }
-    if (!sResetDone) {
-        sResetDone = true;
-        fprintf(fp, "--- ALBW enemy rupee popup ---\n");
-    }
-
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(fp, fmt, args);
-    va_end(args);
-    fclose(fp);
-}
-
 // Display window per grant and fade-out tail, in frames.
 static constexpr s16 POPUP_FRAMES = 120;
 static constexpr s16 POPUP_FADE_FRAMES = 15;
@@ -98,8 +62,6 @@ static J2DPicture* sDigitPic[10] = {NULL};
 // Last granted amount and frames remaining in the display window.
 static u16 sAmount = 0;
 static s16 sFramesLeft = 0;
-// One-shot log flag per arm so the log shows the first draw/skip outcome.
-static bool sLoggedThisArm = false;
 
 // ---------------------------------------------------------------------------
 // dAlbwEnemyRupeesHud_onGrant — arm/replace the popup.
@@ -110,8 +72,6 @@ void dAlbwEnemyRupeesHud_onGrant(u16 i_amount) {
     }
     sAmount = i_amount;
     sFramesLeft = POPUP_FRAMES;
-    sLoggedThisArm = false;
-    rupeeDebugLog("armed +%u\n", (unsigned)i_amount);
 }
 
 // ---------------------------------------------------------------------------
@@ -124,7 +84,6 @@ static bool ensurePics() {
 
     JKRArchive* arc = dComIfGp_getMain2DArchive();
     if (arc == NULL) {
-        rupeeDebugLog("ensurePics: main2D archive NULL\n");
         return false;
     }
 
@@ -135,7 +94,6 @@ static bool ensurePics() {
         ResTIMG* timg = static_cast<ResTIMG*>(
             arc->getResource('TIMG', dMeter2Info_getNumberTextureName(i)));
         if (timg == NULL) {
-            rupeeDebugLog("ensurePics: digit %d TIMG missing\n", i);
             return false;
         }
         sDigitPic[i] = JKR_NEW J2DPicture(timg);
@@ -153,8 +111,6 @@ static bool ensurePics() {
     if (plusTimg == NULL) {
         plusTimg = static_cast<ResTIMG*>(
             arc->getIdxResource(dRes_INDEX_MAIN2D_BTI_IM_PLUS_METAL_24X24_00_e));
-        rupeeDebugLog("ensurePics: plus by-name failed, by-index %s\n",
-                      plusTimg != NULL ? "OK" : "FAILED");
     }
     if (plusTimg == NULL) {
         return false;
@@ -181,20 +137,12 @@ void dAlbwRupeePopup_draw() {
     // popup cannot render (resources unavailable, HUD faded out) does not
     // silently burn the display window.
     if (!ensurePics()) {
-        if (!sLoggedThisArm) {
-            sLoggedThisArm = true;
-            rupeeDebugLog("skip: ensurePics FAILED (main2D TIMG load)\n");
-        }
         return;
     }
 
     dMeter2_c* meter = dMeter2Info_getMeterClass();
     dMeter2Draw_c* meterDraw = (meter != NULL) ? meter->getMeterDrawPtr() : NULL;
     if (meterDraw == NULL) {
-        if (!sLoggedThisArm) {
-            sLoggedThisArm = true;
-            rupeeDebugLog("skip: meterDraw NULL\n");
-        }
         return;
     }
 
@@ -227,10 +175,6 @@ void dAlbwRupeePopup_draw() {
     // while the HUD itself is hidden, e.g. during cutscenes.
     f32 hudAlphaRate = meterDraw->getRupeeHudAlphaRate();
     if (hudAlphaRate <= 0.0f) {
-        if (!sLoggedThisArm) {
-            sLoggedThisArm = true;
-            rupeeDebugLog("skip: rupee HUD alpha %.3f (HUD hidden)\n", hudAlphaRate);
-        }
         return;
     }
     if (hudAlphaRate > 1.0f) {
@@ -279,13 +223,6 @@ void dAlbwRupeePopup_draw() {
     f32 posX = digitLeftX - advance * (POPUP_COUNTER_GAP + (f32)(glyphCount - 1));
     const f32 centerY = digitRowY;
     const f32 plusSize = digitH * POPUP_PLUS_RATIO;
-
-    if (!sLoggedThisArm) {
-        sLoggedThisArm = true;
-        rupeeDebugLog("draw ok: +%u at (%.1f, %.1f) digitLeftX=%.1f digit=%.1fx%.1f adv=%.1f alpha=%u\n",
-                      (unsigned)sAmount, posX, centerY, digitLeftX, digitW, digitH, advance,
-                      (unsigned)alpha);
-    }
 
     // ---- Draw -------------------------------------------------------------
     sPlusPic->setAlpha(alpha);
