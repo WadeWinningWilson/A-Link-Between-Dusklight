@@ -15,6 +15,7 @@
 #include "dusk/io.hpp"
 #include "dusk/livesplit.h"
 #include "dusk/discord_presence.hpp"
+#include "dusk/dpad_quick_swap.h"
 #include "graphics_tuner.hpp"
 #include "m_Do/m_Do_main.h"
 #include "menu_bar.hpp"
@@ -1401,8 +1402,57 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Enemy Death Rupees", getSettings().game.enemyDeathRupees,
             "Credit rupees directly to your wallet when enemies die and when boss fights end. "
             "Vanilla drop tables (hearts, jars, ground rupees) are unchanged.");
-        addOption("Extra Item Slot", getSettings().game.extraItemSlot,
-            "Move Midna talk to left D-pad and assign an inventory item to the Z button.");
+        addOption("True ALBW", getSettings().game.trueAlbwShop,
+            "Every rental-shop item is available from the moment the Postman appears, like "
+            "Ravio's shop, with no need to lose an item first. Deity Armor still requires "
+            "its own unlock conditions, and the Master Quest heart/stamina upgrades are "
+            "unaffected. Off uses the default reclaim-what-you-lost progression.");
+        static constexpr std::array<const char*, 3> kExtraItemSlotModes = {
+            "Off",
+            "Extra Only",
+            "Extra + Quick Swap",
+        };
+        leftPane.register_control(
+            leftPane.add_select_button({
+                .key = "Extra Item Slot",
+                .getValue =
+                    [] {
+                        const auto mode = getSettings().game.extraItemSlotMode.getValue();
+                        const auto index = static_cast<size_t>(mode);
+                        return kExtraItemSlotModes[index < kExtraItemSlotModes.size() ? index : 0];
+                    },
+                .isModified =
+                    [] {
+                        return getSettings().game.extraItemSlotMode.getValue() !=
+                               getSettings().game.extraItemSlotMode.getDefaultValue();
+                    },
+            }),
+            rightPane,
+            [](Pane& pane) {
+                for (int i = 0; i < static_cast<int>(kExtraItemSlotModes.size()); ++i) {
+                    pane
+                        .add_button({
+                            .text = kExtraItemSlotModes[i],
+                            .isSelected =
+                                [i] {
+                                    return getSettings().game.extraItemSlotMode.getValue() ==
+                                           static_cast<ExtraItemSlotMode>(i);
+                                },
+                        })
+                        .on_pressed([i] {
+                            mDoAud_seStartMenu(kSoundItemChange);
+                            getSettings().game.extraItemSlotMode.setValue(
+                                static_cast<ExtraItemSlotMode>(i));
+                            applyDpadQuickSwapPresetBinds();
+                            config::Save();
+                        });
+                }
+                pane.add_rml(
+                    "<br/><b>Off</b>: vanilla d-pad.<br/>"
+                    "<b>Extra Only</b>: Midna on left D-pad, third item on Z.<br/>"
+                    "<b>Extra + Quick Swap</b>: also maps Up/Right/Down to cycle sword, "
+                    "cycle shield, and wolf transform. Map moves to M / Tab by default.");
+            });
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================
@@ -1449,8 +1499,18 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Displays collected/total number of Poe Souls for a region on the map.");
         addSpeedrunDisabledOption("Sun's Song (R+X)", getSettings().game.sunsSong,
             "Allows Wolf Link to howl and change the time of day.");
-        addOption("Quick Transform (R+Y)", getSettings().game.enableQuickTransform,
-            "Transform instantly by pressing R and Y simultaneously.");
+        config_bool_select(leftPane, rightPane, getSettings().game.enableQuickTransform,
+            {
+                .key = "Quick Transform (R+Y)",
+                .helpText = "Transform instantly by pressing R and Y simultaneously. Disabled "
+                            "when Extra Item Slot is set to Extra + Quick Swap (use D-pad Down "
+                            "instead).",
+                .isDisabled =
+                    [] {
+                        return getSettings().game.extraItemSlotMode.getValue() ==
+                               ExtraItemSlotMode::ExtraAndQuickSwap;
+                    },
+            });
 
         leftPane.add_section("Speedrunning");
         config_bool_select(leftPane, rightPane, getSettings().game.speedrunMode,

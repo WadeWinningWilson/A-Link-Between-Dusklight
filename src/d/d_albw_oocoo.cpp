@@ -13,7 +13,7 @@
 
 namespace {
 
-constexpr int kPrice = 300;
+constexpr int kPrice = 150;
 
 char sDeathDungeonStage[8] = {};
 bool sDiedInDungeon        = false;

@@ -37,10 +37,12 @@
 #include <cstring>
 
 #include "d/d_albw_oocoo.h"
+#include "d/d_albw_shade_refuge.h"
 #include "d/d_albw_master_quest.h"
 #include "d/d_com_inf_game.h"
 #include "d/d_item_data.h"
 #include "d/d_meter2_info.h"
+#include "dusk/settings.h"
 #include "dusk/ui/ui.hpp"
 #include "m_Do/m_Do_controller_pad.h"
 // ============================================
@@ -48,6 +50,43 @@
 // ============================================
 
 namespace {
+
+// ============================================
+// NEW CODE — ALBW Port (Shop Category Pages)
+// The shop is split into category pages, navigated left/right.  Pages are
+// data-driven: add a category here + a kPages row + tag entries, and a new
+// page appears automatically (e.g. the future Swords page).  A page is only
+// shown when it has at least one visible row (see categoryHasVisibleRows).
+//   CAT_UPGRADES — non-item services: Master-Quest heart/stamina upgrades,
+//                  Oocoo's Return, and (future) the warp/location service.
+// ============================================
+enum ALBWShopCategory {
+    CAT_SHIELDS = 0,
+    CAT_ITEMS,
+    CAT_ARMOR,
+    CAT_UPGRADES,
+    CAT_SWORDS,   // future page; no entries tagged yet
+    CAT_COUNT,
+};
+
+struct ALBWShopPage {
+    ALBWShopCategory category;
+    const char*      title;   // page heading + counter shown via dALBWRental_getPageTitle()
+};
+
+// Page order = left-to-right tab order.  Uncomment CAT_SWORDS (and tag entries)
+// to add the swords page later.
+static const ALBWShopPage kPages[] = {
+    { CAT_SHIELDS,  "Shields"             },
+    { CAT_ITEMS,    "Items"               },
+    { CAT_ARMOR,    "Armor"               },
+    { CAT_UPGRADES, "Upgrades & Services" },
+    // { CAT_SWORDS, "Swords" },
+};
+static constexpr int kPageCount = sizeof(kPages) / sizeof(kPages[0]);
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
 struct ALBWRentalEntry {
     const char* name;
@@ -67,6 +106,18 @@ struct ALBWRentalEntry {
     // ============================================
     // NEW CODE ENDS HERE
     // ============================================
+    // ============================================
+    // NEW CODE — ALBW Port (Shop Pages + True ALBW)
+    // category    — which shop page this entry lives on.  Defaults to CAT_ITEMS
+    //               so only shields/armor entries need to tag a category below.
+    // alwaysGated — when true, the True ALBW setting does NOT bypass this entry's
+    //               eligibility check (Deity Armor keeps its unlock conditions).
+    // ============================================
+    ALBWShopCategory category    = CAT_ITEMS;
+    bool             alwaysGated = false;
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
 };
 
 // All rentable ALBW items in ascending price order.
@@ -76,17 +127,20 @@ static const ALBWRentalEntry kItems[] = {
     { "Ordon Shield",
       (u8)dItemNo_WOOD_SHIELD_e,  -1,      50,
       "A humble offering for the Princess' Royal Family. Do be more gentle with it now!",
-      []() -> bool { return dMeter2_isShieldRentalEligible((u8)dItemNo_WOOD_SHIELD_e); } },
+      []() -> bool { return dMeter2_isShieldRentalEligible((u8)dItemNo_WOOD_SHIELD_e); },
+      CAT_SHIELDS },
     { "Wooden Shield",
       (u8)dItemNo_SHIELD_e,       -1,      150,
       "A sturdier wooden shield with subtle metal reinforcements....sadly didn't stop me "
       "from getting this nasty splinter.",
-      []() -> bool { return dMeter2_isShieldRentalEligible((u8)dItemNo_SHIELD_e); } },
+      []() -> bool { return dMeter2_isShieldRentalEligible((u8)dItemNo_SHIELD_e); },
+      CAT_SHIELDS },
     { "Hylian Shield",
       (u8)dItemNo_HYLIA_SHIELD_e, -1,      500,
       "An expert duelists' shield of choice, passed down by the Hyrulean Royal family. A "
       "small inscription along the border reads: \" May the Goddess reunite us \".",
-      []() -> bool { return dMeter2_isShieldRentalEligible((u8)dItemNo_HYLIA_SHIELD_e); } },
+      []() -> bool { return dMeter2_isShieldRentalEligible((u8)dItemNo_HYLIA_SHIELD_e); },
+      CAT_SHIELDS },
     { "Slingshot",
       (u8)dItemNo_PACHINKO_e,     SLOT_23, 15,
       "A child's reliable pellet launcher, perfect for tiny insects." },
@@ -120,9 +174,26 @@ static const ALBWRentalEntry kItems[] = {
     { "Ball and Chain",
       (u8)dItemNo_IRONBALL_e,      SLOT_6,  350,
       "Heavy...heavy...please pick it up yourself" },
+    // ============================================
+    // NEW CODE — ALBW Port (Outfits — Armors tab)
+    // Ordon Clothes: the early-game casual outfit (dItemNo_WEAR_CASUAL_e).  Sits
+    // at the TOP of the Armor page (armors listed in order of likely obtainment:
+    // Ordon, Hero's Green, Sumo, Zora, Magic Armor, Deity).  Eligibility =
+    // "worn once" (escaped sewers); True ALBW bypasses it (not alwaysGated).
+    // Purchase grants + auto-equips via dMeter2_grantRentalClothes (see tryPurchase).
+    // ============================================
+    { "Ordon Clothes",
+      (u8)dItemNo_WEAR_CASUAL_e,   -1,      50,
+      "Humble small town wear fit for any...unassuming explorer.",
+      []() -> bool { return dMeter2_isCasualWearEligible(); },
+      CAT_ARMOR },
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     { "Magic Armor",
       (u8)dItemNo_ARMOR_e,         -1,      500,
-      "Legendary Golden protection, keep an eye on your wallet with this!" },
+      "Legendary Golden protection, keep an eye on your wallet with this!",
+      nullptr, CAT_ARMOR },
     // ============================================
     // NEW CODE — ALBW Port
     // Deity Armor: 13th rental entry.  Not a physical inventory item; it is
@@ -142,7 +213,8 @@ static const ALBWRentalEntry kItems[] = {
           //   2. Colossal Wallet is held (rewarded from Cave of Ordeals).
           return dMeter2_isALBWRentalEligible((u8)dItemNo_ARMOR_e)
               && dComIfGs_getWalletSize() == COLOSSAL_WALLET;
-      }
+      },
+      CAT_ARMOR, true
     },
     // ============================================
     // NEW CODE ENDS HERE
@@ -176,6 +248,7 @@ enum VisibleKind {
     VISIBLE_MQ_HEART = 0,
     VISIBLE_MQ_METER,
     VISIBLE_ITEM,
+    VISIBLE_SHADE_REFUGE,  // "Return to Last Shade Watcher" (above Oocoo)
     VISIBLE_OOCOO,
 };
 
@@ -185,12 +258,26 @@ struct VisibleEntry {
     bool        purchasable;
 };
 
-static constexpr int kVisibleListMax = 2 + kItemCount + 1;
+static constexpr int kVisibleListMax = 2 + kItemCount + 2;  // +2 service rows (Shade Watcher, Oocoo)
 static VisibleEntry sVisibleList[kVisibleListMax];
 static int          sVisibleCount     = 0;  // total rows shown (inc. ?????)
 static int          sAvailCount       = 0;  // purchasable rows only (for button state)
 static int          sSelectedIdx      = 0;
 static bool         sPurchasedThisSession = false;
+
+// ============================================
+// NEW CODE — ALBW Port (Shop Category Pages)
+// Page navigation state.  sCurrentPageIdx indexes sActivePages[], which holds
+// only the categories that currently have >=1 visible row (built in
+// rebuildActivePages()).  Left/right in tick() steps sCurrentPageIdx; the
+// renderer is unchanged — getVisibleList() just returns the current page.
+// ============================================
+static int              sCurrentPageIdx          = 0;   // index into sActivePages
+static ALBWShopCategory sActivePages[kPageCount] = {};  // categories with content
+static int              sActivePageCount         = 0;
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
 // Post-purchase cooldown: blocks A only (navigation stays live). Short window
 // for fanfare/feedback before the next buy.
@@ -268,6 +355,77 @@ static bool hasAnyEligible() {
     return false;
 }
 
+// ============================================
+// NEW CODE — ALBW Port (Shop Pages + True ALBW)
+// ============================================
+
+// Eligibility including the True ALBW setting.  When the setting is on, every
+// non-exempt item is available from the start (Ravio's-shop style).  Exempt
+// entries (alwaysGated, e.g. Deity Armor) keep their own check even when on.
+static bool entryEligible(const ALBWRentalEntry& entry) {
+    if (dusk::getSettings().game.trueAlbwShop.getValue() && !entry.alwaysGated) {
+        return true;
+    }
+    return entry.eligibilityCheck
+        ? entry.eligibilityCheck()
+        : dMeter2_isALBWRentalEligible(entry.itemNo);
+}
+
+// A row is shown (as ????? or rentable) unless the player already owns it.
+static bool itemRowVisible(const ALBWRentalEntry& entry) {
+    return !(entryEligible(entry) && dMeter2_playerOwnsRentalItem(entry.itemNo));
+}
+
+// True if the given category page currently has at least one visible row.
+static bool categoryHasVisibleRows(ALBWShopCategory cat) {
+    for (int i = 0; i < kItemCount; ++i) {
+        if (kItems[i].category == cat && itemRowVisible(kItems[i])) {
+            return true;
+        }
+    }
+    if (cat == CAT_UPGRADES) {
+        // MQ heart/meter rows always show when Master Quest is on; the Shade
+        // Watcher return and Oocoo's Return are contextual.  Any one of them
+        // makes the Upgrades & Services page non-empty.
+        if (dAlbwMQ_isEnabled() || dShadeRefuge_canShowInShop() ||
+            dALBWOocoo_canShowInShop()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Rebuild the list of category pages that currently have content.  Called on
+// open() and after each purchase (a page can empty out).  Keeps sCurrentPageIdx
+// in range.
+static void rebuildActivePages() {
+    sActivePageCount = 0;
+    for (int p = 0; p < kPageCount; ++p) {
+        if (categoryHasVisibleRows(kPages[p].category)) {
+            sActivePages[sActivePageCount++] = kPages[p].category;
+        }
+    }
+    if (sCurrentPageIdx >= sActivePageCount) {
+        sCurrentPageIdx = (sActivePageCount > 0) ? sActivePageCount - 1 : 0;
+    }
+    if (sCurrentPageIdx < 0) {
+        sCurrentPageIdx = 0;
+    }
+}
+
+// Category of the page the player is currently viewing.
+static ALBWShopCategory currentCategory() {
+    if (sActivePageCount <= 0) {
+        return CAT_SHIELDS;  // no active pages → empty list → "Not in stock yet"
+    }
+    if (sCurrentPageIdx < 0)                 sCurrentPageIdx = 0;
+    if (sCurrentPageIdx >= sActivePageCount) sCurrentPageIdx = sActivePageCount - 1;
+    return sActivePages[sCurrentPageIdx];
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
 // Rebuild the visible list.
 //   Eligible + owned   → hidden entirely (player already has the item).
 //   Not eligible       → shown as "?????" with real price; purchasable = false.
@@ -276,7 +434,14 @@ static void rebuildVisibleList() {
     sVisibleCount = 0;
     sAvailCount   = 0;
 
-    if (dAlbwMQ_isEnabled()) {
+    // ============================================
+    // MODIFIED CODE — ALBW Port (Shop Category Pages)
+    // Build only the rows belonging to the current category page.  The MQ
+    // upgrade rows and Oocoo's Return live on the Upgrades & Services page.
+    // ============================================
+    const ALBWShopCategory cat = currentCategory();
+
+    if (cat == CAT_UPGRADES && dAlbwMQ_isEnabled()) {
         sVisibleList[sVisibleCount].kind        = VISIBLE_MQ_HEART;
         sVisibleList[sVisibleCount].kItemsIdx   = -1;
         sVisibleList[sVisibleCount].purchasable = dAlbwMQ_canPurchaseHeartShop();
@@ -296,17 +461,10 @@ static void rebuildVisibleList() {
 
     for (int i = 0; i < kItemCount; ++i) {
         const ALBWRentalEntry& entry = kItems[i];
-        // ============================================
-        // MODIFIED CODE — ALBW Port
-        // Use per-entry eligibility override when present; otherwise fall
-        // back to the standard isALBWRentalEligible(itemNo) check.
-        // ============================================
-        const bool eligible = entry.eligibilityCheck
-            ? entry.eligibilityCheck()
-            : dMeter2_isALBWRentalEligible(entry.itemNo);
-        // ============================================
-        // MODIFIED CODE ENDS HERE
-        // ============================================
+        if (entry.category != cat) {
+            continue;  // not on this page
+        }
+        const bool eligible = entryEligible(entry);
         const bool owned    = dMeter2_playerOwnsRentalItem(entry.itemNo);
         if (eligible && owned) {
             continue;  // hidden — player already owns this item
@@ -318,22 +476,55 @@ static void rebuildVisibleList() {
             sAvailCount++;
         }
         sVisibleCount++;
-
-        // Oocoo's Return sits directly under the three shield rows (kItems[0..2]).
-        if (i == 2 && dALBWOocoo_canShowInShop() &&
-            sVisibleCount < (int)(sizeof(sVisibleList) / sizeof(sVisibleList[0]))) {
-            sVisibleList[sVisibleCount].kind        = VISIBLE_OOCOO;
-            sVisibleList[sVisibleCount].kItemsIdx   = -1;
-            sVisibleList[sVisibleCount].purchasable = true;
-            sAvailCount++;
-            sVisibleCount++;
-        }
     }
+
+    // "Return to Last Shade Watcher" sits directly ABOVE Oocoo on the
+    // Upgrades & Services page (available whenever a respawn slot is set).
+    if (cat == CAT_UPGRADES && dShadeRefuge_canShowInShop() &&
+        sVisibleCount < (int)(sizeof(sVisibleList) / sizeof(sVisibleList[0]))) {
+        sVisibleList[sVisibleCount].kind        = VISIBLE_SHADE_REFUGE;
+        sVisibleList[sVisibleCount].kItemsIdx   = -1;
+        sVisibleList[sVisibleCount].purchasable = true;
+        sAvailCount++;
+        sVisibleCount++;
+    }
+
+    // Oocoo's Return lives on the Upgrades & Services page (contextual).
+    if (cat == CAT_UPGRADES && dALBWOocoo_canShowInShop() &&
+        sVisibleCount < (int)(sizeof(sVisibleList) / sizeof(sVisibleList[0]))) {
+        sVisibleList[sVisibleCount].kind        = VISIBLE_OOCOO;
+        sVisibleList[sVisibleCount].kItemsIdx   = -1;
+        sVisibleList[sVisibleCount].purchasable = true;
+        sAvailCount++;
+        sVisibleCount++;
+    }
+    // ============================================
+    // MODIFIED CODE ENDS HERE
+    // ============================================
 
     if (sSelectedIdx >= sVisibleCount) {
         sSelectedIdx = (sVisibleCount > 0) ? sVisibleCount - 1 : 0;
     }
 }
+
+// ============================================
+// NEW CODE — ALBW Port (Shop Category Pages)
+// Step the current page left (-1) or right (+1), wrapping within the active
+// (non-empty) pages.  Resets selection/scroll so the renderer snaps to the top
+// of the new page (mScrollTop follows sSelectedIdx via populateRows clamp).
+// ============================================
+static void changePage(int dir) {
+    if (sActivePageCount <= 1) {
+        return;
+    }
+    sCurrentPageIdx   = (sCurrentPageIdx + dir + sActivePageCount) % sActivePageCount;
+    sSelectedIdx      = 0;
+    sScrollToSelected = true;
+    rebuildVisibleList();
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
 // Attempt to purchase the item currently selected in the visible list.
 // Silent no-op if the item is a ????? (not yet eligible).
@@ -362,6 +553,7 @@ static void tryPurchase(int visIdx) {
         sJustPurchased        = true;
         sStatusMsg            = "Your health will thank you.\nThank you for your patronage!";
         sStatusExpiry         = clock::now() + kPurchaseCooldownSuccess;
+        rebuildActivePages();  // a purchase can empty the current page
         rebuildVisibleList();
         return;
     }
@@ -383,6 +575,24 @@ static void tryPurchase(int visIdx) {
         sJustPurchased        = true;
         sStatusMsg            = "May your stamina carry you far.\nThank you for your patronage!";
         sStatusExpiry         = clock::now() + kPurchaseCooldownSuccess;
+        rebuildActivePages();  // a purchase can empty the current page
+        rebuildVisibleList();
+        return;
+    }
+
+    if (sVisibleList[visIdx].kind == VISIBLE_SHADE_REFUGE) {
+        if (!dShadeRefuge_tryPurchaseReturn()) {
+            sStatusMsg          = "I'm afraid that's not enough to light the way back.";
+            sStatusExpiry       = clock::now() + kPurchaseCooldownFailure;
+            sJustFailedPurchase = true;
+            return;
+        }
+        sPurchasedThisSession = true;
+        sJustPurchased        = true;
+        sStatusMsg            = "The ember will carry you back when you leave the shop.\n"
+                                "Thank you for your patronage!";
+        sStatusExpiry         = clock::now() + kPurchaseCooldownSuccess;
+        rebuildActivePages();
         rebuildVisibleList();
         return;
     }
@@ -400,6 +610,7 @@ static void tryPurchase(int visIdx) {
         sStatusMsg            = "Oocoo will carry you back when you leave the shop.\n"
                                 "Thank you for your patronage!";
         sStatusExpiry         = clock::now() + kPurchaseCooldownSuccess;
+        rebuildActivePages();  // a purchase can empty the current page
         rebuildVisibleList();
         return;
     }
@@ -420,6 +631,17 @@ static void tryPurchase(int visIdx) {
             return;
         }
         dMeter2_grantRentalShield(e.itemNo);
+    // ============================================
+    // NEW CODE — ALBW Port (Outfits)
+    // Clothes outfits (Ordon casual wear) have no inventory slot — grant +
+    // auto-equip + swap the model in one call.  The shop is the only way to don
+    // the Ordon outfit; vanilla collection menus can switch it back off.
+    // ============================================
+    } else if (e.itemNo == (u8)dItemNo_WEAR_CASUAL_e) {
+        dMeter2_grantRentalClothes(e.itemNo);
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     } else {
         dComIfGs_onItemFirstBit(e.itemNo);
         if (e.slotNo >= 0) {
@@ -430,6 +652,7 @@ static void tryPurchase(int visIdx) {
     sJustPurchased        = true;   // triggers Z2SE_POST_V_FANFARE in d_a_npc_post.cpp
     sStatusMsg    = "One step closer to becoming a Senior Postman.\nI can smell the fields now, thank you for your patronage!";
     sStatusExpiry = clock::now() + kPurchaseCooldownSuccess;
+    rebuildActivePages();  // a purchase can empty the current page
     rebuildVisibleList();
 }
 
@@ -549,11 +772,32 @@ void dALBWRental_open() {
 #if TARGET_PC_NATIVE_UI
     sStickNavCooldown     = 0;
 #endif
+    // ============================================
+    // NEW CODE — ALBW Port (Shop Category Pages)
+    // Build the active (non-empty) page set, then default to the Upgrades &
+    // Services page whenever Oocoo's Return is available so it is immediately
+    // visible (it was historically pinned near the top of the flat list).
+    // ============================================
+    sCurrentPageIdx = 0;
+    rebuildActivePages();
+    if (dALBWOocoo_canShowInShop()) {
+        for (int p = 0; p < sActivePageCount; ++p) {
+            if (sActivePages[p] == CAT_UPGRADES) {
+                sCurrentPageIdx = p;
+                break;
+            }
+        }
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     rebuildVisibleList();
 
     // Greeting A — returning customer (items stripped at least once).  One page.
     // Greeting B — first visit.  Three native boxes: intro, then one sentence each.
-    const bool returning = hasAnyEligible();
+    // True ALBW always greets as a returning customer (every item is in stock).
+    const bool returning =
+        dusk::getSettings().game.trueAlbwShop.getValue() || hasAnyEligible();
     const char* greeting = returning
         ? "Greetings! Lost your treasured possessions? Never fear, I have a new shipment for you! All for a.....small fee!"
         : "Greetings! As an ever dutiful Junior mail carrier I return all that is lost or misplaced!";
@@ -677,6 +921,26 @@ void dALBWRental_tick() {
         return;
     }
 
+    // ============================================
+    // NEW CODE — ALBW Port (Shop Category Pages)
+    // D-pad left/right tabs between category pages (Shields / Items / Armor /
+    // Upgrades & Services / ...).  Only active when more than one page has
+    // content.  changePage() resets selection + scroll for the new page.
+    // ============================================
+    if (sActivePageCount > 1) {
+        if (mDoCPd_c::getTrigRight(PAD_1)) {
+            changePage(+1);
+            return;
+        }
+        if (mDoCPd_c::getTrigLeft(PAD_1)) {
+            changePage(-1);
+            return;
+        }
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+
     // Navigation traverses all visible rows (real items AND ?????).
     // tryPurchase() silently ignores ????? rows — A only works on real items.
     // sScrollToSelected tells dALBWShop_c to scroll its viewport to the
@@ -755,6 +1019,14 @@ const dALBWVisibleEntry* dALBWRental_getVisibleList(int* outCount) {
             sPubList[i].itemNo         = (u8)dItemNo_MAGIC_LV1_e;
             sPubList[i].isOocooService = false;
             sPubList[i].showNameWhenSoldOut = true;
+        } else if (sVisibleList[i].kind == VISIBLE_SHADE_REFUGE) {
+            sPubList[i].name           = dShadeRefuge_getServiceName();
+            sPubList[i].price          = dShadeRefuge_getServicePrice();
+            sPubList[i].purchasable    = true;
+            sPubList[i].desc           = dShadeRefuge_getServiceDesc();
+            sPubList[i].itemNo         = 0xff;  // no wheel icon → letter/envelope fallback
+            sPubList[i].isOocooService = false;
+            sPubList[i].showNameWhenSoldOut = false;
         } else if (sVisibleList[i].kind == VISIBLE_OOCOO) {
             sPubList[i].name           = dALBWOocoo_getServiceName();
             sPubList[i].price          = dALBWOocoo_getServicePrice();
@@ -781,6 +1053,32 @@ const dALBWVisibleEntry* dALBWRental_getVisibleList(int* outCount) {
 int dALBWRental_getSelectedIdx() {
     return sSelectedIdx;
 }
+
+// ============================================
+// NEW CODE — ALBW Port (Shop Category Pages)
+// Page heading + counter for dALBWShop_c to render in the title pane.
+// getPageNumber() is 1-based; both fall back to 1 when no page is active.
+// ============================================
+const char* dALBWRental_getPageTitle() {
+    const ALBWShopCategory cat = currentCategory();
+    for (int p = 0; p < kPageCount; ++p) {
+        if (kPages[p].category == cat) {
+            return kPages[p].title;
+        }
+    }
+    return "";
+}
+
+int dALBWRental_getPageNumber() {
+    return (sActivePageCount > 0) ? sCurrentPageIdx + 1 : 1;
+}
+
+int dALBWRental_getPageCount() {
+    return (sActivePageCount > 0) ? sActivePageCount : 1;
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 // ============================================
 // NEW CODE ENDS HERE
 // ============================================

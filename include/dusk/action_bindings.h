@@ -13,6 +13,9 @@ enum class ActionBinds {
     TOGGLE_MINIMAP,
     OPEN_DUSKLIGHT_MENU,
     TURBO_SPEED_BUTTON,
+    CYCLE_SWORD,
+    CYCLE_SHIELD,
+    QUICK_TRANSFORM,
     COUNT,
 };
 
@@ -52,8 +55,15 @@ int getActionBindButton(ActionBinds action, u32 port);
 /** True when Extra Item Slot is enabled (Midna on d-pad, Z free for an item). */
 bool isExtraItemSlotEnabled();
 
+/** True when D-Pad Quick Swap mode is active. */
+bool isDpadQuickSwapEnabled();
+
 /** True when Call Midna uses left d-pad (default or custom bind). Map open must yield. */
 bool callMidnaReservesDpadLeft(u32 port = 0);
+
+bool dpadUpReservedForQuickSwap(u32 port = 0);
+bool dpadDownReservedForQuickSwap(u32 port = 0);
+bool dpadRightReservedForQuickSwap(u32 port = 0);
 #endif
 
 }

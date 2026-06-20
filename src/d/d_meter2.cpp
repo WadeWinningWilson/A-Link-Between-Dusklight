@@ -721,10 +721,19 @@ bool dMeter2_playerOwnsRentalItem(u8 itemNo) {
     if (dMeter2_isShieldItem(itemNo)) {
         return dComIfGs_getSelectEquipShield() == itemNo;
     }
-    if (itemNo == (u8)dItemNo_ARMOR_e &&
+    // ============================================
+    // MODIFIED CODE — ALBW Port (Outfit rental)
+    // Clothes items (Magic Armor, Ordon/casual wear) have no inventory slot —
+    // they count as "owned" only while currently equipped, so the shop hides
+    // them while worn and re-offers them after the player switches outfits.
+    // ============================================
+    if ((itemNo == (u8)dItemNo_ARMOR_e || itemNo == (u8)dItemNo_WEAR_CASUAL_e) &&
         dComIfGs_getSelectEquipClothes() == itemNo) {
         return true;
     }
+    // ============================================
+    // MODIFIED CODE ENDS HERE
+    // ============================================
     return dMeter2_slotHasPossessionForm(itemNo);
 }
 
@@ -844,6 +853,32 @@ void dMeter2_grantRentalShield(u8 itemNo) {
     dComIfGs_onItemFirstBit(itemNo);
     dMeter2Info_setShield(itemNo, false);
 }
+
+// ============================================
+// NEW CODE — ALBW Port (Outfit / clothes rental)
+// "Worn once" gate for the Ordon outfit: the player wears the casual clothes
+// throughout the intro until escaping the Hyrule Castle Sewers (saveBitLabels[47]
+// = "Escaped Sewers", after which the game forces Hero's clothes — see
+// daAlink_c::initClothes).  So that bit being set means the Ordon outfit has been
+// worn at least once.  True ALBW bypasses this gate (entry is not alwaysGated).
+// ============================================
+bool dMeter2_isCasualWearEligible() {
+    return dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[47]);
+}
+
+// Grant + auto-equip a clothes item and trigger the model swap, mirroring the
+// vanilla collection-menu equip path (setSelectEquipClothes + setClothesChange).
+void dMeter2_grantRentalClothes(u8 itemNo) {
+    dComIfGs_onItemFirstBit(itemNo);
+    dComIfGs_setSelectEquipClothes(itemNo);
+    dComIfGp_setSelectEquipClothes(itemNo);
+    if (daPy_getPlayerActorClass() != NULL) {
+        daPy_getPlayerActorClass()->setClothesChange(0);
+    }
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 
 #if TARGET_PC
 static bool dMeter2_hideHudForALBWShop() {

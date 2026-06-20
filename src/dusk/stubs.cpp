@@ -1098,11 +1098,15 @@ u8 fapGm_HIO_c::mCaptureScreenDivH = 1;
 
 #pragma mark dMsgObject
 #include <d/d_msg_object.h>
+// ALBW Port — implemented (were STUB_LOG no-ops): the native message flow's
+// runtime text injection (dMsgFlow_c::initWord / code-supplied select labels)
+// depends on these reaching mWord/mSelectWord. Without them the box renders
+// empty. Delegate to the *Local setters, same pattern as setSelectWordFlag.
 void dMsgObject_c::setWord(const char* i_word) {
-    STUB_LOG();
+    dMsgObject_getMsgObjectClass()->setWordLocal(i_word);
 }
 void dMsgObject_c::setSelectWord(int i_no, const char* i_word) {
-    STUB_LOG();
+    dMsgObject_getMsgObjectClass()->setSelectWordLocal(i_no, i_word);
 }
 
 #pragma mark HIO

@@ -68,6 +68,13 @@ enum class ParryIcons : u8 {
     ShieldOnly = 2,  // shield emblem only (starburst hidden)
 };
 
+// Extra Item Slot + optional D-Pad Quick Swap (Midna left, Z item, field equip/transform).
+enum class ExtraItemSlotMode : int {
+    Off = 0,
+    ExtraOnly = 1,
+    ExtraAndQuickSwap = 2,
+};
+
 namespace config {
 template <>
 struct ConfigEnumRange<BloomMode> {
@@ -124,6 +131,12 @@ struct ConfigEnumRange<ParryIcons> {
 };
 
 template <>
+struct ConfigEnumRange<ExtraItemSlotMode> {
+    static constexpr auto min = ExtraItemSlotMode::Off;
+    static constexpr auto max = ExtraItemSlotMode::ExtraAndQuickSwap;
+};
+
+template <>
 struct ConfigValueTraits<ui::ControlLayout> {
     static constexpr bool enabled = true;
 };
@@ -166,8 +179,8 @@ struct UserSettings {
 
         // QoL
         ConfigVar<bool> enableQuickTransform;
-        // Move Midna talk to left d-pad and keep Z visible for a future item slot.
-        ConfigVar<bool> extraItemSlot;
+        // Off | Extra only (Midna + Z item) | Extra + Quick Swap (d-pad equip/transform).
+        ConfigVar<ExtraItemSlotMode> extraItemSlotMode;
         ConfigVar<bool> hideTvSettingsScreen;
         ConfigVar<bool> biggerWallets;
         ConfigVar<bool> noReturnRupees;
@@ -200,6 +213,11 @@ struct UserSettings {
         // (top-left life/meter/shield stack, top-right rupees, bottom-left items/spurs).
         // Off = vanilla TP corner layout. See docs/albw-hud-lop-layout-brief.md.
         ConfigVar<bool> lopHud;
+        // True ALBW: every rental-shop item is available from the moment the Postman
+        // appears (Ravio's-shop style), bypassing the "must have lost it first" gate.
+        // Deity Armor keeps its own unlock conditions; the Master Quest heart/stamina
+        // upgrades are unaffected. Off = default reclaim-what-you-lost progression.
+        ConfigVar<bool> trueAlbwShop;
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================
@@ -358,6 +376,9 @@ struct UserSettings {
         std::array<ActionBindConfigVar, 4> toggleMinimap;
         std::array<ActionBindConfigVar, 4> openDusklightMenu;
         std::array<ActionBindConfigVar, 4> turboSpeedButton;
+        std::array<ActionBindConfigVar, 4> cycleSword;
+        std::array<ActionBindConfigVar, 4> cycleShield;
+        std::array<ActionBindConfigVar, 4> quickTransform;
     } actionBindings;
 };
 

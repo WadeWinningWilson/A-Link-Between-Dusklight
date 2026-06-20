@@ -1,6 +1,10 @@
 #include "dusk/settings.h"
 #include "dusk/config.hpp"
 
+#if TARGET_PC
+#include "dusk/dpad_quick_swap.h"
+#endif
+
 #include <SDL3/SDL_gamepad.h>
 #include <dolphin/pad.h>
 
@@ -35,7 +39,7 @@ UserSettings g_userSettings = {
 
         // Quality of Life
         .enableQuickTransform {"game.enableQuickTransform", false},
-        .extraItemSlot {"game.extraItemSlot", false},
+        .extraItemSlotMode {"game.extraItemSlot", ExtraItemSlotMode::Off},
         .hideTvSettingsScreen {"game.hideTvSettingsScreen", true},
         .biggerWallets {"game.biggerWallets", false},
         .noReturnRupees {"game.noReturnRupees", false},
@@ -53,6 +57,7 @@ UserSettings g_userSettings = {
         .parryIconsMode {"game.parryIconsMode", ParryIcons::SpurShield},
         .bossHealthBars {"game.bossHealthBars", false},
         .lopHud {"game.lopHud", false},
+        .trueAlbwShop {"game.trueAlbwShop", false},
         .damageMultiplier {"game.damageMultiplier", 1},
         .hpMultNormal     {"game.hpMultNormal",     1},
         .hpMultMidBoss    {"game.hpMultMidBoss",    1},
@@ -230,6 +235,24 @@ UserSettings g_userSettings = {
             ActionBindConfigVar{"actionBindings.turboButton_port2", PAD_NATIVE_BUTTON_INVALID},
             ActionBindConfigVar{"actionBindings.turboButton_port3", PAD_NATIVE_BUTTON_INVALID},
         },
+        .cycleSword {
+            ActionBindConfigVar{"actionBindings.cycleSword_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.cycleSword_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.cycleSword_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.cycleSword_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
+        .cycleShield {
+            ActionBindConfigVar{"actionBindings.cycleShield_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.cycleShield_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.cycleShield_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.cycleShield_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
+        .quickTransform {
+            ActionBindConfigVar{"actionBindings.quickTransform_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.quickTransform_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.quickTransform_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.quickTransform_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
     }
 };
 
@@ -262,7 +285,7 @@ void registerSettings() {
     // Game
     Register(g_userSettings.game.language);
     Register(g_userSettings.game.enableQuickTransform);
-    Register(g_userSettings.game.extraItemSlot);
+    Register(g_userSettings.game.extraItemSlotMode);
     Register(g_userSettings.game.hideTvSettingsScreen);
     Register(g_userSettings.game.biggerWallets);
     Register(g_userSettings.game.noReturnRupees);
@@ -280,6 +303,7 @@ void registerSettings() {
     Register(g_userSettings.game.parryIconsMode);
     Register(g_userSettings.game.bossHealthBars);
     Register(g_userSettings.game.lopHud);
+    Register(g_userSettings.game.trueAlbwShop);
     Register(g_userSettings.game.damageMultiplier);
     Register(g_userSettings.game.hpMultNormal);
     Register(g_userSettings.game.hpMultMidBoss);
@@ -422,6 +446,18 @@ void registerSettings() {
     Register(g_userSettings.actionBindings.turboSpeedButton[1]);
     Register(g_userSettings.actionBindings.turboSpeedButton[2]);
     Register(g_userSettings.actionBindings.turboSpeedButton[3]);
+    Register(g_userSettings.actionBindings.cycleSword[0]);
+    Register(g_userSettings.actionBindings.cycleSword[1]);
+    Register(g_userSettings.actionBindings.cycleSword[2]);
+    Register(g_userSettings.actionBindings.cycleSword[3]);
+    Register(g_userSettings.actionBindings.cycleShield[0]);
+    Register(g_userSettings.actionBindings.cycleShield[1]);
+    Register(g_userSettings.actionBindings.cycleShield[2]);
+    Register(g_userSettings.actionBindings.cycleShield[3]);
+    Register(g_userSettings.actionBindings.quickTransform[0]);
+    Register(g_userSettings.actionBindings.quickTransform[1]);
+    Register(g_userSettings.actionBindings.quickTransform[2]);
+    Register(g_userSettings.actionBindings.quickTransform[3]);
 }
 
 // Transient settings

@@ -1604,6 +1604,10 @@ process_profile_definition DUSK_CONST* DUSK_CONST g_fpcPfLst_ProfileList[] = {
     &g_profile_TIMER.base.base,
     &g_profile_METER2.base.base,
     &g_profile_GAMEOVER.base.base,
+    // ALBW Port — "Shade's Refuge": index MUST match fpcNm_ALBW_SHADE_WATCHER_e
+    // (0x318). fpcPf_Get() indexes this array directly by fpcNm, so this entry
+    // has to sit at the very end, in lockstep with the enum append.
+    &g_profile_ALBW_SHADE_WATCHER.base.base,
     NULL,
 };
 #endif

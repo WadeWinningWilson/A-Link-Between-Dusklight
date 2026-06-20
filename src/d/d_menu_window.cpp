@@ -143,10 +143,20 @@ private:
 };
 
 BOOL dMw_UP_TRIGGER() {
+#if TARGET_PC
+    if (dusk::dpadUpReservedForQuickSwap(0)) {
+        return false;
+    }
+#endif
     return mDoCPd_c::getTrigUp(PAD_1) != 0;
 }
 
 BOOL dMw_DOWN_TRIGGER() {
+#if TARGET_PC
+    if (dusk::dpadDownReservedForQuickSwap(0)) {
+        return false;
+    }
+#endif
     return mDoCPd_c::getTrigDown(PAD_1) != 0;
 }
 
@@ -164,6 +174,11 @@ BOOL dMw_LEFT_TRIGGER() {
 }
 
 BOOL dMw_RIGHT_TRIGGER() {
+#if TARGET_PC
+    if (dusk::dpadRightReservedForQuickSwap(0)) {
+        return false;
+    }
+#endif
     if (mDoCPd_c::getTrigRight(PAD_1) && !dMw_UP_TRIGGER()) {
         return true;
     } else {

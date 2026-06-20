@@ -29,6 +29,8 @@
 #include "tracy/Tracy.hpp"
 #include <dusk/gamepad_color.h>
 #include <dusk/autosave.h>
+#include "dusk/action_bindings.h"
+#include "dusk/dpad_quick_swap.h"
 #include "dusk/menu_pointer.h"
 #endif
 
@@ -765,8 +767,24 @@ static void duskExecute() {
     }
 
     if ((mDoCPd_c::getHold(PAD_1) & (PAD_TRIGGER_R | PAD_TRIGGER_L)) == PAD_TRIGGER_R && mDoCPd_c::getTrigY(PAD_1)) {
+        if (!dusk::isDpadQuickSwapEnabled()) {
+            if (const auto link = g_dComIfG_gameInfo.play.getPlayer(0)) {
+                dynamic_cast<daAlink_c*>(link)->handleQuickTransform();
+            }
+        }
+    }
+
+    if (dusk::canUseDpadQuickSwap(0)) {
         if (const auto link = g_dComIfG_gameInfo.play.getPlayer(0)) {
-            dynamic_cast<daAlink_c*>(link)->handleQuickTransform();
+            if (dusk::getActionBindTrig(dusk::ActionBinds::QUICK_TRANSFORM, 0)) {
+                dynamic_cast<daAlink_c*>(link)->handleQuickTransform();
+            }
+            if (dusk::getActionBindTrig(dusk::ActionBinds::CYCLE_SWORD, 0)) {
+                dusk::cycleNextSword();
+            }
+            if (dusk::getActionBindTrig(dusk::ActionBinds::CYCLE_SHIELD, 0)) {
+                dusk::cycleNextShield();
+            }
         }
     }
 

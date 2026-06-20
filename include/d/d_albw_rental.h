@@ -73,6 +73,17 @@ const char* dALBWRental_getGreetingPage3();  // page 3, first-visit only (null i
 const char* dALBWRental_getFarewellText();
 // Current selection index into the visible list — for dALBWShop_c to highlight.
 int         dALBWRental_getSelectedIdx();
+// ============================================
+// NEW CODE — ALBW Port (Shop Category Pages)
+// Current page heading + position for dALBWShop_c to draw in the title pane.
+// getPageNumber() is 1-based; both fall back to 1 when no page is active.
+// ============================================
+const char* dALBWRental_getPageTitle();
+int         dALBWRental_getPageNumber();
+int         dALBWRental_getPageCount();
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 #endif
 // ============================================
 // NEW CODE ENDS HERE

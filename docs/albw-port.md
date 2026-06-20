@@ -33,7 +33,7 @@ Pause menu → **Quality of Life** → **ALBW Settings** (single section):
 | **Death Recovery Orb** | Off | After Talo is rescued, dying halves your wallet and leaves a Tear of Light at the death spot to recover part of it. Item strip and meter refill on death are unaffected. |
 | **Wolf Link Combat** | Off | ALBW wolf form: bite charges for Midna field attacks, twilight/non-twilight damage split, non-twilight stun, low-HP bite healing. Off = vanilla TP wolf combat. |
 | **Enemy Death Rupees** | Off | Credit rupees directly to your wallet when enemies die and when boss fights end. Vanilla drop tables (hearts, jars, ground rupees) are unchanged. |
-| **Extra Item Slot** | Off | Move **Talk to Midna** to left D-pad and assign a third inventory item to **Z**. Midna HUD moves to the cross; Z shows the item icon. Wolf Z abilities unchanged. |
+| **Extra Item Slot** | Off | **Off** / **Extra Only** (Midna on left D-pad, Z item) / **Extra + Quick Swap** (also Up = cycle sword, Right = cycle shield, Down = transform; map defaults to M / Tab). See `docs/d-pad-reworking.md`. |
 
 Design details for shield systems: **[shield-combat.md](shield-combat.md)**.
 

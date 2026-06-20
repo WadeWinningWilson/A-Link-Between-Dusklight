@@ -15,6 +15,7 @@
 #include "SSystem/SComponent/c_math.h"
 #include "d/d_item.h"
 #include "d/d_meter2_draw.h"
+#include "d/d_albw_rental.h"
 #include "d/d_pane_class.h"
 #include "d/d_demo.h"
 #include "d/actor/d_a_crod.h"
@@ -4921,9 +4922,23 @@ int daAlink_c::create() {
         } else
         #endif
         // Event Flag: Finished Sewers
-        if (checkCasualWearFlg() && dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[47])) {
+        // ============================================
+        // MODIFIED CODE — ALBW Port (Ordon outfit persistence)
+        // Vanilla forces casual wear back to Hero's clothes after the sewers on
+        // every Link init (so it re-fires on every stage transition/warp).  Skip
+        // it when the player has PURCHASED the Ordon outfit from the rental shop:
+        // dMeter2_grantRentalClothes() sets the WEAR_CASUAL item first-bit, which
+        // vanilla never sets (vanilla canonically switches to Hero's clothes after
+        // the sewers, so that bit is clear there).  This keeps a bought outfit on
+        // across warps/reloads without changing vanilla intro behavior.
+        // ============================================
+        if (checkCasualWearFlg() && dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[47])
+            && !dComIfGs_isItemFirstBit((u8)dItemNo_WEAR_CASUAL_e)) {
             dComIfGs_setSelectEquipClothes(dItemNo_WEAR_KOKIRI_e);
         }
+        // ============================================
+        // MODIFIED CODE ENDS HERE
+        // ============================================
 
         if (isEnteringLV7 && checkMagicArmorHeavy()) {
             dComIfGs_setSelectEquipClothes(dItemNo_WEAR_KOKIRI_e);
@@ -9405,6 +9420,18 @@ BOOL daAlink_c::manualShieldBlocksSwordInput() const {
 
 BOOL daAlink_c::midnaTalkTrigger() const {
 #if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port (Shop input ownership)
+    // While the rental shop is open it owns the D-pad (left/right = page nav).
+    // Suppress the Midna call so page-left does not also summon Midna when the
+    // Extra Item Slot binds Midna to the left D-pad.
+    // ============================================
+    if (dALBWRental_isOpen()) {
+        return FALSE;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     if (dusk::isExtraItemSlotEnabled()) {
         if (dusk::isActionBound(dusk::ActionBinds::CALL_MIDNA, 0)) {
             return dusk::getActionBindTrig(dusk::ActionBinds::CALL_MIDNA, 0);

@@ -21,6 +21,8 @@
 #if TARGET_PC
 #include "d/d_item_data.h"
 #include "d/d_albw_oocoo.h"
+#include "d/d_albw_shade_refuge.h"  // Shade's Refuge: last-watcher death-respawn slot
+#include "d/actor/d_a_player.h"     // Shade's Refuge: daPy_py_c::setParamData (warp-in spawn param)
 #include "dusk/ui/ui.hpp"
 #endif
 
@@ -447,6 +449,34 @@ void dGameover_c::saveClose_proc() {
             dComIfGp_setNextStage("F_SP103", 0, 1, -1);
             dComIfGp_offPauseFlag();
         }
+        // Shade's Refuge — "Last Shade Watcher": respawn at the watcher Link
+        // last rested at (slot set by dShadeRefuge_setRespawn on Rest).
+        // setNextStage bypasses the HP-restore path, so restore here. Point -1
+        // + setRestartRoom spawns Link at the saved watcher position (the Midna
+        // field-return convention). setGameoverStatus(2) is skipped — the stage
+        // change drives the reload.
+        else if (dMeter2Info_getGameOverType() == 0 && sALBWWarpChoice == 0 &&
+                 albwWarpChoiceAllowed() && dShadeRefuge_hasRespawn()) {
+            // Respawn at the saved watcher coords (point -1 + setRestartRoom),
+            // so Link lands right by the wolf, AND plays the fall-recovery
+            // getup. This mirrors the void-restart spawn (d_a_alink.cpp:13852,
+            // startRestartRoom(5, 0xC9, 4)): the engine encodes that as
+            // setNextStage lastMode 0x45 = mode 5 | (fall-damage 4 << 4), which
+            // the spawn-in reads via getLastSceneMode()/getLastSceneDamage()
+            // (game state, persists cross-stage) to drive the getup. setParamData
+            // key 0xC9 matches the void-restart param. The ~1/4-heart fall damage
+            // is topped back to full by the watcher the same frame, and the
+            // watcher also snaps the camera behind Link (coords carry no camera).
+            dComIfGs_setLife(dComIfGs_getMaxLife());
+            dComIfGs_setRestartRoom(dShadeRefuge_getPos(), dShadeRefuge_getAngleY(),
+                                    dShadeRefuge_getRoom());
+            dComIfGs_setRestartRoomParam(
+                daPy_py_c::setParamData(dShadeRefuge_getRoom(), 0, 0xC9, 0));
+            dComIfGp_setNextStage(dShadeRefuge_getStage(), -1, dShadeRefuge_getRoom(), -1,
+                                  0.0f, 0x45, 0, 0, 0, 1, 0);
+            dShadeRefuge_armRespawnCamera();
+            dComIfGp_offPauseFlag();
+        }
 #endif
 // ============================================
 // NEW CODE ENDS HERE
@@ -513,6 +543,14 @@ void dGameover_c::warpChoice_init() {
     const char* content = sALBWWarpInDungeon
         ? "A: Dungeon Entrance\nB: Ordon Village"
         : "A: Continue Here\nB: Ordon Village";
+#if TARGET_PC
+    // Shade's Refuge: once Link has rested at a Shade Watcher, the A slot
+    // becomes "Last Shade Watcher" everywhere (overrides Dungeon Entrance /
+    // Continue Here). B stays Ordon. Falls back above when no watcher is set.
+    if (dShadeRefuge_hasRespawn()) {
+        content = "A: Last Shade Watcher\nB: Ordon Village";
+    }
+#endif
 
     dusk::ui::push_toast({
         .title    = "Choose Warp Destination",

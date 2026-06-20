@@ -87,6 +87,7 @@
 #include "dusk/config.hpp"
 #include "dusk/speedrun.h"
 #include "dusk/settings.h"
+#include "dusk/dpad_quick_swap.h"
 #include "dusk/texture_replacements.hpp"
 #include "dusk/io.hpp"
 #include "dusk/version.hpp"
@@ -560,6 +561,7 @@ int game_main(int argc, char* argv[]) {
         dusk::resetForSpeedrunMode();
     }
     ApplyCVarOverrides(parsed_arg_options["cvar"]);
+    dusk::applyDpadQuickSwapPresetBinds();
     dusk::android::update_surface_frame_rate();
     dusk::crash_reporting::initialize();
     dusk::crash_handler::install();

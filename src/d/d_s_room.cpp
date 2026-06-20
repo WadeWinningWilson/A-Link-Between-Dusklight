@@ -21,6 +21,43 @@
 #endif
 #if TARGET_PC
 #include "d/d_albw_death_rupee.h"
+#include "d/d_item_data.h"
+
+// ============================================
+// NEW CODE — ALBW Port — "Shade's Refuge"
+// Shade Watcher placement table. ONE actor type (fpcNm_ALBW_SHADE_WATCHER_e) is
+// spawned per row when that row's stage/room loads and its gate passes. Adding
+// a watcher = adding a row (coords/angle recorded via the F5 Player Info
+// overlay). Param 0x0100 puts the wolf in mParamMode 0 (mode byte 1; a 0 mode
+// byte OOB-hides it). gate==NULL means always present once the room loads.
+// ============================================
+namespace {
+struct ShadeWatcherSpawn {
+    const char* stage;
+    s8          room;
+    cXyz        pos;
+    s16         angleY;
+    bool (*gate)();  // checked with that stage already loaded
+};
+
+// Ook-defeated, death-proof: the ALBW death-strip clears the boomerang
+// first-bit, so isStageMiddleBoss() (the flag the Ook actor uses to stay dead)
+// is the durable signal; OR the boomerang bit for the first pre-death visit.
+bool shadeGate_OokArena() {
+    return dComIfGs_isStageMiddleBoss() ||
+           dComIfGs_isItemFirstBit(dItemNo_BOOMERANG_e);
+}
+
+const ShadeWatcherSpawn kShadeWatchers[] = {
+    // Ook Arena (D_MN05B r51). The "D_MN05B" gate also excludes the Zant fight
+    // (that runs in D_MN08A).
+    { "D_MN05B", 51, { -3.7525f, 3901.0000f, -6624.5981f }, (s16)53, shadeGate_OokArena },
+    // Outside the Diababa boss room (D_MN05 r12). Always present once you reach
+    // the antechamber (gate NULL). Link respawns at a custom offset (see the
+    // kLinkSpawnOverrides table in d_albw_shade_refuge.cpp), not on the wolf.
+    { "D_MN05", 12, { 6875.4951f, 3310.9399f, -15687.1270f }, (s16)16201, NULL },
+};
+}  // namespace
 #endif
 
 static int dScnRoom_Draw(room_of_scene_class* i_this) {
@@ -259,6 +296,20 @@ static bool objectSetCheck(room_of_scene_class* i_this) {
                 static const cXyz  kPostScale = { 1.0f, 1.0f, 1.0f };
                 fopAcM_create(fpcNm_NPC_POST_e, (0x42u << 8) | 0x00u,
                               &kPostPos, roomNo, &kPostAngle, &kPostScale, -1);
+            }
+
+            // Shade's Refuge — spawn each table watcher (kShadeWatchers, near
+            // the top of this file) whose stage/room is loading and whose gate
+            // passes. Adding a watcher is one table row.
+            for (int wi = 0; wi < (int)(sizeof(kShadeWatchers) / sizeof(kShadeWatchers[0])); wi++) {
+                const ShadeWatcherSpawn& w = kShadeWatchers[wi];
+                if (strcmp(dComIfGp_getStartStageName(), w.stage) == 0 && roomNo == w.room &&
+                    (w.gate == NULL || w.gate())) {
+                    static const cXyz kWatcherScale = { 1.0f, 1.0f, 1.0f };
+                    const csXyz kWatcherAngle = { 0, w.angleY, 0 };
+                    fopAcM_create(fpcNm_ALBW_SHADE_WATCHER_e, 0x0100,
+                                  &w.pos, roomNo, &kWatcherAngle, &kWatcherScale, -1);
+                }
             }
 #endif
 // ============================================

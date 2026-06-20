@@ -921,6 +921,20 @@ void dMeter2_onShieldDestroyedForRental(u8 itemNo);
 bool dMeter2_isShieldRentalEligible(u8 itemNo);
 void dMeter2_grantRentalShield(u8 itemNo);
 // ============================================
+// NEW CODE — ALBW Port (Outfit / clothes rental)
+// dMeter2_isCasualWearEligible() — "worn once" gate for the Ordon outfit: true
+//   once the player has escaped the Hyrule Castle Sewers (saveBitLabels[47]),
+//   i.e. has worn the Ordon clothes through the intro. True ALBW bypasses this.
+// dMeter2_grantRentalClothes() — grant + auto-equip a clothes item (e.g. casual
+//   wear) and trigger the model swap. The shop is the only way to don the Ordon
+//   outfit; vanilla collection menus can switch it back off.
+// ============================================
+bool dMeter2_isCasualWearEligible();
+void dMeter2_grantRentalClothes(u8 itemNo);
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+// ============================================
 // NEW CODE — ALBW Port
 // Sword attack and agility drain API.
 // Signal functions are called from the procInit gate at the top of each

@@ -29,6 +29,8 @@
 #include "d/d_albw_wolf_charge_hud.h"
 #include "d/d_albw_rupee_popup.h"
 #include "d/d_albw_boss_hp_hud.h"
+#include "d/d_albw_lop_item_belt.h"
+#include "res/Layout/itemicon.h"
 #include "dusk/action_bindings.h"
 #include "JSystem/JUtility/TColor.h"
 #endif
@@ -121,11 +123,31 @@ static constexpr f32 kLopSpurAnchorOffY = -16.0f;  // lift to sit even with the 
 static constexpr f32 kLopButtonRaiseY = 64.0f;
 // Durability bar gap below the shield-icon row bottoms.
 static constexpr f32 kLopDurabilityGapPx = 6.0f;
-// Item belt (X over Y) stacked just above the Midna icon. Offsets are global HUD px
-// relative to Midna's centre; the Y slot sits at OffY, the X slot a Gap higher.
-static constexpr f32 kLopItemBeltOffX = 0.0f;    // horizontal vs Midna centre
-static constexpr f32 kLopItemBeltOffY = -38.0f;  // Y item above Midna
-static constexpr f32 kLopItemBeltGap = 36.0f;    // X item above the Y item
+// Sword slot: a framed slot to the RIGHT of the B-button box, offset from its centre.
+static constexpr f32 kLopSwordSlotOffX = 44.0f;
+static constexpr f32 kLopSwordSlotOffY = 0.0f;
+
+// Equipped-sword icon from itemicon.arc (by index — encoding-proof, like the shield
+// HUD). NULL = no sword equipped.
+ResTIMG* lopSwordIcon(u8 i_swordNo) {
+    JKRArchive* arc = dComIfGp_getItemIconArchive();
+    if (arc == NULL) {
+        return NULL;
+    }
+    int idx;
+    switch (i_swordNo) {
+    case dItemNo_MASTER_SWORD_e:
+    case dItemNo_LIGHT_SWORD_e:
+        idx = dRes_INDEX_ITEMICON_BTI_NI_MASTERSWORD_48_e;
+        break;
+    case dItemNo_SWORD_e:
+        idx = dRes_INDEX_ITEMICON_BTI_TT_KOKIRINOKEN_S3_TC_e;
+        break;
+    default:
+        return NULL;
+    }
+    return static_cast<ResTIMG*>(arc->getIdxResource(idx));
+}
 // ============================================
 // NEW CODE ENDS HERE
 // ============================================
@@ -271,6 +293,11 @@ dMeter2Draw_c::~dMeter2Draw_c() {
     dComIfGp_getMsgDtArchive(0)->removeResource(dMeter2Info_getMsgResource());
     dComIfGp_getMsgDtArchive(0)->removeResource(dMeter2Info_getMsgUnitResource());
     dComIfGp_getItemIconArchive()->removeResourceAll();
+
+#if TARGET_PC
+    // LoP item-belt slot frames: free the HUD-owned clctres mount + pictures.
+    dAlbwLopItemBelt_cleanup();
+#endif
 
     JKR_DELETE(mpScreen);
     mpScreen = NULL;
@@ -814,11 +841,11 @@ void dMeter2Draw_c::draw() {
             for (J2DPane* c = mpButtonParent->getPanePtr()->getFirstChildPane(); c != NULL;
                  c = c->getNextChildPane()) {
                 const u64 tag = c->mInfoTag;
-                // Keep the B box + sword, Midna, and the X/Y item icons (relocated to
-                // the bottom-left belt just below) — hide everything else (vine, A/Z).
+                // Keep only the B box + sword and Midna. The X/Y item icons are drawn
+                // fresh in the bottom-left belt (from their textures), so the ring
+                // copies stay hidden.
                 if (tag != MULTI_CHAR('bbtn_n') && tag != MULTI_CHAR('b_text_b') &&
-                    tag != MULTI_CHAR('midona_n') && tag != MULTI_CHAR('x_itm_p') &&
-                    tag != MULTI_CHAR('y_itm_p')) {
+                    tag != MULTI_CHAR('midona_n')) {
                     c->hide();
                 }
             }
@@ -836,52 +863,39 @@ void dMeter2Draw_c::draw() {
         lopHidePane(mpTextXY[0]);
         lopHidePane(mpTextXY[1]);
         lopHidePane(mpTextXY[2]);
+        lopHidePane(mpItemXY[0]);
+        lopHidePane(mpItemXY[1]);
         for (int i = 0; i < 5; i++) {
             lopHidePane(mpAText[i]);
         }
 
-        // Item belt: stack the X (top) / Y (bottom) item icons just above the Midna
-        // icon. They ride the bottom-right ring, so cache once the absolute paneTrans
-        // that lands each above Midna — the ring's local->global scale is measured
-        // empirically from the two slots' known natural positions (no guessed divisor).
-        if (mpButtonMidona != NULL && mpButtonMidona->getPanePtr() != NULL &&
-            mpItemXY[0] != NULL && mpItemXY[0]->getPanePtr() != NULL && mpItemXY[1] != NULL &&
-            mpItemXY[1]->getPanePtr() != NULL) {
-            static bool sBeltCached = false;
-            static f32 sBeltX[2] = {0.0f, 0.0f};
-            static f32 sBeltY[2] = {0.0f, 0.0f};
-            if (!sBeltCached) {
+        // Item belt: draw the carved horiwaku slot frames stacked above the Midna
+        // icon, with the assigned X/Y item icons rendered fresh inside them from their
+        // own textures (no fighting the ring's transform/clipping). Gated by the
+        // button-ring fade + pause so it hides with the rest of the HUD (cutscenes,
+        // game over, etc.).
+        if (!dComIfGp_isPauseFlag() && mpButtonParent->getAlphaRate() > 0.0f) {
+            if (mpButtonMidona != NULL && mpButtonMidona->getPanePtr() != NULL) {
                 const Vec midna = mpButtonMidona->getGlobalVtxCenter(false, 0);
-                const Vec g0 = mpItemXY[0]->getGlobalVtxCenter(false, 0);
-                const Vec g1 = mpItemXY[1]->getGlobalVtxCenter(false, 0);
-                const f32 nx0 = mItemParams[0].pos_x + field_0x6ac[0];
-                const f32 ny0 = mItemParams[0].pos_y + field_0x6b8[0];
-                const f32 nx1 = mItemParams[1].pos_x + field_0x6ac[1];
-                const f32 ny1 = mItemParams[1].pos_y + field_0x6b8[1];
-                const f32 fallback = std::max(mButtonsScale * g_drawHIO.mParentScale, 0.001f);
-                const f32 dpx = nx1 - nx0;
-                const f32 dpy = ny1 - ny0;
-                f32 sx = (std::fabs(dpx) > 0.5f) ? ((g1.x - g0.x) / dpx) : fallback;
-                f32 sy = (std::fabs(dpy) > 0.5f) ? ((g1.y - g0.y) / dpy) : fallback;
-                if (std::fabs(sx) < 0.001f) {
-                    sx = fallback;
-                }
-                if (std::fabs(sy) < 0.001f) {
-                    sy = fallback;
-                }
-                for (int i = 0; i < 2; i++) {
-                    const Vec g = (i == 0) ? g0 : g1;
-                    const f32 nx = (i == 0) ? nx0 : nx1;
-                    const f32 ny = (i == 0) ? ny0 : ny1;
-                    const f32 tx = midna.x + kLopItemBeltOffX;
-                    const f32 ty = midna.y + kLopItemBeltOffY - (f32)(1 - i) * kLopItemBeltGap;
-                    sBeltX[i] = nx + (tx - g.x) / sx;
-                    sBeltY[i] = ny + (ty - g.y) / sy;
-                }
-                sBeltCached = true;
+                // Only show an icon for a slot that currently holds an item — query
+                // the live X/Y assignment so a stripped/empty slot clears (the cached
+                // mpItemXYTex isn't reset when the ALBW mod removes an item).
+                ResTIMG* xTex = (dComIfGp_getSelectItem(0) != dItemNo_NONE_e)
+                                    ? mpItemXYTex[0][field_0x76c[0]][0]
+                                    : NULL;
+                ResTIMG* yTex = (dComIfGp_getSelectItem(1) != dItemNo_NONE_e)
+                                    ? mpItemXYTex[1][field_0x76c[1]][0]
+                                    : NULL;
+                dAlbwLopItemBelt_draw(graf_ctx, midna.x, midna.y, xTex, yTex);
             }
-            mpItemXY[0]->paneTrans(sBeltX[0], sBeltY[0]);
-            mpItemXY[1]->paneTrans(sBeltX[1], sBeltY[1]);
+            // Sword slot: framed slot right of the B-button box, showing the equipped
+            // sword (re-queried each frame, so it follows future d-pad sword swaps).
+            if (mpButtonB != NULL && mpButtonB->getPanePtr() != NULL) {
+                const Vec bc = mpButtonB->getGlobalVtxCenter(false, 0);
+                ResTIMG* swordTex = lopSwordIcon(dComIfGs_getSelectEquipSword());
+                dAlbwLopItemBelt_drawSword(graf_ctx, bc.x + kLopSwordSlotOffX,
+                                           bc.y + kLopSwordSlotOffY, swordTex);
+            }
         }
     }
     // ============================================

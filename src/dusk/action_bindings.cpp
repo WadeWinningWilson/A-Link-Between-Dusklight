@@ -1,10 +1,12 @@
 #include "dusk/action_bindings.h"
 
 #include "aurora/lib/input.hpp"
+#include "dusk/dpad_quick_swap.h"
 #include "dusk/settings.h"
 #include "dusk/ui/ui.hpp"
 
 #include <SDL3/SDL_gamepad.h>
+#include <SDL3/SDL_scancode.h>
 #include <dolphin/pad.h>
 
 namespace dusk {
@@ -26,6 +28,9 @@ ActionBindsMap& getActionBinds() {
         {ActionBinds::TOGGLE_MINIMAP,      {&getSettings().actionBindings.toggleMinimap,     "Toggle Minimap"}},
         {ActionBinds::OPEN_DUSKLIGHT_MENU, {&getSettings().actionBindings.openDusklightMenu, "Open Dusklight Menu"}},
         {ActionBinds::TURBO_SPEED_BUTTON,  {&getSettings().actionBindings.turboSpeedButton,  "Turbo Speed Button"}},
+        {ActionBinds::CYCLE_SWORD,         {&getSettings().actionBindings.cycleSword,        "Cycle Sword"}},
+        {ActionBinds::CYCLE_SHIELD,        {&getSettings().actionBindings.cycleShield,       "Cycle Shield"}},
+        {ActionBinds::QUICK_TRANSFORM,     {&getSettings().actionBindings.quickTransform,    "Quick Transform"}},
     };
     return actionBinds;
 }
@@ -139,8 +144,62 @@ int getActionBindButton(ActionBinds action, u32 port) {
 }
 
 #if TARGET_PC
+static bool bindUsesPadButton(ActionBinds action, u32 port, PADButton padButton) {
+    if (!isActionBound(action, port)) {
+        return false;
+    }
+
+    const int bindButton = getActionBindButton(action, port);
+    if (bindButton == PAD_NATIVE_BUTTON_INVALID) {
+        return false;
+    }
+
+    switch (padButton) {
+    case PAD_BUTTON_UP:
+        if (bindButton == SDL_GAMEPAD_BUTTON_DPAD_UP) {
+            return true;
+        }
+        break;
+    case PAD_BUTTON_DOWN:
+        if (bindButton == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
+            return true;
+        }
+        break;
+    case PAD_BUTTON_LEFT:
+        if (bindButton == SDL_GAMEPAD_BUTTON_DPAD_LEFT) {
+            return true;
+        }
+        break;
+    case PAD_BUTTON_RIGHT:
+        if (bindButton == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
+            return true;
+        }
+        break;
+    default:
+        break;
+    }
+
+    u32 count = 0;
+    const PADKeyButtonBinding* bindings = PADGetKeyButtonBindings(port, &count);
+    if (bindings == nullptr) {
+        return false;
+    }
+
+    for (u32 i = 0; i < count; ++i) {
+        if (bindings[i].padButton == padButton && bindings[i].scancode == bindButton) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool isExtraItemSlotEnabled() {
-    return getSettings().game.extraItemSlot.getValue();
+    return getSettings().game.extraItemSlotMode.getValue() != ExtraItemSlotMode::Off;
+}
+
+bool isDpadQuickSwapEnabled() {
+    return getSettings().game.extraItemSlotMode.getValue() == ExtraItemSlotMode::ExtraAndQuickSwap;
 }
 
 bool callMidnaReservesDpadLeft(u32 port) {
@@ -149,11 +208,26 @@ bool callMidnaReservesDpadLeft(u32 port) {
     }
 
     if (isActionBound(ActionBinds::CALL_MIDNA, port)) {
-        return getActionBindButton(ActionBinds::CALL_MIDNA, port) == SDL_GAMEPAD_BUTTON_DPAD_LEFT;
+        return getActionBindButton(ActionBinds::CALL_MIDNA, port) == SDL_GAMEPAD_BUTTON_DPAD_LEFT ||
+               bindUsesPadButton(ActionBinds::CALL_MIDNA, port, PAD_BUTTON_LEFT);
     }
 
     // Built-in PC default when Call Midna is not customized in config.
     return true;
+}
+
+bool dpadUpReservedForQuickSwap(u32 port) {
+    return isDpadQuickSwapEnabled() && bindUsesPadButton(ActionBinds::CYCLE_SWORD, port, PAD_BUTTON_UP);
+}
+
+bool dpadDownReservedForQuickSwap(u32 port) {
+    return isDpadQuickSwapEnabled() &&
+           bindUsesPadButton(ActionBinds::QUICK_TRANSFORM, port, PAD_BUTTON_DOWN);
+}
+
+bool dpadRightReservedForQuickSwap(u32 port) {
+    return isDpadQuickSwapEnabled() &&
+           bindUsesPadButton(ActionBinds::CYCLE_SHIELD, port, PAD_BUTTON_RIGHT);
 }
 #endif
 

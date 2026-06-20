@@ -4,6 +4,10 @@
 #include "d/d_meter2_draw.h"
 #include "d/d_meter2_info.h"
 
+#if TARGET_PC
+#include "dusk/action_bindings.h"
+#endif
+
 void daAlink_c::handleWolfHowl() {
     if (checkWolf()) {
         if (!dusk::getSettings().game.sunsSong) {
@@ -67,9 +71,15 @@ void daAlink_c::handleWolfHowl() {
 }
 
 void daAlink_c::handleQuickTransform() {
-    if (!dusk::getSettings().game.enableQuickTransform) {
+#if TARGET_PC
+    if (!dusk::isDpadQuickSwapEnabled() && !dusk::getSettings().game.enableQuickTransform.getValue()) {
         return;
     }
+#else
+    if (!dusk::getSettings().game.enableQuickTransform.getValue()) {
+        return;
+    }
+#endif
 
     // Check to see if Link has the ability to transform.
     if (!dComIfGs_isEventBit(dSv_event_flag_c::M_077)) {

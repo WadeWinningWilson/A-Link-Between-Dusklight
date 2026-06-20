@@ -803,6 +803,7 @@ PROCS_NOT_WII \
 /* 0x315 */ X(fpcNm_TIMER_e) \
 /* 0x316 */ X(fpcNm_METER2_e) \
 /* 0x317 */ X(fpcNm_GAMEOVER_e) \
+/* 0x318 */ X(fpcNm_ALBW_SHADE_WATCHER_e) \
 
 #define X(name) name,
 enum {

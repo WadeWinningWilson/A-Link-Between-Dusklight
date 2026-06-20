@@ -13,6 +13,7 @@
 #include "d/d_menu_window.h"
 #include "d/d_meter2_info.h"
 #include "d/d_msg_object.h"
+#include "d/d_albw_rental.h"  // ALBW: suppress map/minimap open while the rental shop owns input
 #include "f_op/f_op_overlap_mng.h"
 #include "m_Do/m_Do_controller_pad.h"
 #include "d/d_camera.h"
@@ -747,7 +748,8 @@ void dMeterMap_c::ctrlShowMap() {
         else if (!isEventRunCheck() &&
                  (dMeter2Info_getMapStatus() == 0 || dMeter2Info_getMapStatus() == 1) &&
                  !dMeter2Info_isSub2DStatus(1) && (isFmapScreen() || isDmapScreen()) &&
-                 dusk::getActionBindTrig(dusk::ActionBinds::OPEN_MAP_SCREEN, PAD_1))
+                 dusk::getActionBindTrig(dusk::ActionBinds::OPEN_MAP_SCREEN, PAD_1) &&
+                 !dALBWRental_isOpen())
         {
             dMeter2Info_setMapStatus(2);
             dMeter2Info_setMapKeyDirection(0x400);
@@ -757,7 +759,8 @@ void dMeterMap_c::ctrlShowMap() {
         } else if (!isEventRunCheck() &&
                    (dMeter2Info_getMapStatus() == 0 || dMeter2Info_getMapStatus() == 1) &&
                    isEnableDispMapAndMapDispSizeTypeNo() &&
-                   dusk::getActionBindTrig(dusk::ActionBinds::TOGGLE_MINIMAP, PAD_1))
+                   dusk::getActionBindTrig(dusk::ActionBinds::TOGGLE_MINIMAP, PAD_1) &&
+                   !dALBWRental_isOpen())
         {
             if (isDispPosInsideFlg()) {
                 setDispPosOutsideFlg_SE_On();
@@ -873,7 +876,8 @@ void dMeterMap_c::meter_map_move(u32 param_0) {
         else if (!dComIfGp_event_runCheck() && !dMsgObject_isTalkNowCheck() &&
                  (dMeter2Info_getMapStatus() == 0 || dMeter2Info_getMapStatus() == 1) &&
                  !dMeter2Info_isSub2DStatus(1) && (isFmapScreen() || isDmapScreen()) &&
-                 dusk::getActionBindTrig(dusk::ActionBinds::OPEN_MAP_SCREEN, PAD_1))
+                 dusk::getActionBindTrig(dusk::ActionBinds::OPEN_MAP_SCREEN, PAD_1) &&
+                 !dALBWRental_isOpen())
         {
             dMeter2Info_setMapStatus(2);
             dMeter2Info_setMapKeyDirection(0x400);

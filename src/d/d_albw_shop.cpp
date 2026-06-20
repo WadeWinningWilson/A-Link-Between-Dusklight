@@ -1941,6 +1941,28 @@ void dALBWShop_c::populateRows() {
     if (mpDescBox) {
         mpDescBox->hide();
     }
+
+    // ============================================
+    // NEW CODE — ALBW Port (Shop Category Pages)
+    // Repurpose the title pane as the page heading + counter, e.g. "Items (2/4)".
+    // Shows the page title alone when only one page has content.
+    // ============================================
+    if (mpTitleBox) {
+        char      titleBuf[64];
+        const int pageNum   = dALBWRental_getPageNumber();
+        const int pageCount = dALBWRental_getPageCount();
+        if (pageCount > 1) {
+            snprintf(titleBuf, sizeof(titleBuf), "%s   (%d/%d)",
+                     dALBWRental_getPageTitle(), pageNum, pageCount);
+        } else {
+            snprintf(titleBuf, sizeof(titleBuf), "%s", dALBWRental_getPageTitle());
+        }
+        mpTitleBox->setString(titleBuf);
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+
     updateDescParchment(showItemBox, itemNo);
 }
 

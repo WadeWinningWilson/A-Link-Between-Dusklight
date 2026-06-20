@@ -170,6 +170,7 @@ set(DOLZEL_FILES
         src/d/d_shop_system.cpp
         src/d/d_gameover.cpp
         src/d/d_albw_oocoo.cpp
+        src/d/d_albw_shade_refuge.cpp
         src/d/d_albw_death_rupee.cpp
         src/d/d_albw_rental.cpp
         src/d/d_albw_master_quest.cpp
@@ -186,6 +187,7 @@ set(DOLZEL_FILES
         src/d/d_albw_wolf_charge_hud.cpp
         src/d/d_albw_rupee_popup.cpp
         src/d/d_albw_boss_hp_hud.cpp
+        src/d/d_albw_lop_item_belt.cpp
         src/d/d_kankyo.cpp
         src/d/d_kyeff.cpp
         src/d/d_kyeff2.cpp
@@ -976,6 +978,7 @@ set(REL_FILES
         src/d/actor/d_a_npc_grz.cpp
         src/d/actor/d_a_npc_guard.cpp
         src/d/actor/d_a_npc_gwolf.cpp
+        src/d/actor/d_a_albw_shade_watcher.cpp
         src/d/actor/d_a_npc_hanjo.cpp
         src/d/actor/d_a_npc_henna0.cpp
         src/d/actor/d_a_npc_hoz.cpp
@@ -1563,6 +1566,7 @@ set(DUSK_FILES
         src/dusk/discord_presence.cpp
         src/dusk/version.cpp
         src/dusk/action_bindings.cpp
+        src/dusk/dpad_quick_swap.cpp
 )
 
 set(DUSK_HTTP_BACKEND_FILES
