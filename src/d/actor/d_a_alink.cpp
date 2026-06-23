@@ -55,6 +55,7 @@
 #if TARGET_PC
 #include "d/d_albw_death_rupee.h"
 #include "d/d_albw_combat.h"
+#include "d/d_focused_arts.h"
 #include "d/d_albw_shield.h"
 #include "dusk/trace_noop.h"
 #include "d/d_albw_wolf_stun.h"
@@ -64,6 +65,7 @@
 #include "dusk/action_bindings.h"
 #include "dusk/frame_interpolation.h"
 #include "dusk/settings.h"
+#include "dusk/hurricane_test.h"
 #include "res/Object/Alink.h"
 #include <cstring>
 #include <dusk/string.hpp>
@@ -1374,6 +1376,10 @@ const daAlink_procInitTable daAlink_c::m_procInitTable[] = {
     { &daAlink_c::procCoGlare, 0x80001 },
     { &daAlink_c::procCoHorseCallWait, 0x1 },
     { &daAlink_c::procDemoCommon, 0x1 },
+#if TARGET_PC
+    { &daAlink_c::procCutGsHurricane, 0x101 },
+    { &daAlink_c::procCutGsHurricaneTired, 0x10001185 },
+#endif
 };
 
 daAlink_procFunc daAlink_c::m_demoInitTable[] = {
@@ -1919,6 +1925,9 @@ static dJntColData_c l_wolfJntColData[] = {
 #include "d/actor/d_a_alink_link.inc"
 
 #include "d/actor/d_a_alink_cut.inc"
+#if TARGET_PC
+#include "d/actor/d_a_alink_hurricane.inc"
+#endif
 
 #include "d/actor/d_a_alink_damage.inc"
 
@@ -5941,7 +5950,7 @@ void daAlink_c::setItemMatrix(int param_0) {
 
     mZ2Link.setLinkSwordType(var_r28, var_r26);
 
-    if (mShieldChangeWaitTimer == 0) {
+    if (mShieldChangeWaitTimer == 0 && mShieldModel != NULL) {
         if (param_0 != 0
             || (checkPlayerGuardAndAttack() && mEquipItem != dItemNo_IRONBALL_e && !checkModeFlg(0x400))
             || checkNoResetFlg0(FLG0_UNK_2)
@@ -6148,7 +6157,7 @@ void daAlink_c::setWolfItemMatrix() {
     mDoMtx_stack_c::transM(11.0f, -18.0f, -13.0f);
     mDoMtx_stack_c::XYZrotM(cM_deg2s(90.0f), cM_deg2s(58.0f), cM_deg2s(-24.0f));
 
-    if (mShieldChangeWaitTimer == 0) {
+    if (mShieldChangeWaitTimer == 0 && mShieldModel != NULL) {
         mShieldModel->setBaseTRMtx(mDoMtx_stack_c::get());
         modelCalc(mShieldModel);
     }
@@ -6863,7 +6872,9 @@ void daAlink_c::setCollision() {
         }
     }
 
-    mDoMtx_multVecSR(getShieldMtx(), &cXyz::BaseZ, &field_0x351c);
+    if (mShieldModel != NULL) {
+        mDoMtx_multVecSR(getShieldMtx(), &cXyz::BaseZ, &field_0x351c);
+    }
 
     if (!checkIronBallWaitAnime() && field_0x351c.absXZ() > 0.0099999998f) {
         field_0x306c = field_0x351c.atan2sX_Z();
@@ -9429,6 +9440,9 @@ BOOL daAlink_c::midnaTalkTrigger() const {
     if (dALBWRental_isOpen()) {
         return FALSE;
     }
+    if (dShield_isTestingParryReworkEnabled() && checkPlayerGuard()) {
+        return FALSE;
+    }
     // ============================================
     // NEW CODE ENDS HERE
     // ============================================
@@ -10106,6 +10120,12 @@ f32 daAlink_c::getStickAngleDistanceRate() {
 }
 
 void daAlink_c::setSpeedAndAngleNormal() {
+#if TARGET_PC
+    if (mProcID == PROC_CUT_GS_HURRICANE) {
+        return;
+    }
+#endif
+
     bool var_r26 = false;
 
     if ((mLinkAcch.ChkWallHit() || field_0x30fc != 0) && !checkMagneBootsOn()) {
@@ -12001,6 +12021,11 @@ BOOL daAlink_c::checkItemAction() {
                     return procHorseCutTurnInit();
                 }
 
+#if TARGET_PC
+                if (dusk::isHurricaneTestEnabled()) {
+                    return procCutGsHurricaneInit(getCutTurnDirection());
+                }
+#endif
                 return procCutTurnInit(1, 2);
             }
 
@@ -14154,14 +14179,29 @@ int daAlink_c::checkSceneChange(int i_exitID) {
 }
 
 void daAlink_c::voiceStart(u32 i_soundID) {
+#if TARGET_PC
+    if (dusk::isLinkHurricaneProc(this) && i_soundID != dusk::getHurricanePlaceholderVoiceSe()) {
+        return;
+    }
+#endif
     mZ2Link.startLinkVoice(i_soundID, mVoiceReverbIntensity);
 }
 
 void daAlink_c::voiceStartLevel(u32 i_soundID) {
+#if TARGET_PC
+    if (dusk::isLinkHurricaneProc(this) && i_soundID != dusk::getHurricanePlaceholderVoiceSe()) {
+        return;
+    }
+#endif
     mZ2Link.startLinkVoiceLevel(i_soundID, mVoiceReverbIntensity);
 }
 
 void daAlink_c::seStartSwordCut(u32 i_soundID) {
+#if TARGET_PC
+    if (dusk::isLinkHurricaneProc(this)) {
+        return;
+    }
+#endif
     mZ2Link.startLinkSwordSound(i_soundID, 0, mVoiceReverbIntensity);
 }
 
@@ -15286,7 +15326,9 @@ void daAlink_c::changeWarpMaterial(daAlink_c::daAlink_WARP_MAT_MODE i_matMode) {
     void (*mat_func)(J3DModelData*) = mat_func_tbl[i_matMode];
     mat_func(field_0x064C);
     mat_func(mSwordModel->getModelData());
-    mat_func(mShieldModel->getModelData());
+    if (mShieldModel != NULL) {
+        mat_func(mShieldModel->getModelData());
+    }
     mat_func(mSheathModel->getModelData());
 
     if (checkWolf()) {
@@ -18187,7 +18229,9 @@ int daAlink_c::procGoronRideWait() {
 }
 
 int daAlink_c::execute() {
-    loadModelDVD();
+    if (loadModelDVD() && !checkNoResetFlg2(FLG2_STATUS_WINDOW_DRAW)) {
+        loadShieldModelDVD();
+    }
 
     if (checkEndResetFlg0(ERFLG0_BOSS_ROOM_WAIT) && getMidnaActor() != NULL) {
         getMidnaActor()->onNoServiceWait();
@@ -18961,7 +19005,9 @@ int daAlink_c::execute() {
                 modelCalc(mpLinkModel);
 
                 if (field_0x2fcb != 0) {
-                    if (checkWoodShieldEquip() && mWaterY < mShieldModel->getBaseTRMtx()[1][3]) {
+                    if (checkWoodShieldEquip() && mShieldModel != NULL &&
+                        mWaterY < mShieldModel->getBaseTRMtx()[1][3])
+                    {
                         field_0x2fcb--;
 
                         if (field_0x2fcb == 0) {
@@ -19530,7 +19576,8 @@ bool daAlink_c::checkSwordDraw() {
 }
 
 bool daAlink_c::checkShieldDraw() {
-    return ((checkShieldGet() && mShieldChangeWaitTimer == 0) && !checkNoResetFlg2(FLG2_UNK_4080000)) &&
+    return mShieldModel != NULL &&
+           ((checkShieldGet() && mShieldChangeWaitTimer == 0) && !checkNoResetFlg2(FLG2_UNK_4080000)) &&
            (!checkWolf() || !dComIfGs_isEventBit(dSv_event_flag_c::M_068));
 }
 

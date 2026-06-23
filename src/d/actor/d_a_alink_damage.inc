@@ -11,6 +11,7 @@
 #ifdef TARGET_PC
 #include "d/actor/d_a_obj_carry.h"
 #include "dusk/achievements.h"
+#include "dusk/hurricane_test.h"
 #include "d/d_albw_shield.h"
 #endif
 
@@ -226,6 +227,9 @@ int daAlink_c::setDamagePoint(int i_dmgAmount, BOOL i_checkZoraMag, BOOL i_setDm
 #if TARGET_PC
         if(checkMagicArmorWearAbility() && dusk::getSettings().game.armorRupeeDrain.getValue() == dusk::MagicArmorMode::DOUBLE_DEFENSE) {
             i_dmgAmount /= 2;
+        }
+        if (i_dmgAmount > 0) {
+            dFocusedArts_onDamageTaken();
         }
 #endif
         dComIfGp_setItemLifeCount(-i_dmgAmount, 0);
@@ -488,6 +492,12 @@ BOOL daAlink_c::checkDamageAction() {
         return 0;
     }
 
+#if TARGET_PC
+    if (mProcID == PROC_CUT_GS_HURRICANE && dusk::isHurricaneTestEnabled()) {
+        return 0;
+    }
+#endif
+
     if (checkNoResetFlg1(FLG1_DK_CAUGHT)) {
         if (!checkModeFlg(0x70C52) && !checkWolf() && procDkCaughtInit(field_0x28f8)) {
             return 1;
@@ -706,6 +716,7 @@ BOOL daAlink_c::checkDamageAction() {
                 if (!armor_no_dmg) {
 #if TARGET_PC
                     if (dShield_onShieldHit(this, at_spl, tghit_ac)) {
+                        dShield_playParrySuccessFeedback(this, var_r29->GetTgHitPosP());
                         return 0;
                     }
                     if (dShield_onFailedGuardBreakBlock(this, at_spl, tghit_ac)) {

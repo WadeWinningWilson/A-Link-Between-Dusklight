@@ -68,11 +68,45 @@ enum class ParryIcons : u8 {
     ShieldOnly = 2,  // shield emblem only (starburst hidden)
 };
 
+// ============================================
+// NEW CODE — ALBW Port (Lies of Link HUD mode)
+// Lies of Link HUD layout/health style. Off keeps the vanilla corner HUD; the two
+// On modes share the LoP relayout and differ only in how life is shown.
+// ============================================
+enum class LopHudMode : u8 {
+    Off = 0,            // vanilla TP corner layout
+    VanillaHearts = 1,  // LoP relayout, keep the heart containers
+    HealthBar = 2,      // LoP relayout, Lies-of-P health bar instead of hearts
+};
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
 // Extra Item Slot + optional D-Pad Quick Swap (Midna left, Z item, field equip/transform).
 enum class ExtraItemSlotMode : int {
     Off = 0,
     ExtraOnly = 1,
     ExtraAndQuickSwap = 2,
+};
+
+// Off = vanilla reclaim shop; TrueAlbw = full rental catalog; TrueTest = enables TRUETEST new-save
+// prompt and per-save world bootstrap (see docs/TrueALBWWorld.md).
+enum class TrueAlbwMode : int {
+    Off = 0,
+    TrueAlbw = 1,
+    TrueTest = 2,
+};
+
+enum class HurricaneVfxMode : u8 {
+    WHIRLWIND = 0,
+    BASE = 1,
+};
+
+// Focused Arts playtest cheat: tier 3 without shop; WithDebug adds an in-game HUD overlay.
+enum class FocusedArtsCheatMode : int {
+    Off = 0,
+    On = 1,
+    WithDebug = 2,
 };
 
 namespace config {
@@ -131,9 +165,33 @@ struct ConfigEnumRange<ParryIcons> {
 };
 
 template <>
+struct ConfigEnumRange<LopHudMode> {
+    static constexpr auto min = LopHudMode::Off;
+    static constexpr auto max = LopHudMode::HealthBar;
+};
+
+template <>
 struct ConfigEnumRange<ExtraItemSlotMode> {
     static constexpr auto min = ExtraItemSlotMode::Off;
     static constexpr auto max = ExtraItemSlotMode::ExtraAndQuickSwap;
+};
+
+template <>
+struct ConfigEnumRange<TrueAlbwMode> {
+    static constexpr auto min = TrueAlbwMode::Off;
+    static constexpr auto max = TrueAlbwMode::TrueTest;
+};
+
+template <>
+struct ConfigEnumRange<HurricaneVfxMode> {
+    static constexpr auto min = HurricaneVfxMode::WHIRLWIND;
+    static constexpr auto max = HurricaneVfxMode::BASE;
+};
+
+template <>
+struct ConfigEnumRange<FocusedArtsCheatMode> {
+    static constexpr auto min = FocusedArtsCheatMode::Off;
+    static constexpr auto max = FocusedArtsCheatMode::WithDebug;
 };
 
 template <>
@@ -194,6 +252,10 @@ struct UserSettings {
         ConfigVar<bool> shieldParryCombat;
         // Helm punish flow, hidden-skill dispatch, ALBW meter costs, Jump Strike charge gate.
         ConfigVar<bool> hiddenSkillRework;
+        // Focused Arts charge bank + spend columns (requires hiddenSkillRework).
+        ConfigVar<bool> focusedArtsTest;
+        // Playtest cheat: effective shop tier 3; WithDebug shows in-game FA overlay.
+        ConfigVar<FocusedArtsCheatMode> focusedArtsCheat;
         ConfigVar<bool> shieldDurability;
         // Halve wallet on death and spawn a Tear-of-Light recovery orb (F_0625 gate unchanged).
         ConfigVar<bool> deathRecoveryOrb;
@@ -205,19 +267,21 @@ struct UserSettings {
         ConfigVar<bool> masterQuest;
         // Boss Refinement: any-sword boss damage gates; future Zant/Ganon redesign layers.
         ConfigVar<bool> bossRefinement;
+        // Shade's Refuge: Lies-of-P-style Shade Watcher rest/respawn/return system
+        // (watcher spawns, death-screen "Last Shade Watcher" option, shop return
+        // service). Off = whole system disabled. WIP — default off.
+        ConfigVar<bool> shadeRefuge;
         // Parry/bash charge HUD icon style: spur only, spur+shield, or shield only.
         ConfigVar<ParryIcons> parryIconsMode;
         // Boss health bar HUD (name + bar) for main dungeon bosses / Ganondorf duel.
         ConfigVar<bool> bossHealthBars;
         // Lies of Link HUD: relayout vanilla HUD into a Lies-of-P spatial arrangement
         // (top-left life/meter/shield stack, top-right rupees, bottom-left items/spurs).
-        // Off = vanilla TP corner layout. See docs/albw-hud-lop-layout-brief.md.
-        ConfigVar<bool> lopHud;
-        // True ALBW: every rental-shop item is available from the moment the Postman
-        // appears (Ravio's-shop style), bypassing the "must have lost it first" gate.
-        // Deity Armor keeps its own unlock conditions; the Master Quest heart/stamina
-        // upgrades are unaffected. Off = default reclaim-what-you-lost progression.
-        ConfigVar<bool> trueAlbwShop;
+        // Off = vanilla TP corner layout; VanillaHearts = relayout keeping hearts;
+        // HealthBar = relayout with a LoP health bar. See docs/albw-hud-lop-layout-brief.md.
+        ConfigVar<LopHudMode> lopHud;
+        // True ALBW / TRUETEST mode — see docs/TrueALBWWorld.md. Change only before loading a file.
+        ConfigVar<TrueAlbwMode> trueAlbwMode;
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================
@@ -332,6 +396,9 @@ struct UserSettings {
         ConfigVar<bool> moonJump;
         ConfigVar<bool> superClawshot;
         ConfigVar<bool> alwaysGreatspin;
+        ConfigVar<bool> hurricaneTest;
+        ConfigVar<int> hurricaneTestSe;
+        ConfigVar<HurricaneVfxMode> hurricaneTestVfx;
         ConfigVar<bool> enableFastIronBoots;
         ConfigVar<bool> canTransformAnywhere;
         ConfigVar<bool> fastRoll;
@@ -379,6 +446,7 @@ struct UserSettings {
         std::array<ActionBindConfigVar, 4> cycleSword;
         std::array<ActionBindConfigVar, 4> cycleShield;
         std::array<ActionBindConfigVar, 4> quickTransform;
+        std::array<ActionBindConfigVar, 4> openItemWheel;
     } actionBindings;
 };
 

@@ -14,8 +14,11 @@
 #include "dusk/imgui/ImGuiEngine.hpp"
 #include "dusk/io.hpp"
 #include "dusk/livesplit.h"
+#include "dusk/main.h"
 #include "dusk/discord_presence.hpp"
 #include "dusk/dpad_quick_swap.h"
+#include "dusk/hurricane_test.h"
+#include "dusk/truetest.hpp"
 #include "graphics_tuner.hpp"
 #include "m_Do/m_Do_main.h"
 #include "menu_bar.hpp"
@@ -93,6 +96,12 @@ constexpr std::array kParryIconModes = {
     "Spur Only",
     "Spur+Shield",
     "Shield Only",
+};
+
+constexpr std::array kLopHudModes = {
+    "Off",
+    "Vanilla Hearts",
+    "Health Bar",
 };
 
 constexpr std::array kMagicArmorModes = {
@@ -240,6 +249,9 @@ void reset_for_speedrun_mode() {
     getSettings().game.moonJump.setSpeedrunValue(false);
     getSettings().game.superClawshot.setSpeedrunValue(false);
     getSettings().game.alwaysGreatspin.setSpeedrunValue(false);
+    getSettings().game.hurricaneTest.setSpeedrunValue(false);
+    getSettings().game.hurricaneTestSe.setSpeedrunValue(0);
+    getSettings().game.hurricaneTestVfx.setSpeedrunValue(HurricaneVfxMode::WHIRLWIND);
     getSettings().game.enableFastIronBoots.setSpeedrunValue(false);
     getSettings().game.canTransformAnywhere.setSpeedrunValue(false);
     getSettings().game.fastRoll.setSpeedrunValue(false);
@@ -1387,7 +1399,73 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Hidden Skill Rework", getSettings().game.hiddenSkillRework,
             "Reworks hidden skill combat: Helm Splitter bash punish flow, finisher dispatch "
             "priority, ALBW meter costs, and Jump Strike charge requirement. "
+            "A further reworking of the Hidden Skills system that challenges players to test "
+            "their combat skills with the Focused Arts system when Focused Arts Test is on. "
             "Warning: Game combat may break without this setting turned on and hidden skills acquired.");
+        config_bool_select(leftPane, rightPane, getSettings().game.focusedArtsTest, {
+            .key = "Focused Arts Test",
+            .helpText =
+                "Enables the Focused Arts charge bank, meter fill, and tier spend columns. "
+                "Requires Hidden Skill Rework. Runs alongside existing rework hooks; FA overrides "
+                "only at tier spend moments.",
+            .isDisabled =
+                [] {
+                    return !getSettings().game.hiddenSkillRework.getValue();
+                },
+        });
+        static constexpr std::array<const char*, 3> kFocusedArtsCheatModes = {
+            "Off",
+            "FA Cheat ON",
+            "With Debug",
+        };
+        leftPane.register_control(
+            leftPane.add_select_button({
+                .key = "Focused Arts Cheat",
+                .getValue =
+                    [] {
+                        const auto mode = getSettings().game.focusedArtsCheat.getValue();
+                        const auto index = static_cast<size_t>(mode);
+                        return kFocusedArtsCheatModes[index < kFocusedArtsCheatModes.size()
+                                                             ? index
+                                                             : 0];
+                    },
+                .isDisabled =
+                    [] {
+                        return getSettings().game.speedrunMode ||
+                               !getSettings().game.hiddenSkillRework.getValue() ||
+                               !getSettings().game.focusedArtsTest.getValue();
+                    },
+                .isModified =
+                    [] {
+                        return getSettings().game.focusedArtsCheat.getValue() !=
+                               getSettings().game.focusedArtsCheat.getDefaultValue();
+                    },
+            }),
+            rightPane,
+            [](Pane& pane) {
+                for (int i = 0; i < static_cast<int>(kFocusedArtsCheatModes.size()); ++i) {
+                    pane
+                        .add_button({
+                            .text = kFocusedArtsCheatModes[i],
+                            .isSelected =
+                                [i] {
+                                    return getSettings().game.focusedArtsCheat.getValue() ==
+                                           static_cast<FocusedArtsCheatMode>(i);
+                                },
+                        })
+                        .on_pressed([i] {
+                            mDoAud_seStartMenu(kSoundItemChange);
+                            getSettings().game.focusedArtsCheat.setValue(
+                                static_cast<FocusedArtsCheatMode>(i));
+                            config::Save();
+                        });
+                }
+                pane.add_rml(
+                    "<b>Off</b>: shop/save tiers only.<br/>"
+                    "<b>FA Cheat ON</b>: effective tier 3 (max bank + finishers) for playtest.<br/>"
+                    "<b>With Debug</b>: same as ON plus an in-game FA overlay (bank, fill, ALBW, "
+                    "recent events) — no need to open the dev console.");
+            });
         addOption("Shield Durability", getSettings().game.shieldDurability,
             "Shield HP by tier; failed blocks drain it. Hylian repairs on parry and takes more "
             "damage per hit. Break at 0 uses guard break (replaces vanilla slip counter).");
@@ -1402,11 +1480,51 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Enemy Death Rupees", getSettings().game.enemyDeathRupees,
             "Credit rupees directly to your wallet when enemies die and when boss fights end. "
             "Vanilla drop tables (hearts, jars, ground rupees) are unchanged.");
-        addOption("True ALBW", getSettings().game.trueAlbwShop,
-            "Every rental-shop item is available from the moment the Postman appears, like "
-            "Ravio's shop, with no need to lose an item first. Deity Armor still requires "
-            "its own unlock conditions, and the Master Quest heart/stamina upgrades are "
-            "unaffected. Off uses the default reclaim-what-you-lost progression.");
+        static constexpr std::array<const char*, 3> kTrueAlbwModes = {
+            "Off",
+            "True ALBW",
+            "TRUETEST",
+        };
+        leftPane.register_control(
+            leftPane.add_select_button({
+                .key = "True ALBW Mode",
+                .getValue =
+                    [] {
+                        const auto mode = getSettings().game.trueAlbwMode.getValue();
+                        const auto index = static_cast<size_t>(mode);
+                        return kTrueAlbwModes[index < kTrueAlbwModes.size() ? index : 0];
+                    },
+                .isDisabled = [] { return !dusk::truetest::canChangeGlobalTrueAlbwMode(); },
+                .isModified =
+                    [] {
+                        return getSettings().game.trueAlbwMode.getValue() !=
+                               getSettings().game.trueAlbwMode.getDefaultValue();
+                    },
+            }),
+            rightPane,
+            [](Pane& pane) {
+                for (int i = 0; i < static_cast<int>(kTrueAlbwModes.size()); ++i) {
+                    pane
+                        .add_button({
+                            .text = kTrueAlbwModes[i],
+                            .isSelected =
+                                [i] {
+                                    return getSettings().game.trueAlbwMode.getValue() ==
+                                           static_cast<TrueAlbwMode>(i);
+                                },
+                        })
+                        .on_pressed([i] {
+                            mDoAud_seStartMenu(kSoundItemChange);
+                            getSettings().game.trueAlbwMode.setValue(static_cast<TrueAlbwMode>(i));
+                            config::Save();
+                        });
+                }
+                pane.add_rml(
+                    "<br/><b>Off</b>: vanilla reclaim-what-you-lost rental shop.<br/>"
+                    "<b>True ALBW</b>: full rental catalog from the Postman (shop only).<br/>"
+                    "<b>TRUETEST</b>: enables TRUETEST new-save prompt and per-save world "
+                    "bootstrap. Change at file select or title — locked during field play.");
+            });
         static constexpr std::array<const char*, 3> kExtraItemSlotModes = {
             "Off",
             "Extra Only",
@@ -1464,6 +1582,10 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Boss Refinement", getSettings().game.bossRefinement,
             "Treat Ordon, Wooden, and Master swords as valid boss swords (Zant, Ganondorf, "
             "Argorok). Future layers add Zant tool phases and Ganondorf duel redesign.");
+        addOption("Shade's Refuge", getSettings().game.shadeRefuge,
+            "Lies-of-P-style Shade Watcher rest points: rest to full-heal and set a respawn "
+            "point, respawn at the last watcher on death, and buy a return-to-watcher service "
+            "in the shop. Off disables the whole system. Work in progress.");
         addSpeedrunDisabledOption(
             "Instant Death", getSettings().game.instantDeath, "Any hit will instantly kill you.");
         addSpeedrunDisabledOption("No Heart Drops", getSettings().game.noHeartDrops,
@@ -1589,6 +1711,92 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Extends Clawshot behavior beyond the normal game rules.");
         addCheat("Always Greatspin", getSettings().game.alwaysGreatspin,
             "Allows the Great Spin attack without requiring full health.");
+        addCheat("Hurricane test", getSettings().game.hurricaneTest,
+            "Stick hard left/right + tap sword for a sustained Great Spin prototype (~5 s, then ~2 s tired lockout).");
+        leftPane.register_control(
+            leftPane
+                .add_select_button({
+                    .key = "Hurricane test SE",
+                    .getValue =
+                        [] {
+                            return Rml::String(
+                                dusk::getHurricaneTestSeName(dusk::getHurricaneTestSeIndex()));
+                        },
+                    .isDisabled =
+                        [] {
+                            return getSettings().game.speedrunMode ||
+                                   !getSettings().game.hurricaneTest.getValue();
+                        },
+                    .isModified =
+                        [] {
+                            return getSettings().game.hurricaneTestSe.getValue() !=
+                                   getSettings().game.hurricaneTestSe.getDefaultValue();
+                        },
+                }),
+            rightPane,
+            [](Pane& pane) {
+                pane.clear();
+                pane.add_text(
+                    "Same Zant + tornado + spinner (35%) mix every time — only tornado pitch/speed changes.");
+                for (int i = 0; i < dusk::getHurricaneTestSeCount(); i++) {
+                    pane.add_button({
+                            .text = dusk::getHurricaneTestSeName(i),
+                            .isSelected =
+                                [i] {
+                                    return getSettings().game.hurricaneTestSe.getValue() == i;
+                                },
+                        })
+                        .on_pressed([i] {
+                            mDoAud_seStartMenu(kSoundItemChange);
+                            getSettings().game.hurricaneTestSe.setValue(i);
+                            config::Save();
+                        });
+                }
+            });
+
+        static constexpr const char* kHurricaneVfxModes[] = {"Whirlwind", "Base VFX"};
+        leftPane.register_control(
+            leftPane.add_select_button({
+                .key = "Hurricane test VFX",
+                .getValue =
+                    [] {
+                        const auto mode = getSettings().game.hurricaneTestVfx.getValue();
+                        return kHurricaneVfxModes[static_cast<u8>(mode)];
+                    },
+                .isDisabled =
+                    [] {
+                        return getSettings().game.speedrunMode ||
+                               !getSettings().game.hurricaneTest.getValue();
+                    },
+                .isModified =
+                    [] {
+                        return getSettings().game.hurricaneTestVfx.getValue() !=
+                               getSettings().game.hurricaneTestVfx.getDefaultValue();
+                    },
+            }),
+            rightPane,
+            [](Pane& pane) {
+                pane.clear();
+                pane.add_text(
+                    "Whirlwind: upright spray (left-spin local tilts only). Base VFX: horizontal swing — sword matrix + slash local tilts on both directions (default).");
+                for (int i = 0; i < 2; i++) {
+                    pane.add_button({
+                            .text = kHurricaneVfxModes[i],
+                            .isSelected =
+                                [i] {
+                                    return static_cast<int>(
+                                               getSettings().game.hurricaneTestVfx.getValue()) == i;
+                                },
+                        })
+                        .on_pressed([i] {
+                            mDoAud_seStartMenu(kSoundItemChange);
+                            getSettings().game.hurricaneTestVfx.setValue(
+                                static_cast<HurricaneVfxMode>(i));
+                            config::Save();
+                        });
+                }
+            });
+
         addCheat("Fast Iron Boots", getSettings().game.enableFastIronBoots,
             "Speeds up movement while heavy, including wearing the Iron Boots, holding the Ball and Chain, wearing Magic Armor without rupees, etc.");
         addCheat("Can Transform Anywhere", getSettings().game.canTransformAnywhere,
@@ -1885,12 +2093,45 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .helpText = "Show a health bar with the boss name for major boss fights. "
                             "Scales with the Boss HP and Boss Refinement settings.",
             });
-        config_bool_select(leftPane, rightPane, getSettings().game.lopHud,
-            {
+        leftPane.register_control(
+            leftPane.add_select_button({
                 .key = "Lies of Link HUD",
-                .helpText = "Rearrange the HUD into a Lies of P-style layout: life, stamina "
-                            "and shield stacked top-left, rupees top-right, items and bash "
-                            "spurs bottom-left. Off keeps the vanilla corner layout.",
+                .getValue =
+                    [] {
+                        return kLopHudModes[static_cast<u8>(
+                            getSettings().game.lopHud.getValue())];
+                    },
+                .isModified =
+                    [] {
+                        const auto& mode = getSettings().game.lopHud;
+                        return mode.getValue() != mode.getDefaultValue();
+                    },
+            }),
+            rightPane, [](Pane& pane) {
+                for (int i = 0; i < static_cast<int>(kLopHudModes.size()); ++i) {
+                    pane
+                        .add_button({
+                            .text = kLopHudModes[i],
+                            .isSelected =
+                                [i] {
+                                    return getSettings().game.lopHud.getValue() ==
+                                           static_cast<LopHudMode>(i);
+                                },
+                        })
+                        .on_pressed([i] {
+                            mDoAud_seStartMenu(kSoundItemChange);
+                            getSettings().game.lopHud.setValue(static_cast<LopHudMode>(i));
+                            config::Save();
+                        });
+                }
+                pane.add_rml(
+                    "<br/>Rearrange the HUD into a Lies of P-style layout: life, stamina and "
+                    "shield stacked top-left, rupees top-right, items and bash spurs "
+                    "bottom-left.<br/><br/>"
+                    "<b>Off</b>: vanilla TP corner layout.<br/>"
+                    "<b>Vanilla Hearts</b>: LoP layout, keep the heart containers.<br/>"
+                    "<b>Health Bar</b>: LoP layout with a Lies-of-P health bar instead of "
+                    "hearts.");
             });
     });
 }

@@ -1367,6 +1367,8 @@ public:
         /* 0x15D */ PROC_GLARE,
         /* 0x15E */ PROC_HORSE_CALL_WAIT,
         /* 0x15F */ PROC_QUAKE_WAIT,
+        /* 0x160 */ PROC_CUT_GS_HURRICANE,
+        /* 0x161 */ PROC_CUT_GS_HURRICANE_TIRED,
 
         PROC_MAX,
     };
@@ -1913,6 +1915,12 @@ public:
     int procCutJumpLand();
     int procCutTurnInit(int, int);
     int procCutTurn();
+#if TARGET_PC
+    int procCutGsHurricaneInit(int);
+    int procCutGsHurricane();
+    int procCutGsHurricaneTiredInit();
+    int procCutGsHurricaneTired();
+#endif
     int procCutTurnChargeInit();
     int procCutTurnCharge();
     int procCutTurnMoveInit(int);

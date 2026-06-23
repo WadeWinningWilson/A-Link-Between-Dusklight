@@ -9,6 +9,9 @@
 #include "d/d_com_inf_game.h"
 #include "d/d_k_wmark.h"
 #include "dusk/gx_helper.h"
+#if TARGET_PC
+#include "dusk/hurricane_test.h"
+#endif
 
 const EffParamProc daAlink_c::m_fEffParamProc[] = {
     &daAlink_c::setEffectFrontRollParam,
@@ -327,7 +330,12 @@ void daAlink_c::setFootMark(cXyz* i_pos, u16 i_mtxNo, int param_2) {
 }
 
 void daAlink_c::setEffect() {
-    if (mProcID == PROC_CUT_TURN || mProcID == PROC_BOARD_CUT_TURN) {
+    if (mProcID == PROC_CUT_TURN || mProcID == PROC_BOARD_CUT_TURN
+#if TARGET_PC
+        || mProcID == PROC_CUT_GS_HURRICANE
+#endif
+        )
+    {
         setCutTurnEffect();
     } else if (mProcID == PROC_HORSE_CUT_TURN) {
         setHorseCutTurnEffect();
@@ -943,6 +951,20 @@ void daAlink_c::setCutTurnEffect() {
         return;
     }
 
+#if TARGET_PC
+    if (mProcID == PROC_CUT_GS_HURRICANE) {
+        for (int i = 0; i < 6; i++) {
+            JPABaseEmitter* emitter = dComIfGp_particle_getEmitter(field_0x3204[i]);
+            if (field_0x3204[i] == 0 || emitter == NULL || emitter->getParticleNumber() == 0) {
+                if (field_0x3204[i] != 0) {
+                    stopDrawParticle(field_0x3204[i]);
+                }
+                field_0x3204[i] = 0;
+            }
+        }
+    }
+#endif
+
     static Vec const waterEffScale = {1.5f, 1.5f, 1.5f};
 
     static const int unused0 = 0;
@@ -1058,7 +1080,15 @@ void daAlink_c::setCutTurnEffect() {
     }
 
     cXyz pos;
+    csXyz effectRot = shape_angle;
+#if TARGET_PC
+    const bool hurricaneProc = mProcID == PROC_CUT_GS_HURRICANE;
+    const bool hurricaneBaseVfx = hurricaneProc && dusk::isHurricaneBaseVfx();
+
     mDoMtx_multVecZero(mpLinkModel->getAnmMtx(1), &pos);
+#else
+    mDoMtx_multVecZero(mpLinkModel->getAnmMtx(1), &pos);
+#endif
 
     if (checkMagneBootsOn()) {
         mDoMtx_stack_c::transS(pos);
@@ -1067,18 +1097,44 @@ void daAlink_c::setCutTurnEffect() {
     }
 
     for (int i = 0; i < effNum; i++, emitterId++, effNameList++, rot++, trans++) {
-        emitter = setEmitter(emitterId, *effNameList, &pos, &shape_angle);
+        emitter = setEmitter(emitterId, *effNameList, &pos, &effectRot);
         if (emitter != NULL) {
             if (checkMagneBootsOn()) {
                 emitter->setGlobalRTMatrix(mDoMtx_stack_c::get());
             }
 
-            if (mProcVar4.field_0x3010 == 0) {
+#if TARGET_PC
+            if (hurricaneBaseVfx) {
                 emitter->setLocalRotation(*rot);
                 if (trans->y > 1.0f) {
                     emitter->setLocalTranslation(*trans);
                 }
+            } else if (hurricaneProc) {
+                // Whirlwind — pre-VFX-split behavior (sound-setting era).
+                if (mProcVar4.field_0x3010 == 0) {
+                    emitter->setLocalRotation(*rot);
+                    if (trans->y > 1.0f) {
+                        emitter->setLocalTranslation(*trans);
+                    }
+                }
+            } else if (mProcVar4.field_0x3010 == 0) {
+#else
+            if (mProcVar4.field_0x3010 == 0) {
+#endif
+                emitter->setLocalRotation(*rot);
+                if (trans->y > 1.0f) {
+                    emitter->setLocalTranslation(*trans);
+                }
+#if TARGET_PC
             }
+#endif
+
+#if TARGET_PC
+            if (mProcID == PROC_CUT_GS_HURRICANE) {
+                emitter->becomeImmortalEmitter();
+                emitter->playCreateParticle();
+            }
+#endif
 
             if (sp18) {
                 if (i == 0) {

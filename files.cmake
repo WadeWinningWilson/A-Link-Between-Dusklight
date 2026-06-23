@@ -179,6 +179,7 @@ set(DOLZEL_FILES
         src/d/d_albw_ui_text.cpp
         src/d/d_albw_hp_mult.cpp
         src/d/d_albw_combat.cpp
+        src/d/d_focused_arts.cpp
         src/d/d_albw_lockout.cpp
         src/d/d_albw_enemy_rupee.cpp
         src/d/d_albw_shield.cpp
@@ -188,6 +189,7 @@ set(DOLZEL_FILES
         src/d/d_albw_rupee_popup.cpp
         src/d/d_albw_boss_hp_hud.cpp
         src/d/d_albw_lop_item_belt.cpp
+        src/dusk/truetest.cpp
         src/d/d_kankyo.cpp
         src/d/d_kyeff.cpp
         src/d/d_kyeff2.cpp
@@ -1567,6 +1569,7 @@ set(DUSK_FILES
         src/dusk/version.cpp
         src/dusk/action_bindings.cpp
         src/dusk/dpad_quick_swap.cpp
+        src/dusk/hurricane_test.cpp
 )
 
 set(DUSK_HTTP_BACKEND_FILES

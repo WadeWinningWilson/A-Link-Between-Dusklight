@@ -27,6 +27,108 @@ static bool ReverbHasTail = false;
 static bool sDumpWasActive = false;
 static FILE* sChannelDumpFiles[DSP_CHANNELS] = {};
 
+static bool s_hurricaneSpinSeLoopActive = false;
+static u32 s_hurricaneSpinWaveAram[3] = {};
+static int s_hurricaneSpinWaveAramCount = 0;
+static u32 s_hurricaneExcludedWaveAram[4] = {};
+static int s_hurricaneExcludedWaveCount = 0;
+
+void dusk::audio::setHurricaneSpinSeLoopActive(bool active) {
+    s_hurricaneSpinSeLoopActive = active;
+    if (!active) {
+        s_hurricaneSpinWaveAramCount = 0;
+        s_hurricaneExcludedWaveCount = 0;
+    }
+}
+
+void dusk::audio::registerHurricaneSpinWaveAram(u32 aramAddress) {
+    if (aramAddress == 0) {
+        return;
+    }
+
+    for (int i = 0; i < s_hurricaneSpinWaveAramCount; i++) {
+        if (s_hurricaneSpinWaveAram[i] == aramAddress) {
+            return;
+        }
+    }
+
+    if (s_hurricaneSpinWaveAramCount < static_cast<int>(std::size(s_hurricaneSpinWaveAram))) {
+        s_hurricaneSpinWaveAram[s_hurricaneSpinWaveAramCount++] = aramAddress;
+    }
+}
+
+void dusk::audio::excludeHurricaneSpinWaveAram(u32 aramAddress) {
+    if (aramAddress == 0) {
+        return;
+    }
+
+    for (int i = 0; i < s_hurricaneExcludedWaveCount; i++) {
+        if (s_hurricaneExcludedWaveAram[i] == aramAddress) {
+            return;
+        }
+    }
+
+    if (s_hurricaneExcludedWaveCount < static_cast<int>(std::size(s_hurricaneExcludedWaveAram))) {
+        s_hurricaneExcludedWaveAram[s_hurricaneExcludedWaveCount++] = aramAddress;
+    }
+}
+
+void dusk::audio::clearHurricaneSpinWaveRegistration() {
+    s_hurricaneSpinWaveAramCount = 0;
+    s_hurricaneExcludedWaveCount = 0;
+}
+
+static bool isExcludedHurricaneSpinWave(u32 aramAddress) {
+    for (int i = 0; i < s_hurricaneExcludedWaveCount; i++) {
+        if (s_hurricaneExcludedWaveAram[i] == aramAddress) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool dusk::audio::isHurricaneSpinWaveExcluded(u32 aramAddress) {
+    return isExcludedHurricaneSpinWave(aramAddress);
+}
+
+static bool shouldForceHurricaneSpinLoop(u32 aramAddress) {
+    if (!s_hurricaneSpinSeLoopActive || aramAddress == 0 || s_hurricaneSpinWaveAramCount == 0) {
+        return false;
+    }
+
+    if (isExcludedHurricaneSpinWave(aramAddress)) {
+        return false;
+    }
+
+    for (int i = 0; i < s_hurricaneSpinWaveAramCount; i++) {
+        if (aramAddress == s_hurricaneSpinWaveAram[i]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void applyWholeWaveLoop(JASDsp::TChannel& channel, ChannelAuxData& aux) {
+    if (channel.mSampleCount <= 0) {
+        return;
+    }
+
+    channel.mLoopFlag = 0xff;
+    channel.mLoopStartSample = 0;
+    channel.mEndSample = channel.mSampleCount;
+
+    if (channel.mSamplesLeft == 0) {
+        channel.mSamplesLeft = channel.mEndSample - channel.mLoopStartSample;
+        channel.mSamplePosition = channel.mLoopStartSample;
+    }
+
+    channel.mIsFinished = false;
+    aux.hist1 = channel.mpPenult;
+    aux.hist0 = channel.mpLast;
+}
+
 static void OpenChannelDumpFiles() {
     char name[32];
     for (int i = 0; i < DSP_CHANNELS; i++) {
@@ -515,6 +617,10 @@ static int ReadChannelSamplesChunk(
 static void FillDecodeBuf(JASDsp::TChannel& channel, ChannelAuxData& aux, int needed) {
     while (aux.decodeBufCount < needed) {
         if (channel.mSamplesLeft == 0) {
+            if (shouldForceHurricaneSpinLoop(channel.mWaveAramAddress)) {
+                applyWholeWaveLoop(channel, aux);
+            }
+
             if (!channel.mLoopFlag) {
                 // we aren't a looping channel and there's no samples left, we out of this fuckin loop
                 break;
@@ -667,6 +773,10 @@ static void RenderChannel(
 
     if (channel.mResetFlag) {
         ResetChannel(channel, channelAux);
+    }
+
+    if (shouldForceHurricaneSpinLoop(channel.mWaveAramAddress) && channel.mLoopFlag == 0) {
+        applyWholeWaveLoop(channel, channelAux);
     }
 
     // how many input samples we step per output sample, aka the resampling ratio
