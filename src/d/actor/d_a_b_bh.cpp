@@ -13,6 +13,9 @@
 #include "c/c_damagereaction.h"
 #include "m_Do/m_Do_controller_pad.h"
 #include "Z2AudioLib/Z2Instances.h"
+#if TARGET_PC
+#include "d/d_albw_boss.h"
+#endif
 
 #define ACTION_WAIT       0
 #define ACTION_ATTACK_1   5
@@ -100,6 +103,16 @@ static daB_BH_HIO_c l_HIO;
 
 static b_bh_class* bh[2];
 
+#if TARGET_PC
+static bool b_bh_albwEnrageSubmerged(b_bq_class* bq_p) {
+    return dAlbwBossRefinement_isEnabled() && bq_p->field_0x6fb == 3;
+}
+
+static bool b_bh_albwSideHeadsDecouple(b_bq_class* bq_p) {
+    return dAlbwBossRefinement_isEnabled() && bq_p->mAction == 5 && bq_p->mMode < 3;
+}
+#endif
+
 static void b_bh_wait(b_bh_class* i_this) {
     fopAc_ac_c* a_this = (fopAc_ac_c*)i_this;
 
@@ -108,10 +121,19 @@ static void b_bh_wait(b_bh_class* i_this) {
 
     f32 temp_f31 = 30.0f + TREG_F(12);
     if (bq_p->field_0x6fb != 0) {
-        if (i_this->mID == 0) {
-            i_this->mTimers[1] = 100.0f + cM_rndF(50.0f);
-        } else {
-            i_this->mTimers[1] = 50.0f + cM_rndF(50.0f);
+#if TARGET_PC
+        if (b_bh_albwEnrageSubmerged(bq_p)) {
+            if (i_this->mTimers[1] > 30) {
+                i_this->mTimers[1] = 30;
+            }
+        } else
+#endif
+        {
+            if (i_this->mID == 0) {
+                i_this->mTimers[1] = 100.0f + cM_rndF(50.0f);
+            } else {
+                i_this->mTimers[1] = 50.0f + cM_rndF(50.0f);
+            }
         }
     }
 
@@ -141,7 +163,13 @@ static void b_bh_wait(b_bh_class* i_this) {
             i_this->field_0x674.y = BREG_F(3) + (i_this->mBasePos.y + (550.0f * l_HIO.model_size) + cM_rndFX(200.0f));
             i_this->field_0x690 = 0.0f;
 
-            if (i_this->mTimers[1] == 0 && bq_p->field_0x6fe == 0) {
+            if (i_this->mTimers[1] == 0 &&
+                (bq_p->field_0x6fe == 0
+#if TARGET_PC
+                 || b_bh_albwEnrageSubmerged(bq_p)
+#endif
+                 ))
+            {
                 fopAc_ac_c* const player = dComIfGp_getPlayer(0);
                 if ((i_this->mBasePos - player->current.pos).abs() < 2800.0f) {
                     a_this->speedF = 0.0f;
@@ -155,7 +183,14 @@ static void b_bh_wait(b_bh_class* i_this) {
                         bh[1 - i_this->mID]->field_0x6a0 = 1;
                         bq_p->field_0x6fa = 2.0f + cM_rndF(2.99f);
                     } else {
-                        bq_p->field_0x6fe = 200.0f + cM_rndF(150.0f);
+#if TARGET_PC
+                        if (b_bh_albwEnrageSubmerged(bq_p)) {
+                            bq_p->field_0x6fe = 50.0f + cM_rndF(50.0f);
+                        } else
+#endif
+                        {
+                            bq_p->field_0x6fe = 200.0f + cM_rndF(150.0f);
+                        }
                         if (bq_p->field_0x6fa != 0) {
                             bq_p->field_0x6fa--;
                         }
@@ -450,10 +485,19 @@ static void b_bh_b_wait(b_bh_class* i_this) {
     f32 temp_f31 = 30.0f + TREG_F(12);
 
     if (bq_p->field_0x6fb != 0) {
-        if (i_this->mID == 0) {
-            i_this->mTimers[1] = 100.0f + cM_rndF(50.0f);
-        } else {
-            i_this->mTimers[1] = 50.0f + cM_rndF(50.0f);
+#if TARGET_PC
+        if (b_bh_albwEnrageSubmerged(bq_p)) {
+            if (i_this->mTimers[1] > 30) {
+                i_this->mTimers[1] = 30;
+            }
+        } else
+#endif
+        {
+            if (i_this->mID == 0) {
+                i_this->mTimers[1] = 100.0f + cM_rndF(50.0f);
+            } else {
+                i_this->mTimers[1] = 50.0f + cM_rndF(50.0f);
+            }
         }
     }
 
@@ -485,13 +529,26 @@ static void b_bh_b_wait(b_bh_class* i_this) {
             i_this->field_0x674.y = BREG_F(3) + (i_this->field_0x6b0.y + (550.0f * l_HIO.model_size) + cM_rndFX(200.0f));
             i_this->field_0x690 = 0.0f;
 
-            if (i_this->mTimers[1] == 0 && bq_p->field_0x6fe == 0) {
+            if (i_this->mTimers[1] == 0 &&
+                (bq_p->field_0x6fe == 0
+#if TARGET_PC
+                 || b_bh_albwEnrageSubmerged(bq_p)
+#endif
+                 ))
+            {
                 fopAc_ac_c* const player = dComIfGp_getPlayer(0);
                 if ((i_this->field_0x6b0 - player->current.pos).abs() < 2800.0f) {
                     a_this->speedF = 0.0f;
                     i_this->mAction = ACTION_B_ATTACK_1;
                     i_this->mMode = 0;
-                    bq_p->field_0x6fe = 100.0f + cM_rndF(100.0f);
+#if TARGET_PC
+                    if (b_bh_albwEnrageSubmerged(bq_p)) {
+                        bq_p->field_0x6fe = 50.0f + cM_rndF(50.0f);
+                    } else
+#endif
+                    {
+                        bq_p->field_0x6fe = 100.0f + cM_rndF(100.0f);
+                    }
                 }
             }
 
@@ -1232,7 +1289,15 @@ static int daB_BH_Execute(b_bh_class* i_this) {
 
     b_bq_class* bq_p = (b_bq_class*)fopAcM_SearchByID(a_this->parentActorID);
     if (bq_p->mDisableDraw == FALSE) {
+#if TARGET_PC
+        if (b_bh_albwSideHeadsDecouple(bq_p)) {
+            i_this->field_0xa25 = 2;
+        } else {
+            i_this->field_0xa25 = 1;
+        }
+#else
         i_this->field_0xa25 = 1;
+#endif
         if (i_this->mAction == ACTION_WAIT) {
             i_this->mAction = ACTION_B_WAIT;
         }
@@ -1250,7 +1315,7 @@ static int daB_BH_Execute(b_bh_class* i_this) {
         i_this->field_0x69e--;
     }
 
-    if (i_this->field_0xa25 != 0) {
+    if (i_this->field_0xa25 == 1) {
         i_this->field_0xa26 = bq_p->shape_angle;
 
         J3DModel* bq_model = bq_p->mpMorf->getModel();

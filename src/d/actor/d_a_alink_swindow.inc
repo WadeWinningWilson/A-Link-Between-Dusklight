@@ -27,21 +27,32 @@ void daAlink_c::setArcName(BOOL i_isWolf) {
 
 void daAlink_c::setShieldArcName() {
 #if TARGET_PC
-    // Ordon quest = WOOD_SHIELD (0x2A) -> CWShd. Shop/replace = SHIELD (0x2B) -> SWShd. See docs/shield-ordon-quest-assets.md.
-    if (checkCarvingWoodShieldEquip()) {
+    const u8 equip = dComIfGs_getSelectEquipShield();
+    // Always derive the body arc from equipped shield — required for save-editor multi-shield
+    // cycling where several first bits may be set at once. See docs/shield-ordon-quest-assets.md.
+    switch (equip) {
+    case dItemNo_WOOD_SHIELD_e:
         mShieldArcName = l_cWShdArcName;
-    } else if (checkShopWoodShieldEquip()) {
+        return;
+    case dItemNo_SHIELD_e:
         mShieldArcName = l_sWShdArcName;
-    } else if (dComIfGs_isItemFirstBit(dItemNo_HYLIA_SHIELD_e)) {
+        return;
+    case dItemNo_HYLIA_SHIELD_e:
+        mShieldArcName = l_hyShdArcName;
+        return;
+    default:
+        break;
+    }
+
+    // No shield equipped — preview/init fallback when equip is unset.
+    if (dComIfGs_isItemFirstBit(dItemNo_HYLIA_SHIELD_e)) {
         mShieldArcName = l_hyShdArcName;
     } else if (dComIfGs_isItemFirstBit(dItemNo_WOOD_SHIELD_e)) {
         mShieldArcName = l_cWShdArcName;
     } else if (dComIfGs_isItemFirstBit(dItemNo_SHIELD_e)) {
         mShieldArcName = l_sWShdArcName;
-    } else if (!checkShieldGet()) {
-        mShieldArcName = l_cWShdArcName;
     } else {
-        mShieldArcName = l_hyShdArcName;
+        mShieldArcName = l_cWShdArcName;
     }
 #else
     if (checkCarvingWoodShieldEquip() || !checkShieldGet()) {
@@ -80,6 +91,12 @@ void daAlink_c::setClothesChange(int param_0) {
 }
 
 void daAlink_c::setShieldChange() {
+    if (mShieldChangeWaitTimer != 0) {
+        return;
+    }
+
+    // Model is cleared during reload; drop guard so collision/guard code does not use a null shield mtx.
+    offNoResetFlg2(FLG2_UNK_8000000);
     mShieldChangeWaitTimer = 4;
 }
 
@@ -144,7 +161,14 @@ int daAlink_c::loadModelDVD() {
 
 void daAlink_c::setShieldModel() {
     JKRHeap* heap = mAnmHeap4.setAnimeHeap();
-    mShieldModel = initModel((J3DModelData*)dComIfG_getObjectRes(mShieldArcName, 3), 0);
+    J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(mShieldArcName, 3);
+    if (modelData == NULL) {
+        mShieldModel = NULL;
+        mDoExt_setCurrentHeap(heap);
+        return;
+    }
+
+    mShieldModel = initModel(modelData, 0);
 
     mDoExt_setCurrentHeap(heap);
 }
@@ -155,15 +179,31 @@ int daAlink_c::loadShieldModelDVD() {
 
         if (mShieldChangeWaitTimer == 2) {
             mShieldModel = NULL;
-            dComIfG_resDelete(&mShieldPhaseReq, mShieldArcName);
+            if (!dComIfG_resDelete(&mShieldPhaseReq, mShieldArcName)) {
+#if TARGET_PC
+                // resDelete no-ops when phase id != 2; force-unregister before freeAll
+                dComIfG_deleteObjectResMain(mShieldArcName);
+#endif
+            }
             cPhs_Reset(&mShieldPhaseReq);
-            mpShieldArcHeap->freeAll();
+            if (mpShieldArcHeap != NULL) {
+                mpShieldArcHeap->freeAll();
+            }
             setShieldArcName();
         } else if (mShieldChangeWaitTimer == 1) {
+            if (mpShieldArcHeap == NULL) {
+                mShieldChangeWaitTimer = 0;
+                return 1;
+            }
+
             int phase_state = dComIfG_resLoad(&mShieldPhaseReq, mShieldArcName, mpShieldArcHeap);
             if (phase_state == cPhs_COMPLEATE_e) {
                 mShieldChangeWaitTimer = 0;
                 setShieldModel();
+                if (mShieldModel == NULL) {
+                    OS_REPORT("loadShieldModelDVD: missing model for arc %s equip %u\n", mShieldArcName,
+                              dComIfGs_getSelectEquipShield());
+                }
             } else {
                 mShieldChangeWaitTimer = 2;
             }

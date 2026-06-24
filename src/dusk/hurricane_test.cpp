@@ -13,7 +13,6 @@
 #include "Z2AudioLib/Z2SeMgr.h"
 #include "Z2AudioLib/Z2SoundObject.h"
 
-#include <algorithm>
 #include <array>
 
 namespace dusk {
@@ -25,6 +24,7 @@ static constexpr u32 kZantSpinSe = Z2SE_EN_ZAN_CTL_SPIN_ATK;
 static constexpr u32 kGaleTornadoSe = Z2SE_BOOM_TORNADO;
 
 static constexpr f32 kZantPitch = 1.05f;
+static constexpr f32 kTornadoPitch = 0.85f;
 static constexpr f32 kTornadoVolume = 0.25f;
 static constexpr f32 kSpinnerVolume = 0.35f;
 static constexpr f32 kSpinnerPitch = 1.0f;
@@ -49,34 +49,18 @@ struct HurricaneSePreset {
     u8 flags;
 };
 
-static constexpr u8 kLoopAll = 0;
-static constexpr u8 kNativePrimary = HURRICANE_SE_NO_LOOP_PRIMARY;
-static constexpr u8 kNativeSecondary = HURRICANE_SE_NO_LOOP_SECONDARY;
-static constexpr u8 kNativeTertiary = HURRICANE_SE_NO_LOOP_TERTIARY;
-
-static constexpr HurricaneSePreset s_hurricaneSePresets[] = {
-    {"Zant + Tornado + Spinner (tornado 0.85x)", kZantSpinSe, kGaleTornadoSe, Z2SE_AL_SPINNER_RIDE,
-     kZantPitch, 0.85f, kSpinnerPitch, kTornadoVolume, kSpinnerVolume, kLoopAll},
-    {"Zant + Tornado + Spinner (tornado 1.0x)", kZantSpinSe, kGaleTornadoSe, Z2SE_AL_SPINNER_RIDE,
-     kZantPitch, 1.0f, kSpinnerPitch, kTornadoVolume, kSpinnerVolume, kLoopAll},
-    {"Zant + Tornado + Spinner (tornado 0.90x)", kZantSpinSe, kGaleTornadoSe, Z2SE_AL_SPINNER_RIDE,
-     kZantPitch, 0.9f, kSpinnerPitch, kTornadoVolume, kSpinnerVolume, kLoopAll},
-    {"Zant + Tornado + Spinner (tornado 0.92x)", kZantSpinSe, kGaleTornadoSe, Z2SE_AL_SPINNER_RIDE,
-     kZantPitch, 0.92f, kSpinnerPitch, kTornadoVolume, kSpinnerVolume, kLoopAll},
-    {"Zant + Tornado + Spinner (tornado 0.95x)", kZantSpinSe, kGaleTornadoSe, Z2SE_AL_SPINNER_RIDE,
-     kZantPitch, 0.95f, kSpinnerPitch, kTornadoVolume, kSpinnerVolume, kLoopAll},
-    {"Zant + Tornado + Spinner (tornado 1.05x)", kZantSpinSe, kGaleTornadoSe, Z2SE_AL_SPINNER_RIDE,
-     kZantPitch, 1.05f, kSpinnerPitch, kTornadoVolume, kSpinnerVolume, kLoopAll},
-    {"Zant + Tornado + Spinner (tornado 1.10x)", kZantSpinSe, kGaleTornadoSe, Z2SE_AL_SPINNER_RIDE,
-     kZantPitch, 1.1f, kSpinnerPitch, kTornadoVolume, kSpinnerVolume, kLoopAll},
-    {"Zant + Tornado + Spinner (tornado 1.15x)", kZantSpinSe, kGaleTornadoSe, Z2SE_AL_SPINNER_RIDE,
-     kZantPitch, 1.15f, kSpinnerPitch, kTornadoVolume, kSpinnerVolume, kLoopAll},
-    {"Zant + Tornado + Spinner (tornado 1.20x)", kZantSpinSe, kGaleTornadoSe, Z2SE_AL_SPINNER_RIDE,
-     kZantPitch, 1.2f, kSpinnerPitch, kTornadoVolume, kSpinnerVolume, kLoopAll},
-    {"Zant + Tornado + Spinner (tornado 1.25x)", kZantSpinSe, kGaleTornadoSe, Z2SE_AL_SPINNER_RIDE,
-     kZantPitch, 1.25f, kSpinnerPitch, kTornadoVolume, kSpinnerVolume, kLoopAll},
-    {"Zant + Tornado + Spinner (tornado 1.30x)", kZantSpinSe, kGaleTornadoSe, Z2SE_AL_SPINNER_RIDE,
-     kZantPitch, 1.3f, kSpinnerPitch, kTornadoVolume, kSpinnerVolume, kLoopAll},
+// Locked playtest mix (Zant 1.05× + tornado 0.85× @ 25% + spinner @ 35%).
+static constexpr HurricaneSePreset kHurricaneSeMix = {
+    "Zant + Tornado + Spinner",
+    kZantSpinSe,
+    kGaleTornadoSe,
+    Z2SE_AL_SPINNER_RIDE,
+    kZantPitch,
+    kTornadoPitch,
+    kSpinnerPitch,
+    kTornadoVolume,
+    kSpinnerVolume,
+    0,
 };
 
 static void pinOscillatorHold(JASChannel* jasCh) {
@@ -248,7 +232,7 @@ static void forceHurricaneSpinSeWaveLoop(JAISound* sound) {
 }
 
 static const HurricaneSePreset& getCurrentHurricaneSePreset() {
-    return s_hurricaneSePresets[getHurricaneTestSeIndex()];
+    return kHurricaneSeMix;
 }
 
 static void maintainHurricaneSeLayer(daAlink_c* link, Z2SoundObjSimple& soundObj, u32 seId, f32 pitch,
@@ -346,36 +330,11 @@ bool isHurricaneTestEnabled() {
 }
 
 bool isLinkHurricaneProc(const daAlink_c* i_link) {
-    return i_link != NULL && i_link->mProcID == daAlink_c::PROC_CUT_GS_HURRICANE &&
-           isHurricaneTestEnabled();
-}
-
-bool isHurricaneWhirlwindVfx() {
-    return getSettings().game.hurricaneTestVfx.getValue() == HurricaneVfxMode::WHIRLWIND;
-}
-
-bool isHurricaneBaseVfx() {
-    return getSettings().game.hurricaneTestVfx.getValue() == HurricaneVfxMode::BASE;
+    return i_link != NULL && i_link->mProcID == daAlink_c::PROC_CUT_GS_HURRICANE;
 }
 
 u32 getHurricanePlaceholderVoiceSe() {
     return kHurricanePlaceholderVoiceSe;
-}
-
-int getHurricaneTestSeIndex() {
-    const int count = static_cast<int>(std::size(s_hurricaneSePresets));
-    return std::clamp(getSettings().game.hurricaneTestSe.getValue(), 0, count - 1);
-}
-
-int getHurricaneTestSeCount() {
-    return static_cast<int>(std::size(s_hurricaneSePresets));
-}
-
-const char* getHurricaneTestSeName(int index) {
-    if (index < 0 || index >= getHurricaneTestSeCount()) {
-        return "?";
-    }
-    return s_hurricaneSePresets[index].name;
 }
 
 #endif

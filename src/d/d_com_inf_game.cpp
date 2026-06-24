@@ -31,6 +31,8 @@
 #include "d/d_albw_master_quest.h"
 #include "d/d_albw_shield.h"
 #include "dusk/action_bindings.h"
+#include "d/d_kankyo.h"
+#include "dusk/truetest.hpp"
 #endif
 
 void dComIfG_play_c::ct() {
@@ -191,6 +193,12 @@ int dComIfG_play_c::getLayerNo_common_common(const char* i_stageName, int i_room
             // Stage is Faron Woods
             else if (!strcmp(i_stageName, "F_SP108"))
             {
+#if TARGET_PC
+                const int faronFloor = dusk::truetest::getFaronLayerFloor();
+                if (faronFloor >= 0 && layer < faronFloor) {
+                    layer = faronFloor;
+                }
+#endif
                 // Cleared Snowpeak Ruins
                 if (dComIfGs_isEventBit(0x2008)) {
                     layer = 5;
@@ -218,6 +226,12 @@ int dComIfG_play_c::getLayerNo_common_common(const char* i_stageName, int i_room
             // Stage is Faron Woods Interiors
             else if (!strcmp(i_stageName, "R_SP108"))
             {
+#if TARGET_PC
+                const int faronFloor = dusk::truetest::getFaronLayerFloor();
+                if (faronFloor >= 0 && layer < faronFloor) {
+                    layer = faronFloor;
+                }
+#endif
                 // Cleared Forest Temple
                 if (dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[55])) {
                     layer = 2;
@@ -2859,17 +2873,37 @@ int dComIfG_TimerDeleteRequest(int i_mode) {
 BOOL dComIfGs_Wolf_Change_Check() {
     BOOL is_wolf = false;
 
-    // Transforming Unlocked
-    if (dComIfGs_isEventBit(0x0D04)) {
-        is_wolf = dComIfGs_getTransformStatus();
-    } else if (dComIfGs_isTransformLV(0) && !dComIfGs_isDarkClearLV(0)) {
-        is_wolf = true;
-    } else if (dComIfGs_isTransformLV(1) && !dComIfGs_isDarkClearLV(1)) {
-        is_wolf = true;
-    } else if (dComIfGs_isTransformLV(2) && !dComIfGs_isDarkClearLV(2)) {
-        is_wolf = true;
-    } else if (dComIfGs_isTransformLV(3) && !dComIfGs_isDarkClearLV(3)) {
-        is_wolf = true;
+#if TARGET_PC
+    if (dusk::truetest::isTrueTestSave()) {
+        const bool in_twilight =
+            dKy_darkworld_stage_check(dComIfGp_getStartStageName(), dComIfGp_getStartStageRoomNo()) != 0;
+
+        if (in_twilight && dComIfGs_isCollectSword(COLLECT_MASTER_SWORD)) {
+            is_wolf = dComIfGs_getTransformStatus();
+        } else if (dComIfGs_isTransformLV(0) && !dComIfGs_isDarkClearLV(0)) {
+            is_wolf = true;
+        } else if (dComIfGs_isTransformLV(1) && !dComIfGs_isDarkClearLV(1)) {
+            is_wolf = true;
+        } else if (dComIfGs_isTransformLV(2) && !dComIfGs_isDarkClearLV(2)) {
+            is_wolf = true;
+        } else if (dComIfGs_isTransformLV(3) && !dComIfGs_isDarkClearLV(3)) {
+            is_wolf = true;
+        }
+    } else
+#endif
+    {
+        // Transforming Unlocked
+        if (dComIfGs_isEventBit(0x0D04)) {
+            is_wolf = dComIfGs_getTransformStatus();
+        } else if (dComIfGs_isTransformLV(0) && !dComIfGs_isDarkClearLV(0)) {
+            is_wolf = true;
+        } else if (dComIfGs_isTransformLV(1) && !dComIfGs_isDarkClearLV(1)) {
+            is_wolf = true;
+        } else if (dComIfGs_isTransformLV(2) && !dComIfGs_isDarkClearLV(2)) {
+            is_wolf = true;
+        } else if (dComIfGs_isTransformLV(3) && !dComIfGs_isDarkClearLV(3)) {
+            is_wolf = true;
+        }
     }
 
     OS_REPORT("dComIfGs_isSaveSwitch 12[%x] 13[%x]\n", dComIfGs_isSaveSwitch(12), dComIfGs_isSaveSwitch(13));

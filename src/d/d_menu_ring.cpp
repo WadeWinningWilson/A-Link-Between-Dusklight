@@ -1326,7 +1326,16 @@ void dMenu_Ring_c::setNameString(u32 i_stringID) {
 void dMenu_Ring_c::setActiveCursor() {
     u8 item = dComIfGs_getItem(mItemSlots[mCurrentSlot], false);
     if (mStatus == STATUS_WAIT && mOldStatus != STATUS_EXPLAIN_FORCE && mOldStatus != STATUS_EXPLAIN && mpItemExplain->getStatus() == 0) {
-        if (mDoCPd_c::getTrigR(PAD_1) && !mPlayerIsWolf && item != dItemNo_NONE_e) {
+#if TARGET_PC
+        // Standard PC gamepads map RB/R1 to PAD_TRIGGER_Z; R is often unmapped.
+        const bool combineTrig =
+            mDoCPd_c::getTrigR(PAD_1) ||
+            (mDoCPd_c::getTrigZ(PAD_1) &&
+             (!dusk::isExtraItemSlotEnabled() || isMixItemOn() || isMixItemOff()));
+#else
+        const bool combineTrig = mDoCPd_c::getTrigR(PAD_1);
+#endif
+        if (combineTrig && !mPlayerIsWolf && item != dItemNo_NONE_e) {
             for (int i = 0; i < MAX_SELECT_ITEM; i++) {
                 setSelectItemForce(i);
             }
@@ -1357,7 +1366,7 @@ void dMenu_Ring_c::setActiveCursor() {
             }
 #if TARGET_PC
         } else if (mDoCPd_c::getTrigZ(PAD_1) && !mPlayerIsWolf && item != dItemNo_NONE_e &&
-                   dusk::isExtraItemSlotEnabled())
+                   dusk::isExtraItemSlotEnabled() && !isMixItemOn() && !isMixItemOff())
         {
             for (int i = 0; i < MAX_SELECT_ITEM; i++) {
                 setSelectItemForce(i);
@@ -1373,7 +1382,8 @@ void dMenu_Ring_c::setActiveCursor() {
 #endif
         } else if (mDoCPd_c::getTrigX(PAD_1) || mDoCPd_c::getTrigY(PAD_1)
 #if TARGET_PC
-                   || (dusk::isExtraItemSlotEnabled() && mDoCPd_c::getTrigZ(PAD_1))
+                   || (dusk::isExtraItemSlotEnabled() && mDoCPd_c::getTrigZ(PAD_1) &&
+                       !isMixItemOn() && !isMixItemOff())
 #endif
                   ) {
             // If the player is a wolf or somehow manages to access an item slot with no item, error
@@ -1394,19 +1404,19 @@ void dMenu_Ring_c::setMixItem() {
     {
         Z2GetAudioMgr()->seStart(Z2SE_SY_ITEM_COMBINE_OFF, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
         field_0x6cb = selectItemIndex0;
-        selectItemIndex0 = 4;
-        local_28[0] = getCursorPos(4);
+        selectItemIndex0 = SLOT_4;
+        local_28[0] = getCursorPos(SLOT_4);
         field_0x6b8[0] = 0xff;
         field_0x6b3 = 0;
         field_0x6cd = 0;
         bVar1 = true;
-    } else if (dComIfGs_getMixItemIndex(1) == 4 &&
+    } else if (dComIfGs_getMixItemIndex(1) == SLOT_4 &&
                mItemSlots[mCurrentSlot] == dComIfGs_getSelectItemIndex(1))
     {
         Z2GetAudioMgr()->seStart(Z2SE_SY_ITEM_COMBINE_OFF, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
         field_0x6cb = selectItemIndex1;
-        selectItemIndex1 = 4;
-        local_28[1] = getCursorPos(4);
+        selectItemIndex1 = SLOT_4;
+        local_28[1] = getCursorPos(SLOT_4);
         field_0x6b8[1] = 0xff;
         field_0x6b3 = 1;
         field_0x6cd = 1;
@@ -1417,13 +1427,14 @@ void dMenu_Ring_c::setMixItem() {
         case dItemNo_WATER_BOMB_e:
         case dItemNo_POKE_BOMB_e:
         case dItemNo_HAWK_EYE_e:
-            if ((dComIfGs_getSelectItemIndex(0) == 4 && dComIfGs_getMixItemIndex(0) == dItemNo_NONE_e) ||
-                (dComIfGs_getMixItemIndex(0) == 4))
+            if ((dComIfGs_getSelectItemIndex(0) == SLOT_4 &&
+                  dComIfGs_getMixItemIndex(0) == dItemNo_NONE_e) ||
+                 (dComIfGs_getMixItemIndex(0) == SLOT_4))
             {
                 Z2GetAudioMgr()->seStart(Z2SE_SY_ITEM_COMBINE_ON, NULL, 0, 0, 1.0f, 1.0f, -1.0f,
                                          -1.0f, 0);
                 selectItemIndex0 = mItemSlots[mCurrentSlot];
-                field_0x6b8[0] = 4;
+                field_0x6b8[0] = SLOT_4;
                 field_0x6b3 = 0;
                 mXButtonSlot = mCurrentSlot;
                 field_0x6cd = 0xff;
@@ -1432,14 +1443,14 @@ void dMenu_Ring_c::setMixItem() {
                     selectItemIndex1 = 0xff;
                     mYButtonSlot = 0xff;
                 }
-            } else if ((dComIfGs_getSelectItemIndex(1) == 4 &&
+            } else if ((dComIfGs_getSelectItemIndex(1) == SLOT_4 &&
                         dComIfGs_getMixItemIndex(1) == dItemNo_NONE_e) ||
-                       (dComIfGs_getMixItemIndex(1) == 4))
+                       (dComIfGs_getMixItemIndex(1) == SLOT_4))
             {
                 Z2GetAudioMgr()->seStart(Z2SE_SY_ITEM_COMBINE_ON, NULL, 0, 0, 1.0f, 1.0f, -1.0f,
                                          -1.0f, 0);
                 selectItemIndex1 = mItemSlots[mCurrentSlot];
-                field_0x6b8[1] = 4;
+                field_0x6b8[1] = SLOT_4;
                 field_0x6b3 = 1;
                 mYButtonSlot = mCurrentSlot;
                 field_0x6cd = 0xff;
@@ -1777,6 +1788,8 @@ void dMenu_Ring_c::stick_explain_force_proc() {
     if (endButton == 1) {
         setCombineBomb(field_0x6b3);
     } else if (endButton == 2) {
+        field_0x6cf = 0xff;
+        field_0x6d0 = 0xff;
         u8 itemMaxNum = getItemMaxNum(mItemSlots[mCurrentSlot]);
         u8 itemNum = getItemNum(mItemSlots[mCurrentSlot]);
         mpItemExplain->openExplain(mItemSlots[mCurrentSlot], itemNum, itemMaxNum, true);
@@ -1796,13 +1809,10 @@ void dMenu_Ring_c::setSelectItem(int i_idx, u8 i_itemNo) {
         } else {
             field_0x6be[i_idx] = 0;
         }
-        // !@bug Out-of-bounds access into mpSelectItemTexBuf
-        //       (innermost dimension is 2, we take index 2 which is invalid)
         field_0x686[i_idx] = dMeter2Info_readItemTexture(
             i_itemNo, mpSelectItemTexBuf[i_idx][field_0x6be[i_idx]][0], mpSelectItemTex[i_idx][0],
-            mpSelectItemTexBuf[i_idx][field_0x6be[i_idx]][1], mpSelectItemTex[i_idx][1],
-            mpSelectItemTexBuf[i_idx][field_0x6be[i_idx]][2], mpSelectItemTex[i_idx][2], NULL, NULL,
-            -1);
+            mpSelectItemTexBuf[i_idx][field_0x6be[i_idx]][1], mpSelectItemTex[i_idx][1], NULL, NULL,
+            NULL, NULL, -1);
         texScale = dItem_data::getTexScale(i_itemNo) / 100.0f;
     }
     field_0x548[i_idx] = mpSelectItemTexBuf[i_idx][field_0x6be[i_idx]][0]->width / 48.0f * texScale;
@@ -2123,11 +2133,35 @@ bool dMenu_Ring_c::checkExplainForce() {
 }
 
 bool dMenu_Ring_c::checkCombineBomb(int param_0) {
-    return false;
+    if (param_0 >= SELECT_ITEM_NUM) {
+        return false;
+    }
+
+    checkExplainForce();
+    if (field_0x6c7[param_0] == dItemNo_NONE_e) {
+        return false;
+    }
+
+    field_0x6cf = static_cast<u8>(param_0);
+    field_0x6d0 = 0xff;
+    if (openExplain(0xff) == 0) {
+        field_0x6cf = 0xff;
+        return false;
+    }
+
+    dMeter2Info_setItemExplainWindowStatus(1);
+    setStatus(STATUS_EXPLAIN_FORCE);
+    dMeter2Info_set2DVibration();
+    return true;
 }
 
 void dMenu_Ring_c::setCombineBomb(int param_0) {
-    /* empty function */
+    field_0x6b3 = static_cast<u8>(param_0);
+    setMixItem();
+    field_0x6cf = 0xff;
+    field_0x6d0 = 0xff;
+    dMeter2Info_setItemExplainWindowStatus(0);
+    setStatus(STATUS_WAIT);
 }
 
 void dMenu_Ring_c::drawNumber(int i_itemNum, int i_itemMaxNum, f32 i_posX, f32 i_posY) {
@@ -2193,10 +2227,49 @@ void dMenu_Ring_c::drawNumber(int i_itemNum, int i_itemMaxNum, f32 i_posX, f32 i
     }
 }
 
-u8 dMenu_Ring_c::getItem(int i_slot_no, u8 i_slot_no2) {
-    u8 item = dComIfGs_getItem(i_slot_no, 0);
-    dComIfGs_getItem(i_slot_no2, 0);
-    return item;
+u8 dMenu_Ring_c::getItem(int i_slot_no, u8 i_mix_slot) {
+    if (i_mix_slot == 0xFF) {
+        return dComIfGs_getItem(i_slot_no, false);
+    }
+
+    const u8 select_item = dComIfGs_getItem(i_slot_no, false);
+    const u8 mix_item = dComIfGs_getItem(i_mix_slot, false);
+
+    if ((select_item == dItemNo_BOW_e && mix_item == dItemNo_NORMAL_BOMB_e) ||
+        (mix_item == dItemNo_BOW_e && select_item == dItemNo_NORMAL_BOMB_e) ||
+        (select_item == dItemNo_BOW_e && mix_item == dItemNo_WATER_BOMB_e) ||
+        (mix_item == dItemNo_BOW_e && select_item == dItemNo_WATER_BOMB_e) ||
+        (select_item == dItemNo_BOW_e && mix_item == dItemNo_POKE_BOMB_e) ||
+        (mix_item == dItemNo_BOW_e && select_item == dItemNo_POKE_BOMB_e))
+    {
+        return dItemNo_BOMB_ARROW_e;
+    }
+
+    if ((select_item == dItemNo_BOW_e && mix_item == dItemNo_HAWK_EYE_e) ||
+        (mix_item == dItemNo_BOW_e && select_item == dItemNo_HAWK_EYE_e))
+    {
+        return dItemNo_HAWK_ARROW_e;
+    }
+
+    if ((select_item == dItemNo_FISHING_ROD_1_e && mix_item == dItemNo_BEE_CHILD_e) ||
+        (mix_item == dItemNo_FISHING_ROD_1_e && select_item == dItemNo_BEE_CHILD_e))
+    {
+        return dItemNo_BEE_ROD_e;
+    }
+
+    if ((select_item == dItemNo_FISHING_ROD_1_e && mix_item == dItemNo_ZORAS_JEWEL_e) ||
+        (mix_item == dItemNo_FISHING_ROD_1_e && select_item == dItemNo_ZORAS_JEWEL_e))
+    {
+        return dItemNo_JEWEL_ROD_e;
+    }
+
+    if ((select_item == dItemNo_FISHING_ROD_1_e && mix_item == dItemNo_WORM_e) ||
+        (mix_item == dItemNo_FISHING_ROD_1_e && select_item == dItemNo_WORM_e))
+    {
+        return dItemNo_WORM_ROD_e;
+    }
+
+    return select_item;
 }
 
 void dMenu_Ring_c::setDoStatus(u8 i_doStatus) {

@@ -24,6 +24,7 @@
 #include "d/d_albw_shade_refuge.h"  // Shade's Refuge: last-watcher death-respawn slot
 #include "d/actor/d_a_player.h"     // Shade's Refuge: daPy_py_c::setParamData (warp-in spawn param)
 #include "dusk/ui/ui.hpp"
+#include "dusk/truetest.hpp"
 #endif
 
 class dGov_HIO_c : public mDoHIO_entry_c {
@@ -194,7 +195,7 @@ int dGameover_c::_create() {
             // ============================================
             // NEW CODE — ALBW Port
             // Strip all ALBW items from inventory on real player death,
-            // BUT only once Talo has been rescued (event bit F_0625).
+            // BUT only once Talo has been rescued (F_0625) or on a TRUETEST save.
             // Before that point the rental Postman does not exist, so
             // there is no way to recover stripped items — leave them alone.
             // For each item: record rental eligibility BEFORE clearing
@@ -208,7 +209,7 @@ int dGameover_c::_create() {
             // Meter capacity upgrades (sOilMaxVar) are intentionally
             // preserved — only the current value is restored.
             // ============================================
-            if (dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625])) {
+            if (dusk::truetest::isAlbwPostmanUnlocked()) {
                 dALBWDeathRupees_applyHalvingOnDeath();
                 dMeter2_stripAllALBWInventoryOnDeath();
                 dMeter2_fillALBWMeter();
@@ -358,8 +359,7 @@ void dGameover_c::saveOpen_init() {
 // Duration is 75 % of the original 6 s for a less intrusive display.
 // ============================================
 #if TARGET_PC
-    if (dMeter2Info_getGameOverType() == 0 &&
-        dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625])) {
+    if (dMeter2Info_getGameOverType() == 0 && dusk::truetest::isAlbwPostmanUnlocked()) {
         dusk::ui::push_toast({
             .title   = "Items Delivered",
             .content = "~Greetings! A helpful friend has delivered your lost"
@@ -392,14 +392,13 @@ void dGameover_c::saveMove_proc() {
 // Cutscene deaths (types 1 and 2) bypass this dialog — they already
 // have their own custom handling in saveClose_proc.
 //
-// Gate: normal death (type 0) after Talo rescue (F_0625). Pre-MS Wolf Link
+// Gate: normal death (type 0) after Talo rescue (F_0625) or TRUETEST stamp. Pre-MS Wolf Link
 // skips warp choice entirely (vanilla continue) to avoid Ordon softlocks;
 // sALBWWarpChoice must be cleared so a prior human Ordon pick cannot stick.
 // Human Link and wolf-with-Master-Sword get the full A/B toast.
 // ============================================
 #if TARGET_PC
-        if (dMeter2Info_getGameOverType() == 0 &&
-            dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625]) &&
+        if (dMeter2Info_getGameOverType() == 0 && dusk::truetest::isAlbwPostmanUnlocked() &&
             albwWarpChoiceAllowed()) {
             mProc = PROC_ALBW_WARP_CHOICE;
         } else {

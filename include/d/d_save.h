@@ -909,8 +909,45 @@ public:
 
 class dSv_reserve_c {
 public:
+    bool isTrueTest() const { return (mData[0] & 0x01) != 0; }
+    void setTrueTest(bool i_enabled) {
+        if (i_enabled) {
+            mData[0] |= 0x01;
+        } else {
+            mData[0] &= ~0x01;
+        }
+    }
+
+    bool isBootstrapApplied() const { return (mData[0] & 0x02) != 0; }
+    void setBootstrapApplied(bool i_applied) {
+        if (i_applied) {
+            mData[0] |= 0x02;
+        } else {
+            mData[0] &= ~0x02;
+        }
+    }
+
+    // Selective twilight bubbles (Faron clear, Eldin/Lanayru live, HF always day).
+    bool hasTwilightPolicyV1() const { return (mData[0] & 0x04) != 0; }
+    void setTwilightPolicyV1(bool i_applied) {
+        if (i_applied) {
+            mData[0] |= 0x04;
+        } else {
+            mData[0] &= ~0x04;
+        }
+    }
+
+    bool hasGanonGatePolicyV1() const { return (mData[0] & 0x08) != 0; }
+    void setGanonGatePolicyV1(bool i_applied) {
+        if (i_applied) {
+            mData[0] |= 0x08;
+        } else {
+            mData[0] &= ~0x08;
+        }
+    }
+
 private:
-    u8 unk[80];
+    u8 mData[80];
 };
 
 class dSv_save_c {
@@ -931,6 +968,8 @@ public:
     }
     dSv_event_c& getEvent() { return mEvent; }
     dSv_MiniGame_c& getMiniGame() { return mMiniGame; }
+    dSv_reserve_c& getReserve() { return reserve; }
+    const dSv_reserve_c& getReserve() const { return reserve; }
 
     static const int STAGE_MAX = 32;
     static const int STAGE2_MAX = 64;

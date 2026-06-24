@@ -11,6 +11,8 @@
 #if TARGET_PC
 #include "d/d_albw_combat.h"
 #include "d/d_albw_shield.h"
+#include "d/d_focused_arts.h"
+#include "dusk/hurricane_test.h"
 #endif
 
 enum daAlink_CutNmParamType {
@@ -345,6 +347,9 @@ BOOL daAlink_c::setSwordHitVibration(dCcD_GObjInf* i_gobj) {
             if (hitAc != NULL && fopAcM_GetGroup(hitAc) == fopAc_ENEMY_e &&
                 checkMagicArmorWearAbility()) {
                 dMeter2_onArmorAttackHit(fopAcM_GetID(hitAc));
+            }
+            if (hitAc != NULL && fopAcM_GetGroup(hitAc) == fopAc_ENEMY_e && !checkWolf()) {
+                dFocusedArts_onConnectedSwordHit();
             }
         }
         // ============================================
@@ -1225,6 +1230,7 @@ int daAlink_c::procCutFinishInit(int i_type) {
                 return 1;
             }
             dMeter2_onALBWHiddenSkill();
+            dFocusedArts_onPlayerHiddenSkillUse();
         }
     } else {
         if (!dMeter2_canALBWSword()) {
@@ -1300,6 +1306,11 @@ int daAlink_c::procCutFinishInit(int i_type) {
 
     commonProcInit(PROC_CUT_FINISH);
     setCutType(cutParams->m_cutType);
+#if TARGET_PC
+    if (i_type == CUT_FINISH_PARAM_MORTAL_DRAW_A || i_type == CUT_FINISH_PARAM_MORTAL_DRAW_B) {
+        dFocusedArts_onHiddenSkillProcStarted(cutParams->m_cutType);
+    }
+#endif
     field_0x3198 = cutParams->m_recoilAnmID;
     mProcVar2.field_0x300c = cutParams->field_0xa;
     mProcVar3.field_0x300e = cutParams->field_0xb;
@@ -1483,17 +1494,16 @@ int daAlink_c::procCutFinish() {
 }
 
 int daAlink_c::procCutFinishJumpUpInit() {
-    // ============================================
-    // NEW CODE — ALBW Port
-    // Block aerial uppercut when meter is exhausted.
-    // ============================================
 #if TARGET_PC
-    if (!dMeter2_canALBWSword()) { return 1; }
-    dMeter2_onALBWSword();
+    // Aerial twirl must always execute. Drain ALBW when available; never block the proc.
+    if (dAlbw_isHiddenSkillReworkEnabled() && checkCutBackState()) {
+        if (dMeter2_canALBWHiddenSkill()) {
+            dMeter2_onALBWHiddenSkill();
+        }
+    } else if (dMeter2_canALBWSword()) {
+        dMeter2_onALBWSword();
+    }
 #endif
-    // ============================================
-    // NEW CODE ENDS HERE
-    // ============================================
     BOOL is_proc_sideRoll = mProcID == PROC_SIDE_ROLL;
 
     commonProcInit(PROC_CUT_FINISH_JUMP_UP);
@@ -1504,6 +1514,14 @@ int daAlink_c::procCutFinishJumpUpInit() {
     }
 
     setCutType(CUT_TYPE_TWIRL);
+#if TARGET_PC
+    if (dAlbw_isHiddenSkillReworkEnabled() && checkCutBackState()) {
+        dFocusedArts_onPlayerHiddenSkillUse();
+        if (dFocusedArts_isSpecialFinisherSpendActive()) {
+            dFocusedArts_onHiddenSkillProcStarted(CUT_TYPE_TWIRL);
+        }
+    }
+#endif
     speed.y = mpHIO->mCut.mCutFinishJumpUppercut.m.mSpeedV;
     mNormalSpeed = mpHIO->mCut.mCutFinishJumpUppercut.m.mSpeedH;
 
@@ -1626,6 +1644,9 @@ int daAlink_c::procCutFinishJumpUpLand() {
         } else {
             mNormalSpeed = 0.0f;
             field_0x2f98 = 2;
+#if TARGET_PC
+            dFocusedArts_onBackSliceFinisherEnded();
+#endif
             checkNextAction(0);
         }
     } else if (!(frameCtrl->getFrame() > field_0x3484) || !checkCutCancelNextMode(3)) {
@@ -1751,6 +1772,9 @@ int daAlink_c::procCutJumpInit(BOOL i_isAirCut) {
     setSwordComboVoice();
     dComIfGp_setPlayerStatus0(0, 0x8000);
     field_0x3198 = 2;
+#if TARGET_PC
+    dFocusedArts_onPlayerHiddenSkillUse();
+#endif
     return 1;
 }
 
@@ -1861,8 +1885,17 @@ int daAlink_c::procCutTurnInit(int param_0, int param_1) {
     // spins that don't come through procCutTurnChargeInit.
     // ============================================
 #if TARGET_PC
-    if (!dMeter2_canALBWSword()) { return 1; }
-    dMeter2_onALBWSword();
+    if (dAlbw_isHiddenSkillReworkEnabled() && checkCutLargeTurnState()) {
+        if (!dMeter2_canALBWHiddenSkill()) {
+            return 1;
+        }
+        dMeter2_onALBWHiddenSkill();
+    } else {
+        if (!dMeter2_canALBWSword()) {
+            return 1;
+        }
+        dMeter2_onALBWSword();
+    }
 #endif
     // ============================================
     // NEW CODE ENDS HERE
@@ -1963,6 +1996,11 @@ int daAlink_c::procCutTurnInit(int param_0, int param_1) {
     mProcVar5.field_0x3012 = 0;
     setCutWaterDropEffect();
     initCutTurnAt(field_0x347c, atp);
+#if TARGET_PC
+    if (checkCutLargeTurnState()) {
+        dFocusedArts_onPlayerHiddenSkillUse();
+    }
+#endif
     return 1;
 }
 
@@ -2027,8 +2065,18 @@ int daAlink_c::procCutTurnChargeInit() {
     // so that pure animation overrides are unaffected.
     // ============================================
 #if TARGET_PC
-    if (!dMeter2_canALBWSword()) { return 1; }
-    dMeter2_onALBWSword();
+    if (dAlbw_isHiddenSkillReworkEnabled() &&
+        (checkCutLargeTurnState() || dFocusedArts_isOnFinalSpendCharge())) {
+        // Great Spin drains 1/2 base at release (procCutTurnInit), not during charge.
+        if (!dMeter2_canALBWHiddenSkill()) {
+            return 1;
+        }
+    } else {
+        if (!dMeter2_canALBWSword()) {
+            return 1;
+        }
+        dMeter2_onALBWSword();
+    }
 #endif
     // ============================================
     // NEW CODE ENDS HERE
@@ -2222,7 +2270,16 @@ int daAlink_c::procCutTurnMove() {
             procCutLargeJumpInit();
         } else {
             CONAV_LOG("cut", "procCutTurnMove branch=var_r4-spin");
-            procCutTurnInit(0, 1);
+#if TARGET_PC
+            if (dusk::isHurricaneTestEnabled() && !dFocusedArts_isEnabled()) {
+                procCutGsHurricaneInit(getCutTurnDirection());
+            } else if (dFocusedArts_tryArmGsHurricaneFinisher()) {
+                procCutGsHurricaneInit(getCutTurnDirection());
+            } else
+#endif
+            {
+                procCutTurnInit(0, 1);
+            }
         }
     } else if (mProcVar2.field_0x300c != 0) {
         CONAV_LOG("cut", "procCutTurnMove branch=js-release-no-varR4");
@@ -2253,6 +2310,7 @@ int daAlink_c::procCutDownInit() {
             return 1;
         }
         dMeter2_onALBWHiddenSkill();
+        dFocusedArts_onPlayerHiddenSkillUse();
     }
 #endif
     commonProcInit(PROC_CUT_DOWN);
@@ -2360,6 +2418,20 @@ int daAlink_c::procCutDownLandInit(fopEn_enemy_c* i_enemy) {
             dComIfGp_setHitMark(3, NULL, &i_enemy->getDownPos(), &angle, NULL, 0);
         }
 
+#if TARGET_PC
+        if (dFocusedArts_onEndingBlowContact()) {
+            const daAlinkHIO_cutTurn_c1& turnData = mpHIO->mCut.mCutTurn.m;
+            field_0x3478 = turnData.mLargeAttackRadius;
+            field_0x348c = turnData.mLargeAttackAccel;
+            field_0x347c = turnData.mAttackRadius;
+            mProcVar1.field_0x300a = turnData.mLeftAttackStartFrame;
+            mProcVar4.field_0x3010 = 0;
+            initCutTurnAt(field_0x347c, 4);
+            seStartSwordCut(Z2SE_AL_KAITEN_L_SLASH);
+            setCutTurnEffect();
+        }
+#endif
+
         var_r30 = 0x20;
         mProcVar0.field_0x3008 = mpHIO->mCut.mCutDown.m.mSuccessStopTime;
         dComIfGp_getVibration().StartShock(4, 31, cXyz(0.0f, 1.0f, 0.0f));
@@ -2390,6 +2462,17 @@ int daAlink_c::procCutDownLand() {
     if (checkGroundSpecialMode()) {
         return 1;
     }
+
+#if TARGET_PC
+    if (dFocusedArts_isEndingBlowGreatSpinAoeActive()) {
+        cLib_chaseF(&field_0x347c, field_0x3478, field_0x348c);
+        if (mAtSph.ChkAtSet()) {
+            mAtSph.SetR(field_0x347c);
+            mAtSph.ResetAtHit();
+        }
+        onResetFlg0(RFLG0_UNK_2);
+    }
+#endif
 
     daPy_frameCtrl_c* frameCtrl_p = mUnderFrameCtrl;
     field_0x2f99 = 4;
@@ -2457,6 +2540,7 @@ int daAlink_c::procCutHeadInit() {
         }
 
         dShield_chargeHelmSplitterMeterOnce();
+        dFocusedArts_onPlayerHiddenSkillUse();
     }
 
     commonProcInit(PROC_CUT_HEAD);
@@ -2496,6 +2580,9 @@ int daAlink_c::procCutHeadInit() {
     setSwordAtParam(dCcG_At_Spl_UNK_1, 3, dCcD_SE_SWORD, 3, mpHIO->mCut.mCutHead.m.mSwordLength,
                     mpHIO->mCut.mCutHead.m.mSwordRadius);
     setCutType(CUT_TYPE_HEAD_JUMP);
+#if TARGET_PC
+    dFocusedArts_onHiddenSkillProcStarted(CUT_TYPE_HEAD_JUMP);
+#endif
 
     return 1;
 }
@@ -2583,6 +2670,7 @@ int daAlink_c::procCutLargeJumpChargeInit() {
             return 1;
         }
         dMeter2_onALBWHiddenSkill();
+        dFocusedArts_onHiddenSkillChargeStart();
     }
 #endif
     CONAV_LOG("cut", "procCutLargeJumpChargeInit");
@@ -2677,6 +2765,7 @@ int daAlink_c::procCutLargeJumpInit() {
 
     CONAV_LOG("cut", "procCutLargeJumpInit OK");
     CONAV_CUT_SNAPSHOT(this, "cut", "largeJumpInit-OK");
+    dFocusedArts_onPlayerHiddenSkillUse();
     commonProcInit(PROC_CUT_LARGE_JUMP);
     setSingleAnimeParam(ANM_CUT_JUMP_LARGE_START, &mpHIO->mCut.mCutLargeJump.m.mChargeMoveAnm);
     field_0x3588 = l_halfAtnWaitBaseAnime;
@@ -2687,6 +2776,9 @@ int daAlink_c::procCutLargeJumpInit() {
     setSwordAtParam(dCcG_At_Spl_UNK_0, 1, dCcD_SE_SWORD, 2, mpHIO->mCut.m.mSwordLength,
                     mpHIO->mCut.m.mSwordRadius);
     setCutType(CUT_TYPE_LARGE_JUMP_INIT);
+#if TARGET_PC
+    dFocusedArts_onHiddenSkillProcStarted(CUT_TYPE_LARGE_JUMP_INIT);
+#endif
     setSwordVoiceSe(Z2SE_AL_V_JUMP_ATTACK_L_1);
     setCutWaterDropEffect();
     mProcVar3.field_0x300e = 4;

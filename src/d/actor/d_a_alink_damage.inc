@@ -493,7 +493,7 @@ BOOL daAlink_c::checkDamageAction() {
     }
 
 #if TARGET_PC
-    if (mProcID == PROC_CUT_GS_HURRICANE && dusk::isHurricaneTestEnabled()) {
+    if (mProcID == PROC_CUT_GS_HURRICANE) {
         return 0;
     }
 #endif

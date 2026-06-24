@@ -9,7 +9,8 @@
 #include "f_pc/f_pc_name.h"
 
 bool dAlbw_isHiddenSkillReworkEnabled() {
-    return dusk::getSettings().game.hiddenSkillRework.getValue();
+    // Core ALBW combat (HS meter costs, JS charge, Helm punish, etc.) — always on; not exposed in UI.
+    return true;
 }
 
 static bool s_jumpStrikeChargeReady = false;

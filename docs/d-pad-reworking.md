@@ -2,13 +2,58 @@
 
 Design + **completed research** for repurposing the d-pad cross (beyond Extra Item Slot / Midna on left) to support in-field sword cycling, shield cycling, and quick wolf transform.
 
-**Status:** Implemented (2026-06-19). Build validated with `build_run.bat`.
+**Status:** Implemented (2026-06-19). **Shield cycle crash + L1 item wheel** fixed and playtested (2026-06-20).
 
 **Feature name:** **D-Pad Quick Swap** (settings UI label; doc filename stays `d-pad-reworking.md`).
 
 **Decision:** Use **Option A** — extend the existing `ActionBinds` system (rebindable in controller config), not hardcoded PC-only intercepts.
 
 **Research date:** 2026-06-19 (Cursor session + product clarifications).
+
+---
+
+## Implementation progress (2026-06-20)
+
+Session work after initial Quick Swap ship. All builds validated with `build_run.bat` (RelWithDebInfo). **Not committed** unless product asks.
+
+### L1 item wheel (Extra + Quick Swap only)
+
+| Item | Detail |
+|------|--------|
+| Action bind | `OPEN_ITEM_WHEEL` in `include/dusk/action_bindings.h` + `action_bindings.cpp` |
+| Auto-preset | L1 bound only when `extraItemSlot` mode == **Extra + Quick Swap** (`applyDpadQuickSwapPresetBinds()` in `src/dusk/dpad_quick_swap.cpp`) — not a global default |
+| Open path | Handled in vanilla `key_wait_proc()` in `src/d/d_menu_window.cpp` (same as d-pad item ring) |
+| Visual fix | Early open from `f_ap_game.cpp` skipped `ring_open_init` / `dMeter2Info_setWindowStatus(2)` — removed that path; L1 must go through `key_wait_proc()` so the ring draws |
+
+### Shield quick-swap crash fix (save-editor multi-shield)
+
+**Symptom:** Immediate crash on d-pad Right shield cycle when multiple shields granted via save editor (Ordon → Hylian).
+
+**Root causes (stacked):**
+
+1. **`setShieldArcName()`** used first owned `isItemFirstBit` when several flags set → wrong arc unloaded (e.g. CWShd while Hylian equipped) → heap corruption after `freeAll()`.
+2. **`setCollision()`** called `getShieldMtx()` → `mShieldModel->getBaseTRMtx()` with **no null check** during reload delete phase (`mShieldModel = NULL`) → `EXCEPTION_ACCESS_VIOLATION` at fault addr `0x44`.
+3. Guard state could persist during reload (`FLG2_UNK_8000000`) while model was null — looked like “raising shield” on cycle press.
+
+**Fixes (current tree):**
+
+| File | Change |
+|------|--------|
+| `src/d/actor/d_a_alink_swindow.inc` | PC `setShieldArcName()` maps arc from `getSelectEquipShield()` first; `setShieldChange()` no-ops if timer active, clears guard flag on start; PC `deleteObjectResMain` fallback in `loadShieldModelDVD()` delete phase (same pattern as clothes) |
+| `src/d/actor/d_a_alink.cpp` | `setCollision()`: only calls `getShieldMtx()` when `mShieldModel != NULL`; field `execute()` runs `loadShieldModelDVD()` when not in status-window draw |
+| `src/d/actor/d_a_alink_guard.inc` | `setShieldGuard()` early-out while `mShieldChangeWaitTimer != 0` |
+| `src/d/d_meter2.cpp` | `dMeter2_equipOwnedShield`, `dMeter2_shieldIsOwned`, `dMeter2_ensureShieldOwned`, `dMeter2_requestLinkShieldModelUpdate()` — ownership sync + skip reload restart while timer active |
+| `src/dusk/dpad_quick_swap.cpp` | `cycleNextShield()` blocks while reload timer active |
+
+**Diagnostics:** Temporary `[ShieldSwapDbg]` logging (`include/dusk/shield_swap_debug.h`) added for investigation, **removed** after user confirmed fix (2026-06-20).
+
+**Related doc:** [shield-ordon-quest-assets.md](shield-ordon-quest-assets.md) — item ID ↔ arc table; PC arc selection now follows equipped ID, not first bit.
+
+### Playtest notes (2026-06-20)
+
+- Shield cycle Ordon ↔ Hylian with save-editor multi-shield: **stable** after collision null guard.
+- L1 item wheel in Extra + Quick Swap: opens and **draws** correctly.
+- D-pad Right cycle shield does **not** map to guard; guard is ZR/R2 via `manualShieldButton()`. Guard pose during swap was reload artifact — fixed by clearing guard on `setShieldChange()`.
 
 **Paste into any implementation chat:**
 
@@ -403,23 +448,25 @@ Quick Swap actions must **not** run when vanilla would block d-pad gameplay menu
 
 ## Test plan (for implementation)
 
-- [ ] Mode **Off** → vanilla d-pad unchanged
-- [ ] Mode **Extra, No Quick Swap** → Midna left + Z item; vanilla Up/Down/Right; R+Y transform still works if QoL toggle on
-- [ ] Mode **Extra + Quick Swap** → left Midna, up/right/down Quick Swap; R+Y transform **does not** fire
-- [ ] Entering Quick Swap mode presets d-pad binds + proposed M/Tab map keys only when still unbound
-- [ ] Midna call does not open map when left reserved
-- [ ] Sword cycle skips unowned tiers; respects wait timer
+- [x] Mode **Off** → vanilla d-pad unchanged
+- [x] Mode **Extra, No Quick Swap** → Midna left + Z item; vanilla Up/Down/Right; R+Y transform still works if QoL toggle on
+- [x] Mode **Extra + Quick Swap** → left Midna, up/right/down Quick Swap; R+Y transform **does not** fire
+- [x] Entering Quick Swap mode presets d-pad binds + proposed M/Tab map keys only when still unbound
+- [x] Midna call does not open map when left reserved
+- [x] Sword cycle skips unowned tiers; respects wait timer
+- [x] Shield cycle with save-editor multi-shield ownership (Ordon + Hylian): **no crash** (2026-06-20 fix)
 - [ ] Shield cycle with one shield (no-op or single entry); **placeholder** for two-shield upgrade
-- [ ] Transform blocked in cutscene, STAR tent, ball & chain, metamorphose disabled
-- [ ] Transform works wolf→human and human→wolf when eligible
-- [ ] Item ring does not open on reserved up/down (Quick Swap mode)
-- [ ] Map does not open on reserved left/right; `OPEN_MAP_SCREEN` / M key still works
-- [ ] Rental shop: d-pad tabs work; no Midna / Quick Swap during shop
-- [ ] Collection menu equip still works; Quick Swap uses same equip state
-- [ ] LoP HUD: shield row updates after shield cycle without cross labels
+- [x] Transform blocked in cutscene, STAR tent, ball & chain, metamorphose disabled
+- [x] Transform works wolf→human and human→wolf when eligible
+- [x] Item ring does not open on reserved up/down (Quick Swap mode)
+- [x] Map does not open on reserved left/right; `OPEN_MAP_SCREEN` / M key still works
+- [x] Rental shop: d-pad tabs work; no Midna / Quick Swap during shop
+- [x] Collection menu equip still works; Quick Swap uses same equip state
+- [x] LoP HUD: shield row updates after shield cycle without cross labels
 - [ ] Rebind cycle/transform to keyboard in controller config
-- [ ] Wolf form: sword/shield cycle blocked; transform allowed per rules
-- [ ] Save migration: old `extraItemSlot=true` → mode 1
+- [x] Wolf form: sword/shield cycle blocked; transform allowed per rules
+- [x] Save migration: old `extraItemSlot=true` → mode 1
+- [x] L1 item wheel opens and **draws** in Extra + Quick Swap mode (2026-06-20)
 
 ---
 
@@ -428,10 +475,15 @@ Quick Swap actions must **not** run when vanilla would block d-pad gameplay menu
 | Resource | Path |
 |----------|------|
 | Extra Item Slot shipped notes | `docs/patch-notes-v0.55.md`, `docs/albw-port.md` |
+| Shield item ID ↔ arc (save-editor cycling) | `docs/shield-ordon-quest-assets.md` |
 | Midna / Z slot | `src/d/actor/d_a_alink.cpp` — `midnaTalkTrigger()` |
 | Action binds | `src/dusk/action_bindings.cpp` |
+| D-pad Quick Swap logic | `src/dusk/dpad_quick_swap.cpp` |
+| Shield equip / ownership API | `src/d/d_meter2.cpp` — `dMeter2_equipOwnedShield()`, `dMeter2_shieldIsOwned()` |
+| Shield model reload | `src/d/actor/d_a_alink_swindow.inc` — `setShieldChange()`, `loadShieldModelDVD()` |
 | Quick transform | `src/d/actor/d_a_alink_dusk.cpp`, `src/f_ap/f_ap_game.cpp` |
 | Collection equip | `src/d/d_menu_collect.cpp` — `changeSword()`, `changeShield()` |
+| Item wheel (L1) | `src/d/d_menu_window.cpp` — `key_wait_proc()` |
 | Shield one-at-a-time | `src/d/d_meter2.cpp` — `dMeter2_canAcquireShield()` |
 | Map PC binds | `src/d/d_meter_map.cpp` — `OPEN_MAP_SCREEN`, `TOGGLE_MINIMAP` |
 | Rental shop d-pad | `src/d/d_albw_rental.cpp` |

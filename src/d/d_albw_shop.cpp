@@ -79,6 +79,11 @@ static constexpr f32 kTitleFontScale   = 0.65f;
 static constexpr f32 kDescFontScale       = 0.65f;
 static constexpr f32 kDescLineSpaceScale  = 0.72f;  // ruled pitch is tall; tighten vs font size
 static constexpr f32 kRowNameFontScale = 0.88f;  // long names (e.g. Double Clawshot) vs price column
+// Very long service names (e.g. "Return to Last Shade Watcher") overflow into the
+// price column.  When a name exceeds kRowNameCompactLen chars, shrink ONLY that
+// row's name font by kRowNameCompactScale.  Price/frame/scissor layout untouched.
+static constexpr int kRowNameCompactLen   = 18;
+static constexpr f32 kRowNameCompactScale = 0.70f;
 // let_area is the whole letter-window interior (list + parchment), not the list column alone.
 // Vanilla only draws the menu inside it; parchment in read mode is full-screen with a dim pass.
 static constexpr f32 kPriceFontScale = 0.52f;
@@ -1880,6 +1885,23 @@ void dALBWShop_c::populateRows() {
 
     const dMeter_drawLetterHIO_c& hio = g_drawHIO.mLetterSelectScreen;
     char buf[64];
+    // ============================================
+    // NEW CODE — ALBW Port (Long-name compaction)
+    // Capture the BLO-baked row-name font size once so long service names can be
+    // scaled down per-row below using an ABSOLUTE size (no per-frame compounding).
+    // Only the name textbox is touched.
+    // ============================================
+    static f32 sRowNameBaseFontX = 0.0f;
+    static f32 sRowNameBaseFontY = 0.0f;
+    if (sRowNameBaseFontX <= 0.0f && mpRowName[0]) {
+        J2DTextBox::TFontSize baseFs;
+        mpRowName[0]->getFontSize(baseFs);
+        sRowNameBaseFontX = baseFs.mSizeX;
+        sRowNameBaseFontY = baseFs.mSizeY;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     for (int row = 0; row < 6; ++row) {
         if (!mpRowName[row]) continue;
         const int itemIdx = mScrollTop + row;
@@ -1894,6 +1916,23 @@ void dALBWShop_c::populateRows() {
             }
             mpRowName[row]->setString(buf);
             mpRowName[row]->show();
+            // ============================================
+            // NEW CODE — ALBW Port (Long-name compaction)
+            // Shrink only this row's name font when the name is very long, so it
+            // does not overlap the price column.  Reset to base for short names
+            // (rows are reused as the list scrolls).
+            // ============================================
+            if (sRowNameBaseFontX > 0.0f) {
+                const f32 nameScale =
+                    (name && (int)strlen(name) > kRowNameCompactLen) ? kRowNameCompactScale : 1.0f;
+                J2DTextBox::TFontSize nameFs;
+                nameFs.mSizeX = sRowNameBaseFontX * nameScale;
+                nameFs.mSizeY = sRowNameBaseFontY * nameScale;
+                mpRowName[row]->setFontSize(nameFs);
+            }
+            // ============================================
+            // NEW CODE ENDS HERE
+            // ============================================
             if (mpRowPrice[row]) {
                 snprintf(buf, sizeof(buf), "%d Rupees", ve.price);
                 mpRowPrice[row]->setString(buf);

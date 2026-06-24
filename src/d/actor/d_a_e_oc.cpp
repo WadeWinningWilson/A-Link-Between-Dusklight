@@ -1426,6 +1426,16 @@ void daE_OC_c::executeAttack() {
         }
         // fallthrough intentional
         case 1: {
+            // Club windup locks shape_angle at attack start; track Link through the swing
+            // so lunges stay aligned when the player strafes (ALBW hold-to-guard without Z-target).
+            if (mpMorf->getFrame() < 22.0f) {
+                s16 pl_ang = fopAcM_searchPlayerAngleY(this);
+                if ((s16)cLib_distanceAngleS(shape_angle.y, pl_ang) >= 0x400) {
+                    cLib_addCalcAngleS(&shape_angle.y, pl_ang, 4, 0x800, 0x100);
+                }
+                current.angle.y = shape_angle.y;
+            }
+
             if (mOcState == 1) {
                 if (mpMorf->checkFrame(10.0f)) {
                     mSound.startCreatureVoice(Z2SE_EN_OC_V_ATTACK_B2, -1);

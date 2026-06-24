@@ -357,6 +357,7 @@ namespace dusk {
 
         m_menuTools.ShowInputViewer();
         m_menuTools.ShowLockonHpOverlay();
+        m_menuTools.ShowFocusedArtsDebugOverlay();
 
         if (dusk::IsGameLaunched && !dusk::getSettings().game.speedrunMode) {
             m_menuTools.ShowDebugOverlay();

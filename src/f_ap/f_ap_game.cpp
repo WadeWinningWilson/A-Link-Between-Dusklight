@@ -760,13 +760,13 @@ static void duskExecute() {
         isRecording = false;
     }
 
-    if (mDoCPd_c::getHoldR(PAD_1) && mDoCPd_c::getTrigX(PAD_1)) {
+    if (dusk::isPadModifierRHeld(PAD_1) && mDoCPd_c::getTrigX(PAD_1)) {
         if (const auto link = g_dComIfG_gameInfo.play.getPlayer(0)) {
             dynamic_cast<daAlink_c*>(link)->handleWolfHowl();
         }
     }
 
-    if ((mDoCPd_c::getHold(PAD_1) & (PAD_TRIGGER_R | PAD_TRIGGER_L)) == PAD_TRIGGER_R && mDoCPd_c::getTrigY(PAD_1)) {
+    if (dusk::isPadModifierRHeldExclusive(PAD_1) && mDoCPd_c::getTrigY(PAD_1)) {
         if (!dusk::isDpadQuickSwapEnabled()) {
             if (const auto link = g_dComIfG_gameInfo.play.getPlayer(0)) {
                 dynamic_cast<daAlink_c*>(link)->handleQuickTransform();
@@ -788,13 +788,14 @@ static void duskExecute() {
         }
     }
 
-    if (dusk::getSettings().game.moonJump && (mDoCPd_c::getHoldR(PAD_1) && mDoCPd_c::getHoldA(PAD_1))) {
+    if (dusk::getSettings().game.moonJump &&
+        (dusk::isPadModifierRHeld(PAD_1) && mDoCPd_c::getHoldA(PAD_1))) {
         if (const auto link = g_dComIfG_gameInfo.play.getPlayer(0)) {
             link->speed.y = 56.0f;
         }
     }
 
-    if (dusk::getSettings().game.fastSpinner && mDoCPd_c::getHoldR(PAD_1)) {
+    if (dusk::getSettings().game.fastSpinner && dusk::isPadModifierRHeld(PAD_1)) {
         if (const auto link = g_dComIfG_gameInfo.play.getPlayer(0)) {
             auto spinnerActor = (fopAc_ac_c*)dynamic_cast<daAlink_c*>(link)->getSpinnerActor();
             if (spinnerActor) {

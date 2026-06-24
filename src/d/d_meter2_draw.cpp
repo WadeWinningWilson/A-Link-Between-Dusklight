@@ -30,6 +30,7 @@
 #include "d/d_albw_rupee_popup.h"
 #include "d/d_albw_boss_hp_hud.h"
 #include "d/d_albw_lop_item_belt.h"
+#include "d/d_focused_arts.h"
 #include "res/Layout/itemicon.h"
 #include "dusk/action_bindings.h"
 #include "JSystem/JUtility/TColor.h"
@@ -126,27 +127,66 @@ static constexpr f32 kLopDurabilityGapPx = 6.0f;
 // Sword slot: a framed slot to the RIGHT of the B-button box, offset from its centre.
 static constexpr f32 kLopSwordSlotOffX = 44.0f;
 static constexpr f32 kLopSwordSlotOffY = 0.0f;
+// Health Bar mode: a red life bar reusing the kantera/magic meter widgets, sitting
+// just ABOVE the green ALBW meter (slot 0) in that meter's own local space. Offsets
+// are tuned in HUD design px; widthScale multiplies the meter's init width.
+static constexpr f32 kLopHealthBarOffX = 0.0f;        // X vs the ALBW meter
+static constexpr f32 kLopHealthBarAbovePx = 24.0f;    // lift above the ALBW meter
+static constexpr f32 kLopHealthBarWidthScale = 1.40f; // bar span vs the meter init width
 
 // Equipped-sword icon from itemicon.arc (by index — encoding-proof, like the shield
 // HUD). NULL = no sword equipped.
 ResTIMG* lopSwordIcon(u8 i_swordNo) {
+    if (i_swordNo == dItemNo_NONE_e) {
+        return NULL;
+    }
     JKRArchive* arc = dComIfGp_getItemIconArchive();
     if (arc == NULL) {
         return NULL;
     }
-    int idx;
-    switch (i_swordNo) {
-    case dItemNo_MASTER_SWORD_e:
-    case dItemNo_LIGHT_SWORD_e:
-        idx = dRes_INDEX_ITEMICON_BTI_NI_MASTERSWORD_48_e;
-        break;
-    case dItemNo_SWORD_e:
-        idx = dRes_INDEX_ITEMICON_BTI_TT_KOKIRINOKEN_S3_TC_e;
-        break;
-    default:
-        return NULL;
+    // Resolve the icon index from the item-data table (item_resource[].mTexture) — the
+    // same source vanilla uses for the B-button (dMeter2Info readItemTexture). This
+    // covers every blade (Wooden/Ordon/Master/Light) instead of a hardcoded switch
+    // that silently dropped the wooden sword, and stays index-based / encoding-proof.
+    return static_cast<ResTIMG*>(arc->getIdxResource(dItem_data::getTexture(i_swordNo)));
+}
+
+// Build a belt icon for an X/Y slot from the vanilla item panes: both composite layers
+// + the exact tint colors vanilla already applied (set1st/2ndColor). The overlay layer
+// is included only when the vanilla overlay pane is visible (i.e. the item has a 2nd
+// layer — bottles, potions). Empty slot → tex0 NULL (frame only).
+LopBeltIcon makeLopBeltIcon(u8 i_itemNo, CPaneMgr* i_basePane, J2DPicture* i_overlayPane,
+                            ResTIMG* i_tex0, ResTIMG* i_tex1) {
+    LopBeltIcon icon = {};
+    icon.scalePct = 100;
+    if (i_itemNo == dItemNo_NONE_e || i_basePane == NULL || i_basePane->getPanePtr() == NULL) {
+        return icon;
     }
-    return static_cast<ResTIMG*>(arc->getIdxResource(idx));
+    J2DPicture* basePic = static_cast<J2DPicture*>(i_basePane->getPanePtr());
+    icon.tex0 = i_tex0;
+    icon.black0 = basePic->getBlack();
+    icon.white0 = basePic->getWhite();
+    icon.scalePct = dItem_data::getTexScale(i_itemNo);
+    if (i_overlayPane != NULL && i_overlayPane->isVisible()) {
+        icon.tex1 = i_tex1;
+        icon.black1 = i_overlayPane->getBlack();
+        icon.white1 = i_overlayPane->getWhite();
+    }
+    return icon;
+}
+
+// Whether the Focused Arts meter should draw: the FA system is live (Hidden Skill
+// Rework + test settings, per dFocusedArts_isEnabled), Link is not a wolf, and the
+// wooden sword (which has no FA system) is not equipped. When false, no lilac UI is
+// drawn anywhere and the durability bar keeps its exact current placement.
+bool lopFaMeterActive() {
+    if (!dFocusedArts_isEnabled()) {
+        return false;
+    }
+    if (daPy_getPlayerActorClass()->checkWolf()) {
+        return false;
+    }
+    return dComIfGs_getSelectEquipSword() != dItemNo_WOOD_STICK_e;
 }
 // ============================================
 // NEW CODE ENDS HERE
@@ -162,7 +202,7 @@ bool dLopHudOn() {
             return draw->isLopHudActive();
         }
     }
-    return dusk::getSettings().game.lopHud.getValue();
+    return dusk::getSettings().game.lopHud.getValue() != dusk::LopHudMode::Off;
 }
 #endif
 dMeter2Draw_c::dMeter2Draw_c(JKRExpHeap* mp_heap) {
@@ -686,7 +726,11 @@ void dMeter2Draw_c::init() {
 
 void dMeter2Draw_c::exec(u32 i_status) {
 #if TARGET_PC
-    mLopHudActive = dusk::getSettings().game.lopHud.getValue();
+    {
+        const dusk::LopHudMode lopMode = dusk::getSettings().game.lopHud.getValue();
+        mLopHudActive = lopMode != dusk::LopHudMode::Off;
+        mLopHealthBarActive = lopMode == dusk::LopHudMode::HealthBar;
+    }
     // n_all keeps the vanilla scale. Scaling the root pane shrinks every child toward
     // its centred origin; per-child scaling in each drawXxx() path keeps each HUD group
     // anchored to its own pane origin and also pulls it toward the screen corner.
@@ -798,7 +842,11 @@ void dMeter2Draw_c::draw() {
     graf_ctx->setup2D();
 
 #if TARGET_PC
-    mLopHudActive = dusk::getSettings().game.lopHud.getValue();
+    {
+        const dusk::LopHudMode lopMode = dusk::getSettings().game.lopHud.getValue();
+        mLopHudActive = lopMode != dusk::LopHudMode::Off;
+        mLopHealthBarActive = lopMode == dusk::LopHudMode::HealthBar;
+    }
     mLopShieldAnchorValid = false;
     if (mLopHudActive) {
         // Anchor the shield row just to the RIGHT of the Midna icon, on its row
@@ -837,15 +885,20 @@ void dMeter2Draw_c::draw() {
     // visible in the move phase, so re-hide here right before the screen renders.
     // ============================================
     if (mLopHudActive && !touchControlsEnabled) {
+        // Wolf Link HUD: hide the B-sword box too, leaving only Midna (wolf charges and
+        // tears of light are drawn elsewhere; the belt/sword are gated off below).
+        const bool wolfForm = daPy_getPlayerActorClass()->checkWolf();
         if (mpButtonParent != NULL && mpButtonParent->getPanePtr() != NULL) {
             for (J2DPane* c = mpButtonParent->getPanePtr()->getFirstChildPane(); c != NULL;
                  c = c->getNextChildPane()) {
                 const u64 tag = c->mInfoTag;
-                // Keep only the B box + sword and Midna. The X/Y item icons are drawn
-                // fresh in the bottom-left belt (from their textures), so the ring
-                // copies stay hidden.
-                if (tag != MULTI_CHAR('bbtn_n') && tag != MULTI_CHAR('b_text_b') &&
-                    tag != MULTI_CHAR('midona_n')) {
+                // Human form keeps the B box + sword and Midna; wolf form keeps only
+                // Midna. The X/Y item icons are drawn fresh in the bottom-left belt, so
+                // the ring copies stay hidden either way.
+                const bool keep = tag == MULTI_CHAR('midona_n') ||
+                                  (!wolfForm && (tag == MULTI_CHAR('bbtn_n') ||
+                                                 tag == MULTI_CHAR('b_text_b')));
+                if (!keep) {
                     c->hide();
                 }
             }
@@ -870,33 +923,57 @@ void dMeter2Draw_c::draw() {
         }
 
         // Item belt: draw the carved horiwaku slot frames stacked above the Midna
-        // icon, with the assigned X/Y item icons rendered fresh inside them from their
-        // own textures (no fighting the ring's transform/clipping). Gated by the
-        // button-ring fade + pause so it hides with the rest of the HUD (cutscenes,
-        // game over, etc.).
-        if (!dComIfGp_isPauseFlag() && mpButtonParent->getAlphaRate() > 0.0f) {
+        // icon, with the assigned X/Y item icons composited fresh inside them (no
+        // fighting the ring's transform/clipping). Gated by the button-ring fade +
+        // pause so it hides with the rest of the HUD (cutscenes, game over, etc.), and
+        // by wolf form — Wolf Link's HUD shows only Midna + wolf charges + tears of
+        // light, never the human item belt / sword slot.
+        if (!dComIfGp_isPauseFlag() && mpButtonParent->getAlphaRate() > 0.0f &&
+            !daPy_getPlayerActorClass()->checkWolf()) {
             if (mpButtonMidona != NULL && mpButtonMidona->getPanePtr() != NULL) {
                 const Vec midna = mpButtonMidona->getGlobalVtxCenter(false, 0);
-                // Only show an icon for a slot that currently holds an item — query
-                // the live X/Y assignment so a stripped/empty slot clears (the cached
-                // mpItemXYTex isn't reset when the ALBW mod removes an item).
-                ResTIMG* xTex = (dComIfGp_getSelectItem(0) != dItemNo_NONE_e)
-                                    ? mpItemXYTex[0][field_0x76c[0]][0]
-                                    : NULL;
-                ResTIMG* yTex = (dComIfGp_getSelectItem(1) != dItemNo_NONE_e)
-                                    ? mpItemXYTex[1][field_0x76c[1]][0]
-                                    : NULL;
-                dAlbwLopItemBelt_draw(graf_ctx, midna.x, midna.y, xTex, yTex);
+                // Query the live X/Y assignment so a stripped/empty slot clears (the
+                // cached mpItemXYTex isn't reset when the ALBW mod removes an item).
+                const u8 xItem = dComIfGp_getSelectItem(0);
+                const u8 yItem = dComIfGp_getSelectItem(1);
+                const LopBeltIcon xi = makeLopBeltIcon(xItem, mpItemXY[0], mpItemXYPane[0],
+                                                       mpItemXYTex[0][field_0x76c[0]][0],
+                                                       mpItemXYTex[0][field_0x76c[0]][1]);
+                const LopBeltIcon yi = makeLopBeltIcon(yItem, mpItemXY[1], mpItemXYPane[1],
+                                                       mpItemXYTex[1][field_0x76c[1]][0],
+                                                       mpItemXYTex[1][field_0x76c[1]][1]);
+                dAlbwLopItemBelt_draw(graf_ctx, midna.x, midna.y, xi, yi);
             }
             // Sword slot: framed slot right of the B-button box, showing the equipped
             // sword (re-queried each frame, so it follows future d-pad sword swaps).
             if (mpButtonB != NULL && mpButtonB->getPanePtr() != NULL) {
                 const Vec bc = mpButtonB->getGlobalVtxCenter(false, 0);
                 ResTIMG* swordTex = lopSwordIcon(dComIfGs_getSelectEquipSword());
+                // FA active extends the panel downward; the FA bar itself is drawn later
+                // in the kantera phase (drawFocusedArtsMeter) so it shares the meter widget.
                 dAlbwLopItemBelt_drawSword(graf_ctx, bc.x + kLopSwordSlotOffX,
-                                           bc.y + kLopSwordSlotOffY, swordTex);
+                                           bc.y + kLopSwordSlotOffY, swordTex, lopFaMeterActive());
             }
         }
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
+#endif
+
+#if TARGET_PC
+    // ============================================
+    // NEW CODE — ALBW Port (Lies of Link HUD — Health Bar)
+    // In Health Bar mode the heart row is replaced by the red life bar, so hide the
+    // life parent before the HUD screen rasterizes. Re-show it once on leaving the mode
+    // (tracked so we never touch heart visibility in the vanilla / Vanilla-Hearts HUD).
+    // ============================================
+    if (mLopHealthBarActive) {
+        lopHidePane(mpLifeParent);
+        mLopLifeHidden = true;
+    } else if (mLopLifeHidden) {
+        lopShowPane(mpLifeParent);
+        mLopLifeHidden = false;
     }
     // ============================================
     // NEW CODE ENDS HERE
@@ -915,8 +992,18 @@ void dMeter2Draw_c::draw() {
     // conditions (cutscenes, menus, pause, etc.) automatically.
     // ============================================
     if (!dComIfGp_isPauseFlag() && dComIfGp_isHeapLockFlag() != 6) {
-        drawKanteraScreen(0);
-        drawShieldDurabilityBelowAlbw();
+        // Wolf Link HUD under LoP: hide the human ALBW stamina meter + shield durability
+        // (only Midna, wolf charges, tears of light, and life should show). The health
+        // bar still draws — life always matters.
+        const bool lopWolfHide = mLopHudActive && daPy_getPlayerActorClass()->checkWolf();
+        if (!lopWolfHide) {
+            drawKanteraScreen(0);
+        }
+        drawLopHealthBar();
+        drawFocusedArtsMeter();  // no-op when FA off; routes vanilla vs LoP placement
+        if (!lopWolfHide) {
+            drawShieldDurabilityBelowAlbw();
+        }
     }
     // ============================================
     // NEW CODE ENDS HERE
@@ -2360,6 +2447,226 @@ void dMeter2Draw_c::setAlphaMagicAnimeMax() {
 #if TARGET_PC
 // LoP durability: fine-tune offsets for the relocated bar (HUD design px).
 static constexpr f32 kLopDurabilityOffX = -8.0f;  // nudge left to align with icons
+// Vanilla-layout Focused Arts row (top-left, under the green ALBW meter, in the slot the
+// durability bar normally occupies). Durability shifts down by (height + gap) when FA is
+// on. HUD design px; tune via screenshot.
+static constexpr f32 kFaVanillaRowH = 14.0f;  // ~kantera bar native height (durability shift)
+static constexpr f32 kFaVanillaGap = 6.0f;
+#endif
+
+#if TARGET_PC
+// Local-space gap between FA segments (matches the original 3-bar spacing).
+static constexpr f32 kFaSegGap = 3.0f;
+// Each FA segment's width as a multiple of the meter base width. 0.5 matches the Ordon
+// durability bar (dShield_getDurabilityMeterWidthScale() case 0); 1.0 was ~2× too wide.
+static constexpr f32 kFaSegWidthScale = 0.5f;
+
+// ============================================
+// NEW CODE — ALBW Port (Focused Arts meter — kantera widget, segmented)
+// Draw the FA meter as N=maxBank SEPARATE mini kantera bars (same widget as the health /
+// stamina / durability bars), lilac, laid out left-to-right with kFaSegGap between them.
+// Each segment is one state: banked → opaque full fill; the single active segment →
+// translucent partial fill (charging); the rest → empty dark track. Track is drawn first
+// (base + frames, opaque) then the fill (base/frames hidden) so the charging fill can be
+// translucent over an opaque framed track — same opaque/charging logic as before. Slot 0
+// (green ALBW) is restored after so the shared panes stay clean.
+// (i_localX,i_localY) = group top-left in the kantera screen's LOCAL space; i_totalW = the
+// group's local width (split into the N segments + gaps).
+// ============================================
+void dMeter2Draw_c::drawFocusedArtsMeterKantera(f32 i_localX, f32 i_localY, f32 i_totalW) {
+    if (mpKanteraScreen == NULL || mpMagicBase == NULL || mpMagicParent == NULL ||
+        mpMagicMeter == NULL || mpMagicFrameL == NULL || mpMagicFrameR == NULL ||
+        mMeterAlphaRate[0] <= 0.0f) {
+        return;
+    }
+    J2DGrafContext* graf_ctx = dComIfGp_getCurrentGrafPort();
+    if (graf_ctx == NULL) {
+        return;
+    }
+
+    const int maxBank = dFocusedArts_getMaxBank();
+    if (maxBank <= 0) {
+        return;
+    }
+    const int bank = dFocusedArts_getBankCount();
+    const int den = dFocusedArts_getFillDenominator() > 0 ? dFocusedArts_getFillDenominator() : 1;
+    const int num = dFocusedArts_getFillNumerator();
+
+    const f32 baseW = mpMagicBase->getInitSizeX();
+    const f32 segW = (i_totalW - kFaSegGap * (f32)(maxBank - 1)) / (f32)maxBank;
+    if (segW <= 0.0f || baseW <= 0.0f) {
+        return;
+    }
+    const f32 segScale = segW / baseW;
+
+    const JUtility::TColor lilacTrack(30, 22, 56, 255);   // dark purple empty track
+    const JUtility::TColor lilacFill(208, 184, 248, 255);  // bright lavender fill (lightened)
+    const JUtility::TColor clear(0, 0, 0, 0);
+
+    for (int i = 0; i < maxBank; i++) {
+        const f32 segX = i_localX + (f32)i * (segW + kFaSegGap);
+
+        // One pass per segment (base + meter + frames together, like the durability bar).
+        // Banked → full opaque fill; the active segment → partial fill at half alpha
+        // (charging); the rest → empty (fill 0).
+        s16 fill = 0;
+        f32 alpha = 1.0f;
+        if (i < bank) {
+            fill = 32;
+        } else if (i == bank && num > 0) {
+            int f = num * 32 / den;
+            if (f > 32) {
+                f = 32;
+            }
+            fill = (s16)f;
+            alpha = 0.5f;
+        }
+
+        mpMagicBase->setBlackWhite(clear, lilacTrack);
+        mpMagicMeter->setBlackWhite(clear, lilacFill);
+        applyMagicMeterLayoutTransient(32, fill, segX, i_localY, segScale, 0);
+        // The fill pane (mm_00) is shorter than the tinted track (mm_base), so the dark
+        // base shows below the lilac. Stretch the fill to the track's full height so the
+        // lilac covers the whole cell vertically, like the green/orange bars.
+        const f32 fillW = (f32)fill * mpMagicMeter->getInitSizeX() / 32.0f * segScale;
+        mpMagicMeter->resize(fillW, mpMagicBase->getInitSizeY());
+        mpMagicParent->setAlphaRate(mMeterAlphaRate[0] * alpha);
+        setAlphaMagicChange(true);
+        mpKanteraScreen->draw(0.0f, 0.0f, graf_ctx);
+    }
+
+    // Restore slot 0 (green ALBW meter) tints + layout so durability / next frame are clean.
+    JUtility::TColor mblack = mpMagicMeter->getInitBlack();
+    mblack.a = 255;
+    mpMagicMeter->setBlackWhite(mblack, mpMagicMeter->getInitWhite());
+    mpMagicBase->setBlackWhite(mpMagicBase->getInitBlack(), mpMagicBase->getInitWhite());
+    applyMagicMeterSlot(0);
+    mpMagicParent->setAlphaRate(mMeterAlphaRate[0]);
+    setAlphaMagicChange(true);
+}
+
+// Caches the kantera screen's local→global root offset (corner0 - slot-0 paneTrans),
+// measured once. global = local + offset, so local = global - offset.
+void dMeter2Draw_c::getKanteraRootOffset(f32* o_x, f32* o_y) {
+    if (!mKanteraRootOffsetValid && mpMagicParent != NULL && mpMagicParent->getPanePtr() != NULL) {
+        Mtx m;
+        J2DPane* mp = mpMagicParent->getPanePtr();
+        const Vec c0 = mpMagicParent->getGlobalVtx(mp, &m, 0, false, 0);
+        mKanteraRootOffsetX = c0.x - field_0x5e4[0];
+        mKanteraRootOffsetY = c0.y - field_0x5f0[0];
+        mKanteraRootOffsetValid = true;
+    }
+    if (o_x != NULL) {
+        *o_x = mKanteraRootOffsetX;
+    }
+    if (o_y != NULL) {
+        *o_y = mKanteraRootOffsetY;
+    }
+}
+
+// Routes the FA meter to the right spot: vanilla → durability's old top-left slot (kantera
+// local space); LoP → the sword panel's bottom strip (global, converted to local). No-op
+// when FA is off (lilac never appears, durability keeps its exact placement).
+void dMeter2Draw_c::drawFocusedArtsMeter() {
+    if (!lopFaMeterActive() || mpMagicBase == NULL) {
+        return;
+    }
+    const int maxBank = dFocusedArts_getMaxBank();
+    if (maxBank <= 0) {
+        return;
+    }
+    // Group width = N segments (each ≈ durability length) + gaps. The Kantera helper
+    // divides this back into the per-segment bars.
+    const f32 segW = mpMagicBase->getInitSizeX() * kFaSegWidthScale;
+    const f32 totalW = segW * (f32)maxBank + kFaSegGap * (f32)(maxBank - 1);
+
+    if (mLopHudActive) {
+        if (mpButtonB == NULL || mpButtonB->getPanePtr() == NULL) {
+            return;
+        }
+        const Vec bc = mpButtonB->getGlobalVtxCenter(false, 0);
+        f32 sLeft, sTop, sW, sH;
+        dAlbwLopItemBelt_getSwordFaStrip(bc.x + kLopSwordSlotOffX, bc.y + kLopSwordSlotOffY, &sLeft,
+                                         &sTop, &sW, &sH);
+        // Shrink the whole group uniformly if it would overflow the sword panel — never
+        // stretch individual segments past their Ordon-durability cell size.
+        f32 useW = totalW;
+        if (useW > sW) {
+            useW = sW;
+        }
+        f32 offX, offY;
+        getKanteraRootOffset(&offX, &offY);
+        drawFocusedArtsMeterKantera(sLeft - offX, sTop - offY, useW);
+    } else {
+        const f32 albwX = field_0x5e4[0];
+        const f32 albwY = field_0x5f0[0];
+        const f32 rowLocalY = albwY + mpMagicBase->getInitSizeY() * field_0x5d8[0] + 8.0f;
+        drawFocusedArtsMeterKantera(albwX, rowLocalY, totalW);
+    }
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
+
+// ============================================
+// NEW CODE — ALBW Port (Lies of Link HUD — Health Bar)
+// Draw a Lies-of-P red life bar by reusing the kantera/magic-meter widgets, the same
+// trick as the durability bar: lay the panes out transiently, tint, draw the kantera
+// screen, then restore slot 0 so the green ALBW meter (drawn just before this) is
+// untouched. The bar sits just ABOVE the ALBW meter in that meter's own local space,
+// so no global→local conversion is needed (unlike durability, which tracks the shield
+// row). Hearts are hidden in draw() while this mode is active.
+// ============================================
+void dMeter2Draw_c::drawLopHealthBar() {
+    if (!mLopHealthBarActive || mMeterAlphaRate[0] <= 0.0f) {
+        return;
+    }
+    if (mpKanteraScreen == NULL || mpMagicBase == NULL || mpMagicParent == NULL ||
+        mpMagicMeter == NULL || mpMagicFrameL == NULL || mpMagicFrameR == NULL) {
+        return;
+    }
+    J2DGrafContext* graf_ctx = dComIfGp_getCurrentGrafPort();
+    if (graf_ctx == NULL) {
+        return;
+    }
+
+    // Fill against the TRUE full-life basis: drawLife() treats a full heart row as
+    // (maxLife/5)*4 life units, so reaching that value fills the bar to 32/32 exactly.
+    const s16 maxHearts = (s16)(dComIfGs_getMaxLife() / 5);
+    const s16 fullLife = (s16)(maxHearts * 4);
+    s16 life = (s16)dComIfGs_getLife();
+    if (life < 0) {
+        life = 0;
+    }
+    if (fullLife > 0 && life > fullLife) {
+        life = fullLife;
+    }
+    const s16 fill32 = (fullLife > 0) ? (s16)((s32)life * 32 / fullLife) : 0;
+
+    // Position in the ALBW meter's local space: same X, lifted above it.
+    const f32 barX = field_0x5e4[0] + kLopHealthBarOffX;
+    const f32 barY = field_0x5f0[0] - kLopHealthBarAbovePx;
+
+    applyMagicMeterLayoutTransient(32, fill32, barX, barY, kLopHealthBarWidthScale, 0);
+
+    // Crimson fill (dark → bright), mirroring the durability bar's tint approach.
+    mpMagicMeter->setBlackWhite(JUtility::TColor(90, 18, 18, 255),
+                                JUtility::TColor(215, 40, 40, 255));
+
+    setAlphaMagicChange(true);
+    mpKanteraScreen->draw(0.0f, 0.0f, graf_ctx);
+
+    // Restore slot 0 (green ALBW meter) so the shared panes are left as drawn.
+    JUtility::TColor black = mpMagicMeter->getInitBlack();
+    black.a = 255;
+    mpMagicMeter->setBlackWhite(black, mpMagicMeter->getInitWhite());
+    applyMagicMeterSlot(0);
+    mpMagicParent->setAlphaRate(mMeterAlphaRate[0]);
+    setAlphaMagicChange(true);
+}
+// ============================================
+// NEW CODE ENDS HERE
+// ============================================
 #endif
 
 void dMeter2Draw_c::drawShieldDurabilityBelowAlbw() {
@@ -2428,6 +2735,11 @@ void dMeter2Draw_c::drawShieldDurabilityBelowAlbw() {
         const f32 albwScaleY = field_0x5d8[0];
         barX = albwX;
         barY = albwY + mpMagicBase->getInitSizeY() * albwScaleY + 8.0f;
+        // Vanilla FA on: the lilac FA row takes durability's slot, so push durability
+        // down one row. FA off → barY unchanged (durability exactly where it is today).
+        if (lopFaMeterActive()) {
+            barY += kFaVanillaRowH + kFaVanillaGap;
+        }
     }
     // ============================================
     // NEW CODE ENDS HERE
@@ -3500,8 +3812,15 @@ void dMeter2Draw_c::lopRestoreButtonRing() {
     lopShowPane(mpTextXY[0]);
     lopShowPane(mpTextXY[1]);
     lopShowPane(mpTextXY[2]);
-    lopShowPane(mpItemXY[0]);
-    lopShowPane(mpItemXY[1]);
+    // Only re-show an X/Y item pane that actually holds an item — an empty slot's pane
+    // has no texture and would flash as a white cube until the next vanilla redraw
+    // re-hid it. Empty slots stay hidden (matching vanilla's own empty-slot behavior).
+    if (dComIfGp_getSelectItem(0) != dItemNo_NONE_e) {
+        lopShowPane(mpItemXY[0]);
+    }
+    if (dComIfGp_getSelectItem(1) != dItemNo_NONE_e) {
+        lopShowPane(mpItemXY[1]);
+    }
     for (int i = 0; i < 5; i++) {
         lopShowPane(mpAText[i]);
     }

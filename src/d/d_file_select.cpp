@@ -25,7 +25,9 @@
 
 #if TARGET_PC
 #include "dusk/menu_pointer.h"
+#include "dusk/settings.h"
 #include "dusk/string.hpp"
+#include "dusk/truetest.hpp"
 
 namespace {
 constexpr u8 pointer_target(u8 group, u8 index) noexcept {
@@ -282,6 +284,10 @@ void dFile_select_c::_create() {
     screenSetYesNo();
     screenSetDetail();
     displayInit();
+
+#if TARGET_PC
+    mTrueTestPending = false;
+#endif
 }
 
 typedef void (dFile_select_c::*DataSelProcFunc)(void);
@@ -332,6 +338,13 @@ static DataSelProcFunc DataSelProc[] = {
     &dFile_select_c::backDatSelWait2,
     &dFile_select_c::backDatSelPaneMove,
     &dFile_select_c::ToNameMove2,
+#if TARGET_PC
+    &dFile_select_c::trueTestModeIn,
+    &dFile_select_c::trueTestModeSelect,
+    &dFile_select_c::trueTestModeCursorMove,
+    &dFile_select_c::trueTestModeClose,
+    &dFile_select_c::trueTestModeCancel,
+#endif
     &dFile_select_c::nextModeWait,
 
     #if PLATFORM_WII || PLATFORM_SHIELD
@@ -953,6 +966,162 @@ static u16 msgTbl[3] = {
     0x0042,
 };
 
+#if TARGET_PC
+void dFile_select_c::headerTxtSetRaw(const char* i_text, u8 i_type, u8 param_3) {
+    u8 dispIdx = mHeaderTxtDispIdx ^ 1;
+    if (param_3 != 0) {
+        dispIdx = mHeaderTxtDispIdx;
+    }
+
+    static f32 fontsize[2] = {21.0f, 27.0f};
+#if VERSION == VERSION_GCN_JPN
+    static f32 linespace[2] = {22.0f, 20.0f};
+    static f32 charspace[2] = {2.0f, 3.0f};
+#else
+    static f32 linespace[2] = {21.0f, 20.0f};
+    static f32 charspace[2] = {0.0f, 0.0f};
+#endif
+
+    J2DTextBox* textBox = (J2DTextBox*)mHeaderTxtPane[dispIdx]->getPanePtr();
+    textBox->setFont(fileSel.font[i_type]);
+    textBox->setFontSize(fontsize[i_type], fontsize[i_type]);
+    textBox->setLineSpace(linespace[i_type]);
+    textBox->setCharSpace(charspace[i_type]);
+    textBox->setString(512, i_text);
+    mHeaderStringPtr[dispIdx] = textBox->getStringPtr();
+
+    if (param_3 == 0) {
+        mHeaderTxtPane[mHeaderTxtDispIdx]->alphaAnimeStart(0);
+        mHeaderTxtPane[mHeaderTxtDispIdx ^ 1]->alphaAnimeStart(0);
+        field_0x021d = 0;
+    }
+}
+
+void dFile_select_c::setTrueTestLabels() {
+    static const char* labels[2] = {"New Game", "TRUETEST"};
+
+    for (int i = 0; i < 2; i++) {
+        J2DTextBox* textBox = (J2DTextBox*)mYnSelTxtPane[i]->getPanePtr();
+        textBox->setString(labels[i]);
+    }
+}
+
+void dFile_select_c::startTrueTestPrompt() {
+    mTrueTestPending = false;
+    field_0x0268 = 0;
+    field_0x0269 = 1;
+    dComIfGs_setDataNum(mSelectNum);
+    headerTxtSetRaw("Select story mode", 1, 0);
+    yesnoMenuMoveAnmInitSet(0x473, 0x47d);
+    setTrueTestLabels();
+    modoruTxtDispAnmInit(1);
+    mDataSelProc = DATASELPROC_TRUETEST_MODE_IN;
+}
+
+void dFile_select_c::startNewGameNameInput() {
+#if PLATFORM_GCN
+    dComIfGs_setNewFile(128);
+#endif
+
+    dComIfGs_setDataNum(mSelectNum);
+    mDoAud_seStart(Z2SE_SY_NEW_FILE, NULL, 0, 0);
+    headerTxtSet(0x385, 1, 0);
+    fileRecScaleAnmInitSet2(1.0f, 0.0f);
+    nameMoveAnmInitSet(3359, 3369);
+
+    mSelFileMoyoPane[mSelectNum]->setAlpha(0);
+    mSelFileGoldPane[mSelectNum]->setAlpha(0);
+    mSelFileGold2Pane[mSelectNum]->setAlpha(0);
+
+    char namebuf[32];
+    dMeter2Info_getString(0x382, namebuf, NULL);
+    dComIfGs_setPlayerName(namebuf);
+    mpName->setNextNameStr(dComIfGs_getPlayerName());
+    mpName->initial();
+    modoruTxtChange(1);
+
+    dComIfGs_getSaveData()->getReserve().setTrueTest(false);
+    mDataSelProc = DATASELPROC_SELECT_DATA_NAME_MOVE;
+}
+
+void dFile_select_c::applyTrueTestNewSavePreset() {
+    dusk::truetest::applyNewSavePreset(mTrueTestPending);
+    mTrueTestPending = false;
+}
+
+void dFile_select_c::trueTestModeIn() {
+    bool isHeaderTxtChange = headerTxtChangeAnm();
+    bool isYnMenuMove = yesnoMenuMoveAnm();
+    bool isModoruTxtDisp = modoruTxtDispAnm();
+
+    if (isHeaderTxtChange && isYnMenuMove && isModoruTxtDisp) {
+        yesnoCursorShow();
+        mDataSelProc = DATASELPROC_TRUETEST_MODE_SELECT;
+    }
+}
+
+void dFile_select_c::trueTestModeSelect() {
+    stick->checkTrigger();
+
+    if (mDoCPd_c::getTrigA(PAD_1) || mDoCPd_c::getTrigStart(PAD_1)) {
+        mDoAud_seStart(field_0x0268 != 0 ? Z2SE_SY_CURSOR_OK : Z2SE_SY_CURSOR_CANCEL, NULL, 0, 0);
+        mTrueTestPending = field_0x0268 != 0;
+        mSelIcon->setAlphaRate(0.0f);
+        yesnoMenuMoveAnmInitSet(0x47d, 0x473);
+        mDataSelProc = DATASELPROC_TRUETEST_MODE_CLOSE;
+    } else if (mDoCPd_c::getTrigB(PAD_1)) {
+        mDoAud_seStart(Z2SE_SY_CURSOR_CANCEL, NULL, 0, 0);
+        mTrueTestPending = false;
+        mSelIcon->setAlphaRate(0.0f);
+        headerTxtSet(0x43, 1, 0);
+        yesnoMenuMoveAnmInitSet(0x47d, 0x473);
+        modoruTxtDispAnmInit(0);
+        mDataSelProc = DATASELPROC_TRUETEST_MODE_CANCEL;
+    } else if (stick->checkRightTrigger()) {
+        if (field_0x0268 != 0) {
+            mDoAud_seStart(Z2SE_SY_MENU_CURSOR_COMMON, NULL, 0, 0);
+            field_0x0269 = field_0x0268;
+            field_0x0268 = 0;
+            yesnoSelectAnmSet();
+            mDataSelProc = DATASELPROC_TRUETEST_MODE_CURSOR_MOVE;
+        }
+    } else if (stick->checkLeftTrigger() && field_0x0268 != 1) {
+        mDoAud_seStart(Z2SE_SY_MENU_CURSOR_COMMON, NULL, 0, 0);
+        field_0x0269 = field_0x0268;
+        field_0x0268 = 1;
+        yesnoSelectAnmSet();
+        mDataSelProc = DATASELPROC_TRUETEST_MODE_CURSOR_MOVE;
+    }
+}
+
+void dFile_select_c::trueTestModeCursorMove() {
+    bool isYnSelMove = yesnoSelectMoveAnm();
+    bool isYnWakuAlpha = yesnoWakuAlpahAnm(field_0x0269);
+
+    if (isYnSelMove && isYnWakuAlpha) {
+        yesnoCursorShow();
+        mDataSelProc = DATASELPROC_TRUETEST_MODE_SELECT;
+    }
+}
+
+void dFile_select_c::trueTestModeClose() {
+    if (yesnoMenuMoveAnm()) {
+        startNewGameNameInput();
+    }
+}
+
+void dFile_select_c::trueTestModeCancel() {
+    bool isHeaderTxtChange = headerTxtChangeAnm();
+    bool isYnMenuMove = yesnoMenuMoveAnm();
+    bool isModoruTxtDisp = modoruTxtDispAnm();
+
+    if (isHeaderTxtChange && isYnMenuMove && isModoruTxtDisp) {
+        selFileCursorShow();
+        mDataSelProc = DATASELPROC_DATA_SELECT;
+    }
+}
+#endif
+
 void dFile_select_c::dataSelectStart() {
 #if TARGET_PC
     dusk::menu_pointer::clear_deferred_activation(dusk::menu_pointer::Context::FileSelect);
@@ -978,6 +1147,14 @@ void dFile_select_c::dataSelectStart() {
 
         mDataSelProc = DATASELPROC_SELECT_DATA_OPENERASE_MOVE;
     } else if (mIsDataNew[mSelectNum] != 0) {
+#if TARGET_PC
+        mTrueTestPending = false;
+        if (dusk::getSettings().game.trueAlbwMode.getValue() == dusk::TrueAlbwMode::TrueTest) {
+            startTrueTestPrompt();
+        } else {
+            startNewGameNameInput();
+        }
+#else
         #if PLATFORM_GCN
         dComIfGs_setNewFile(128);
         #endif
@@ -1000,6 +1177,7 @@ void dFile_select_c::dataSelectStart() {
         modoruTxtChange(1);
 
         mDataSelProc = DATASELPROC_SELECT_DATA_NAME_MOVE;
+#endif
     } else {
         #if PLATFORM_GCN
         dComIfGs_setNewFile(0);
@@ -1737,6 +1915,9 @@ void dFile_select_c::nameInput2() {
         break;
     case 2:
         dComIfGs_setHorseName(mpName->getInputStrPtr());
+#if TARGET_PC
+        applyTrueTestNewSavePreset();
+#endif
         mIsSelectEnd = true;
         mDataSelProc = DATASELPROC_NEXT_MODE_WAIT;
     }

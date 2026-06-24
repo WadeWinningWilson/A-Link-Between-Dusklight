@@ -7,6 +7,7 @@
 #include "d/d_albw_lockout.h"
 #include "d/d_albw_shield.h"
 #include "d/d_com_inf_game.h"
+#include "d/d_focused_arts.h"
 #include "d/d_meter2_info.h"
 #include "SSystem/SComponent/c_cc_d.h"
 #include "f_pc/f_pc_manager.h"
@@ -15,6 +16,7 @@
 namespace {
 
 constexpr u8 kLockoutBowShotsMax           = 3;
+constexpr u8 kLockoutBombArrowShotsMax     = 2;
 constexpr u8 kLockoutSlingShotsMax         = 3;
 constexpr u8 kLockoutHookshotHitsHeal      = 10;
 constexpr u16 kLockoutHeartHealUnits       = 12; // 3 hearts (quarter-heart units)
@@ -28,8 +30,9 @@ struct LockoutTaggedEnemy {
     bool       mPauseActive;
 };
 
-u8 sLockoutBowShotsRemaining  = kLockoutBowShotsMax;
-u8 sLockoutSlingShotsRemaining = kLockoutSlingShotsMax;
+u8 sLockoutBowShotsRemaining       = kLockoutBowShotsMax;
+u8 sLockoutBombArrowShotsRemaining = kLockoutBombArrowShotsMax;
+u8 sLockoutSlingShotsRemaining     = kLockoutSlingShotsMax;
 u8 sLockoutHookshotHits       = 0;
 bool sLockoutDoubleClawUsed   = false;
 
@@ -114,16 +117,18 @@ bool taggedEnemyHasFrames(fopAc_ac_c* i_enemy) {
 } // namespace
 
 void dAlbwLockout_onBegin() {
-    sLockoutBowShotsRemaining   = kLockoutBowShotsMax;
-    sLockoutSlingShotsRemaining = kLockoutSlingShotsMax;
+    sLockoutBowShotsRemaining       = kLockoutBowShotsMax;
+    sLockoutBombArrowShotsRemaining = kLockoutBombArrowShotsMax;
+    sLockoutSlingShotsRemaining     = kLockoutSlingShotsMax;
     sLockoutHookshotHits        = 0;
     sLockoutDoubleClawUsed      = false;
     clearAllTaggedEnemies();
 }
 
 void dAlbwLockout_onEnd() {
-    sLockoutBowShotsRemaining   = kLockoutBowShotsMax;
-    sLockoutSlingShotsRemaining = kLockoutSlingShotsMax;
+    sLockoutBowShotsRemaining       = kLockoutBowShotsMax;
+    sLockoutBombArrowShotsRemaining = kLockoutBombArrowShotsMax;
+    sLockoutSlingShotsRemaining     = kLockoutSlingShotsMax;
     sLockoutHookshotHits        = 0;
     sLockoutDoubleClawUsed      = false;
     clearAllTaggedEnemies();
@@ -155,6 +160,14 @@ void dAlbwLockout_onArrowFired() {
     }
 
     sLockoutBowShotsRemaining--;
+}
+
+void dAlbwLockout_onBombArrowFired() {
+    if (!dMeter2_isALBWLocked() || sLockoutBombArrowShotsRemaining == 0) {
+        return;
+    }
+
+    sLockoutBombArrowShotsRemaining--;
 }
 
 void dAlbwLockout_onSlingFired() {
@@ -192,6 +205,10 @@ void dAlbwLockout_onDoubleHookshotFired() {
 
 bool dAlbwLockout_canFireBow() {
     return dMeter2_isALBWLocked() && sLockoutBowShotsRemaining > 0;
+}
+
+bool dAlbwLockout_canFireBombArrow() {
+    return dMeter2_isALBWLocked() && sLockoutBombArrowShotsRemaining > 0;
 }
 
 bool dAlbwLockout_canFireSling() {
@@ -236,7 +253,13 @@ void dAlbwLockout_applyAttackPowerBoost(u16& io_attackPower, u32 i_atType) {
         return;
     }
 
-    if (i_atType == AT_TYPE_ARROW || i_atType == AT_TYPE_BOMB) {
+    if (dFocusedArts_isJsFinisherLockoutActive()) {
+        io_attackPower = static_cast<u16>(
+            std::min<u32>(static_cast<u32>(io_attackPower) * 4u, 0xFFFFu));
+        return;
+    }
+
+    if (i_atType == AT_TYPE_ARROW || i_atType == AT_TYPE_BOMB || i_atType == AT_TYPE_SLINGSHOT) {
         io_attackPower = (io_attackPower * 3) / 2;
     } else if (i_atType == AT_TYPE_IRON_BALL) {
         io_attackPower = (io_attackPower * 5) / 2;

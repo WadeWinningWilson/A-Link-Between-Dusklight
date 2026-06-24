@@ -15,7 +15,7 @@
 | 4 | `d_a_obj_shield.cpp:185-198` | Wolf `checkWolfAttackReverse()` / roll crash → shake → `Z2SE_OBJ_WOODSHIELD_*` SFX |
 | 5 | `d_a_obj_shield.cpp:244` | Pickup spawns item **`dItemNo_WOOD_SHIELD_e`** via `fopAcM_createItemForTrBoxDemo` |
 | 6 | `d_item.cpp:768` | `item_func_WOOD_SHIELD()` → `COLLECT_WOODEN_SHIELD` + **`setSelectEquipShield(WOOD_SHIELD)`** |
-| 7 | `d_a_alink_swindow.inc` | `checkCarvingWoodShieldEquip()` true → **`mShieldArcName = "CWShd"`** |
+| 7 | `d_a_alink_swindow.inc` | `checkCarvingWoodShieldEquip()` true → **`mShieldArcName = "CWShd"`** (PC: always from **`getSelectEquipShield()`** first — required for save-editor multi-shield quick swap; see `docs/d-pad-reworking.md` § Implementation progress) |
 | 8 | `include/d/d_save_bit_labels.inc` | Event **`M_072`** = "Get **wooden** shield" (Ordon Village) |
 
 **Player-facing name:** Ordon Shield (UI, story, Dusk start menu).  

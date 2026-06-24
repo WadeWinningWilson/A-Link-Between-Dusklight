@@ -13,6 +13,7 @@ class daAlink_c;
 class fopEn_enemy_c;
 
 bool dShield_isParryCombatEnabled();
+bool dShield_isTestingParryReworkEnabled();
 bool dShield_isDurabilityEnabled();
 
 void dShield_resetSession();
@@ -43,6 +44,8 @@ u8 dShield_getDurabilityTierStyle();
 f32 dShield_getDurabilityMeterWidthScale();
 
 bool dShield_onShieldHit(daAlink_c* i_link, int i_atSpl, fopAc_ac_c* i_attacker);
+
+void dShield_playParrySuccessFeedback(daAlink_c* i_link, const cXyz* i_hitPos);
 
 // Guard-break tier (AtSpl 9/10/11): defer vanilla instant break for parry-eligible enemies.
 // Mount/spear actors (King Bulblin, horseback Ganondorf) keep vanilla behavior.
@@ -81,6 +84,7 @@ void dShield_onGuardAttackConnect();
 
 u8 dShield_getBashCharges();
 u8 dShield_getMaxBashCharges();
+void dShield_fillBashChargesToMax();
 u8 dShield_getBashThreshold();
 u8 dShield_getDenyFlashFrames();
 bool dShield_canSpendBash();

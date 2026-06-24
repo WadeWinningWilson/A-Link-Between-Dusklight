@@ -48,16 +48,20 @@ UserSettings g_userSettings = {
         .manualShielding {"game.manualShielding", false},
         .shieldParryCombat {"game.shieldParryCombat", true},
         .hiddenSkillRework {"game.hiddenSkillRework", true},
+        .focusedArtsTest {"game.focusedArtsTest", false},
+        .focusedArtsCheat {"game.focusedArtsCheat", FocusedArtsCheatMode::Off},
         .shieldDurability {"game.shieldDurability", false},
         .deathRecoveryOrb {"game.deathRecoveryOrb", false},
         .wolfLinkCombat {"game.wolfLinkCombat", false},
         .enemyDeathRupees {"game.enemyDeathRupees", false},
         .masterQuest {"game.masterQuest", false},
         .bossRefinement {"game.bossRefinement", false},
+        .shadeRefuge {"game.shadeRefuge", false},
         .parryIconsMode {"game.parryIconsMode", ParryIcons::SpurShield},
         .bossHealthBars {"game.bossHealthBars", false},
-        .lopHud {"game.lopHud", false},
-        .trueAlbwShop {"game.trueAlbwShop", false},
+        .lopHud {"game.lopHud", LopHudMode::Off},
+        .showEponaSpurHud {"game.showEponaSpurHud", true},
+        .trueAlbwMode {"game.trueAlbwMode", TrueAlbwMode::Off},
         .damageMultiplier {"game.damageMultiplier", 1},
         .hpMultNormal     {"game.hpMultNormal",     1},
         .hpMultMidBoss    {"game.hpMultMidBoss",    1},
@@ -161,6 +165,7 @@ UserSettings g_userSettings = {
         .moonJump {"game.moonJump", false},
         .superClawshot {"game.superClawshot", false},
         .alwaysGreatspin {"game.alwaysGreatspin", false},
+        .hurricaneTest {"game.hurricaneTest", false},
         .enableFastIronBoots {"game.enableFastIronBoots", false},
         .canTransformAnywhere {"game.canTransformAnywhere", false},
         .fastRoll {"game.fastRoll", false},
@@ -253,6 +258,12 @@ UserSettings g_userSettings = {
             ActionBindConfigVar{"actionBindings.quickTransform_port2", PAD_NATIVE_BUTTON_INVALID},
             ActionBindConfigVar{"actionBindings.quickTransform_port3", PAD_NATIVE_BUTTON_INVALID},
         },
+        .openItemWheel {
+            ActionBindConfigVar{"actionBindings.openItemWheel_port0", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.openItemWheel_port1", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.openItemWheel_port2", PAD_NATIVE_BUTTON_INVALID},
+            ActionBindConfigVar{"actionBindings.openItemWheel_port3", PAD_NATIVE_BUTTON_INVALID},
+        },
     }
 };
 
@@ -294,16 +305,20 @@ void registerSettings() {
     Register(g_userSettings.game.manualShielding);
     Register(g_userSettings.game.shieldParryCombat);
     Register(g_userSettings.game.hiddenSkillRework);
+    Register(g_userSettings.game.focusedArtsTest);
+    Register(g_userSettings.game.focusedArtsCheat);
     Register(g_userSettings.game.shieldDurability);
     Register(g_userSettings.game.deathRecoveryOrb);
     Register(g_userSettings.game.wolfLinkCombat);
     Register(g_userSettings.game.enemyDeathRupees);
     Register(g_userSettings.game.masterQuest);
     Register(g_userSettings.game.bossRefinement);
+    Register(g_userSettings.game.shadeRefuge);
     Register(g_userSettings.game.parryIconsMode);
     Register(g_userSettings.game.bossHealthBars);
     Register(g_userSettings.game.lopHud);
-    Register(g_userSettings.game.trueAlbwShop);
+    Register(g_userSettings.game.showEponaSpurHud);
+    Register(g_userSettings.game.trueAlbwMode);
     Register(g_userSettings.game.damageMultiplier);
     Register(g_userSettings.game.hpMultNormal);
     Register(g_userSettings.game.hpMultMidBoss);
@@ -383,6 +398,7 @@ void registerSettings() {
     Register(g_userSettings.game.moonJump);
     Register(g_userSettings.game.superClawshot);
     Register(g_userSettings.game.alwaysGreatspin);
+    Register(g_userSettings.game.hurricaneTest);
     Register(g_userSettings.game.invincibleEnemies);
     Register(g_userSettings.game.enableFrameInterpolation);
     Register(g_userSettings.game.enableGyroAim);
@@ -458,6 +474,10 @@ void registerSettings() {
     Register(g_userSettings.actionBindings.quickTransform[1]);
     Register(g_userSettings.actionBindings.quickTransform[2]);
     Register(g_userSettings.actionBindings.quickTransform[3]);
+    Register(g_userSettings.actionBindings.openItemWheel[0]);
+    Register(g_userSettings.actionBindings.openItemWheel[1]);
+    Register(g_userSettings.actionBindings.openItemWheel[2]);
+    Register(g_userSettings.actionBindings.openItemWheel[3]);
 }
 
 // Transient settings

@@ -35,6 +35,7 @@ void applyDpadQuickSwapPresetBinds() {
     presetIfUnset(binds.quickTransform[0], SDL_GAMEPAD_BUTTON_DPAD_DOWN);
     presetIfUnset(binds.openMapScreen[0], SDL_SCANCODE_M);
     presetIfUnset(binds.toggleMinimap[0], SDL_SCANCODE_TAB);
+    presetIfUnset(binds.openItemWheel[0], SDL_GAMEPAD_BUTTON_LEFT_SHOULDER);
 }
 
 bool canUseDpadQuickSwap(u32 port) {
@@ -70,10 +71,6 @@ bool canUseDpadQuickSwap(u32 port) {
 }
 
 static bool isOwnedSword(u8 itemNo) {
-    return dComIfGs_isItemFirstBit(itemNo) != 0;
-}
-
-static bool isOwnedShield(u8 itemNo) {
     return dComIfGs_isItemFirstBit(itemNo) != 0;
 }
 
@@ -142,40 +139,16 @@ void cycleNextShield() {
         return;
     }
 
-    static constexpr u8 kShieldOrder[] = {
-        dItemNo_WOOD_SHIELD_e,
-        dItemNo_SHIELD_e,
-        dItemNo_HYLIA_SHIELD_e,
-    };
-
     const u8 current = dComIfGs_getSelectEquipShield();
-    u8 next = current;
-
-    static constexpr int kShieldCount =
-        static_cast<int>(sizeof(kShieldOrder) / sizeof(kShieldOrder[0]));
-
-    int start = 0;
-    for (int i = 0; i < kShieldCount; ++i) {
-        if (kShieldOrder[i] == current) {
-            start = i + 1;
-            break;
-        }
-    }
-
-    for (int step = 0; step < kShieldCount; ++step) {
-        const u8 candidate = kShieldOrder[(start + step) % kShieldCount];
-        if (isOwnedShield(candidate) && candidate != current) {
-            next = candidate;
-            break;
-        }
-    }
-
-    if (next == current || next == dItemNo_NONE_e) {
+    const u8 next = dMeter2_getNextOwnedShield(current);
+    if (next == dItemNo_NONE_e || next == current) {
         return;
     }
 
-    dMeter2Info_setShield(next, false);
-    daAlink_getAlinkActorClass()->setShieldChange();
+    if (!dMeter2_equipOwnedShield(next)) {
+        return;
+    }
+
     Z2GetAudioMgr()->seStart(Z2SE_SY_ITEM_SET_X, NULL, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
     dMeter2Info_set2DVibration();
 }

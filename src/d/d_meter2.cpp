@@ -30,8 +30,10 @@
 #include "d/d_albw_master_quest.h"
 #include "d/d_albw_rental.h"
 #include "d/d_albw_shield.h"
+#include "d/d_focused_arts.h"
 #include "d/d_attention.h"
 #include "d/actor/d_a_player.h"
+#include "d/actor/d_a_alink.h"
 #include "dusk/action_bindings.h"
 #include "dusk/memory.h"
 #include "dusk/settings.h"
@@ -50,6 +52,7 @@
 #if TARGET_PC
 static bool sArrowMade    = false;
 static bool sBombAmmo     = false;
+static bool sBombArrowMade = false;
 static bool sBoomThrow    = false;
 static bool sSlingMade    = false;
 static bool sIronballThrow = false;
@@ -61,6 +64,7 @@ static bool sIronballThrow = false;
 // full expanded meter).
 static int sOilBaseMax = 10900;
 static int sOilMaxVar  = 10900;
+static constexpr int kALBWBombArrowDrain = 8175; // 3/4 sOilBaseMax (5450 arrow + 2725 bomb)
 static bool sMeterinc = false;
 static int sALBWMeter = 10900;
 static u8 s_zSlotItemCache = 0xFF;
@@ -330,6 +334,10 @@ void dMeter2_onALBWArrow() {
     dAlbwLockout_onArrowFired();
 }
 void dMeter2_onALBWBomb()     { sBombAmmo     = true; }
+void dMeter2_onALBWBombArrow() {
+    sBombArrowMade = true;
+    dAlbwLockout_onBombArrowFired();
+}
 void dMeter2_onALBWIronball() { sIronballThrow = true; }
 // ============================================
 // NEW CODE — ALBW Port
@@ -339,6 +347,11 @@ void dMeter2_onALBWIronball() { sIronballThrow = true; }
 // sync with the drain values in the moveKantera() block.
 // ============================================
 bool dMeter2_isALBWLocked() { return sALBWLocked; }
+
+void dMeter2_drainALBWToLockout() {
+    sALBWMeter = 0;
+    albwRefreshLockoutState(true);
+}
 
 bool dMeter2_isALBWMovementExhausted() { return sALBWMovementExhausted; }
 
@@ -389,6 +402,13 @@ bool dMeter2_canALBWArrow() {
 bool dMeter2_canALBWBomb() {
     if (sALBWLocked) {
         return true;
+    }
+    return true;
+}
+
+bool dMeter2_canALBWBombArrow() {
+    if (sALBWLocked) {
+        return dAlbwLockout_canFireBombArrow();
     }
     return true;
 }
@@ -451,7 +471,14 @@ bool dMeter2_canALBWDoubleHookshot() {
 //     started action may push the meter into debt; lockout blocks the next action.
 //   Ranged/items: no minimum while unlocked; lockout perks apply while locked.
 // ============================================
-void dMeter2_onALBWSword()       { sSwordSwing  = true; }
+void dMeter2_onALBWSword() {
+#if TARGET_PC
+    if (dFocusedArts_shouldSuppressAlbwMeterDrain()) {
+        return;
+    }
+#endif
+    sSwordSwing = true;
+}
 void dMeter2_onALBWSidestep()    { sSidestep    = true; }
 void dMeter2_onALBWBackJump()    { sBackJump    = true; }
 void dMeter2_onALBWRollJump()    { sRollJump    = true; }
@@ -459,6 +486,12 @@ void dMeter2_onALBWHiddenSkill() {
     if (sHiddenSkill) {
         return;
     }
+
+#if TARGET_PC
+    if (dFocusedArts_shouldSuppressAlbwMeterDrain()) {
+        return;
+    }
+#endif
 
     sHiddenSkill = true;
 }
@@ -768,6 +801,42 @@ static const u8 sShieldRentalItemNos[3] = {
     (u8)dItemNo_HYLIA_SHIELD_e,
 };
 static constexpr int kShieldRentalEligibleBase = 685; // saveBitLabels[685..687]
+// Dusk: one-time shop upgrade — hold Ordon/Wooden/Hylian shields simultaneously (max 3).
+static constexpr int kMultiShieldUpgradeBit = 688; // saveBitLabels[688] — future shop purchase
+static constexpr int kMaxOwnedShieldsDefault = 1;
+static constexpr int kMaxOwnedShieldsUpgraded = 3;
+
+static void dMeter2_setCollectShieldForItem(u8 itemNo) {
+    switch (itemNo) {
+    case (u8)dItemNo_WOOD_SHIELD_e:
+        dComIfGs_setCollectShield(COLLECT_WOODEN_SHIELD);
+        break;
+    case (u8)dItemNo_SHIELD_e:
+        dComIfGs_setCollectShield(COLLECT_ORDON_SHIELD);
+        break;
+    case (u8)dItemNo_HYLIA_SHIELD_e:
+        dComIfGs_setCollectShield(COLLECT_HYLIAN_SHIELD);
+        break;
+    default:
+        break;
+    }
+}
+
+static void dMeter2_ensureShieldOwned(u8 itemNo) {
+    if (!dMeter2_isShieldItem(itemNo)) {
+        return;
+    }
+
+    if (!dComIfGs_isItemFirstBit(itemNo)) {
+        dComIfGs_onItemFirstBit(itemNo);
+    }
+
+    dMeter2_setCollectShieldForItem(itemNo);
+}
+
+static int dMeter2_getMaxOwnedShields() {
+    return dMeter2_playerHasMultiShieldUpgrade() ? kMaxOwnedShieldsUpgraded : kMaxOwnedShieldsDefault;
+}
 
 bool dMeter2_isShieldItem(u8 itemNo) {
     return itemNo == (u8)dItemNo_WOOD_SHIELD_e || itemNo == (u8)dItemNo_SHIELD_e ||
@@ -790,20 +859,158 @@ static void dMeter2_clearAllShieldPossession() {
     dMeter2Info_setShield(dItemNo_NONE_e, false);
 }
 
+bool dMeter2_playerHasMultiShieldUpgrade() {
+    return dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[kMultiShieldUpgradeBit]);
+}
+
+void dMeter2_onMultiShieldUpgradePurchase() {
+    dComIfGs_onEventBit(dSv_event_flag_c::saveBitLabels[kMultiShieldUpgradeBit]);
+}
+
+int dMeter2_countOwnedShields() {
+    int count = 0;
+    for (int i = 0; i < 3; i++) {
+        if (dComIfGs_isItemFirstBit(sShieldRentalItemNos[i])) {
+            count++;
+        }
+    }
+    return count;
+}
+
+bool dMeter2_shieldIsOwned(u8 itemNo) {
+    if (!dMeter2_isShieldItem(itemNo)) {
+        return false;
+    }
+
+    if (dComIfGs_isItemFirstBit(itemNo)) {
+        return true;
+    }
+
+    // Save editor may set equipped shield without syncing the first bit.
+    return dComIfGs_getSelectEquipShield() == itemNo;
+}
+
+u8 dMeter2_getNextOwnedShield(u8 currentEquip) {
+    int start = 0;
+    for (int i = 0; i < 3; i++) {
+        if (sShieldRentalItemNos[i] == currentEquip) {
+            start = i + 1;
+            break;
+        }
+    }
+
+    for (int step = 0; step < 3; step++) {
+        const u8 candidate = sShieldRentalItemNos[(start + step) % 3];
+        if (candidate != currentEquip && dMeter2_shieldIsOwned(candidate)) {
+            return candidate;
+        }
+    }
+
+    return dItemNo_NONE_e;
+}
+
+static void dMeter2_requestLinkShieldModelUpdate() {
+    daAlink_c* link = daAlink_getAlinkActorClass();
+    if (link == nullptr) {
+        return;
+    }
+
+    if (link->getShieldChangeWaitTimer() != 0) {
+        return;
+    }
+
+    link->setShieldChange();
+}
+
+bool dMeter2_equipOwnedShield(u8 itemNo) {
+    if (!dMeter2_isShieldItem(itemNo) || itemNo == dItemNo_NONE_e) {
+        return false;
+    }
+
+    if (dComIfGs_getSelectEquipShield() == itemNo) {
+        return false;
+    }
+
+    if (!dMeter2_shieldIsOwned(itemNo)) {
+        return false;
+    }
+
+    dMeter2_ensureShieldOwned(itemNo);
+    dMeter2Info_setShield(itemNo, false);
+    dMeter2_requestLinkShieldModelUpdate();
+    return true;
+}
+
+void dMeter2_applyEquippedShield(u8 itemNo) {
+    if (itemNo == dItemNo_NONE_e) {
+        if (dComIfGs_getSelectEquipShield() != dItemNo_NONE_e) {
+            dMeter2Info_setShield(dItemNo_NONE_e, false);
+            dMeter2_requestLinkShieldModelUpdate();
+        }
+        return;
+    }
+
+    if (!dMeter2_isShieldItem(itemNo)) {
+        return;
+    }
+
+    dMeter2_ensureShieldOwned(itemNo);
+    if (dComIfGs_getSelectEquipShield() != itemNo) {
+        dMeter2Info_setShield(itemNo, false);
+        dMeter2_requestLinkShieldModelUpdate();
+    }
+}
+
+void dMeter2_setShieldOwned(u8 itemNo, bool owned) {
+    if (!dMeter2_isShieldItem(itemNo)) {
+        return;
+    }
+
+    if (owned) {
+        dMeter2_ensureShieldOwned(itemNo);
+        return;
+    }
+
+    dComIfGs_offItemFirstBit(itemNo);
+    if (dComIfGs_getSelectEquipShield() == itemNo) {
+        dMeter2Info_setShield(dItemNo_NONE_e, false);
+        dMeter2_requestLinkShieldModelUpdate();
+    }
+}
+
+bool dMeter2_grantShieldOwnership(u8 itemNo) {
+    if (!dMeter2_isShieldItem(itemNo) || !dMeter2_canAcquireShield(itemNo)) {
+        return false;
+    }
+
+    if (!dMeter2_playerHasMultiShieldUpgrade() && dMeter2_playerHasAnyShield() &&
+        !dMeter2_shieldIsOwned(itemNo))
+    {
+        dMeter2_clearAllShieldPossession();
+    }
+
+    dMeter2_ensureShieldOwned(itemNo);
+    return true;
+}
+
 bool dMeter2_canAcquireShield(u8 itemNo) {
     if (!dMeter2_isShieldItem(itemNo)) {
         return true;
     }
-    if (!dMeter2_playerHasAnyShield()) {
+
+    if (dMeter2_shieldIsOwned(itemNo)) {
         return true;
     }
 
-    const u8 equipped = dComIfGs_getSelectEquipShield();
-    if (equipped == itemNo) {
+    if (dMeter2_countOwnedShields() == 0) {
         return true;
     }
 
-    // One shield at a time until a future upgrade path allows multiples.
+    if (dMeter2_playerHasMultiShieldUpgrade()) {
+        return dMeter2_countOwnedShields() < dMeter2_getMaxOwnedShields();
+    }
+
+    // Default: one shield at a time — rental/grant replaces the previous shield.
     return false;
 }
 
@@ -828,30 +1035,12 @@ bool dMeter2_isShieldRentalEligible(u8 itemNo) {
 }
 
 void dMeter2_grantRentalShield(u8 itemNo) {
-    if (!dMeter2_isShieldItem(itemNo) || !dMeter2_canAcquireShield(itemNo)) {
+    if (!dMeter2_grantShieldOwnership(itemNo)) {
         return;
     }
 
-    if (dMeter2_playerHasAnyShield()) {
-        dMeter2_clearAllShieldPossession();
-    }
-
-    switch (itemNo) {
-    case (u8)dItemNo_WOOD_SHIELD_e:
-        dComIfGs_setCollectShield(COLLECT_WOODEN_SHIELD);
-        break;
-    case (u8)dItemNo_SHIELD_e:
-        dComIfGs_setCollectShield(COLLECT_ORDON_SHIELD);
-        break;
-    case (u8)dItemNo_HYLIA_SHIELD_e:
-        dComIfGs_setCollectShield(COLLECT_HYLIAN_SHIELD);
-        break;
-    default:
-        break;
-    }
-
-    dComIfGs_onItemFirstBit(itemNo);
     dMeter2Info_setShield(itemNo, false);
+    dMeter2_requestLinkShieldModelUpdate();
 }
 
 // ============================================
@@ -1160,7 +1349,7 @@ int dMeter2_c::_execute() {
     // ============================================
     {
         static bool sButtonsLopWasOn = false;
-        const bool lopOn = dusk::getSettings().game.lopHud.getValue();
+        const bool lopOn = dusk::getSettings().game.lopHud.getValue() != dusk::LopHudMode::Off;
         if (sButtonsLopWasOn != lopOn) {
             sButtonsLopWasOn = lopOn;
             // Show every ring child first (restores the vine + decorations the LoP
@@ -1812,7 +2001,10 @@ void dMeter2_c::moveKantera() {
         // NEW CODE ENDS HERE
         // ============================================
 
-        if (sArrowMade) {
+        if (sBombArrowMade) {
+            albwDrainMeter(kALBWBombArrowDrain, sNow);
+            sBombArrowMade = false;
+        } else if (sArrowMade) {
             albwDrainMeter(5450, sNow);
             sArrowMade = false;
         } else if (sBombAmmo) {
@@ -2443,7 +2635,7 @@ void dMeter2_c::moveRupee() {
     // ============================================
     {
         static bool sRupeeLopWasOn = false;
-        const bool lopOn = dusk::getSettings().game.lopHud.getValue();
+        const bool lopOn = dusk::getSettings().game.lopHud.getValue() != dusk::LopHudMode::Off;
         if (sRupeeLopWasOn != lopOn) {
             sRupeeLopWasOn = lopOn;
             draw_rupee = true;
@@ -3491,7 +3683,7 @@ void dMeter2_c::moveButtonCross() {
     // ============================================
     {
         static bool sCrossLopWasOn = false;
-        const bool lopOn = dusk::getSettings().game.lopHud.getValue();
+        const bool lopOn = dusk::getSettings().game.lopHud.getValue() != dusk::LopHudMode::Off;
         if (sCrossLopWasOn != lopOn) {
             sCrossLopWasOn = lopOn;
             draw_cross = true;
@@ -3689,6 +3881,12 @@ void dMeter2_c::checkSubContents() {
         if (strcmp(dComIfGp_getStartStageName(), "F_SP103") &&
             (strcmp(dComIfGp_getStartStageName(), "F_SP00") || dComIfG_play_c::getLayerNo(0) != 5))
         {
+#if TARGET_PC
+            if (!dusk::getSettings().game.showEponaSpurHud.getValue()) {
+                killSubContents(1);
+                return;
+            }
+#endif
             killSubContents(1);
 
             if (mSubContentType == 0) {

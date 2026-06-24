@@ -10,6 +10,10 @@
 #include "f_op/f_op_actor_mng.h"
 #include <cstring>
 
+#if TARGET_PC
+#include "dusk/truetest.hpp"
+#endif
+
 static u8 const l_idx[24][4] = {
     {0x17, 0x05, 0x06, 0x01}, {0x17, 0x05, 0x06, 0x02}, {0x17, 0x05, 0x06, 0x03},
     {0x17, 0x05, 0x06, 0x04}, {0x17, 0x05, 0x06, 0x05}, {0x05, 0x06, 0x01, 0x00},
@@ -105,6 +109,11 @@ int daObjGWall_c::execute() {
 }
 
 int daObjGWall_c::checkDraw() {
+#if TARGET_PC
+    if (dusk::truetest::isTrueTestSave()) {
+        return dusk::truetest::isGanonBarrierCleared() ? 0 : 1;
+    }
+#endif
     if (mEventBit2 != 0x3ff && dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[mEventBit2]) ||
         mEventBit1 != 0x3ff && !dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[mEventBit1]))
     {

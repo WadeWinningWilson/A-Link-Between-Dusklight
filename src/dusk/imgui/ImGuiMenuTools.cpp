@@ -13,7 +13,9 @@
 #include "d/actor/d_a_horse.h"
 #include "d/d_albw_hp_mult.h"
 #include "d/d_attention.h"
+#include "d/d_focused_arts.h"
 #include "d/d_com_inf_game.h"
+#include "d/d_meter2_info.h"
 #include "f_op/f_op_actor.h"
 #include "f_pc/f_pc_manager.h"
 #include "f_pc/f_pc_name.h"
@@ -465,6 +467,91 @@ namespace dusk {
                 fmt::format("Battle targets nearby: {}\n", battleTargets));
 
             ShowCornerContextMenu(m_lockonHpOverlayCorner, m_playerInfoOverlayCorner);
+        }
+        ImGui::End();
+        ImGui::PopFont();
+    }
+
+    void ImGuiMenuTools::ShowFocusedArtsDebugOverlay() {
+        if (!dFocusedArts_isDebugOverlayEnabled() || !dusk::IsGameLaunched ||
+            !isPlaySceneActive())
+        {
+            return;
+        }
+
+        ImGui::PushFont(ImGuiEngine::fontMono);
+
+        ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDecoration |
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing |
+            ImGuiWindowFlags_NoNav;
+        SetOverlayWindowLocation(1);
+        windowFlags |= ImGuiWindowFlags_NoMove;
+
+        ImGui::SetNextWindowBgAlpha(0.65f);
+        if (ImGui::Begin("Focused Arts", nullptr, windowFlags)) {
+            const int maxBank = dFocusedArts_getMaxBank();
+            const int bank = dFocusedArts_getBankCount();
+            const int fill = dFocusedArts_getFillNumerator();
+            const int fillDen = dFocusedArts_getFillDenominator();
+            const int spendCol = dFocusedArts_getSpendColumn();
+
+            ImGui::Text("Focused Arts (test)");
+            ImGui::Separator();
+            ImGuiStringViewText(fmt::format("Tier: {} (purchased {})\n",
+                                            dFocusedArts_getEffectiveTier(),
+                                            dFocusedArts_getPurchasedTier()));
+            ImGuiStringViewText(fmt::format("Bank: {} / {}\n", bank, maxBank));
+            ImGuiStringViewText(fmt::format("Fill: {} / {}\n", fill, fillDen));
+            ImGuiStringViewText(fmt::format("Spend ready: {}\n",
+                                            dFocusedArts_isSpendReady() ? "yes" : "no"));
+            ImGuiStringViewText(fmt::format("In spend seq: {}\n",
+                                            dFocusedArts_isInSpendSequence() ? "yes" : "no"));
+            if (spendCol > 0) {
+                ImGuiStringViewText(fmt::format("Last spend column: T{}\n", spendCol));
+            }
+            ImGuiStringViewText(fmt::format("Charged dmg tier: T{}\n",
+                                            dFocusedArts_getChargedDamageTier()));
+            ImGui::Separator();
+            ImGuiStringViewText(
+                fmt::format("HS attack values ({}, FA formula):\n",
+                            dFocusedArts_getHiddenSkillAttackDebugSwordLabel()));
+            ImGuiStringViewText("  [x]=save bit  V=vanilla  now=live  T1/2/3=charged tiers\n");
+            for (int i = 0; i < dFocusedArts_getHiddenSkillAttackDebugLineCount(); ++i) {
+                char line[96];
+                dFocusedArts_formatHiddenSkillAttackDebugLine(i, line, sizeof(line));
+                if (line[0] != '\0') {
+                    ImGuiStringViewText(fmt::format("  {}\n", line));
+                }
+            }
+            ImGuiStringViewText(fmt::format("ALBW: {} / {} locked={} suppress={}\n",
+                                            dMeter2_getALBWMeterValue(), dMeter2_getALBWMaxValue(),
+                                            dMeter2_isALBWLocked() ? "yes" : "no",
+                                            dFocusedArts_shouldSuppressAlbwMeterDrain() ? "yes"
+                                                                                        : "no"));
+            ImGui::Separator();
+            ImGuiStringViewText("Recent FA events:\n");
+            for (int i = 0; i < 4; i++) {
+                const char* line = dFocusedArts_getRecentEventLine(i);
+                if (line[0] != '\0') {
+                    ImGuiStringViewText(fmt::format("  {}\n", line));
+                }
+            }
+            ImGui::Separator();
+            ImGuiStringViewText(
+                "ALBW on HS while banking (not spending):\n"
+                "  1/2 base (5450): EB, MD, JS charge, Helm, GS\n"
+                "  1/6 base (1817): Back Slice (+ spin charge)\n"
+                "Spend sequence: ALBW suppressed ~5s after each spend charge.\n");
+            if (dFocusedArts_hasSpecialFinisherAvailable()) {
+                ImGuiStringViewText("Finisher: available on T1 spend\n");
+            }
+            if (maxBank <= 0) {
+                ImGuiStringViewText(
+                    "Enable Focused Arts Cheat or buy tiers (shop API).\n");
+            }
+            if (ImGui::Button("Reset FA meter")) {
+                dFocusedArts_resetRuntimeState();
+            }
         }
         ImGui::End();
         ImGui::PopFont();

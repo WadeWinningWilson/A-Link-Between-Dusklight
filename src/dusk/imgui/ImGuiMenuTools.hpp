@@ -28,6 +28,7 @@ namespace dusk {
         void ShowStateShare();
         void ShowInputViewer();
         void ShowLockonHpOverlay();
+        void ShowFocusedArtsDebugOverlay();
         void ShowActorSpawner();
 
     private:

@@ -21,7 +21,9 @@
 #endif
 #if TARGET_PC
 #include "d/d_albw_death_rupee.h"
+#include "d/d_albw_shade_refuge.h"  // dShadeRefuge_isEnabled (master toggle)
 #include "d/d_item_data.h"
+#include "dusk/truetest.hpp"
 
 // ============================================
 // NEW CODE — ALBW Port — "Shade's Refuge"
@@ -278,7 +280,7 @@ static bool objectSetCheck(room_of_scene_class* i_this) {
 // ============================================
 // NEW CODE — ALBW Port
 // Spawn the rental Postman in F_SP103 room 1 (Outside Link's House)
-// once Talo has been rescued (event bit 625).
+// once Talo has been rescued (F_0625), or on TRUETEST-stamped saves.
 // Uses getStartStageName() (not getLastPlayStageName()) because
 // setLastPlayStageName() is called later inside roomInit(), which runs
 // after this block — getLastPlayStageName() would still hold the
@@ -290,7 +292,7 @@ static bool objectSetCheck(room_of_scene_class* i_this) {
             dALBWDeathRupees_trySpawnOrbInRoom(dComIfGp_getStartStageName(), roomNo);
             if (strcmp(dComIfGp_getStartStageName(), "F_SP103") == 0 &&
                 roomNo == 1 &&
-                dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625])) {
+                dusk::truetest::isAlbwPostmanUnlocked()) {
                 static const cXyz  kPostPos   = { 1505.3680f, 800.0000f, -2529.2832f };
                 static const csXyz kPostAngle = { 0, (s16)-13008, 0 };
                 static const cXyz  kPostScale = { 1.0f, 1.0f, 1.0f };
@@ -300,8 +302,10 @@ static bool objectSetCheck(room_of_scene_class* i_this) {
 
             // Shade's Refuge — spawn each table watcher (kShadeWatchers, near
             // the top of this file) whose stage/room is loading and whose gate
-            // passes. Adding a watcher is one table row.
-            for (int wi = 0; wi < (int)(sizeof(kShadeWatchers) / sizeof(kShadeWatchers[0])); wi++) {
+            // passes. Adding a watcher is one table row. Gated behind the master
+            // toggle (game.shadeRefuge, default off) while the feature is WIP.
+            for (int wi = 0; dShadeRefuge_isEnabled() &&
+                             wi < (int)(sizeof(kShadeWatchers) / sizeof(kShadeWatchers[0])); wi++) {
                 const ShadeWatcherSpawn& w = kShadeWatchers[wi];
                 if (strcmp(dComIfGp_getStartStageName(), w.stage) == 0 && roomNo == w.room &&
                     (w.gate == NULL || w.gate())) {

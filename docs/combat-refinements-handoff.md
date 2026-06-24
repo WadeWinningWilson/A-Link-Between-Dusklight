@@ -166,7 +166,7 @@ See formula table. PDF column semantics:
 
 ### Shop tiers → player max charges
 
-Purchased from shop: **Focused Arts tier 1 / 2 / 3** (Postman shop — not wired in UI yet).
+Purchased from shop: **Focused Arts tier 1 / 2 / 3** (Postman shop **Upgrades & Services** page when FA test is on).
 
 **Shop tier API** (`d/d_focused_arts.cpp` — shop calls the same entry points as playtest):
 
@@ -190,7 +190,9 @@ Purchased from shop: **Focused Arts tier 1 / 2 / 3** (Postman shop — not wired
 5. Bank to **3/3** (with cheat), use hidden skills in order — overlay shows spend columns **T3 → T2 → T1**. Partial bank + HS resets fill only.
 6. Take unguarded damage — partial fill drains to 0.
 
-**Not wired yet:** FA damage columns, finishers (incl. Hurricane on GS T1), polished HUD pips, shop rows.
+**Wired (2026-06-20):** FA damage resolver (`dFocusedArts_resolveMeleeDamage`), item tier stacks, T1 finishers (GS Hurricane, JS lockout, Back Slice ALBW suppress, MD/Helm damage), Postman shop tier row.
+
+**Still open:** MD forced-wolf @ 1 HP, bank +1 SFX, item vanilla attack table research.
 
 | Purchased | Max bank | Damage while banking | Spend order (high → low) | Special Finishers |
 |-----------|----------|----------------------|--------------------------|-------------------|
@@ -268,23 +270,6 @@ Purchased from shop: **Focused Arts tier 1 / 2 / 3** (Postman shop — not wired
 - **No HS-lockout overlay** — optional indicator when **ALBW meter lockout** active.
 - **Spend-ready** when bank = purchased max (and tier 3 bought → finisher available on final spend).
 - Setting gate: **`game.hiddenSkillRework`** + **`game.focusedArtsTest`**.
-
----
-
-### DELETE AFTER HUD DELIVERY — meter bar drawing placeholder
-
-**Remove this entire subsection once the HUD chat ships polished FA bars.** Until then, bind UI to query API only — do not duplicate tier math in the HUD layer.
-
-| HUD element | Query | Notes |
-|-------------|-------|-------|
-| Bank pips (1–3) | `dFocusedArts_getBankCount()`, `dFocusedArts_getMaxBank()` | Sticky; no flicker on whiff |
-| Partial arc | `dFocusedArts_getFillNumerator()` / `dFocusedArts_getFillDenominator()` (12) | Sword +1/12, item +1/6 — fill hooks TBD |
-| Spend-ready glow | `dFocusedArts_isSpendReady()` | Bank == effective max |
-| Finisher hint | `dFocusedArts_hasSpecialFinisherAvailable()` | Tier 3 + full bank |
-| ALBW lockout | existing meter lockout UI | **Not** HS lockout overlay |
-| Master gate | `dFocusedArts_isEnabled()` | Also requires rework + test settings |
-
-**Files to touch:** `d_meter2_draw.cpp` (or LoP HUD equivalent), not `d_focused_arts.cpp` bar geometry.
 
 ---
 
@@ -407,31 +392,32 @@ Source-level answers to the nine feasibility questions. **FA charge bank is not 
 | Settings (`focusedArtsTest`, `focusedArtsCheat`) | ✅ Wired under Hidden Skill Rework |
 | Shop tier API (save reg 103, cheat override) | ✅ `d_focused_arts.cpp` |
 | Runtime meter fill / spend / combat hooks | ✅ v0 — sword/item fill, HS spend, damage drain, ImGui overlay |
-| Postman shop rows | ⏳ Not listed yet — use tier API above |
-| HUD bars | ⏳ After functionality; see deletable placeholder § |
-| GS finisher FA wiring | ⏳ Hurricane prototype done; bypass vanilla GS gates on FA spend |
-| Item vanilla attack table | ⏳ Research before item damage stacks |
+| FA damage resolver + item stacks | ✅ `dFocusedArts_resolveMeleeDamage`, `dFocusedArts_applyItemDamageBoost` |
+| Postman shop rows | ✅ FA tier on Upgrades & Services (`d_albw_rental.cpp`) |
+| HUD bars | ✅ Lilac FA meter in `d_meter2_draw.cpp` |
+| GS finisher FA wiring | ✅ Tier-3 T1 spend → `procCutGsHurricaneInit` (+ cheat fallback) |
+| T1 finishers (JS/BackSlice/MD/Helm/EB) | ✅ v1 — JS lockout drain, Back Slice 3s suppress, MD/Helm damage, EB GS AOE 50% |
+| Item vanilla attack table | ⏳ Research before per-item baseline tuning |
 
 ---
 
 ### Still open
 
 - **Item vanilla attack table** (Focused Arts row).
-- **Great Spin finisher — FA integration** (prototype **complete**; see § Hurricane Spin below): wire FA tier-3 T1 spend, **bypass vanilla GS gates (`F_0344` / full HP) on spend**, tune damage via FA resolver.
-- **Ending Blow** enemy down-flag consistency (deferred).
-- **Postman shop UI** for tier rows (API ready; prices/names in `d_focused_arts.cpp`).
+- ~~**Ending Blow** GS AOE finisher (50% on contact)~~ — wired on EB stab contact (T1 spend).
+- **Mortal Draw** forced wolf @ 1 HP finisher — deferred (damage mult wired).
 - **Hardcoded sword damage multiplier** — tune alongside FA resolver (may reduce sword damage globally).
-- **Combat hooks** — sword/item fill, HS spend columns, bash finisher spend.
+- **Bank +1 SFX** — optional polish.
 
 ## Hurricane Spin prototype (PC test cheat)
 
-**Status: COMPLETE (2026-06-19)** — playtested; no known blockers. **Not committed** unless product asks. Lives behind `game.hurricaneTest` until FA system owns entry + spend.
+**Status: COMPLETE (2026-06-19)** — playtested; FA tier-3 T1 spend launches hurricane when bank is full (`dFocusedArts_shouldLaunchGsHurricaneFinisher`). Cheat `game.hurricaneTest` remains for QA without FA spend.
 
 ### Message for FA / Focused Arts chat
 
 > **Great Spin finisher (Hurricane Spin) — prototype is working**
 >
-> The extended Great Spin finisher is implemented and playtested as a **PC-only test cheat** (`game.hurricaneTest` in Settings → Cheats). It is **not** wired to FA charge spend yet — that is your integration work.
+> The extended Great Spin finisher is implemented and playtested. **FA integration:** tier-3 purchased, bank full, T1 spend column → hurricane proc (or `game.hurricaneTest` cheat for QA).
 >
 > **How to try it:** enable **Hurricane test**, hard stick L/R + tap sword → ~5 s sustained spin, then ~2 s tired lockout.
 >
@@ -440,7 +426,6 @@ Source-level answers to the nine feasibility questions. **FA charge bank is not 
 > - `PROC_CUT_GS_HURRICANE_TIRED` — `ANM_WAIT_TO_TIRED` / `ANM_WAIT_TIRED`, 60 f no input, then normal control
 > - **Audio (locked):** Zant spin 1.05× + Gale tornado 0.85× @ 25% + spinner ride @ 35%; one-shot Link scream `Z2SE_AL_V_FALL` at start (not looped)
 > - **VFX:** `game.hurricaneTestVfx` — **Base VFX** (default) = horizontal great-spin ring; **Whirlwind** = upright spray variant
-> - **SE tweak setting:** `game.hurricaneTestSe` cycles tornado pitch only (0.85×–1.30×)
 >
 > **Key files:** `src/d/actor/d_a_alink_hurricane.inc`, `src/dusk/hurricane_test.cpp`, `src/d/actor/d_a_alink_effect.inc` (`setCutTurnEffect`), `src/dusk/audio/DuskDsp.cpp` (SE loop hack), voice gate in `d_a_alink.cpp` (`isLinkHurricaneProc`).
 >
@@ -466,7 +451,7 @@ Gated by `game.hurricaneTest` in settings. Entry: hard stick L/R + tap sword →
 | Audio mix | ✅ | Three-layer loop + one-shot scream; `DuskDsp` loop registration |
 | VFX modes | ✅ | Base VFX (horizontal) default; Whirlwind alternate |
 | Voice isolation | ✅ | Other Link voices + sword SE blocked during spin proc |
-| Settings / speedrun | ✅ | `hurricaneTest`, `hurricaneTestSe`, `hurricaneTestVfx` |
+| Settings / speedrun | ✅ | `hurricaneTest`, `hurricaneTestVfx` |
 | FA spend / UI | ⏳ | **FA chat** — no charge bank in tree yet |
 | Forward momentum pull | ✅ | WW-lite: `l_hurricaneForwardBias` (4.0) + stick speed; init Great Spin burst (`mCutTurn.mSpeed`); neutral stick decels to bias, not 0 |
 
@@ -537,7 +522,7 @@ Three-layer sustained mix on `mSoundObjSimple2` (Zant + tornado) and `mSoundObjS
 | Accent | `Z2SE_BOOM_TORNADO` | simple2 | **0.85×** (chosen) | 25% | PC force-loop |
 | Accent | `Z2SE_AL_SPINNER_RIDE` | simple1 | 1.0× | 35% | PC force-loop |
 
-Settings key `game.hurricaneTestSe` cycles **tornado pitch only** (0.85×–1.30×); all other layers stay fixed. PC loop hack: `DuskDsp.cpp` registers wave ARAMs; `hurricane_test.cpp` pins ADSR hold and excludes voice/scream channels.
+Mix is hardcoded in `hurricane_test.cpp` (`kHurricaneSeMix`); no SE swap setting. PC loop hack: `DuskDsp.cpp` registers wave ARAMs; `hurricane_test.cpp` pins ADSR hold and excludes voice/scream channels.
 
 ### VFX
 

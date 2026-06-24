@@ -35,8 +35,12 @@ constexpr f32 kSwordBoxH = 46.0f;   // sword panel height (≈ one square)
 // item-art blade reads horizontal (hilt right, tip left). makeMatrix() applies
 // -mRotateZ, so sign/amount are tuned by screenshot. Scale = blade size vs panel
 // height (its rotated diagonal is the visible blade length across the wide slot).
-constexpr f32 kLopSwordAngleDeg = 135.0f;  // CCW-ish; tune ±15
+constexpr f32 kLopSwordAngleDeg = 122.5f;  // CCW-ish; tune ±15 (135→125→124→123→122.5)
 constexpr f32 kLopSwordIconScale = 1.30f;  // square icon size vs (panel height - inset)
+// Focused Arts strip: extra height added BELOW the sword panel (top edge + sword stay
+// put) to hold the lilac FA meter (kantera widget, drawn by the meter layer) when FA is
+// active. Sized to fit the kantera bar's native height; tune via screenshot.
+constexpr f32 kFaStripH = 18.0f;
 
 J2DPicture* sCorner = NULL;  // tt_horiwaku_lu       (top-left corner; mirrored for others)
 J2DPicture* sEdgeV = NULL;   // tt_horiwaku_side_l_rr (left vertical edge)
@@ -49,6 +53,9 @@ ResTIMG* sBaseT = NULL;
 // Item icons drawn fresh from their textures: [0]=X, [1]=Y, [2]=equipped sword.
 J2DPicture* sIconPic[3] = {NULL, NULL, NULL};
 ResTIMG* sIconT[3] = {NULL, NULL, NULL};
+// Second composite layer (bottle glass etc.) for the X/Y slots: [0]=X, [1]=Y.
+J2DPicture* sIconOverlay[2] = {NULL, NULL};
+ResTIMG* sIconOverlayT[2] = {NULL, NULL};
 
 // Fetch a texture from the (already-resident, boot-mounted) collect archive and keep
 // the J2DPicture in sync with it. The pause menu calls removeResourceAll() on that
@@ -149,37 +156,122 @@ void drawIcon(f32 i_cx, f32 i_cy, f32 i_w, f32 i_h, ResTIMG* i_tex, int i_slot,
     sIconPic[i_slot]->draw(i_cx - i_w * 0.5f, i_cy - i_h * 0.5f, i_w, i_h, false, false, false);
 }
 
+// Size an item icon to match vanilla proportions: native aspect (texDim / 48px ref)
+// times the item's texScale, fitted into the slot's inner area i_ref. Without this,
+// every icon was stretched to a fixed square — items with a smaller texScale (bottles,
+// lanterns) overflowed the carved frame. Oversized results are scaled back uniformly so
+// nothing ever spills past the frame.
+void fitIconSize(ResTIMG* i_tex, u8 i_scalePct, f32 i_ref, f32* o_w, f32* o_h) {
+    const f32 tw = (i_tex != NULL && i_tex->width > 0) ? (f32)i_tex->width : 48.0f;
+    const f32 th = (i_tex != NULL && i_tex->height > 0) ? (f32)i_tex->height : 48.0f;
+    const f32 s = (i_scalePct > 0 ? (f32)i_scalePct : 100.0f) / 100.0f;
+    f32 w = (tw / 48.0f) * i_ref * s;
+    f32 h = (th / 48.0f) * i_ref * s;
+    f32 fit = 1.0f;
+    if (w > i_ref) {
+        fit = i_ref / w;
+    }
+    if (h > i_ref && (i_ref / h) < fit) {
+        fit = i_ref / h;
+    }
+    *o_w = w * fit;
+    *o_h = h * fit;
+}
+
+// Draw one composite layer fresh (recreate the picture on texture change), tinted with
+// the colors vanilla applied to its source pane, at i_w x i_h centred on (i_cx,i_cy).
+// NULL tex = nothing (single-layer items pass NULL for the overlay).
+void drawLayer(J2DPicture** io_pic, ResTIMG** io_t, ResTIMG* i_tex, JUtility::TColor i_black,
+               JUtility::TColor i_white, f32 i_cx, f32 i_cy, f32 i_w, f32 i_h) {
+    if (i_tex == NULL) {
+        return;
+    }
+    if (*io_pic == NULL || *io_t != i_tex) {
+        if (*io_pic != NULL) {
+            JKR_DELETE(*io_pic);
+        }
+        *io_pic = JKR_NEW J2DPicture(i_tex);
+        *io_t = i_tex;
+    }
+    if (*io_pic == NULL) {
+        return;
+    }
+    (*io_pic)->setBlackWhite(i_black, i_white);
+    (*io_pic)->setAlpha(255);
+    (*io_pic)->mRotateZ = 0.0f;  // X/Y icons never rotate (unlike the sword slot)
+    (*io_pic)->draw(i_cx - i_w * 0.5f, i_cy - i_h * 0.5f, i_w, i_h, false, false, false);
+}
+
 }  // namespace
 
-void dAlbwLopItemBelt_draw(J2DGrafContext* i_gctx, f32 i_midnaX, f32 i_midnaY, ResTIMG* i_xTex,
-                           ResTIMG* i_yTex) {
+void dAlbwLopItemBelt_draw(J2DGrafContext* i_gctx, f32 i_midnaX, f32 i_midnaY,
+                           const LopBeltIcon& i_x, const LopBeltIcon& i_y) {
     if (i_gctx == NULL || !ensureLoaded()) {
         return;
     }
-    const f32 slot1X = i_midnaX + kBeltOffX;  // Y slot (lower)
+    const f32 slot1X = i_midnaX + kBeltOffX;  // X slot (lower)
     const f32 slot1Y = i_midnaY + kBeltOffY;
-    const f32 slot0X = slot1X;                // X slot (upper)
+    const f32 slot0X = slot1X;                // Y slot (upper)
     const f32 slot0Y = slot1Y - kBeltGap;
 
-    const f32 iconSz = kBoxSize - kIconInset;
+    const f32 iconRef = kBoxSize - kIconInset;
     i_gctx->setup2D();
     drawSlotFrame(slot0X, slot0Y, kBoxSize, kBoxSize);
     drawSlotFrame(slot1X, slot1Y, kBoxSize, kBoxSize);
-    drawIcon(slot0X, slot0Y, iconSz, iconSz, i_yTex, 1);  // top    = Y
-    drawIcon(slot1X, slot1Y, iconSz, iconSz, i_xTex, 0);  // bottom = X
+
+    // Y slot (top): base content, then the overlay (e.g. bottle glass) over it.
+    f32 yW, yH;
+    fitIconSize(i_y.tex0, i_y.scalePct, iconRef, &yW, &yH);
+    drawLayer(&sIconPic[1], &sIconT[1], i_y.tex0, i_y.black0, i_y.white0, slot0X, slot0Y, yW, yH);
+    drawLayer(&sIconOverlay[1], &sIconOverlayT[1], i_y.tex1, i_y.black1, i_y.white1, slot0X, slot0Y,
+              yW, yH);
+
+    // X slot (bottom).
+    f32 xW, xH;
+    fitIconSize(i_x.tex0, i_x.scalePct, iconRef, &xW, &xH);
+    drawLayer(&sIconPic[0], &sIconT[0], i_x.tex0, i_x.black0, i_x.white0, slot1X, slot1Y, xW, xH);
+    drawLayer(&sIconOverlay[0], &sIconOverlayT[0], i_x.tex1, i_x.black1, i_x.white1, slot1X, slot1Y,
+              xW, xH);
 }
 
-void dAlbwLopItemBelt_drawSword(J2DGrafContext* i_gctx, f32 i_cx, f32 i_cy, ResTIMG* i_swordTex) {
+void dAlbwLopItemBelt_drawSword(J2DGrafContext* i_gctx, f32 i_cx, f32 i_cy, ResTIMG* i_swordTex,
+                                bool i_faActive) {
     if (i_gctx == NULL || !ensureLoaded()) {
         return;
     }
     i_gctx->setup2D();
-    drawSlotFrame(i_cx, i_cy, kSwordBoxW, kSwordBoxH);
+
+    // With FA active the panel grows downward by kFaStripH: the top edge and the sword
+    // icon stay exactly where they are; the FA meter (drawn by the meter layer) occupies
+    // the new bottom strip.
+    const f32 frameH = i_faActive ? (kSwordBoxH + kFaStripH) : kSwordBoxH;
+    const f32 frameCy = i_faActive ? (i_cy + kFaStripH * 0.5f) : i_cy;
+    drawSlotFrame(i_cx, frameCy, kSwordBoxW, frameH);
+
     // Draw the blade at natural (square) aspect and rotate it flat — stretching a
     // diagonal icon across the wide panel would shear it. Size from the panel height
     // so the rotated blade's diagonal spans the landscape slot.
     const f32 swordSz = (kSwordBoxH - kIconInset) * kLopSwordIconScale;
     drawIcon(i_cx, i_cy, swordSz, swordSz, i_swordTex, 2, kLopSwordAngleDeg);
+}
+
+void dAlbwLopItemBelt_getSwordFaStrip(f32 i_cx, f32 i_cy, f32* o_left, f32* o_top, f32* o_width,
+                                      f32* o_height) {
+    // The strip is the extra band below the original (un-extended) panel bottom; the
+    // FA bar sits inside it with a little horizontal padding.
+    const f32 rowH = kFaStripH - 6.0f;
+    if (o_left != NULL) {
+        *o_left = i_cx - (kSwordBoxW * 0.5f - kEdgeThick - 3.0f);
+    }
+    if (o_top != NULL) {
+        *o_top = i_cy + kSwordBoxH * 0.5f + (kFaStripH - rowH) * 0.5f - 1.0f;
+    }
+    if (o_width != NULL) {
+        *o_width = kSwordBoxW - kEdgeThick * 2.0f - 6.0f;
+    }
+    if (o_height != NULL) {
+        *o_height = rowH;
+    }
 }
 
 void dAlbwLopItemBelt_cleanup() {
@@ -205,6 +297,13 @@ void dAlbwLopItemBelt_cleanup() {
             sIconPic[i] = NULL;
         }
         sIconT[i] = NULL;
+    }
+    for (int i = 0; i < 2; i++) {
+        if (sIconOverlay[i] != NULL) {
+            JKR_DELETE(sIconOverlay[i]);
+            sIconOverlay[i] = NULL;
+        }
+        sIconOverlayT[i] = NULL;
     }
     sCornerT = NULL;
     sEdgeVT = NULL;

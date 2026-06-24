@@ -10,6 +10,7 @@
 #include "d/d_k_wmark.h"
 #include "dusk/gx_helper.h"
 #if TARGET_PC
+#include "d/d_focused_arts.h"
 #include "dusk/hurricane_test.h"
 #endif
 
@@ -333,6 +334,7 @@ void daAlink_c::setEffect() {
     if (mProcID == PROC_CUT_TURN || mProcID == PROC_BOARD_CUT_TURN
 #if TARGET_PC
         || mProcID == PROC_CUT_GS_HURRICANE
+        || (mProcID == PROC_CUT_DOWN_LAND && dFocusedArts_isEndingBlowGreatSpinAoeActive())
 #endif
         )
     {
@@ -947,12 +949,16 @@ void daAlink_c::clearCutTurnEffectID() {
 }
 
 void daAlink_c::setCutTurnEffect() {
-    if (mUnderFrameCtrl[0].getFrame() < mProcVar1.field_0x300a) {
+#if TARGET_PC
+    const bool hurricaneProc = mProcID == PROC_CUT_GS_HURRICANE;
+    const bool ebGreatSpinAoe =
+        mProcID == PROC_CUT_DOWN_LAND && dFocusedArts_isEndingBlowGreatSpinAoeActive();
+    const bool gsSustainedVfx = hurricaneProc || ebGreatSpinAoe;
+    if (!gsSustainedVfx && mUnderFrameCtrl[0].getFrame() < mProcVar1.field_0x300a) {
         return;
     }
 
-#if TARGET_PC
-    if (mProcID == PROC_CUT_GS_HURRICANE) {
+    if (gsSustainedVfx) {
         for (int i = 0; i < 6; i++) {
             JPABaseEmitter* emitter = dComIfGp_particle_getEmitter(field_0x3204[i]);
             if (field_0x3204[i] == 0 || emitter == NULL || emitter->getParticleNumber() == 0) {
@@ -962,6 +968,10 @@ void daAlink_c::setCutTurnEffect() {
                 field_0x3204[i] = 0;
             }
         }
+    }
+#else
+    if (mUnderFrameCtrl[0].getFrame() < mProcVar1.field_0x300a) {
+        return;
     }
 #endif
 
@@ -1062,7 +1072,11 @@ void daAlink_c::setCutTurnEffect() {
         } else {
             return;
         }
-    } else if (mCutType == CUT_TYPE_LARGE_TURN_RIGHT || mCutType == CUT_TYPE_LARGE_TURN_LEFT) {
+    } else if (mCutType == CUT_TYPE_LARGE_TURN_RIGHT || mCutType == CUT_TYPE_LARGE_TURN_LEFT
+#if TARGET_PC
+               || ebGreatSpinAoe
+#endif
+    ) {
         effNameList = effNameLarge;
         rot = (JGeometry::TVec3<s16>*)leftRotLarge;
         trans = (JGeometry::TVec3<f32>*)leftTransLarge;
@@ -1082,9 +1096,6 @@ void daAlink_c::setCutTurnEffect() {
     cXyz pos;
     csXyz effectRot = shape_angle;
 #if TARGET_PC
-    const bool hurricaneProc = mProcID == PROC_CUT_GS_HURRICANE;
-    const bool hurricaneBaseVfx = hurricaneProc && dusk::isHurricaneBaseVfx();
-
     mDoMtx_multVecZero(mpLinkModel->getAnmMtx(1), &pos);
 #else
     mDoMtx_multVecZero(mpLinkModel->getAnmMtx(1), &pos);
@@ -1104,18 +1115,11 @@ void daAlink_c::setCutTurnEffect() {
             }
 
 #if TARGET_PC
-            if (hurricaneBaseVfx) {
+            if (gsSustainedVfx) {
+                // Hurricane / EB sustained great-spin ring — local tilt on both spin directions.
                 emitter->setLocalRotation(*rot);
                 if (trans->y > 1.0f) {
                     emitter->setLocalTranslation(*trans);
-                }
-            } else if (hurricaneProc) {
-                // Whirlwind — pre-VFX-split behavior (sound-setting era).
-                if (mProcVar4.field_0x3010 == 0) {
-                    emitter->setLocalRotation(*rot);
-                    if (trans->y > 1.0f) {
-                        emitter->setLocalTranslation(*trans);
-                    }
                 }
             } else if (mProcVar4.field_0x3010 == 0) {
 #else
@@ -1130,7 +1134,7 @@ void daAlink_c::setCutTurnEffect() {
 #endif
 
 #if TARGET_PC
-            if (mProcID == PROC_CUT_GS_HURRICANE) {
+            if (gsSustainedVfx) {
                 emitter->becomeImmortalEmitter();
                 emitter->playCreateParticle();
             }

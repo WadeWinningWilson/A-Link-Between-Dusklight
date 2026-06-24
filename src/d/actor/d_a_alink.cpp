@@ -6594,7 +6594,13 @@ void daAlink_c::setAtCollision() {
             spC8.set(current.pos.x + (50.0f * cM_ssin(shape_angle.y)), field_0x3478, current.pos.z + (50.0f * cM_scos(shape_angle.y)));
         }
 
-        if (mProcID == PROC_CUT_TURN || (mProcID == PROC_CUT_LARGE_JUMP_LAND && mProcVar2.field_0x300c != 0) || mProcID == PROC_BOARD_CUT_TURN) {
+        if (mProcID == PROC_CUT_TURN || (mProcID == PROC_CUT_LARGE_JUMP_LAND && mProcVar2.field_0x300c != 0) ||
+            mProcID == PROC_BOARD_CUT_TURN
+#if TARGET_PC
+            || mProcID == PROC_CUT_GS_HURRICANE
+            || (mProcID == PROC_CUT_DOWN_LAND && dFocusedArts_isEndingBlowGreatSpinAoeActive())
+#endif
+        ) {
             if (!checkNoResetFlg0(FLG0_CUT_AT_FLG)) {
                 onNoResetFlg0(FLG0_CUT_AT_FLG);
             }
@@ -12022,7 +12028,10 @@ BOOL daAlink_c::checkItemAction() {
                 }
 
 #if TARGET_PC
-                if (dusk::isHurricaneTestEnabled()) {
+                if (dusk::isHurricaneTestEnabled() && !dFocusedArts_isEnabled()) {
+                    return procCutGsHurricaneInit(getCutTurnDirection());
+                }
+                if (dFocusedArts_tryArmGsHurricaneFinisher()) {
                     return procCutGsHurricaneInit(getCutTurnDirection());
                 }
 #endif
@@ -18743,6 +18752,7 @@ int daAlink_c::execute() {
         // ============================================
         dAlbwWolfStun_update();
         dAlbwLockout_update();
+        dFocusedArts_update();
         // ============================================
         // NEW CODE ENDS HERE
         // ============================================

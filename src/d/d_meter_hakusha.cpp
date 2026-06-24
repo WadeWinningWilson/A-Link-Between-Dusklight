@@ -15,6 +15,10 @@
 #include "d/d_pane_class.h"
 #include <cstring>
 
+#if TARGET_PC
+#include "dusk/settings.h"
+#endif
+
 dMeterHakusha_c::dMeterHakusha_c(void* i_screen) {
     field_0x004 = (J2DScreen*)i_screen;
     _create();
@@ -108,6 +112,11 @@ int dMeterHakusha_c::_execute(u32 i_flags) {
 }
 
 void dMeterHakusha_c::draw() {
+#if TARGET_PC
+    if (!dusk::getSettings().game.showEponaSpurHud.getValue()) {
+        return;
+    }
+#endif
     J2DGrafContext* graf_ctx = dComIfGp_getCurrentGrafPort();
     graf_ctx->setup2D();
 

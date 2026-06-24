@@ -12,6 +12,11 @@
 
 #include "SSystem/SComponent/c_xyz.h"
 
+// Master enable for the whole Shade's Refuge system (settings: game.shadeRefuge,
+// default off). Gates watcher spawning, the death-screen option, and the shop
+// service. WIP feature kept behind this until finished.
+bool dShadeRefuge_isEnabled();
+
 void dShadeRefuge_setRespawn(const char* i_stage, s8 i_roomNo, const cXyz& i_pos, s16 i_angleY);
 void dShadeRefuge_clearRespawn();
 bool dShadeRefuge_hasRespawn();

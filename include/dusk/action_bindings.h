@@ -16,6 +16,7 @@ enum class ActionBinds {
     CYCLE_SWORD,
     CYCLE_SHIELD,
     QUICK_TRANSFORM,
+    OPEN_ITEM_WHEEL,
     COUNT,
 };
 
@@ -64,6 +65,12 @@ bool callMidnaReservesDpadLeft(u32 port = 0);
 bool dpadUpReservedForQuickSwap(u32 port = 0);
 bool dpadDownReservedForQuickSwap(u32 port = 0);
 bool dpadRightReservedForQuickSwap(u32 port = 0);
+
+/** R held for cheat chords (digital R or analog RT latch). */
+bool isPadModifierRHeld(u32 port = 0);
+
+/** R held without L — for R+face-button cheat combos. */
+bool isPadModifierRHeldExclusive(u32 port = 0);
 #endif
 
 }

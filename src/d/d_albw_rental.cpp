@@ -39,10 +39,12 @@
 #include "d/d_albw_oocoo.h"
 #include "d/d_albw_shade_refuge.h"
 #include "d/d_albw_master_quest.h"
+#include "d/d_focused_arts.h"
 #include "d/d_com_inf_game.h"
 #include "d/d_item_data.h"
 #include "d/d_meter2_info.h"
 #include "dusk/settings.h"
+#include "dusk/truetest.hpp"
 #include "dusk/ui/ui.hpp"
 #include "m_Do/m_Do_controller_pad.h"
 // ============================================
@@ -247,6 +249,7 @@ static ALBWRentalState sState = STATE_CLOSED;
 enum VisibleKind {
     VISIBLE_MQ_HEART = 0,
     VISIBLE_MQ_METER,
+    VISIBLE_FA_TIER,
     VISIBLE_ITEM,
     VISIBLE_SHADE_REFUGE,  // "Return to Last Shade Watcher" (above Oocoo)
     VISIBLE_OOCOO,
@@ -258,7 +261,7 @@ struct VisibleEntry {
     bool        purchasable;
 };
 
-static constexpr int kVisibleListMax = 2 + kItemCount + 2;  // +2 service rows (Shade Watcher, Oocoo)
+static constexpr int kVisibleListMax = 3 + kItemCount + 2;  // MQ rows + FA tier + services
 static VisibleEntry sVisibleList[kVisibleListMax];
 static int          sVisibleCount     = 0;  // total rows shown (inc. ?????)
 static int          sAvailCount       = 0;  // purchasable rows only (for button state)
@@ -363,7 +366,7 @@ static bool hasAnyEligible() {
 // non-exempt item is available from the start (Ravio's-shop style).  Exempt
 // entries (alwaysGated, e.g. Deity Armor) keep their own check even when on.
 static bool entryEligible(const ALBWRentalEntry& entry) {
-    if (dusk::getSettings().game.trueAlbwShop.getValue() && !entry.alwaysGated) {
+    if (dusk::truetest::isTrueAlbwShopEnabled() && !entry.alwaysGated) {
         return true;
     }
     return entry.eligibilityCheck
@@ -388,7 +391,7 @@ static bool categoryHasVisibleRows(ALBWShopCategory cat) {
         // Watcher return and Oocoo's Return are contextual.  Any one of them
         // makes the Upgrades & Services page non-empty.
         if (dAlbwMQ_isEnabled() || dShadeRefuge_canShowInShop() ||
-            dALBWOocoo_canShowInShop()) {
+            dALBWOocoo_canShowInShop() || dFocusedArts_shouldShowShopTierRow()) {
             return true;
         }
     }
@@ -453,6 +456,16 @@ static void rebuildVisibleList() {
         sVisibleList[sVisibleCount].kind        = VISIBLE_MQ_METER;
         sVisibleList[sVisibleCount].kItemsIdx   = -1;
         sVisibleList[sVisibleCount].purchasable = dAlbwMQ_canPurchaseMeterShop();
+        if (sVisibleList[sVisibleCount].purchasable) {
+            sAvailCount++;
+        }
+        sVisibleCount++;
+    }
+
+    if (cat == CAT_UPGRADES && dFocusedArts_shouldShowShopTierRow()) {
+        sVisibleList[sVisibleCount].kind        = VISIBLE_FA_TIER;
+        sVisibleList[sVisibleCount].kItemsIdx   = -1;
+        sVisibleList[sVisibleCount].purchasable = dFocusedArts_canPurchaseShopTier();
         if (sVisibleList[sVisibleCount].purchasable) {
             sAvailCount++;
         }
@@ -576,6 +589,32 @@ static void tryPurchase(int visIdx) {
         sStatusMsg            = "May your stamina carry you far.\nThank you for your patronage!";
         sStatusExpiry         = clock::now() + kPurchaseCooldownSuccess;
         rebuildActivePages();  // a purchase can empty the current page
+        rebuildVisibleList();
+        return;
+    }
+
+    if (sVisibleList[visIdx].kind == VISIBLE_FA_TIER) {
+        const int tier = dFocusedArts_getNextShopTierIndex();
+        const int price = dFocusedArts_getNextShopTierPrice();
+        u16 rupees      = dComIfGs_getRupee();
+        if (tier <= 0 || price <= 0) {
+            return;
+        }
+        if (rupees < (u16)price) {
+            sStatusMsg          = "Sincerest apologies, but we can't return\nthat to you for that little..";
+            sStatusExpiry       = clock::now() + kPurchaseCooldownFailure;
+            sJustFailedPurchase = true;
+            return;
+        }
+        if (!dFocusedArts_tryPurchaseShopTier()) {
+            return;
+        }
+        dComIfGs_setRupee(rupees - (u16)price);
+        sPurchasedThisSession = true;
+        sJustPurchased        = true;
+        sStatusMsg            = "Your hidden arts will sharpen with practice.\nThank you for your patronage!";
+        sStatusExpiry         = clock::now() + kPurchaseCooldownSuccess;
+        rebuildActivePages();
         rebuildVisibleList();
         return;
     }
@@ -797,7 +836,7 @@ void dALBWRental_open() {
     // Greeting B — first visit.  Three native boxes: intro, then one sentence each.
     // True ALBW always greets as a returning customer (every item is in stock).
     const bool returning =
-        dusk::getSettings().game.trueAlbwShop.getValue() || hasAnyEligible();
+        dusk::truetest::isTrueAlbwShopEnabled() || hasAnyEligible();
     const char* greeting = returning
         ? "Greetings! Lost your treasured possessions? Never fear, I have a new shipment for you! All for a.....small fee!"
         : "Greetings! As an ever dutiful Junior mail carrier I return all that is lost or misplaced!";
@@ -1017,6 +1056,16 @@ const dALBWVisibleEntry* dALBWRental_getVisibleList(int* outCount) {
             sPubList[i].purchasable    = sVisibleList[i].purchasable;
             sPubList[i].desc           = dAlbwMQ_getMeterShopDesc();
             sPubList[i].itemNo         = (u8)dItemNo_MAGIC_LV1_e;
+            sPubList[i].isOocooService = false;
+            sPubList[i].showNameWhenSoldOut = true;
+        } else if (sVisibleList[i].kind == VISIBLE_FA_TIER) {
+            const int tier = dFocusedArts_getNextShopTierIndex();
+            sPubList[i].name           = dFocusedArts_getShopTierName(tier);
+            sPubList[i].price          = sVisibleList[i].purchasable
+                ? dFocusedArts_getNextShopTierPrice() : 0;
+            sPubList[i].purchasable    = sVisibleList[i].purchasable;
+            sPubList[i].desc           = dFocusedArts_getShopTierDesc(tier);
+            sPubList[i].itemNo         = (u8)dItemNo_SWORD_e;
             sPubList[i].isOocooService = false;
             sPubList[i].showNameWhenSoldOut = true;
         } else if (sVisibleList[i].kind == VISIBLE_SHADE_REFUGE) {

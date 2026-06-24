@@ -250,8 +250,6 @@ void reset_for_speedrun_mode() {
     getSettings().game.superClawshot.setSpeedrunValue(false);
     getSettings().game.alwaysGreatspin.setSpeedrunValue(false);
     getSettings().game.hurricaneTest.setSpeedrunValue(false);
-    getSettings().game.hurricaneTestSe.setSpeedrunValue(0);
-    getSettings().game.hurricaneTestVfx.setSpeedrunValue(HurricaneVfxMode::WHIRLWIND);
     getSettings().game.enableFastIronBoots.setSpeedrunValue(false);
     getSettings().game.canTransformAnywhere.setSpeedrunValue(false);
     getSettings().game.fastRoll.setSpeedrunValue(false);
@@ -1200,7 +1198,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                                              const Rml::String& helpText) {
             add_speedrun_disabled_option(leftPane, rightPane, value, key, helpText);
         };
-
         leftPane.add_section("General");
         addOption("Mirror Mode", getSettings().game.enableMirrorMode,
             "Mirrors the world horizontally, matching the Wii version of the game.");
@@ -1252,106 +1249,68 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         // ============================================
         leftPane.add_section("ALBW Settings");
         leftPane.register_control(
-            leftPane.add_child<NumberButton>(NumberButton::Props{
-                .key = "Common HP ×",
-                .getValue = [] { return getSettings().game.hpMultNormal.getValue(); },
-                .setValue =
-                    [](int value) {
-                        getSettings().game.hpMultNormal.setValue(value);
-                        config::Save();
+            leftPane.add_select_button({
+                .key = "Health Multiplier",
+                .getValue =
+                    [] {
+                        return fmt::format(
+                            "{}× / {}× / {}× / {}×",
+                            getSettings().game.hpMultNormal.getValue(),
+                            getSettings().game.hpMultMidBoss.getValue(),
+                            getSettings().game.hpMultBoss.getValue(),
+                            getSettings().game.hpMultFinalBoss.getValue());
                     },
                 .isDisabled = [] { return getSettings().game.speedrunMode; },
                 .isModified =
                     [] {
                         return getSettings().game.hpMultNormal.getValue() !=
-                               getSettings().game.hpMultNormal.getDefaultValue();
+                                   getSettings().game.hpMultNormal.getDefaultValue() ||
+                               getSettings().game.hpMultMidBoss.getValue() !=
+                                   getSettings().game.hpMultMidBoss.getDefaultValue() ||
+                               getSettings().game.hpMultBoss.getValue() !=
+                                   getSettings().game.hpMultBoss.getDefaultValue() ||
+                               getSettings().game.hpMultFinalBoss.getValue() !=
+                                   getSettings().game.hpMultFinalBoss.getDefaultValue();
                     },
-                .min = 1,
-                .max = 16,
-                .suffix = "×",
             }),
-            rightPane, [](Pane& pane) {
+            rightPane,
+            [](Pane& pane) {
                 pane.clear();
+                pane.add_section("Health Multiplier");
                 pane.add_text(
-                    "Multiplies max HP of standard enemies: Bokoblins, Stalfos, "
-                    "Lizalfos, Keese, and all other regular encounters. "
-                    "1× is vanilla; only newly spawned enemies pick up changes.");
-            });
-        leftPane.register_control(
-            leftPane.add_child<NumberButton>(NumberButton::Props{
-                .key = "Mid-Boss HP ×",
-                .getValue = [] { return getSettings().game.hpMultMidBoss.getValue(); },
-                .setValue =
-                    [](int value) {
-                        getSettings().game.hpMultMidBoss.setValue(value);
-                        config::Save();
-                    },
-                .isDisabled = [] { return getSettings().game.speedrunMode; },
-                .isModified =
-                    [] {
-                        return getSettings().game.hpMultMidBoss.getValue() !=
-                               getSettings().game.hpMultMidBoss.getDefaultValue();
-                    },
-                .min = 1,
-                .max = 16,
-                .suffix = "×",
-            }),
-            rightPane, [](Pane& pane) {
-                pane.clear();
-                pane.add_text(
-                    "Multiplies max HP of sub-bosses: Ook, Dangoro, Death Sword, "
-                    "Deku Toad, Skull Kid, King Bulblin, Darkhammer, "
-                    "Twilit Bloat, Phantom Zant, etc.");
-            });
-        leftPane.register_control(
-            leftPane.add_child<NumberButton>(NumberButton::Props{
-                .key = "Boss HP ×",
-                .getValue = [] { return getSettings().game.hpMultBoss.getValue(); },
-                .setValue =
-                    [](int value) {
-                        getSettings().game.hpMultBoss.setValue(value);
-                        config::Save();
-                    },
-                .isDisabled = [] { return getSettings().game.speedrunMode; },
-                .isModified =
-                    [] {
-                        return getSettings().game.hpMultBoss.getValue() !=
-                               getSettings().game.hpMultBoss.getDefaultValue();
-                    },
-                .min = 1,
-                .max = 16,
-                .suffix = "×",
-            }),
-            rightPane, [](Pane& pane) {
-                pane.clear();
-                pane.add_text(
-                    "Multiplies max HP of dungeon bosses: Diababa, Fyrus, Morpheel, "
-                    "Stallord, Blizzeta, Armogohma, Argorok, and Zant.");
-            });
-        leftPane.register_control(
-            leftPane.add_child<NumberButton>(NumberButton::Props{
-                .key = "Final Boss HP ×",
-                .getValue = [] { return getSettings().game.hpMultFinalBoss.getValue(); },
-                .setValue =
-                    [](int value) {
-                        getSettings().game.hpMultFinalBoss.setValue(value);
-                        config::Save();
-                    },
-                .isDisabled = [] { return getSettings().game.speedrunMode; },
-                .isModified =
-                    [] {
-                        return getSettings().game.hpMultFinalBoss.getValue() !=
-                               getSettings().game.hpMultFinalBoss.getDefaultValue();
-                    },
-                .min = 1,
-                .max = 16,
-                .suffix = "×",
-            }),
-            rightPane, [](Pane& pane) {
-                pane.clear();
-                pane.add_text(
-                    "Multiplies max HP of the final boss sequence: Dark Beast Ganon "
-                    "and the Ganondorf sword fight on Hyrule Castle rooftop.");
+                    "Per-category true max-HP multipliers (1–16×). 1× is vanilla; only newly "
+                    "spawned enemies pick up changes.");
+                auto addCategoryMult = [&](const Rml::String& key, ConfigVar<int>& value) {
+                    pane.add_child<NumberButton>(NumberButton::Props{
+                        .key = key,
+                        .getValue = [&value] { return value.getValue(); },
+                        .setValue =
+                            [&value](int mult) {
+                                value.setValue(mult);
+                                config::Save();
+                            },
+                        .isDisabled = [] { return getSettings().game.speedrunMode; },
+                        .isModified =
+                            [&value] {
+                                return value.getValue() != value.getDefaultValue();
+                            },
+                        .min = 1,
+                        .max = 16,
+                        .suffix = "×",
+                    });
+                };
+                addCategoryMult("Common", getSettings().game.hpMultNormal);
+                addCategoryMult("Mid-Boss", getSettings().game.hpMultMidBoss);
+                addCategoryMult("Boss", getSettings().game.hpMultBoss);
+                addCategoryMult("Final Boss", getSettings().game.hpMultFinalBoss);
+                pane.add_rml(
+                    "<br/><b>Common</b>: Bokoblins, Stalfos, Lizalfos, Keese, and other regular "
+                    "encounters.<br/>"
+                    "<b>Mid-Boss</b>: Ook, Dangoro, Death Sword, Deku Toad, Skull Kid, King "
+                    "Bulblin, Darkhammer, Twilit Bloat, Phantom Zant, etc.<br/>"
+                    "<b>Boss</b>: Diababa, Fyrus, Morpheel, Stallord, Blizzeta, Armogohma, "
+                    "Argorok, and Zant.<br/>"
+                    "<b>Final Boss</b>: Dark Beast Ganon and the Ganondorf sword fight.");
             });
         leftPane.register_control(
             leftPane.add_child<NumberButton>(NumberButton::Props{
@@ -1379,12 +1338,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                     "Stacks with true HP multipliers if both are raised. "
                     "Independent of enemy category.");
             });
-        addOption("Show Lock-on HP Debug", getSettings().game.showLockonHpDebug,
-            "While Z-targeting, shows the locked enemy's current HP, max HP, ALBW category, "
-            "and true HP multiplier in a small on-screen overlay.");
-        addOption("Darknut Bash Debug Log", getSettings().game.showDarknutBashDebug,
-            "Logs Darknut bash/guard-break state and shield bash-start charge snapshots to "
-            "Documents/dusklight/albw_darknut_debug.txt (truncated once per session).");
         addOption("Stick Cycle Lock-on", getSettings().game.stickCycleLockon,
             "While Z-targeting, right stick left/right cycles between nearby enemies that are "
             "in combat with you instead of manually rotating the lock-on camera.");
@@ -1396,76 +1349,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Shield Parry & Bash Charges", getSettings().game.shieldParryCombat,
             "Perfect-guard timing earns bash charges and ALBW meter. Failed blocks cost meter "
             "and charges. Off uses traditional TP guard (no parry economy).");
-        addOption("Hidden Skill Rework", getSettings().game.hiddenSkillRework,
-            "Reworks hidden skill combat: Helm Splitter bash punish flow, finisher dispatch "
-            "priority, ALBW meter costs, and Jump Strike charge requirement. "
-            "A further reworking of the Hidden Skills system that challenges players to test "
-            "their combat skills with the Focused Arts system when Focused Arts Test is on. "
-            "Warning: Game combat may break without this setting turned on and hidden skills acquired.");
-        config_bool_select(leftPane, rightPane, getSettings().game.focusedArtsTest, {
-            .key = "Focused Arts Test",
-            .helpText =
-                "Enables the Focused Arts charge bank, meter fill, and tier spend columns. "
-                "Requires Hidden Skill Rework. Runs alongside existing rework hooks; FA overrides "
-                "only at tier spend moments.",
-            .isDisabled =
-                [] {
-                    return !getSettings().game.hiddenSkillRework.getValue();
-                },
-        });
-        static constexpr std::array<const char*, 3> kFocusedArtsCheatModes = {
-            "Off",
-            "FA Cheat ON",
-            "With Debug",
-        };
-        leftPane.register_control(
-            leftPane.add_select_button({
-                .key = "Focused Arts Cheat",
-                .getValue =
-                    [] {
-                        const auto mode = getSettings().game.focusedArtsCheat.getValue();
-                        const auto index = static_cast<size_t>(mode);
-                        return kFocusedArtsCheatModes[index < kFocusedArtsCheatModes.size()
-                                                             ? index
-                                                             : 0];
-                    },
-                .isDisabled =
-                    [] {
-                        return getSettings().game.speedrunMode ||
-                               !getSettings().game.hiddenSkillRework.getValue() ||
-                               !getSettings().game.focusedArtsTest.getValue();
-                    },
-                .isModified =
-                    [] {
-                        return getSettings().game.focusedArtsCheat.getValue() !=
-                               getSettings().game.focusedArtsCheat.getDefaultValue();
-                    },
-            }),
-            rightPane,
-            [](Pane& pane) {
-                for (int i = 0; i < static_cast<int>(kFocusedArtsCheatModes.size()); ++i) {
-                    pane
-                        .add_button({
-                            .text = kFocusedArtsCheatModes[i],
-                            .isSelected =
-                                [i] {
-                                    return getSettings().game.focusedArtsCheat.getValue() ==
-                                           static_cast<FocusedArtsCheatMode>(i);
-                                },
-                        })
-                        .on_pressed([i] {
-                            mDoAud_seStartMenu(kSoundItemChange);
-                            getSettings().game.focusedArtsCheat.setValue(
-                                static_cast<FocusedArtsCheatMode>(i));
-                            config::Save();
-                        });
-                }
-                pane.add_rml(
-                    "<b>Off</b>: shop/save tiers only.<br/>"
-                    "<b>FA Cheat ON</b>: effective tier 3 (max bank + finishers) for playtest.<br/>"
-                    "<b>With Debug</b>: same as ON plus an in-game FA overlay (bank, fill, ALBW, "
-                    "recent events) — no need to open the dev console.");
-            });
         addOption("Shield Durability", getSettings().game.shieldDurability,
             "Shield HP by tier; failed blocks drain it. Hylian repairs on parry and takes more "
             "damage per hit. Break at 0 uses guard break (replaces vanilla slip counter).");
@@ -1480,51 +1363,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
         addOption("Enemy Death Rupees", getSettings().game.enemyDeathRupees,
             "Credit rupees directly to your wallet when enemies die and when boss fights end. "
             "Vanilla drop tables (hearts, jars, ground rupees) are unchanged.");
-        static constexpr std::array<const char*, 3> kTrueAlbwModes = {
-            "Off",
-            "True ALBW",
-            "TRUETEST",
-        };
-        leftPane.register_control(
-            leftPane.add_select_button({
-                .key = "True ALBW Mode",
-                .getValue =
-                    [] {
-                        const auto mode = getSettings().game.trueAlbwMode.getValue();
-                        const auto index = static_cast<size_t>(mode);
-                        return kTrueAlbwModes[index < kTrueAlbwModes.size() ? index : 0];
-                    },
-                .isDisabled = [] { return !dusk::truetest::canChangeGlobalTrueAlbwMode(); },
-                .isModified =
-                    [] {
-                        return getSettings().game.trueAlbwMode.getValue() !=
-                               getSettings().game.trueAlbwMode.getDefaultValue();
-                    },
-            }),
-            rightPane,
-            [](Pane& pane) {
-                for (int i = 0; i < static_cast<int>(kTrueAlbwModes.size()); ++i) {
-                    pane
-                        .add_button({
-                            .text = kTrueAlbwModes[i],
-                            .isSelected =
-                                [i] {
-                                    return getSettings().game.trueAlbwMode.getValue() ==
-                                           static_cast<TrueAlbwMode>(i);
-                                },
-                        })
-                        .on_pressed([i] {
-                            mDoAud_seStartMenu(kSoundItemChange);
-                            getSettings().game.trueAlbwMode.setValue(static_cast<TrueAlbwMode>(i));
-                            config::Save();
-                        });
-                }
-                pane.add_rml(
-                    "<br/><b>Off</b>: vanilla reclaim-what-you-lost rental shop.<br/>"
-                    "<b>True ALBW</b>: full rental catalog from the Postman (shop only).<br/>"
-                    "<b>TRUETEST</b>: enables TRUETEST new-save prompt and per-save world "
-                    "bootstrap. Change at file select or title — locked during field play.");
-            });
         static constexpr std::array<const char*, 3> kExtraItemSlotModes = {
             "Off",
             "Extra Only",
@@ -1579,13 +1417,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Recommended once per playthrough. Halves heart container and heart-piece "
             "set rewards; adds Postman heart and stamina upgrades. Disables dungeon ALBW "
             "meter growth in favor of shop purchases.");
-        addOption("Boss Refinement", getSettings().game.bossRefinement,
-            "Treat Ordon, Wooden, and Master swords as valid boss swords (Zant, Ganondorf, "
-            "Argorok). Future layers add Zant tool phases and Ganondorf duel redesign.");
-        addOption("Shade's Refuge", getSettings().game.shadeRefuge,
-            "Lies-of-P-style Shade Watcher rest points: rest to full-heal and set a respawn "
-            "point, respawn at the last watcher on death, and buy a return-to-watcher service "
-            "in the shop. Off disables the whole system. Work in progress.");
         addSpeedrunDisabledOption(
             "Instant Death", getSettings().game.instantDeath, "Any hit will instantly kill you.");
         addSpeedrunDisabledOption("No Heart Drops", getSettings().game.noHeartDrops,
@@ -1711,92 +1542,6 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Extends Clawshot behavior beyond the normal game rules.");
         addCheat("Always Greatspin", getSettings().game.alwaysGreatspin,
             "Allows the Great Spin attack without requiring full health.");
-        addCheat("Hurricane test", getSettings().game.hurricaneTest,
-            "Stick hard left/right + tap sword for a sustained Great Spin prototype (~5 s, then ~2 s tired lockout).");
-        leftPane.register_control(
-            leftPane
-                .add_select_button({
-                    .key = "Hurricane test SE",
-                    .getValue =
-                        [] {
-                            return Rml::String(
-                                dusk::getHurricaneTestSeName(dusk::getHurricaneTestSeIndex()));
-                        },
-                    .isDisabled =
-                        [] {
-                            return getSettings().game.speedrunMode ||
-                                   !getSettings().game.hurricaneTest.getValue();
-                        },
-                    .isModified =
-                        [] {
-                            return getSettings().game.hurricaneTestSe.getValue() !=
-                                   getSettings().game.hurricaneTestSe.getDefaultValue();
-                        },
-                }),
-            rightPane,
-            [](Pane& pane) {
-                pane.clear();
-                pane.add_text(
-                    "Same Zant + tornado + spinner (35%) mix every time — only tornado pitch/speed changes.");
-                for (int i = 0; i < dusk::getHurricaneTestSeCount(); i++) {
-                    pane.add_button({
-                            .text = dusk::getHurricaneTestSeName(i),
-                            .isSelected =
-                                [i] {
-                                    return getSettings().game.hurricaneTestSe.getValue() == i;
-                                },
-                        })
-                        .on_pressed([i] {
-                            mDoAud_seStartMenu(kSoundItemChange);
-                            getSettings().game.hurricaneTestSe.setValue(i);
-                            config::Save();
-                        });
-                }
-            });
-
-        static constexpr const char* kHurricaneVfxModes[] = {"Whirlwind", "Base VFX"};
-        leftPane.register_control(
-            leftPane.add_select_button({
-                .key = "Hurricane test VFX",
-                .getValue =
-                    [] {
-                        const auto mode = getSettings().game.hurricaneTestVfx.getValue();
-                        return kHurricaneVfxModes[static_cast<u8>(mode)];
-                    },
-                .isDisabled =
-                    [] {
-                        return getSettings().game.speedrunMode ||
-                               !getSettings().game.hurricaneTest.getValue();
-                    },
-                .isModified =
-                    [] {
-                        return getSettings().game.hurricaneTestVfx.getValue() !=
-                               getSettings().game.hurricaneTestVfx.getDefaultValue();
-                    },
-            }),
-            rightPane,
-            [](Pane& pane) {
-                pane.clear();
-                pane.add_text(
-                    "Whirlwind: upright spray (left-spin local tilts only). Base VFX: horizontal swing — sword matrix + slash local tilts on both directions (default).");
-                for (int i = 0; i < 2; i++) {
-                    pane.add_button({
-                            .text = kHurricaneVfxModes[i],
-                            .isSelected =
-                                [i] {
-                                    return static_cast<int>(
-                                               getSettings().game.hurricaneTestVfx.getValue()) == i;
-                                },
-                        })
-                        .on_pressed([i] {
-                            mDoAud_seStartMenu(kSoundItemChange);
-                            getSettings().game.hurricaneTestVfx.setValue(
-                                static_cast<HurricaneVfxMode>(i));
-                            config::Save();
-                        });
-                }
-            });
-
         addCheat("Fast Iron Boots", getSettings().game.enableFastIronBoots,
             "Speeds up movement while heavy, including wearing the Iron Boots, holding the Ball and Chain, wearing Magic Armor without rupees, etc.");
         addCheat("Can Transform Anywhere", getSettings().game.canTransformAnywhere,
@@ -2092,6 +1837,13 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .key = "Boss Health Bars",
                 .helpText = "Show a health bar with the boss name for major boss fights. "
                             "Scales with the Boss HP and Boss Refinement settings.",
+            });
+        config_bool_select(leftPane, rightPane, getSettings().game.showEponaSpurHud,
+            {
+                .key = "Epona Spur HUD",
+                .helpText = "Show dash-spur icons while riding Epona.<br/><br/>"
+                            "Does not affect wolf bite charges, shield durability, parry icons, "
+                            "or other HUD elements.",
             });
         leftPane.register_control(
             leftPane.add_select_button({

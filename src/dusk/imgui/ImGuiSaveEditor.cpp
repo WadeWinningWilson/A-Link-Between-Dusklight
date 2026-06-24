@@ -622,16 +622,16 @@ namespace dusk {
 
         if (ImGui::BeginCombo("Shield", itemMap.find(statusA.mSelectEquip[2])->second.m_name.c_str())) {
             if (ImGui::Selectable("None")) {
-                statusA.mSelectEquip[2] = dItemNo_NONE_e;
+                dMeter2_applyEquippedShield(dItemNo_NONE_e);
             }
             if (ImGui::Selectable("Wooden Shield")) {
-                statusA.mSelectEquip[2] = dItemNo_SHIELD_e;
+                dMeter2_applyEquippedShield(dItemNo_SHIELD_e);
             }
             if (ImGui::Selectable("Ordon Shield")) {
-                statusA.mSelectEquip[2] = dItemNo_WOOD_SHIELD_e;
+                dMeter2_applyEquippedShield(dItemNo_WOOD_SHIELD_e);
             }
             if (ImGui::Selectable("Hylian Shield")) {
-                statusA.mSelectEquip[2] = dItemNo_HYLIA_SHIELD_e;
+                dMeter2_applyEquippedShield(dItemNo_HYLIA_SHIELD_e);
             }
             ImGui::EndCombo();
         }
@@ -990,8 +990,7 @@ namespace dusk {
                 for (int i = 0; i < 3; i++) {
                     bool got = dComIfGs_isItemFirstBit(shield_list[i]) != 0;
                     if (ImGui::Checkbox(fmt::format("{0}##shield_{1}", sShieldNames[i], i).c_str(), &got)) {
-                        if (got) dComIfGs_onItemFirstBit(shield_list[i]);
-                        else     dComIfGs_offItemFirstBit(shield_list[i]);
+                        dMeter2_setShieldOwned(shield_list[i], got);
                     }
                 }
                 ImGui::TreePop();

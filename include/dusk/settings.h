@@ -97,16 +97,13 @@ enum class TrueAlbwMode : int {
     TrueTest = 2,
 };
 
-enum class HurricaneVfxMode : u8 {
-    WHIRLWIND = 0,
-    BASE = 1,
-};
-
 // Focused Arts playtest cheat: tier 3 without shop; WithDebug adds an in-game HUD overlay.
 enum class FocusedArtsCheatMode : int {
     Off = 0,
     On = 1,
     WithDebug = 2,
+    OnMaxBank = 3,
+    WithDebugMaxBank = 4,
 };
 
 namespace config {
@@ -183,15 +180,9 @@ struct ConfigEnumRange<TrueAlbwMode> {
 };
 
 template <>
-struct ConfigEnumRange<HurricaneVfxMode> {
-    static constexpr auto min = HurricaneVfxMode::WHIRLWIND;
-    static constexpr auto max = HurricaneVfxMode::BASE;
-};
-
-template <>
 struct ConfigEnumRange<FocusedArtsCheatMode> {
     static constexpr auto min = FocusedArtsCheatMode::Off;
-    static constexpr auto max = FocusedArtsCheatMode::WithDebug;
+    static constexpr auto max = FocusedArtsCheatMode::WithDebugMaxBank;
 };
 
 template <>
@@ -251,8 +242,9 @@ struct UserSettings {
         // Phase 4: LoP-style parry, bash charges, ALBW rewards/penalties. Off = vanilla guard slip only.
         ConfigVar<bool> shieldParryCombat;
         // Helm punish flow, hidden-skill dispatch, ALBW meter costs, Jump Strike charge gate.
+        // Always on (ALBW core); retained for save compat — not shown in settings UI.
         ConfigVar<bool> hiddenSkillRework;
-        // Focused Arts charge bank + spend columns (requires hiddenSkillRework).
+        // Focused Arts charge bank + spend columns (Gameplay → ALBW Unfinished Settings).
         ConfigVar<bool> focusedArtsTest;
         // Playtest cheat: effective shop tier 3; WithDebug shows in-game FA overlay.
         ConfigVar<FocusedArtsCheatMode> focusedArtsCheat;
@@ -280,6 +272,8 @@ struct UserSettings {
         // Off = vanilla TP corner layout; VanillaHearts = relayout keeping hearts;
         // HealthBar = relayout with a LoP health bar. See docs/albw-hud-lop-layout-brief.md.
         ConfigVar<LopHudMode> lopHud;
+        // Epona dash-spur icons while riding. Does not affect wolf charges, shield HUD, or parry icons.
+        ConfigVar<bool> showEponaSpurHud;
         // True ALBW / TRUETEST mode — see docs/TrueALBWWorld.md. Change only before loading a file.
         ConfigVar<TrueAlbwMode> trueAlbwMode;
         // ============================================
@@ -397,8 +391,6 @@ struct UserSettings {
         ConfigVar<bool> superClawshot;
         ConfigVar<bool> alwaysGreatspin;
         ConfigVar<bool> hurricaneTest;
-        ConfigVar<int> hurricaneTestSe;
-        ConfigVar<HurricaneVfxMode> hurricaneTestVfx;
         ConfigVar<bool> enableFastIronBoots;
         ConfigVar<bool> canTransformAnywhere;
         ConfigVar<bool> fastRoll;

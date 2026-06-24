@@ -13,11 +13,13 @@ void dAlbwLockout_onEnd();
 void dAlbwLockout_update();
 
 void dAlbwLockout_onArrowFired();
+void dAlbwLockout_onBombArrowFired();
 void dAlbwLockout_onSlingFired();
 void dAlbwLockout_onHookshotFired();
 void dAlbwLockout_onDoubleHookshotFired();
 
 bool dAlbwLockout_canFireBow();
+bool dAlbwLockout_canFireBombArrow();
 bool dAlbwLockout_canFireSling();
 bool dAlbwLockout_canUseDoubleHookshot();
 

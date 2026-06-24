@@ -10,6 +10,7 @@
 #include "d/d_item_data.h"
 #include "d/d_com_inf_game.h"
 #include "d/d_save.h"
+#include "dusk/truetest.hpp"
 
 namespace {
 
@@ -32,7 +33,7 @@ bool hasMetOocooSrOnce() {
 }
 
 bool postmanRentalActive() {
-    return dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[625]);
+    return dusk::truetest::isAlbwPostmanUnlocked();
 }
 
 }  // namespace

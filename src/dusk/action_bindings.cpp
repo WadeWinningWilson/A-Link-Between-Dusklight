@@ -4,6 +4,7 @@
 #include "dusk/dpad_quick_swap.h"
 #include "dusk/settings.h"
 #include "dusk/ui/ui.hpp"
+#include "m_Do/m_Do_controller_pad.h"
 
 #include <SDL3/SDL_gamepad.h>
 #include <SDL3/SDL_scancode.h>
@@ -31,6 +32,7 @@ ActionBindsMap& getActionBinds() {
         {ActionBinds::CYCLE_SWORD,         {&getSettings().actionBindings.cycleSword,        "Cycle Sword"}},
         {ActionBinds::CYCLE_SHIELD,        {&getSettings().actionBindings.cycleShield,       "Cycle Shield"}},
         {ActionBinds::QUICK_TRANSFORM,     {&getSettings().actionBindings.quickTransform,    "Quick Transform"}},
+        {ActionBinds::OPEN_ITEM_WHEEL,     {&getSettings().actionBindings.openItemWheel,     "Open Item Wheel"}},
     };
     return actionBinds;
 }
@@ -228,6 +230,17 @@ bool dpadDownReservedForQuickSwap(u32 port) {
 bool dpadRightReservedForQuickSwap(u32 port) {
     return isDpadQuickSwapEnabled() &&
            bindUsesPadButton(ActionBinds::CYCLE_SHIELD, port, PAD_BUTTON_RIGHT);
+}
+
+bool isPadModifierRHeld(u32 port) {
+    return mDoCPd_c::getHoldR(port) != 0 || mDoCPd_c::getHoldLockR(port) != 0;
+}
+
+bool isPadModifierRHeldExclusive(u32 port) {
+    const bool rHeld = isPadModifierRHeld(port);
+    const bool lHeld =
+        mDoCPd_c::getHoldL(port) != 0 || mDoCPd_c::getHoldLockL(port) != 0;
+    return rHeld && !lHeld;
 }
 #endif
 

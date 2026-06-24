@@ -135,4 +135,10 @@ namespace dusk::audio {
     extern bool DumpAudio;
     extern bool EnableHrtf;
     extern f32 HrtfGain;
+
+    void setHurricaneSpinSeLoopActive(bool active);
+    void registerHurricaneSpinWaveAram(u32 aramAddress);
+    void excludeHurricaneSpinWaveAram(u32 aramAddress);
+    void clearHurricaneSpinWaveRegistration();
+    bool isHurricaneSpinWaveExcluded(u32 aramAddress);
 }

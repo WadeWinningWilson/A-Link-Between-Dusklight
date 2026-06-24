@@ -879,6 +879,7 @@ void dMeter2_onALBWSling();
 void dMeter2_onALBWBoom();
 void dMeter2_onALBWArrow();
 void dMeter2_onALBWBomb();
+void dMeter2_onALBWBombArrow();
 void dMeter2_onALBWIronball();
 void dMeter2_onALBWSpinner();
 void dMeter2_onALBWDomRod();
@@ -892,6 +893,7 @@ bool dMeter2_canALBWSling();
 bool dMeter2_canALBWBoom();
 bool dMeter2_canALBWArrow();
 bool dMeter2_canALBWBomb();
+bool dMeter2_canALBWBombArrow();
 bool dMeter2_canALBWIronball();
 bool dMeter2_canALBWHookshot();
 bool dMeter2_canALBWDoubleHookshot();
@@ -900,6 +902,7 @@ bool dMeter2_isALBWArmorDepleted();
 bool dMeter2_isALBWDepleted();
 bool dMeter2_isALBWLocked();
 bool dMeter2_isALBWMovementExhausted();
+void dMeter2_drainALBWToLockout();
 void dMeter2_restoreALBWMeterToFull();
 bool dMeter2_canALBWSpinner();
 bool dMeter2_canALBWDomRod();
@@ -920,6 +923,17 @@ bool dMeter2_canAcquireShield(u8 itemNo);
 void dMeter2_onShieldDestroyedForRental(u8 itemNo);
 bool dMeter2_isShieldRentalEligible(u8 itemNo);
 void dMeter2_grantRentalShield(u8 itemNo);
+// Multi-shield upgrade (future shop): one-time purchase to hold all three shield tiers.
+// Save editor can also grant multiple shields via item first bits without this flag.
+bool dMeter2_playerHasMultiShieldUpgrade();
+void dMeter2_onMultiShieldUpgradePurchase();
+int dMeter2_countOwnedShields();
+bool dMeter2_shieldIsOwned(u8 itemNo);
+u8 dMeter2_getNextOwnedShield(u8 currentEquip);
+bool dMeter2_equipOwnedShield(u8 itemNo);
+void dMeter2_applyEquippedShield(u8 itemNo);
+void dMeter2_setShieldOwned(u8 itemNo, bool owned);
+bool dMeter2_grantShieldOwnership(u8 itemNo);
 // ============================================
 // NEW CODE — ALBW Port (Outfit / clothes rental)
 // dMeter2_isCasualWearEligible() — "worn once" gate for the Ordon outfit: true

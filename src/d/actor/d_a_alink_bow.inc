@@ -5,6 +5,7 @@
 
 #include "d/actor/d_a_alink.h"
 #include "d/d_com_inf_game.h"
+#include "d/d_meter2_info.h"
 #include "d/actor/d_a_arrow.h"
 #include "d/actor/d_a_horse.h"
 
@@ -113,13 +114,27 @@ void daAlink_c::makeArrow() {
     // MODIFIED CODE — ALBW Port
     // Pre-fire check: arrow requires 5450 units (50% of
     // base meter) available before the actor is created.
-    // If unaffordable, arrow_p stays NULL and the player
-    // hears the empty-quiver click on release — no crash.
+    // Bomb arrows use field_0x301e and drain 8175 units
+    // (3/4 base meter) — not save bomb count.
     // ============================================
     if (dMeter2_canALBWArrow()) {
+        if (mEquipItem == dItemNo_BOMB_ARROW_e && dMeter2_canALBWBombArrow()) {
+            field_0x301e = 1;
+        } else if (field_0x301e == 1 && mEquipItem == dItemNo_BOMB_ARROW_e &&
+                   !dMeter2_canALBWBombArrow())
+        {
+            field_0x301e = 0;
+        }
+
+        mItemAcKeep.setData(daArrow_c::makeArrow(this, field_0x301e));
+
+        if (mItemAcKeep.getActor() == NULL) {
+            OS_REPORT("メモリが足りなくてアイテム発生できません！！\n");
+            JUT_ASSERT(221, 0);
+        }
+    }
 #else
     if (dComIfGs_getArrowNum() != 0) {
-#endif
         if (field_0x301e == 1 && dComIfGp_getSelectItemNum(mSelectItemId) == 0) {
             field_0x301e = 0;
         }
@@ -127,14 +142,11 @@ void daAlink_c::makeArrow() {
         mItemAcKeep.setData(daArrow_c::makeArrow(this, field_0x301e));
 
         if (mItemAcKeep.getActor() == NULL) {
-            // "Not enough memory to create item!!"
             OS_REPORT("メモリが足りなくてアイテム発生できません！！\n");
             JUT_ASSERT(221, 0);
         }
     }
-    // ============================================
-    // MODIFIED CODE ENDS HERE
-    // ============================================
+#endif
 
     mItemVar0.field_0x3018 = 0;
 }
@@ -166,8 +178,13 @@ void daAlink_c::setBowOrSlingStatus() {
 
 void daAlink_c::changeArrowType() {
     if (checkCanoeSlider() || (mEquipItem == dItemNo_BOW_e && field_0x301e == 0) ||
+#if TARGET_PC
+        (mEquipItem == dItemNo_BOMB_ARROW_e && field_0x301e == 0 &&
+         !dMeter2_canALBWBombArrow()) ||
+#else
         (mEquipItem == dItemNo_BOMB_ARROW_e && field_0x301e == 0 &&
          dComIfGp_getSelectItemNum(mSelectItemId) == 0) ||
+#endif
         (mEquipItem == dItemNo_HAWK_ARROW_e && checkAttentionLock()))
     {
         return;
@@ -218,11 +235,19 @@ BOOL daAlink_c::cancelBowMove() {
 void daAlink_c::setBowReadyAnime() {
     if (!checkBowAnime()) {
         if (mEquipItem == dItemNo_BOMB_ARROW_e) {
+#if TARGET_PC
+            if (dMeter2_canALBWBombArrow()) {
+                field_0x301e = 1;
+            } else {
+                field_0x301e = 0;
+            }
+#else
             if (dComIfGp_getSelectItemNum(mSelectItemId) != 0) {
                 field_0x301e = 1;
             } else {
                 field_0x301e = 0;
             }
+#endif
         } else {
             field_0x301e = 0;
         }
@@ -380,10 +405,13 @@ BOOL daAlink_c::checkUpperItemActionBow() {
                     // MODIFIED CODE — ALBW Port
                     // Source: bow drain hook, ALBW main.cpp
                     // Arrow count and special-type decrements bypassed on PC.
-                    // Meter is the only resource; arrow count never changes.
-                    // Drain: 5450 internal units (1/2 meter per shot).
+                    // Meter is the only resource; bomb arrows drain both costs.
                     // ============================================
-                    dMeter2_onALBWArrow();
+                    if (arrow_p->checkBombArrow()) {
+                        dMeter2_onALBWBombArrow();
+                    } else {
+                        dMeter2_onALBWArrow();
+                    }
                     // ============================================
                     // MODIFIED CODE ENDS HERE
                     // ============================================

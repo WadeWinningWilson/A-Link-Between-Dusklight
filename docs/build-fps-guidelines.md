@@ -17,7 +17,49 @@
 | **5** | **[performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md)** | Historical drive evidence if you need SHAs / what was ruled out |
 | **6** | **[albw-hud-lop-layout-brief.md](albw-hud-lop-layout-brief.md)** | LoP layout *behavior* spec (feature agent); cross-ref §2 for FPS |
 
-**Feature-specific briefs** (read only if the diff touches that area): `boss-fights-handoff.md`, `albw-boss-hp-hud-tuning-brief.md`, `albw-hud-lop-layout-v3-instructions.md`.
+**Feature-specific briefs** (read only if the diff touches that area): `boss-fights-handoff.md`, `TrueALBWWorld.md` (TRUETEST / open-world bootstrap), `albw-boss-hp-hud-tuning-brief.md`, `albw-hud-lop-layout-v3-instructions.md`, `testing-parry-rework.md` (RB parry + parry VFX/SFX test toggle).
+
+---
+
+## Feature agent onboarding (HUD, bosses, combat, TRUETEST, etc.)
+
+**Always read first:**
+
+| Doc | Why |
+|-----|-----|
+| [build-fps-guidelines.md](build-fps-guidelines.md) | Canonical build (`build_run.bat` / RelWithDebInfo), launch hygiene (no `DUSK_DRIVE*`), what never goes in the repo |
+| [commit-and-push.md](commit-and-push.md) | Push to **upstream** (`WadeWinningWilson/ALBW-Dusklight`), not `origin`; stage/don't-stage rules |
+
+**If the work touches…**
+
+| Area | Also read |
+|------|-----------|
+| HUD / meter / shield / `game.lopHud` | [hud-performance-handoff.md](hud-performance-handoff.md) + [albw-hud-lop-layout-brief.md](albw-hud-lop-layout-brief.md) |
+| LoP layout details | [albw-hud-lop-layout-v3-instructions.md](albw-hud-lop-layout-v3-instructions.md) |
+| Boss fights / refinement | [boss-fights-handoff.md](boss-fights-handoff.md) |
+| Boss HP bar tuning | [albw-boss-hp-hud-tuning-brief.md](albw-boss-hp-hud-tuning-brief.md) |
+| True ALBW world / TRUETEST bootstrap | [TrueALBWWorld.md](TrueALBWWorld.md) |
+
+**After they build — hand off here:**
+
+| Chat | Doc entry |
+|------|-----------|
+| Build-analysis / FPS review | This file → Doc map section, then [hud-performance-handoff.md](hud-performance-handoff.md) if HUD changed |
+
+**Short prompt (paste into any new feature chat):**
+
+> Before coding: read `docs/build-fps-guidelines.md` and `docs/commit-and-push.md`.  
+> Build with `build_run.bat` only (RelWithDebInfo). No drive/conavigate code in `src/`.  
+> If HUD/meter/shield: also read `docs/hud-performance-handoff.md`.  
+> When done: git diff summary + build result → build-analysis chat for FPS check before commit.  
+> Push to **upstream** (ALBW-Dusklight), not origin.
+
+**Hard rules (one-liners for any chat):**
+
+- **Build:** `build/windows-msvc-relwithdebinfo/dusklight.exe` via `build_run.bat`
+- **Never commit:** `local_dev_backup/`, drive/conavigate sources, `albw_*_debug.txt`
+- **Don't revert features to fix FPS** — optimize in place; use the build-analysis chat
+- **Don't commit/push unless the user explicitly asks**
 
 ### Build-review workflow (same as the long-running analysis chat)
 
@@ -148,3 +190,4 @@ If field is **~50–70** on RelWithDebInfo with clean env, suspect **wrong exe, 
 | [future-performance-leaning.md](future-performance-leaning.md) | Original suspicions + ineffective-methods note |
 | [commit-and-push.md](commit-and-push.md) | Fork remotes, commit/push workflow |
 | [hud-performance-handoff.md](hud-performance-handoff.md) | **LoP HUD FPS — for Claude/feature agents** |
+| [TrueALBWWorld.md](TrueALBWWorld.md) | TRUETEST / open-world bootstrap design handoff |

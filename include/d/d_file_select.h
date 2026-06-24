@@ -242,6 +242,13 @@ public:
         DATASELPROC_BACK_DAT_SEL_WAIT2,
         DATASELPROC_BACK_DAT_SEL_PANE_MOVE,
         DATASELPROC_TO_NAME_MOVE2,
+#if TARGET_PC
+        DATASELPROC_TRUETEST_MODE_IN,
+        DATASELPROC_TRUETEST_MODE_SELECT,
+        DATASELPROC_TRUETEST_MODE_CURSOR_MOVE,
+        DATASELPROC_TRUETEST_MODE_CLOSE,
+        DATASELPROC_TRUETEST_MODE_CANCEL,
+#endif
         DATASELPROC_NEXT_MODE_WAIT,
 
         #if PLATFORM_WII || PLATFORM_SHIELD
@@ -415,6 +422,16 @@ public:
     void yesnoWakuAlpahAnmInit(u8, u8, u8, u8);
     bool yesnoWakuAlpahAnm(u8);
     #if TARGET_PC
+    void headerTxtSetRaw(const char* i_text, u8 i_type, u8 param_3);
+    void setTrueTestLabels();
+    void startTrueTestPrompt();
+    void startNewGameNameInput();
+    void applyTrueTestNewSavePreset();
+    void trueTestModeIn();
+    void trueTestModeSelect();
+    void trueTestModeCursorMove();
+    void trueTestModeClose();
+    void trueTestModeCancel();
     void fileSelectWide();
     bool pointerDataSelect();
     bool pointerMenuSelect();
@@ -737,6 +754,7 @@ public:
     /* 0x2378 */ J2DPicture* mpFadePict;
     #endif
 #ifdef TARGET_PC
+    bool mTrueTestPending;
     dDlst_FileSelFade_c mFadeDlst;
 #endif
 
@@ -748,7 +766,7 @@ public:
 };
 
 #ifdef TARGET_PC
-STATIC_ASSERT(sizeof(dFile_select_c) == 0x237C + sizeof(dDlst_FileSelFade_c));
+STATIC_ASSERT(sizeof(dFile_select_c) == 0x237C + sizeof(bool) + sizeof(dDlst_FileSelFade_c));
 #else
 STATIC_ASSERT(sizeof(dFile_select_c) == 0x237C);
 #endif

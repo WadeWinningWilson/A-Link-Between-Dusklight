@@ -692,7 +692,12 @@ void dMw_c::key_wait_proc() {
                 mMenuProc = DMAP_OPEN;
                 dMw_dmap_create();
             }
-        } else if ((((dMw_UP_TRIGGER() || dMw_DOWN_TRIGGER()) && !dMw_LEFT_TRIGGER() && !dMw_RIGHT_TRIGGER()) || dMeter2Info_isMenuInForce(2) || dMeter2Info_isTouchKeyCheck(2)) &&
+        } else if ((((dMw_UP_TRIGGER() || dMw_DOWN_TRIGGER()
+#if TARGET_PC
+                      || (dusk::isActionBound(dusk::ActionBinds::OPEN_ITEM_WHEEL, 0) &&
+                          dusk::getActionBindTrig(dusk::ActionBinds::OPEN_ITEM_WHEEL, 0))
+#endif
+                      ) && !dMw_LEFT_TRIGGER() && !dMw_RIGHT_TRIGGER()) || dMeter2Info_isMenuInForce(2) || dMeter2Info_isTouchKeyCheck(2)) &&
                    dMeter2Info_isWindowAccept(2) &&
                    (dMeter2Info_getMapStatus() == 0 || dMeter2Info_getMapStatus() == 1) &&
                    dMeter2Info_isItemOpenCheck() &&
@@ -708,8 +713,19 @@ void dMw_c::key_wait_proc() {
                 field_0x14B = 1;
                 dMw_ring_create(2);
             } else {
+                u8 ringOrigin = 0;
+#if TARGET_PC
+                if (!dMw_UP_TRIGGER() &&
+                    dusk::getActionBindTrig(dusk::ActionBinds::OPEN_ITEM_WHEEL, 0))
+                {
+                    daPy_py_c* player = daPy_getPlayerActorClass();
+                    if (player != nullptr && player->checkWolf()) {
+                        ringOrigin = 2;
+                    }
+                }
+#endif
                 field_0x14B = 2;
-                dMw_ring_create(0);
+                dMw_ring_create(ringOrigin);
             }
 
             mMenuProc = RING_OPEN;

@@ -382,7 +382,10 @@ template class ConfigImpl<dusk::MenuScaling>;
 template class ConfigImpl<dusk::Resampler>;
 template class ConfigImpl<dusk::MagicArmorMode>;
 template class ConfigImpl<dusk::ParryIcons>;
+template class ConfigImpl<dusk::LopHudMode>;
 template class ConfigImpl<dusk::ExtraItemSlotMode>;
+template class ConfigImpl<dusk::TrueAlbwMode>;
+template class ConfigImpl<dusk::FocusedArtsCheatMode>;
 template class ConfigImpl<dusk::ui::ControlLayout>;
 }  // namespace dusk::config
 
@@ -443,6 +446,19 @@ static void LoadFromPath(const char* path) {
             DuskConfigLog.error("Failed to load key '{}' from config: {}", key, e.what());
         }
     }
+
+    if (j.contains("game.trueAlbwShop")) {
+        try {
+            if (j["game.trueAlbwShop"].get<bool>() &&
+                dusk::getSettings().game.trueAlbwMode.getValue() == dusk::TrueAlbwMode::Off) {
+                dusk::getSettings().game.trueAlbwMode.setValue(dusk::TrueAlbwMode::TrueAlbw);
+            }
+        } catch (std::exception&) {
+        }
+    }
+
+    // Hidden Skill Rework is always on; normalize legacy saves that disabled it.
+    dusk::getSettings().game.hiddenSkillRework.setValue(true, false);
 }
 
 void dusk::config::LoadFromFileName(const char* path) {

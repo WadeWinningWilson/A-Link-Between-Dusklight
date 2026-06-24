@@ -154,6 +154,7 @@ When **Enemy Death Rupees** is on:
 
 | Doc | Topic |
 |-----|--------|
+| [combat-refinements-handoff.md](combat-refinements-handoff.md) | Field combat backlog: enemy windup targeting, hidden skills × ALBW meter |
 | [shield-combat.md](shield-combat.md) | Shield design, Dawnlight port notes, playtest checklist |
 | [albw-death-recovery-orb-brief.md](albw-death-recovery-orb-brief.md) | Death orb state machine and spawn rules |
 | [albw-shop-icon-alignment.md](albw-shop-icon-alignment.md) | Shop row icons, footer layout constraints |
@@ -170,16 +171,16 @@ Rebase / submodule sync with **[TwilitRealm/dusklight v1.3.1](https://github.com
 
 **Touch points:** git submodule / merge base, conflict pass on shared files (`m_Do_main`, actor infra, settings, build presets), full rebuild and smoke test (Postman shop, meter HUD, wolf combat, Darknut parry).
 
-### 2. Health & ALBW meter upgrades (Postman shop)
+### 2. Postman heart & stamina upgrades — ✅ finalized (2026-06)
 
-Extend **Postman's Lending Service** (or a dedicated shop mode) so Link can **buy permanent upgrades** — not rentals:
+**Shipped** on the Postman **Upgrades & Services** page when **Master Quest** is on (`d_albw_master_quest.cpp`, `d_albw_rental.cpp`):
 
-- **Heart containers / health** — increase max HP (ALBW-style progression).
-- **ALBW meter capacity** — increase max stamina (ties into existing `sOilMaxVar` / meter expansion hooks).
+- Escalating-price **heart** purchases (half-heart / container progression).
+- Escalating-price **ALBW stamina meter** capacity purchases.
 
-**Economy model:** *Lies of P* / *Dark Souls*–style leveling — **each purchase costs more** based on how many upgrades Link already has (separate curves for hearts vs meter tiers). Price should read from current heart count and current meter ceiling, not flat catalog rows like the 13 rental items.
+**Remaining polish:** swap the **stamina upgrade row icon** in shop UI (heart icon is correct).
 
-**Touch points (starting points):** `d_albw_rental.cpp` / `d_albw_shop.cpp` (catalog + purchase flow), `d_com_inf_game.cpp` / save flags for heart pieces, `d_meter2.cpp` for meter max, wallet checks via existing rupee APIs.
+**Touch points:** `d_albw_master_quest.cpp`, `d_albw_rental.cpp` (`CAT_UPGRADES`), `d_meter2.cpp` (meter max), save event regs 100–102.
 
 ### 3. Actual enemy HP multiplier (deferred)
 

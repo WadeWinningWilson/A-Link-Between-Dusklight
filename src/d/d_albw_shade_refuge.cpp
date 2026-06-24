@@ -10,6 +10,7 @@
 #include "d/actor/d_a_alink.h"
 #include "d/actor/d_a_player.h"  // daPy_py_c::setParamData (getup warp-in spawn param)
 #include "d/d_com_inf_game.h"
+#include "dusk/settings.h"  // master enable toggle (game.shadeRefuge)
 #include <cstring>
 
 namespace {
@@ -38,12 +39,20 @@ void dShadeRefuge_setRespawn(const char* i_stage, s8 i_roomNo, const cXyz& i_pos
     sHasRespawn = true;
 }
 
+// Master toggle for the whole Shade's Refuge system. When off, no watchers
+// spawn (d_s_room.cpp), the death screen never offers "Last Shade Watcher"
+// (hasRespawn returns false below), and the shop service is hidden
+// (canShowInShop returns false below). Default off — feature is WIP.
+bool dShadeRefuge_isEnabled() {
+    return dusk::getSettings().game.shadeRefuge.getValue();
+}
+
 void dShadeRefuge_clearRespawn() {
     sHasRespawn = false;
 }
 
 bool dShadeRefuge_hasRespawn() {
-    return sHasRespawn;
+    return dShadeRefuge_isEnabled() && sHasRespawn;
 }
 
 const char* dShadeRefuge_getStage() {
@@ -123,7 +132,7 @@ bool          sPendingReturnWarp = false;
 }  // namespace
 
 bool dShadeRefuge_canShowInShop() {
-    return sHasRespawn;
+    return dShadeRefuge_isEnabled() && sHasRespawn;
 }
 
 bool dShadeRefuge_tryPurchaseReturn() {

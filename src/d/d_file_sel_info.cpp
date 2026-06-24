@@ -113,9 +113,17 @@ int dFile_info_c::setSaveData(dSv_save_c* i_savedata, BOOL i_validChksum, u8 i_d
             }
         } else {
             setHeartCnt(i_savedata);
-            SAFE_STRCPY(mPlayerName, player_name);
             setSaveDate(i_savedata);
             setPlayTime(i_savedata);
+#if TARGET_PC
+            if (i_savedata->getReserve().isTrueTest()) {
+                snprintf(mPlayerName, 0x40, "%s TT", player_name);
+            } else {
+                strcpy(mPlayerName, player_name);
+            }
+#else
+            strcpy(mPlayerName, player_name);
+#endif
             result = 0;
         }
     } else {

@@ -68,6 +68,15 @@ public:
     void setAlphaMagicAnimeMin();
     void setAlphaMagicAnimeMax();
     void drawShieldDurabilityBelowAlbw();
+    // LoP "Health Bar" mode: draw a red life bar reusing the kantera meter widgets,
+    // above the green ALBW meter; the heart row is hidden in draw().
+    void drawLopHealthBar();
+    // Focused Arts meter (kantera widget, lilac): drawFocusedArtsMeter routes it to the
+    // top-left durability slot (vanilla) or the LoP sword-panel strip; the Kantera helper
+    // does the two-pass banked/charging render at a kantera-local rect.
+    void drawFocusedArtsMeter();
+    void drawFocusedArtsMeterKantera(f32 i_localX, f32 i_localY, f32 i_widthPx);
+    void getKanteraRootOffset(f32* o_x, f32* o_y);
     // LoP layout: show every cont_n ring child (undo the bottom-right trim) so the
     // vanilla button redraw can then re-apply correct visibility. Called on toggle.
     void lopRestoreButtonRing();
@@ -81,6 +90,8 @@ public:
     bool getRupeeDigitMetrics(f32* o_width, f32* o_height, f32* o_advance,
                               f32* o_leftCenterX, f32* o_centerY) const;
     bool isLopHudActive() const { return mLopHudActive; }
+    // True only in the LoP "Health Bar" mode (relayout + bar replacing hearts).
+    bool isLopHealthBarActive() const { return mLopHealthBarActive; }
     // ============================================
     // NEW CODE ENDS HERE
     // ============================================
@@ -405,8 +416,13 @@ private:
 #if TARGET_PC
     bool mShowMidnaIcon{};
     bool mLopHudActive{};
+    bool mLopHealthBarActive{};
+    bool mLopLifeHidden{};
     bool mLopShieldAnchorValid{};
     Vec mLopShieldAnchor{};
+    bool mKanteraRootOffsetValid{};
+    f32 mKanteraRootOffsetX{};
+    f32 mKanteraRootOffsetY{};
     void applyMagicMeterSlot(u8 i_slot);
     void layoutMagicMeterSlot(u8 i_slot, s16 i_max, s16 i_fill, f32 i_posX, f32 i_posY,
                               f32 i_widthScale);

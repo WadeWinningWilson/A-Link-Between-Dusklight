@@ -9,6 +9,10 @@
 #include "d/d_com_inf_game.h"
 #include <cstring>
 
+#if TARGET_PC
+#include "dusk/truetest.hpp"
+#endif
+
 static u8 const l_idx[24][4] = {
     0x17, 0x05, 0x06, 0x01, 0x17, 0x05, 0x06, 0x02, 0x17, 0x05, 0x06, 0x03, 0x17, 0x05, 0x06, 0x04,
     0x17, 0x05, 0x06, 0x05, 0x05, 0x06, 0x01, 0x00, 0x06, 0x0B, 0x05, 0x00, 0x06, 0x0B, 0x05, 0x01,
@@ -76,6 +80,13 @@ int daObjGWall2_c::CreateHeap() {
 }
 
 int daObjGWall2_c::create1st() {
+#if TARGET_PC
+    if (dusk::truetest::isTrueTestSave()) {
+        if (dusk::truetest::isGanonBarrierCleared()) {
+            return cPhs_ERROR_e;
+        }
+    } else
+#endif
     if (getEventBit1() != 0x3FF &&
         dComIfGs_isEventBit(dSv_event_flag_c::saveBitLabels[(u16)getEventBit1()]) != 0)
     {
@@ -92,6 +103,13 @@ int daObjGWall2_c::create1st() {
 }
 
 int daObjGWall2_c::Execute(Mtx** i_bgMtx) {
+#if TARGET_PC
+    if (dusk::truetest::isTrueTestSave() && dusk::truetest::isGanonBarrierCleared()) {
+        dComIfGs_onEventBit(dSv_event_flag_c::F_0542);
+        fopAcM_delete(this);
+        return 1;
+    }
+#endif
     mpBtkAnm->play();
     *i_bgMtx = &mBgMtx;
     setBaseMtx();

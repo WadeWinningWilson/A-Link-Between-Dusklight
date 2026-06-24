@@ -3,6 +3,8 @@ cd /d "%~dp0"
 call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" > nul 2>&1
 if not exist "%~dp0build\windows-msvc-relwithdebinfo\build.ninja" (
     cmake --preset windows-msvc-relwithdebinfo
+) else if not exist "%~dp0build\windows-msvc-relwithdebinfo\CMakeFiles\rules.ninja" (
+    cmake --preset windows-msvc-relwithdebinfo
 )
 ninja -j8 -C "%~dp0build\windows-msvc-relwithdebinfo" dusklight
 if errorlevel 1 exit /b 1

@@ -36,6 +36,7 @@
 #include "dusk/imgui/ImGuiBloomWindow.hpp"
 #include "dusk/settings.h"
 #include "dusk/frame_interpolation.h"
+#include "dusk/truetest.hpp"
 #include "dusk/game_clock.h"
 #endif
 
@@ -11078,6 +11079,12 @@ int dKy_F_SP121Check(char const* stageName, int roomNo, u8* out_darkLv, int tblI
 
     // Stage is Hyrule Field
     if (!strcmp(stageName, "F_SP121")) {
+#if TARGET_PC
+        // TRUETEST: traverse HF in day; province bubbles keep their own twilight.
+        if (dusk::truetest::isTrueTestSave()) {
+            return -1;
+        }
+#endif
         // Room is one of:
         // - Eldin Field (0)
         // - Kakariko Gorge (3)

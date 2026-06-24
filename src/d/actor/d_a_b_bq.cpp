@@ -18,7 +18,9 @@
 #include "c/c_damagereaction.h"
 #include <cmath>
 #if TARGET_PC
+#include "d/d_albw_boss.h"
 #include "d/d_albw_enemy_rupee.h"
+#include "d/actor/d_a_b_bh.h"
 #endif
 
 enum B_bq_RES_File_ID {
@@ -135,6 +137,9 @@ enum daB_BQ_ACT {
     ACTION_ATTACK,
     ACTION_DAMAGE,
     ACTION_END,
+#if TARGET_PC
+    ACTION_RUNAWAY_TEST,
+#endif
 };
 
 enum daB_BQ_JNT {
@@ -429,16 +434,72 @@ static void* s_bi_del_sub(void* i_actor, void* i_data) {
     return NULL;
 }
 
+#if TARGET_PC
+static constexpr f32 kAlbwBqRunawayAnimSpeed = 4.5f;
+static constexpr s16 kAlbwBqRunawayHoldFrames = 150;
+static constexpr s16 kAlbwBqRunawaySequenceIframe = 450;
+// field_0x6fb: 1=damage, 2=poison pause; 3=Refinement enrage hold (side-head frenzy)
+static constexpr s8 kAlbwBqFbEnrageSubmerged = 3;
+// Keep in sync with daB_BQ_ACT::ACTION_RUNAWAY_TEST.
+static constexpr s16 kAlbwBqActionRunawayTest = 5;
+
+static void b_bq_albwSnapSideHeadSurfaceAnchors(b_bq_class* i_this) {
+    for (int ti = 0; ti < 2; ti++) {
+        b_bh_class* bh_p = (b_bh_class*)fopAcM_SearchByID(i_this->mTentacleIDs[ti]);
+        if (bh_p != NULL) {
+            bh_p->mBasePos = bh_p->field_0x6b0;
+            bh_p->field_0xa25 = 2;
+        }
+    }
+}
+
+static bool b_bq_tryAlbwRunawayTest(b_bq_class* i_this) {
+    if (!dAlbwBossRefinement_isEnabled()) {
+        return false;
+    }
+
+    if (i_this->mAction != ACTION_WAIT || i_this->field_0x6de != 0) {
+        return false;
+    }
+
+    bool isArrow = i_this->mAtInfo.mHitType == HIT_TYPE_ARROW;
+    if (i_this->mAtInfo.mpCollider != NULL &&
+        i_this->mAtInfo.mpCollider->ChkAtType(AT_TYPE_ARROW))
+    {
+        isArrow = true;
+    }
+
+    if (!isArrow) {
+        return false;
+    }
+
+    i_this->mAction = ACTION_RUNAWAY_TEST;
+    i_this->mMode = 0;
+    i_this->field_0x6de = kAlbwBqRunawaySequenceIframe;
+    return true;
+}
+#endif
+
 static void damage_check(b_bq_class* i_this) {
     dComIfGp_getPlayer(0);
 
     i_this->mCcCoStts.Move();
     i_this->mCcStts.Move();
 
-    if (i_this->mAction != ACTION_DAMAGE) {
+    if (i_this->mAction != ACTION_DAMAGE
+#if TARGET_PC
+        && i_this->mAction != ACTION_RUNAWAY_TEST
+#endif
+    ) {
         if (i_this->mCcSph.ChkTgHit()) {
             i_this->mAtInfo.mpCollider = i_this->mCcSph.GetTgHitObj();
             at_power_check(&i_this->mAtInfo);
+
+#if TARGET_PC
+            if (b_bq_tryAlbwRunawayTest(i_this)) {
+                return;
+            }
+#endif
 
             if (i_this->mAtInfo.mHitType == 2) {
                 i_this->mAction = ACTION_DAMAGE;
@@ -586,6 +647,40 @@ static void b_bq_wait(b_bq_class* i_this) {
         i_this->mMode = 0;
     }
 }
+
+#if TARGET_PC
+static void b_bq_runaway_test(b_bq_class* i_this) {
+    switch (i_this->mMode) {
+    case 0:
+        b_bq_albwSnapSideHeadSurfaceAnchors(i_this);
+        anm_init(i_this, BCK_BQ_RUNAWAY, kAlbwBqRunawayAnimSpeed, J3DFrameCtrl::EMode_NONE, 1.0f);
+        i_this->mTimers[0] = 0;
+        i_this->mMode = 1;
+        break;
+    case 1:
+        if (i_this->mpMorf->isStop()) {
+            i_this->mMode = 2;
+            i_this->mTimers[0] = kAlbwBqRunawayHoldFrames;
+        }
+        break;
+    case 2:
+        i_this->field_0x6fb = kAlbwBqFbEnrageSubmerged;
+        if (i_this->mTimers[0] == 0) {
+            i_this->mMode = 3;
+            anm_init(i_this, BCK_BQ_APPEAR, 1.0f, J3DFrameCtrl::EMode_NONE, 1.0f);
+        }
+        break;
+    case 3:
+        if (i_this->mpMorf->isStop()) {
+            i_this->mAction = ACTION_WAIT;
+            i_this->mMode = 0;
+            i_this->field_0x6fc = 10;
+            anm_init(i_this, BCK_BQ_WAIT01, 10.0f, J3DFrameCtrl::EMode_LOOP, 1.0f);
+        }
+        break;
+    }
+}
+#endif
 
 static void b_bq_damage(b_bq_class* i_this) {
     fopAc_ac_c* a_this = (fopAc_ac_c*)i_this;
@@ -952,6 +1047,12 @@ static void action(b_bq_class* i_this) {
             var_r27 = false;
         }
         break;
+#if TARGET_PC
+    case ACTION_RUNAWAY_TEST:
+        b_bq_runaway_test(i_this);
+        set_head_angle = false;
+        break;
+#endif
     }
 
     if (dokuhaki_set && i_this->mTimers[1] == 0) {
@@ -2283,7 +2384,7 @@ static int daB_BQ_Execute(b_bq_class* i_this) {
         sp68.y += 10000.0f;
     }
 
-    if (i_this->mAction >= ACTION_DAMAGE) {
+    if (i_this->mAction == ACTION_DAMAGE || i_this->mAction == ACTION_END) {
         i_this->mCcCoreSph.SetR(YREG_F(15) + 55.0f);
 
         sp50 = a_this->eyePos;
@@ -2320,7 +2421,8 @@ static int daB_BQ_Execute(b_bq_class* i_this) {
     dComIfG_Ccsp()->Set(&i_this->mCcCoreSph);
 
     sp50 = a_this->eyePos;
-    if (daPy_getPlayerActorClass()->getCutType() != daPy_py_c::CUT_TYPE_DOWN && i_this->mAction >= ACTION_DAMAGE) {
+    if (daPy_getPlayerActorClass()->getCutType() != daPy_py_c::CUT_TYPE_DOWN &&
+        (i_this->mAction == ACTION_DAMAGE || i_this->mAction == ACTION_END)) {
         sp50.y = player->current.pos.y + 70.0f + KREG_F(7);
     } else {
         sp50.x -= 20000.0f;

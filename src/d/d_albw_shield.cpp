@@ -17,6 +17,8 @@
 #include "d/d_meter2.h"
 #include "d/d_meter2_info.h"
 #include "d/d_meter2_draw.h"
+#include "d/d_albw_rental.h"  // suppress shield HUD while the rental shop owns input
+#include "m_Do/m_Do_controller_pad.h"
 #include "d/d_meter_HIO.h"
 #include "d/d_pane_class.h"
 #include "dusk/settings.h"
@@ -74,6 +76,10 @@ static const char SHIELD_ARC_HYLIAN[] = "HyShd";
 
 // Scale down vs full rupi_n bounds so icons match the green rupee gem, not the whole row.
 constexpr f32 BASH_ICON_RUPEE_SIZE_MUL = 0.78f;
+
+// Parked experiment — docs/testing-parry-rework.md (playtest 2026-06). Menu setting removed;
+// flip to true locally to re-test hold-guard + R1/RB parry, Midna suppress, parry VFX/SFX.
+constexpr bool kTestingParryReworkEnabled = false;
 
 // Fallback when rupee / hakusha panes are not ready (matches ~mRupeeScale spur sizing).
 constexpr f32 BASH_ICON_SCALE_FALLBACK = 0.8f;
@@ -530,6 +536,13 @@ bool isGuardInputHeld(const daAlink_c* i_link) {
     return i_link->checkUpperGuardAnime();
 }
 
+bool isParryPressTrigger() {
+    // Guard hold = getHoldLockR (RT/R2 analog). Parry tap = shoulder bumper RB/R1
+    // (PAD_TRIGGER_Z). PAD_TRIGGER_R shares the guard trigger and never re-edges while
+    // RT is held, so getTrigR is the wrong input for hold-guard + tap-parry.
+    return mDoCPd_c::getTrigZ(PAD_1) != 0;
+}
+
 bool isInParryWindow() {
     if (sGuardOnsetFrame == 0) {
         return false;
@@ -570,6 +583,19 @@ void grantBashAlbwOnce() {
 }
 
 void updateShieldHudLinger(daAlink_c* i_link) {
+    // ============================================
+    // NEW CODE — ALBW Port (Shop input ownership)
+    // While the rental shop is open it owns the D-pad (left/right = page nav).
+    // A right-D-pad press reads as a guard, which would linger the shield HUD
+    // over the shop.  Suppress the linger entirely while the shop is open.
+    // ============================================
+    if (dALBWRental_isOpen()) {
+        sShieldHudLingerFrames = 0;
+        return;
+    }
+    // ============================================
+    // NEW CODE ENDS HERE
+    // ============================================
     if (i_link == NULL || !i_link->checkShieldGet() || i_link->checkHorseRide()) {
         sShieldHudLingerFrames = 0;
         return;
@@ -596,6 +622,12 @@ bool isShieldGuardRecoveryVisible(const daAlink_c* i_link) {
 
 bool isShieldAuxHudVisible(const daAlink_c* i_link) {
     if (i_link == NULL) {
+        return false;
+    }
+
+    // Shop owns input/HUD — guard/shield-button presses (incl. D-pad page nav
+    // read as a guard) must not surface the shield HUD over the shop.
+    if (dALBWRental_isOpen()) {
         return false;
     }
 
@@ -983,6 +1015,10 @@ bool dShield_isParryCombatEnabled() {
     return dusk::getSettings().game.shieldParryCombat;
 }
 
+bool dShield_isTestingParryReworkEnabled() {
+    return kTestingParryReworkEnabled && dShield_isParryCombatEnabled();
+}
+
 bool dShield_isDurabilityEnabled() {
     return dusk::getSettings().game.shieldDurability;
 }
@@ -1036,10 +1072,18 @@ void dShield_updateGuardTracking(daAlink_c* i_link) {
 
     const bool guardActive = i_link->checkUpperGuardAnime() && isGuardInputHeld(i_link);
 
-    if (guardActive && !sWasGuardActive) {
-        sGuardOnsetFrame = sSimFrame;
-    } else if (!guardActive) {
-        sGuardOnsetFrame = 0;
+    if (dShield_isTestingParryReworkEnabled()) {
+        if (guardActive && isParryPressTrigger()) {
+            sGuardOnsetFrame = sSimFrame;
+        } else if (!guardActive) {
+            sGuardOnsetFrame = 0;
+        }
+    } else {
+        if (guardActive && !sWasGuardActive) {
+            sGuardOnsetFrame = sSimFrame;
+        } else if (!guardActive) {
+            sGuardOnsetFrame = 0;
+        }
     }
 
     sWasGuardActive = guardActive;
@@ -1104,6 +1148,15 @@ bool dShield_onShieldHit(daAlink_c* i_link, int i_atSpl, fopAc_ac_c* i_attacker)
     repairDurabilityOnParry(i_link);
 
     return true;
+}
+
+void dShield_playParrySuccessFeedback(daAlink_c* i_link, const cXyz* i_hitPos) {
+    if (!dShield_isTestingParryReworkEnabled() || i_link == NULL || i_hitPos == NULL) {
+        return;
+    }
+
+    dComIfGp_setHitMark(2, i_link, i_hitPos, NULL, NULL, 0);
+    Z2GetAudioMgr()->seStart(Z2SE_EN_TN_SHIELD_BND, i_hitPos, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
 }
 
 void dShield_pollGuardAttackHit(daAlink_c* i_link) {
@@ -1618,6 +1671,17 @@ u8 dShield_getBashCharges() {
 
 u8 dShield_getMaxBashCharges() {
     return currentTierCfg(daAlink_getAlinkActorClass()).maxCharges;
+}
+
+void dShield_fillBashChargesToMax() {
+    if (!dShield_isParryCombatEnabled()) {
+        return;
+    }
+    const u8 maxCharges = dShield_getMaxBashCharges();
+    if (maxCharges == 0) {
+        return;
+    }
+    sBashCharges = maxCharges;
 }
 
 u8 dShield_getBashThreshold() {

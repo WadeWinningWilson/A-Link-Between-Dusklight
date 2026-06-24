@@ -41,6 +41,10 @@
 
 #if TARGET_PC
 #include "d/d_albw_boss.h"
+#include "d/d_focused_arts.h"
+#if TARGET_PC
+#include "dusk/truetest.hpp"
+#endif
 #include "d/d_albw_death_rupee.h"
 #include "dusk/autosave.h"
 #include "dusk/memory.h"
@@ -1174,6 +1178,8 @@ static int phase_1(dScnPly_c* i_this) {
 
 #if TARGET_PC
     dAlbwBoss_onStageLoad();
+    dFocusedArts_onStageLoad();
+    dusk::truetest::onStageLoad();
 #endif
 
     // Stage: Faron Woods, Room: Faron Spring

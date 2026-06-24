@@ -8,7 +8,11 @@
 #include "d/actor/d_a_player.h"
 #include "d/d_kankyo.h"
 #include "d/d_meter2_info.h"
+#include "dusk/config.hpp"
 #include "dusk/map_loader_definitions.h"
+#include "dusk/settings.h"
+#include "dusk/truetest.hpp"
+#include "m_Do/m_Do_audio.h"
 #include "number_button.hpp"
 #include "pane.hpp"
 #include "select_button.hpp"
@@ -673,6 +677,11 @@ u8 get_slot_default(int slot) {
 }
 
 void set_item_first_bit(u8 itemNo, bool owned) {
+    if (dMeter2_isShieldItem(itemNo)) {
+        dMeter2_setShieldOwned(itemNo, owned);
+        return;
+    }
+
     if (owned) {
         dComIfGs_onItemFirstBit(itemNo);
     } else {
@@ -986,6 +995,25 @@ void populate_select_clothes_picker(Pane& pane) {
     addOption(dItemNo_WEAR_KOKIRI_e);
     addOption(dItemNo_WEAR_ZORA_e);
     addOption(dItemNo_ARMOR_e);
+}
+
+template <size_t Size>
+void populate_shield_equip_picker(Pane& pane, const std::array<u8, Size>& entries) {
+    pane.clear();
+    const auto addOption = [&pane](u8 id) {
+        pane.add_button({
+                            .text = get_item_name(id),
+                            .isSelected = [id] { return dComIfGs_getSelectEquipShield() == id; },
+                        })
+            .on_pressed([id] {
+                mDoAud_seStartMenu(kSoundItemChange);
+                dMeter2_applyEquippedShield(id);
+            });
+    };
+    addOption(dItemNo_NONE_e);
+    for (const auto item : entries) {
+        addOption(item);
+    }
 }
 
 template <size_t Size>
@@ -1353,6 +1381,32 @@ void set_clock_time(int hour, int minute) {
     }
 }
 
+static constexpr const char* kAlbwUnfinishedDisclaimer =
+    "<br/><br/><b>Not fully tested!</b> Turning on these settings may crash, softlock, "
+    "or otherwise break your saves. Continue with caution.";
+
+void editor_bool_option(Pane& leftPane, Pane& rightPane, ConfigVar<bool>& var,
+                        const Rml::String& key, const Rml::String& helpText,
+                        std::function<bool()> isDisabled = {}) {
+    leftPane.register_control(
+        leftPane.add_child<BoolButton>(BoolButton::Props{
+            .key = key,
+            .getValue = [&var] { return var.getValue(); },
+            .setValue =
+                [&var](bool value) {
+                    var.setValue(value);
+                    config::Save();
+                },
+            .isDisabled = std::move(isDisabled),
+            .isModified = [&var] { return var.getValue() != var.getDefaultValue(); },
+        }),
+        rightPane,
+        [helpText](Pane& pane) {
+            pane.clear();
+            pane.add_rml(helpText);
+        });
+}
+
 }  // namespace
 
 EditorWindow::EditorWindow() {
@@ -1454,8 +1508,7 @@ EditorWindow::EditorWindow() {
                 .getValue = [] { return get_item_name(get_player_status()->mSelectEquip[2]); },
             }),
             rightPane, [](Pane& pane) {
-                populate_select_equip_picker(
-                    pane, get_player_status()->mSelectEquip[2], shieldEntries);
+                populate_shield_equip_picker(pane, shieldEntries);
             });
         leftPane.register_control(
             leftPane.add_select_button({
@@ -1968,6 +2021,148 @@ EditorWindow::EditorWindow() {
                                       .getValue = [] { return sound_mode_label(); },
                                   }),
             rightPane, [](Pane& pane) { populate_sound_mode_picker(pane); });
+    });
+
+    add_tab("ALBW", [this](Rml::Element* content) {
+        auto& leftPane = add_child<Pane>(content, Pane::Type::Controlled);
+        auto& rightPane = add_child<Pane>(content, Pane::Type::Uncontrolled);
+
+        leftPane.add_text(
+            "Experimental ALBW settings. Enable the editor from the main menu to access this "
+            "tab.");
+        editor_bool_option(leftPane, rightPane, getSettings().game.focusedArtsTest,
+            "Focused Arts Test",
+            "Enables the Focused Arts charge bank, meter fill, tier spend columns, and special "
+            "finishers. Off keeps standard ALBW hidden-skill meter costs and rework combat only." +
+                Rml::String(kAlbwUnfinishedDisclaimer));
+        static constexpr std::array<const char*, 5> kFocusedArtsCheatModes = {
+            "Off",
+            "FA Cheat ON",
+            "With Debug",
+            "FA Cheat + Max Bank",
+            "With Debug + Max Bank",
+        };
+        leftPane.register_control(
+            leftPane.add_select_button({
+                .key = "Focused Arts Cheat",
+                .getValue =
+                    [] {
+                        const auto mode = getSettings().game.focusedArtsCheat.getValue();
+                        const auto index = static_cast<size_t>(mode);
+                        return kFocusedArtsCheatModes[index < kFocusedArtsCheatModes.size() ? index
+                                                                                          : 0];
+                    },
+                .isDisabled =
+                    [] {
+                        return getSettings().game.speedrunMode ||
+                               !getSettings().game.focusedArtsTest.getValue();
+                    },
+                .isModified =
+                    [] {
+                        return getSettings().game.focusedArtsCheat.getValue() !=
+                               getSettings().game.focusedArtsCheat.getDefaultValue();
+                    },
+            }),
+            rightPane,
+            [](Pane& pane) {
+                for (int i = 0; i < static_cast<int>(kFocusedArtsCheatModes.size()); ++i) {
+                    pane
+                        .add_button({
+                            .text = kFocusedArtsCheatModes[i],
+                            .isSelected =
+                                [i] {
+                                    return getSettings().game.focusedArtsCheat.getValue() ==
+                                           static_cast<FocusedArtsCheatMode>(i);
+                                },
+                        })
+                        .on_pressed([i] {
+                            mDoAud_seStartMenu(kSoundItemChange);
+                            getSettings().game.focusedArtsCheat.setValue(
+                                static_cast<FocusedArtsCheatMode>(i));
+                            config::Save();
+                        });
+                }
+                pane.add_rml(
+                    "<b>Off</b>: shop/save tiers only.<br/>"
+                    "<b>FA Cheat ON</b>: effective tier 3 (max bank + finishers) for playtest.<br/>"
+                    "<b>With Debug</b>: same as ON plus an in-game FA overlay (bank, fill, ALBW, "
+                    "recent events) — no need to open the dev console.<br/>"
+                    "<b>FA Cheat + Max Bank</b>: tier 3 cheat and bank starts full (3/3) on load.<br/>"
+                    "<b>With Debug + Max Bank</b>: max bank cheat plus the debug overlay." +
+                    Rml::String(kAlbwUnfinishedDisclaimer));
+            });
+        static constexpr std::array<const char*, 3> kTrueAlbwModes = {
+            "Off",
+            "True ALBW",
+            "TRUETEST",
+        };
+        leftPane.register_control(
+            leftPane.add_select_button({
+                .key = "True ALBW Mode",
+                .getValue =
+                    [] {
+                        const auto mode = getSettings().game.trueAlbwMode.getValue();
+                        const auto index = static_cast<size_t>(mode);
+                        return kTrueAlbwModes[index < kTrueAlbwModes.size() ? index : 0];
+                    },
+                .isDisabled = [] { return !dusk::truetest::canChangeGlobalTrueAlbwMode(); },
+                .isModified =
+                    [] {
+                        return getSettings().game.trueAlbwMode.getValue() !=
+                               getSettings().game.trueAlbwMode.getDefaultValue();
+                    },
+            }),
+            rightPane,
+            [](Pane& pane) {
+                for (int i = 0; i < static_cast<int>(kTrueAlbwModes.size()); ++i) {
+                    pane
+                        .add_button({
+                            .text = kTrueAlbwModes[i],
+                            .isSelected =
+                                [i] {
+                                    return getSettings().game.trueAlbwMode.getValue() ==
+                                           static_cast<TrueAlbwMode>(i);
+                                },
+                        })
+                        .on_pressed([i] {
+                            mDoAud_seStartMenu(kSoundItemChange);
+                            getSettings().game.trueAlbwMode.setValue(static_cast<TrueAlbwMode>(i));
+                            config::Save();
+                        });
+                }
+                pane.add_rml(
+                    "<br/><b>Off</b>: vanilla reclaim-what-you-lost rental shop.<br/>"
+                    "<b>True ALBW</b>: full rental catalog from the Postman (shop only).<br/>"
+                    "<b>TRUETEST</b>: enables TRUETEST new-save prompt and per-save world "
+                    "bootstrap. Change at file select or title — locked during field play." +
+                    Rml::String(kAlbwUnfinishedDisclaimer));
+            });
+        editor_bool_option(leftPane, rightPane, getSettings().game.bossRefinement, "Boss Refinement",
+            "Treat Ordon, Wooden, and Master swords as valid boss swords (Zant, Ganondorf, "
+            "Argorok). Future layers add Zant tool phases and Ganondorf duel redesign." +
+                Rml::String(kAlbwUnfinishedDisclaimer));
+        editor_bool_option(leftPane, rightPane, getSettings().game.shadeRefuge, "Shade's Refuge",
+            "Lies-of-P-style Shade Watcher rest points: rest to full-heal and set a respawn "
+            "point, respawn at the last watcher on death, and buy a return-to-watcher service "
+            "in the shop. Off disables the whole system." +
+                Rml::String(kAlbwUnfinishedDisclaimer));
+        editor_bool_option(leftPane, rightPane, getSettings().game.showLockonHpDebug,
+            "Show Lock-on HP Debug",
+            "While Z-targeting, shows the locked enemy's current HP, max HP, ALBW category, "
+            "and true HP multiplier in a small on-screen overlay." +
+                Rml::String(kAlbwUnfinishedDisclaimer));
+        editor_bool_option(leftPane, rightPane, getSettings().game.showDarknutBashDebug,
+            "Darknut Bash Debug Log",
+            "Logs Darknut bash/guard-break state and shield bash-start charge snapshots to "
+            "Documents/dusklight/albw_darknut_debug.txt (truncated once per session)." +
+                Rml::String(kAlbwUnfinishedDisclaimer));
+        editor_bool_option(
+            leftPane, rightPane, getSettings().game.hurricaneTest, "Hurricane test",
+            "Stick hard left/right + tap sword for a sustained Great Spin prototype (~5 s, then "
+            "~2 s tired lockout). Audio: Zant spin 1.05× + Gale tornado 0.85× @ 25% + spinner "
+            "ride @ 35%. Particle layout uses Interface → ALBW Visuals → Hurricane Spin Visual." +
+                Rml::String(kAlbwUnfinishedDisclaimer),
+            [] { return getSettings().game.speedrunMode; });
     });
 }
 

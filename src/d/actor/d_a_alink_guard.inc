@@ -203,6 +203,11 @@ void daAlink_c::setUpperGuardAnime(f32 param_0) {
 }
 
 void daAlink_c::setShieldGuard() {
+    if (mShieldChangeWaitTimer != 0) {
+        offNoResetFlg2(FLG2_UNK_8000000);
+        return;
+    }
+
     f32 var_f31 = mNowAnmPackUpper[2].getRatio();
 
     if ((mProcID == PROC_GUARD_SLIP && mEquipItem != dItemNo_IRONBALL_e) || checkSmallUpperGuardAnime() ||

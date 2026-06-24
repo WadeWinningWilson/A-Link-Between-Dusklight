@@ -252,7 +252,11 @@ Shield durability HUD needs **index 3**, standalone draw, or new BLO — do not 
 - **Parry** — skill check on block; builds bash charges and refills ALBW.
 - **Bash** — spends 1 charge; independent input (manual: L+R + B); requires charges ≥ unlock threshold for current shield.
 
-### Perfect parry timing (LoP-style, PC)
+### Testing Parry Rework (optional — not shipped by default)
+
+Parked experiment (hold-guard + R1/RB parry, parry VFX/SFX) documented in **[testing-parry-rework.md](testing-parry-rework.md)** — **disabled in shipping builds** (`kTestingParryReworkEnabled = false`); menu toggle removed after playtest. Shipping parry remains guard-onset below.
+
+### Perfect parry timing (LoP-style, PC) — shipping default
 
 Inspired by **Lies of P Perfect Guard** (not enemy anim windows):
 

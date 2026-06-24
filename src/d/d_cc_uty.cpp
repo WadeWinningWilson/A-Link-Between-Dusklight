@@ -23,6 +23,8 @@
 #include "d/d_albw_wolf_stun.h"
 #include "d/d_albw_wolf_combat.h"
 #include "d/d_albw_wolf_charge_hud.h"
+#include "d/d_focused_arts.h"
+#include "dusk/hurricane_test.h"
 #include "d/d_albw_enemy_rupee.h"
 #include "d/d_albw_boss.h"
 #endif
@@ -445,6 +447,23 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* i_enemy, dCcU_AtInfo* i_AtInfo) {
                 i_AtInfo->mAttackPower *= 2;
                 i_AtInfo->mHitStatus = 1;
             }
+
+            if (!daPy_py_c::checkNowWolf()) {
+                if (dusk::isLinkHurricaneProc((daAlink_c*)player_p)) {
+                    i_AtInfo->mAttackPower = dFocusedArts_getGsHurricaneHitPower();
+                } else {
+                    i_AtInfo->mAttackPower =
+                        dFocusedArts_resolveMeleeDamage(i_AtInfo->mAttackPower, player_p->getCutType());
+                }
+            }
+
+            if (dFocusedArts_isEndingBlowGreatSpinAoeActive()) {
+                daAlink_c* link_p = (daAlink_c*)player_p;
+                if (i_AtInfo->mpCollider == static_cast<cCcD_Obj*>(&link_p->mAtSph)) {
+                    i_AtInfo->mAttackPower =
+                        dFocusedArts_getEndingBlowGreatSpinAoePower(i_AtInfo->mAttackPower);
+                }
+            }
         }
 
 #if TARGET_PC
@@ -472,9 +491,27 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* i_enemy, dCcU_AtInfo* i_AtInfo) {
                 atType = AT_TYPE_BOMB;
             } else if (i_AtInfo->mpCollider->ChkAtType(AT_TYPE_IRON_BALL)) {
                 atType = AT_TYPE_IRON_BALL;
+            } else if (i_AtInfo->mpCollider->ChkAtType(AT_TYPE_SLINGSHOT)) {
+                atType = AT_TYPE_SLINGSHOT;
             }
             if (atType != 0) {
+                dFocusedArts_applyItemDamageBoost(i_AtInfo->mAttackPower);
                 dAlbwLockout_applyAttackPowerBoost(i_AtInfo->mAttackPower, atType);
+            }
+        } else if (i_AtInfo->mAttackPower > 0 && fopAcM_GetGroup(i_enemy) == fopAc_ENEMY_e &&
+                   i_AtInfo->mpCollider != NULL) {
+            u32 atType = 0;
+            if (i_AtInfo->mpCollider->ChkAtType(AT_TYPE_ARROW)) {
+                atType = AT_TYPE_ARROW;
+            } else if (i_AtInfo->mpCollider->ChkAtType(AT_TYPE_BOMB)) {
+                atType = AT_TYPE_BOMB;
+            } else if (i_AtInfo->mpCollider->ChkAtType(AT_TYPE_IRON_BALL)) {
+                atType = AT_TYPE_IRON_BALL;
+            } else if (i_AtInfo->mpCollider->ChkAtType(AT_TYPE_SLINGSHOT)) {
+                atType = AT_TYPE_SLINGSHOT;
+            }
+            if (atType != 0) {
+                dFocusedArts_applyItemDamageBoost(i_AtInfo->mAttackPower);
             }
         }
         // Wolf field attack damage modifier.
@@ -534,6 +571,20 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* i_enemy, dCcU_AtInfo* i_AtInfo) {
 #if TARGET_PC
             if (fopAcM_GetGroup(i_enemy) == fopAc_ENEMY_e) {
                 dAlbwEnemyRupees_tryKillAfterDamage(i_enemy, i_AtInfo->mAttackPower);
+                if (i_AtInfo->mpCollider != NULL &&
+                    !i_AtInfo->mpCollider->ChkAtType(AT_TYPE_NORMAL_SWORD) &&
+                    !i_AtInfo->mpCollider->ChkAtType(AT_TYPE_MASTER_SWORD) &&
+                    !i_AtInfo->mpCollider->ChkAtType(AT_TYPE_WOLF_ATTACK) &&
+                    !i_AtInfo->mpCollider->ChkAtType(AT_TYPE_WOLF_CUT_TURN) &&
+                    !i_AtInfo->mpCollider->ChkAtType(AT_TYPE_MIDNA_LOCK) &&
+                    (i_AtInfo->mpCollider->ChkAtType(AT_TYPE_ARROW) ||
+                     i_AtInfo->mpCollider->ChkAtType(AT_TYPE_BOMB) ||
+                     i_AtInfo->mpCollider->ChkAtType(AT_TYPE_SLINGSHOT) ||
+                     i_AtInfo->mpCollider->ChkAtType(AT_TYPE_IRON_BALL) ||
+                     i_AtInfo->mpCollider->ChkAtType(AT_TYPE_40)))
+                {
+                    dFocusedArts_onConnectedItemHit();
+                }
             }
 #endif
         }

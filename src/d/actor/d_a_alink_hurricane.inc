@@ -21,30 +21,20 @@ static constexpr int l_hurricaneTiredLockFrames = 60;
 static constexpr f32 l_hurricaneCruiseSpeed = 15.0f;
 static constexpr f32 l_hurricaneAnimRateScale = 3.5f;
 
-
-
-// false = original looping BCK attack-window spin (revert target).
-
+// Finalized prototype: both Whirlwind and Base VFX use frozen pose + manual Y spin.
+// Loop helpers remain for revert experiments only — do not gate on VFX setting.
 static constexpr bool l_hurricaneFrozenModelSpin = true;
-
-
 
 static f32 l_hurricaneFrozenPoseFrame = 0.0f;
 
 
 
 static void hurricaneInitAnimLoopSpin(daAlink_c* i_link, daAlink_c::daAlink_ANM anmID,
-
                                       const daAlinkHIO_anm_c* anm_data, f32 start_frame) {
-
     i_link->setSingleAnime(anmID, anm_data->mSpeed * l_hurricaneAnimRateScale, start_frame,
-
                            anm_data->mEndFrame, anm_data->mInterpolation);
-
     i_link->mUnderFrameCtrl[0].setFrame(i_link->field_0x3484);
-
     i_link->getNowAnmPackUnder(daAlink_c::UNDER_0)->setFrame(i_link->field_0x3484);
-
 }
 
 
@@ -116,32 +106,28 @@ static void hurricaneUpdateFrozenSpin(daAlink_c* i_link) {
 
 
 static void hurricaneUpdateLoopSpin(daAlink_c* i_link) {
-
     daPy_frameCtrl_c* frameCtrl = &i_link->mUnderFrameCtrl[0];
 
-
-
     if (frameCtrl->getFrame() >= i_link->field_0x3488) {
-
         frameCtrl->offEndFlg();
-
         frameCtrl->setFrame(i_link->field_0x3484);
-
         i_link->getNowAnmPackUnder(daAlink_c::UNDER_0)->setFrame(i_link->field_0x3484);
-
     }
-
 }
 
 
 
 int daAlink_c::procCutGsHurricaneInit(int param_direction) {
 
-    if (!dusk::isHurricaneTestEnabled()) {
-
+#if TARGET_PC
+    if (dusk::isHurricaneTestEnabled() && !dFocusedArts_isEnabled()) {
+        // QA cheat path (Settings → Cheats) when FA is off.
+    } else if (!dFocusedArts_consumeGsHurricaneFinisherArmed()) {
         return 0;
-
     }
+#else
+    return 0;
+#endif
 
 
 
@@ -238,13 +224,9 @@ int daAlink_c::procCutGsHurricaneInit(int param_direction) {
 
 
     if (l_hurricaneFrozenModelSpin) {
-
         hurricaneInitFrozenSpin(this, anmID, anm_data, field_0x3484, param_direction);
-
     } else {
-
         hurricaneInitAnimLoopSpin(this, anmID, anm_data, start_frame);
-
     }
 
 
@@ -268,7 +250,7 @@ int daAlink_c::procCutGsHurricaneInit(int param_direction) {
     onResetFlg0(RFLG0_UNK_2);
 
     dusk::initHurricaneSpinSe(this);
-
+    setCutTurnEffect();
     return 1;
 
 }
@@ -324,13 +306,9 @@ int daAlink_c::procCutGsHurricane() {
 
 
     if (l_hurricaneFrozenModelSpin) {
-
         hurricaneUpdateFrozenSpin(this);
-
     } else {
-
         hurricaneUpdateLoopSpin(this);
-
     }
 
 
