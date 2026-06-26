@@ -2,7 +2,7 @@
   <img src="res/logo.png" alt="Logo" width="640">
 
   <p align="center">
-    <a href="https://github.com/WadeWinningWilson/ALBW-Dusklight">A Link Between Dusklight on GitHub</a>
+    <a href="https://github.com/WadeWinningWilson/A-Link-Between-Dusklight">A Link Between Dusklight on GitHub</a>
   </p>
 </div>
 
@@ -54,8 +54,8 @@ More detail: [docs/building.md](docs/building.md).
 ### 2. Clone this repository
 
 ```powershell
-git clone --recursive https://github.com/WadeWinningWilson/ALBW-Dusklight.git
-cd ALBW-Dusklight
+git clone --recursive https://github.com/WadeWinningWilson/A-Link-Between-Dusklight.git
+cd A-Link-Between-Dusklight
 git submodule update --init --recursive
 ```
 
@@ -127,7 +127,7 @@ This repo is a full Dusklight source tree with **A Link Between Dusklight** inte
 
 # Credits
 
-- **A Link Between Dusklight:** WadeWinningWilson — [ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight) (GitHub repo name)
+- **A Link Between Dusklight:** WadeWinningWilson — [A-Link-Between-Dusklight](https://github.com/WadeWinningWilson/A-Link-Between-Dusklight) (GitHub repo name)
 - **Inspired by:** CaptainKittyCa2
 - **Dusklight:** [TwilitRealm](https://github.com/TwilitRealm/dusklight) and [contributors](https://github.com/TwilitRealm/dusklight/graphs/contributors)
 - **Decomp / Aurora / community:** see upstream [README](https://github.com/TwilitRealm/dusklight/blob/main/README.md) credits

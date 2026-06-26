@@ -2,7 +2,7 @@
 
 **ALBW-Dusklight** adds an _A Link Between Worlds_–style energy meter, death item strip, Postman rental economy, and optional combat/economy systems to the PC build of [Dusklight](https://github.com/TwilitRealm/dusklight). All mod code is gated on `#if TARGET_PC`.
 
-Clone **[ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight)** and follow the **[README](../README.md)** for build steps.
+Clone **[ALBW-Dusklight](https://github.com/WadeWinningWilson/A-Link-Between-Dusklight)** and follow the **[README](../README.md)** for build steps.
 
 ## Build flag
 

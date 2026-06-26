@@ -227,7 +227,7 @@ Dungeon keys stay **vanilla in-dungeon** (`getKeyNum()` — no shop interaction)
 | Doc | Why |
 |-----|-----|
 | [build-fps-guidelines.md](build-fps-guidelines.md) | Canonical build (`build_run.bat` / RelWithDebInfo), launch hygiene (no `DUSK_DRIVE*`), what never goes in the repo |
-| [commit-and-push.md](commit-and-push.md) | Push to **upstream** (`WadeWinningWilson/ALBW-Dusklight`), not `origin`; stage/don't-stage rules |
+| [commit-and-push.md](commit-and-push.md) | Push to **upstream** (`WadeWinningWilson/A-Link-Between-Dusklight`), not `origin`; stage/don't-stage rules |
 | **This file** | TRUETEST design, save isolation, Dawnlight file-select pattern, bootstrap bundle |
 
 **If the work touches…**

@@ -1,6 +1,6 @@
-# Commit and push — ALBW-Dusklight fork
+# Commit and push — A-Link-Between-Dusklight fork
 
-**Audience:** You and Cursor agents. This fork is **`WadeWinningWilson/ALBW-Dusklight`**, not `TwilitRealm/dusklight`.
+**Audience:** You and Cursor agents. This fork is **`WadeWinningWilson/A-Link-Between-Dusklight`**, not `TwilitRealm/dusklight`.
 
 **Build analysis chat:** After HUD/gameplay changes, validate FPS per [build-fps-guidelines.md](build-fps-guidelines.md) (and [hud-performance-handoff.md](hud-performance-handoff.md) if HUD touched) **before** commit. Doc map for reviewers: [build-fps-guidelines.md](build-fps-guidelines.md) § “Doc map”.
 
@@ -12,11 +12,11 @@
 
 | Remote | URL | Use |
 |--------|-----|-----|
-| **`upstream`** | `https://github.com/WadeWinningWilson/ALBW-Dusklight.git` | **Push here** — your ALBW fork |
+| **`upstream`** | `https://github.com/WadeWinningWilson/A-Link-Between-Dusklight.git` | **Push here** — your ALBW fork |
 | `origin` | `https://github.com/TwilitRealm/dusklight.git` | Upstream Dusklight reference; **do not push** unless you have TwilitRealm write access |
 
 ```powershell
-git remote -v   # confirm upstream points at ALBW-Dusklight
+git remote -v   # confirm upstream points at A-Link-Between-Dusklight
 ```
 
 ---
@@ -84,7 +84,7 @@ If remote moved ahead (e.g. README edit on GitHub), merge first — **avoid reba
 
 ```powershell
 git fetch upstream
-git merge upstream/main -m "Merge remote ALBW-Dusklight main"
+git merge upstream/main -m "Merge remote A-Link-Between-Dusklight main"
 git push upstream main
 ```
 
@@ -99,7 +99,7 @@ git status          # clean working tree (ignored files OK)
 git log -1 --oneline
 ```
 
-On GitHub: confirm latest commit on `WadeWinningWilson/ALBW-Dusklight` → `main`.
+On GitHub: confirm latest commit on `WadeWinningWilson/A-Link-Between-Dusklight` → `main`.
 
 ---
 

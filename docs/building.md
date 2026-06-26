@@ -151,7 +151,7 @@ Recommended IDEs:
 
 ### ALBW-Dusklight mod (PC)
 
-If you are building **[ALBW-Dusklight](https://github.com/WadeWinningWilson/ALBW-Dusklight)**, use that repo’s [README](../README.md) — clone it with `--recursive`, then configure with `-DTARGET_PC_NATIVE_UI=ON` for the native rental shop UI. See [ALBW port](albw-port.md) for gameplay details.
+If you are building **[ALBW-Dusklight](https://github.com/WadeWinningWilson/A-Link-Between-Dusklight)**, use that repo’s [README](../README.md) — clone it with `--recursive`, then configure with `-DTARGET_PC_NATIVE_UI=ON` for the native rental shop UI. See [ALBW port](albw-port.md) for gameplay details.
 
 ### Optional: ALBW native UI (PC)
 
@@ -163,8 +163,8 @@ Add `-DTARGET_PC_NATIVE_UI=ON` to your CMake configure line for native rental sh
 
 ```sh
 # ALBW mod (recommended for this fork):
-git clone --recursive https://github.com/WadeWinningWilson/ALBW-Dusklight.git
-cd ALBW-Dusklight
+git clone --recursive https://github.com/WadeWinningWilson/A-Link-Between-Dusklight.git
+cd A-Link-Between-Dusklight
 
 # Or vanilla Dusklight only:
 # git clone --recursive https://github.com/TwilitRealm/dusklight.git
