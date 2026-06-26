@@ -126,5 +126,6 @@ That chat will compare against this doc and [build-fps-guidelines.md](build-fps-
 | Doc | Topic |
 |-----|--------|
 | [build-fps-guidelines.md](build-fps-guidelines.md) | Canonical build, launch, validation |
+| [build-fps-guidelines.md § Addendum (2026-06-25)](build-fps-guidelines.md#addendum-build-artifact-failures-2026-06-25) | **Low FPS on WIP:** check build/source/exe before blaming HUD draw |
 | [albw-hud-lop-layout-v3-instructions.md](albw-hud-lop-layout-v3-instructions.md) | LoP layout design spec |
 | [commit-and-push.md](commit-and-push.md) | Push to `upstream` (ALBW-Dusklight fork) |

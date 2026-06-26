@@ -11,9 +11,12 @@ Output: rodan.bdf next to this script
 """
 
 import struct, os
+from pathlib import Path
 
-BFN_PATH = r'C:\Users\<user>\Documents\dusklight\tools\font_extract\bfn\rodan_b_24_22.bfn'
-BDF_PATH = r'C:\Users\<user>\Documents\dusklight\tools\font_extract\rodan.bdf'
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_FONT_EXTRACT = _SCRIPT_DIR / "font_extract"
+BFN_PATH = _FONT_EXTRACT / "bfn" / "rodan_b_24_22.bfn"
+BDF_PATH = _FONT_EXTRACT / "rodan.bdf"
 
 with open(BFN_PATH, 'rb') as f:
     d = f.read()

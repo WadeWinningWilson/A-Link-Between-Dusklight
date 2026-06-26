@@ -4,10 +4,12 @@ Assumes: 256 glyphs, I4 format, 24x24 effective glyph size (stored as 3x3 tiles 
 """
 
 import struct
+from pathlib import Path
 from PIL import Image
 
-BFN_PATH = r'C:\Users\<user>\Documents\dusklight\tools\font_extract\bfn\rodan_b_24_22.bfn'
-OUT_PATH = r'C:\Users\<user>\Documents\dusklight\tools\font_extract\rodan_atlas.png'
+_FONT_EXTRACT = Path(__file__).resolve().parent / "font_extract"
+BFN_PATH = _FONT_EXTRACT / "bfn" / "rodan_b_24_22.bfn"
+OUT_PATH = _FONT_EXTRACT / "rodan_atlas.png"
 
 with open(BFN_PATH, 'rb') as f:
     d = f.read()

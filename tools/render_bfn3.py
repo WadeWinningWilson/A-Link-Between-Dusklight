@@ -4,11 +4,13 @@ Tries several atlas dimensions until one produces readable glyphs.
 GC I4: 4 bits/px, tiles stored as 8x8 blocks in row-major tile order.
 """
 import struct
+from pathlib import Path
 from PIL import Image
 import os
 
-BFN_PATH = r'C:\Users\<user>\Documents\dusklight\tools\font_extract\bfn\rodan_b_24_22.bfn'
-OUT_DIR  = r'C:\Users\<user>\Documents\dusklight\tools\font_extract'
+_FONT_EXTRACT = Path(__file__).resolve().parent / "font_extract"
+BFN_PATH = _FONT_EXTRACT / "bfn" / "rodan_b_24_22.bfn"
+OUT_DIR = _FONT_EXTRACT
 
 with open(BFN_PATH, 'rb') as f:
     d = f.read()

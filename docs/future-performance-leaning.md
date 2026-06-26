@@ -90,6 +90,20 @@ Runners: `local_dev_backup/session/Invoke-BasicFpsDrive.ps1` (after restore), `r
 
 ---
 
+## Addendum (2026-06-25)
+
+**Reconciles** the June 17 “field ~50–67 everywhere” drive numbers with the June 25 investigation outcome:
+
+- Early drive batches in § “Drive research — ineffective methods” remain **directionally valid** for **protocol mistakes** (no baseline restore, wrong mission framing, shield drives as FPS tests).
+- A **later session** on WIP @ `5b0fdaf` showed that **~77 FPS** on the same commit was caused by **dirty investigation source** (`fps-probe-temp` stash) and/or a **bad main `build/` executable**, not inherent WIP slowness. Clean worktree + good exe → **~144**.
+- **~32 FPS** on all exes followed **`reconfigure_build.bat`** on main — a **build-environment** failure, not a gameplay regression.
+
+**Do not** use June 17 field ~50–67 numbers to conclude WIP @ `5b0fdaf` is permanently sub-60. **Do** use them to avoid repeating bad drive protocol.
+
+Full symptom table, agent avoid/do, and recovery: [build-fps-guidelines.md § Addendum (2026-06-25)](build-fps-guidelines.md#addendum-build-artifact-failures-2026-06-25). Drive session rules: [performance-handoff.md § Drive session addendum (2026-06-25)](performance-handoff.md#addendum-drive-session-protocol-2026-06-25).
+
+---
+
 ## Session log (2026-06-18)
 
 **[performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md)** — Tracks B/C (WIP stubs), pre141/v141merge matrix, Track D binary bisect, infrastructure, contradictions, next steps. Primary raw log: `local_dev_backup/drive_research/track_abc_progress.log`.

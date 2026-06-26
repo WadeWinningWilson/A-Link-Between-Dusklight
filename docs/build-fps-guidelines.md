@@ -16,6 +16,7 @@
 | **4** | **[commit-and-push.md](commit-and-push.md)** | Commit/push to `upstream` (ALBW-Dusklight fork); never-commit list |
 | **5** | **[performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md)** | Historical drive evidence if you need SHAs / what was ruled out |
 | **6** | **[albw-hud-lop-layout-brief.md](albw-hud-lop-layout-brief.md)** | LoP layout *behavior* spec (feature agent); cross-ref §2 for FPS |
+| **7** | **§ [Addendum: Build artifact failures (2026-06-25)](#addendum-build-artifact-failures-2026-06-25)** (this file) | Symptom → cause, agent avoid/do, `build_run` vs `reconfigure`, recovery |
 
 **Feature-specific briefs** (read only if the diff touches that area): `boss-fights-handoff.md`, `TrueALBWWorld.md` (TRUETEST / open-world bootstrap), `albw-boss-hp-hud-tuning-brief.md`, `albw-hud-lop-layout-v3-instructions.md`, `testing-parry-rework.md` (RB parry + parry VFX/SFX test toggle).
 
@@ -181,11 +182,93 @@ If field is **~50–70** on RelWithDebInfo with clean env, suspect **wrong exe, 
 
 ---
 
+## Addendum: Build artifact failures (2026-06-25)
+
+**Context:** WIP @ `5b0fdaf` (parry rework, focused arts, HUD meters) is **144-capable**. A June 2026 investigation session saw **~77 FPS** and **~32 FPS** on the same commit — caused by **build/source hygiene**, not WIP gameplay code. See also [performance-handoff.md § Addendum: June 2026 WIP FPS incident](performance-handoff.md#addendum-june-2026-wip-fps-incident-resolved) and [future-performance-leaning.md § Addendum (2026-06-25)](future-performance-leaning.md#addendum-2026-06-25).
+
+### Symptom → cause (quick reference)
+
+| Observed FPS | Likely cause | First action |
+|--------------|--------------|--------------|
+| ~50–70 steady | **Debug** preset, wrong exe, or `DUSK_DRIVE*` still set | Confirm RelWithDebInfo exe; clear drive env |
+| ~77 on WIP commit | **Dirty investigation source** on main (`fps-probe-temp` stash) **or** bad main `build/` exe | Clean tree or worktree build; same-commit exe A/B |
+| ~32 on all exes | **Broken build environment** after main `reconfigure_build.bat` / fresh CMake without seeded `_deps` | Recover via worktree (`build_fps_probe.bat`); do not bisect HUD |
+| ~105 single-sample cliff | Intermittent hitch (WIP and v1.4.1) | [performance-handoff.md](performance-handoff.md) profiler follow-up |
+| ~140–144 field | Healthy RelWithDebInfo + clean source + good exe | Baseline |
+
+### Three-layer incident (plain language)
+
+1. **~77 FPS — dirty source:** Temporary bisect stubs, profiling hooks, and pad inject helpers (later in stash `fps-probe-temp`) were mixed into the main working tree. Same commit built cleanly in a worktree → **~144**; dirty main tree → **~77**.
+2. **~77 FPS — bad executable:** Same source, worktree-built exe **144**, main `build/` exe **77**. Copying the worktree exe into main’s build folder restored **144** — a **link/cache artifact**, not a gameplay regression.
+3. **~32 FPS — broken reconfigure:** After `reconfigure_build.bat` on main, **all** binaries (worktree, upstream, WIP) reported ~32 FPS. Environmental/build-deps failure, not WIP features. Cleared after rebuilding via the investigate worktree path.
+
+**Do not** revert WIP HUD/FA/parry features to “fix” these symptoms — optimize in place (§3, [hud-performance-handoff.md](hud-performance-handoff.md)).
+
+### Avoid (future AI builds)
+
+- Leave **investigation stubs** in main `src/` (bisect env checks, `game_clock` profiling, file-select stubs, etc.).
+- **Pop `fps-probe-temp`** (or similar investigation stashes) onto main without a deliberate bisect plan.
+- Use **`reconfigure_build.bat`** as the default build — only when CMake configure is genuinely broken.
+- **Delete or full-reconfigure** main `build/` as the first FPS fix attempt.
+- Conclude **“WIP is slow”** when `build_run.bat` exits 0 but FPS is still low — suspect **source or exe**, not compile failure.
+- Trust FPS during **manual play** with `DUSK_DRIVE*` or `DUSK_DRIVE_STUB_*` still set.
+- **Commit** drive hooks in `m_Do_main.cpp`, `files.cmake`, etc. — drive sources stay gitignored (see [performance-handoff.md § Drive session addendum](performance-handoff.md#addendum-drive-session-protocol-2026-06-25)).
+
+### Do instead
+
+- **Incremental build:** `build_run.bat` → `build/windows-msvc-relwithdebinfo/dusklight.exe` on an **existing** RelWithDebInfo dir.
+- **If main build is suspect:** build in `dusklight-fps-investigate` via `build_fps_probe.bat` (seeds `_deps` from main), then copy exe if needed.
+- **Same-commit exe A/B:** worktree exe vs main `build/` exe before blaming gameplay code.
+- **Clear drive env** before manual FPS reports (§2).
+- **Optimize in place** per [hud-performance-handoff.md](hud-performance-handoff.md) when HUD changed.
+
+### When `build_run.bat` is not enough
+
+| Situation | Why | Recovery |
+|-----------|-----|----------|
+| Fresh worktree / missing `build/` | `cmake --preset` tries FetchContent download → SSL/network failures | Seed `_deps` from main; use `build_fps_probe.bat` or `CloneMainBuild.ps1` ([performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md)) |
+| `build.ninja` exists but cache stale | `build_run.bat` **does not** reconfigure | Prefer incremental ninja; if deps/submodules changed badly, use offline reconfigure **once**, then return to incremental |
+| Link errors after drive overlay | `files.cmake` lists gitignored `drive.cpp` but file missing | Restore drive files from `local_dev_backup/` or revert hooks; build in investigate worktree |
+| Compile OK, FPS still ~70 | Dirty source or wrong exe | Stash audit + exe A/B — not more reconfigure |
+
+### Why agents abandoned `build_run.bat`
+
+| What agents reported | What was usually true |
+|----------------------|------------------------|
+| “Configure failed” | Fresh CMake without `FETCHCONTENT_FULLY_DISCONNECTED` / seeded `_deps` |
+| “Build didn’t fix FPS” | Ninja succeeded; **source or exe** still bad |
+| “Link error on drive.h” | Drive overlay partial after stash/checkout |
+| “Worktree has no build” | Needed cloned build dir, not bare `build_run.bat` |
+
+### `reconfigure_build.bat` hazard
+
+Script at repo root forces full `cmake --preset` with offline FetchContent paths. Reasonable **once** when configure/fetch fails; **not** routine. In the June 2026 session it correlated with **global ~32 FPS** on all exes. Prefer worktree recovery over repeated main reconfigure.
+
+### `fps-probe-temp` stash
+
+Named investigation stash containing bisect/profiling changes that caused **~77 FPS** on main when applied. **Do not pop** onto main unless intentionally bisecting — use a dedicated worktree instead.
+
+### Drive `config.json` swap
+
+`local_dev_backup/session/run_load_save_drive.ps1` temporarily replaces `%AppData%/TwilitRealm/Dusklight/config.json` with a minimal test JSON and restores a backup in `finally`. If a drive is **killed** mid-run, settings may look “reverted” — not an FPS cause. Re-check WIP toggles in AppData after drive batches.
+
+### Recovery workflow (local, gitignored)
+
+1. Sync source into `dusklight-fps-investigate` (or use existing worktree @ target commit).
+2. Run `build_fps_probe.bat` (seeds `_deps`, incremental ninja).
+3. Optional validation: `local_dev_backup/session/fps_drive_loop.ps1` (build + `load_save` drive until PASS).
+4. Copy `dusklight.exe` to main `build/windows-msvc-relwithdebinfo/` only after PASS if main artifact is suspect.
+5. Clear `DUSK_DRIVE*` before manual play (§2).
+
+---
+
 ## Related docs
 
 | Doc | Topic |
 |-----|--------|
 | [performance-handoff.md](performance-handoff.md) | Drive oracle, hitch investigation, profiler next steps |
+| [performance-handoff.md § June 2026 incident](performance-handoff.md#addendum-june-2026-wip-fps-incident-resolved) | Resolved ~77/~32 FPS root causes |
+| [performance-handoff.md § Drive session (2026-06-25)](performance-handoff.md#addendum-drive-session-protocol-2026-06-25) | `load_save` drive protocol, runners, pass/fail |
 | [performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md) | Full drive evidence (Tracks B–J) |
 | [future-performance-leaning.md](future-performance-leaning.md) | Original suspicions + ineffective-methods note |
 | [commit-and-push.md](commit-and-push.md) | Fork remotes, commit/push workflow |

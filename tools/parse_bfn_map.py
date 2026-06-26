@@ -3,8 +3,9 @@ parse_bfn_map.py — Parse MAP1 and WID1 sections from rodan_b_24_22.bfn.
 Needed to build the BDF character mapping table.
 """
 import struct
+from pathlib import Path
 
-BFN_PATH = r'C:\Users\<user>\Documents\dusklight\tools\font_extract\bfn\rodan_b_24_22.bfn'
+BFN_PATH = Path(__file__).resolve().parent / "font_extract" / "bfn" / "rodan_b_24_22.bfn"
 
 with open(BFN_PATH, 'rb') as f:
     d = f.read()

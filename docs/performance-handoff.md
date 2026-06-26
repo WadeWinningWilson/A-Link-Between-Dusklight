@@ -33,7 +33,7 @@ Restore **constant ~144 FPS in standard user play** — saved AppData preset, na
 ```powershell
 Get-Process dusklight -EA SilentlyContinue | Stop-Process -Force -EA SilentlyContinue
 powershell -NoProfile -ExecutionPolicy Bypass -File `
-  "c:\Users\<user>\Documents\dusklight\local_dev_backup\session\run_track_g_user_natural.ps1"
+  "<repo-root>\local_dev_backup\session\run_track_g_user_natural.ps1"
 ```
 
 | Env | Value |
@@ -202,7 +202,7 @@ F2 (`armogohma_shield.log`) hung after `settings_applied` with `play_n=0`. Obser
 Get-Process dusklight -EA SilentlyContinue | Stop-Process -Force -EA SilentlyContinue
 Remove-Item Env:DUSK_DRIVE* -EA SilentlyContinue
 Remove-Item Env:DUSK_DRIVE_STUB_* -EA SilentlyContinue
-& "c:\Users\<user>\Documents\dusklight\build\windows-msvc-relwithdebinfo\dusklight.exe"
+& "<repo-root>\build\windows-msvc-relwithdebinfo\dusklight.exe"
 ```
 
 Use saved AppData preset only — no `--cvar` overrides, no drive env.
@@ -226,12 +226,109 @@ Use saved AppData preset only — no `--cvar` overrides, no drive env.
 
 Rebuild before commit if source changed during playtest: `build_run.bat`.
 
+---
+
+## Addendum: June 2026 WIP FPS incident (resolved)
+
+**Date:** 2026-06-25. **Commit:** `5b0fdaf` (checkpoint parry rework, focused arts, HUD meter baseline).
+
+### Outcome
+
+- WIP at this commit is **144-capable** on natural `load_save` → `F_SP121` room 3 with saved AppData preset (RelWithDebInfo, no drive env).
+- Regression to **~77 FPS** was traced to **dirty investigation source** (`fps-probe-temp` stash content) and/or a **bad main `build/` executable** — not WIP HUD/meter/FA code.
+- **~32 FPS** on all exes followed **`reconfigure_build.bat`** on main — build-environment artifact; recovered via investigate worktree rebuild.
+
+### Ruled out (this incident)
+
+| Suspect | Verdict |
+|---------|---------|
+| WIP feature content @ `5b0fdaf` | **Not the cause** — clean worktree + same commit → ~144 |
+| Upstream baseline permanently broken | **No** — upstream hit ~144 before bad reconfigure |
+| Drive code in normal play | **No** — drive hooks reverted from main; drive only runs when `DUSK_DRIVE` is set |
+
+Full symptom table and agent avoid/do: [build-fps-guidelines.md § Addendum (2026-06-25)](build-fps-guidelines.md#addendum-build-artifact-failures-2026-06-25).
+
+---
+
+## Addendum: Drive session protocol (2026-06-25)
+
+**Purpose:** Automated drives are an **oracle** for repeatable `load_save` → field FPS — not a substitute for natural user play. See also [build-fps-guidelines.md §2 Launch hygiene](build-fps-guidelines.md#2-launch-hygiene).
+
+### When to drive vs manual play
+
+| Use drives | Use manual play |
+|------------|-----------------|
+| Regression after a **known-good build** | “Does it feel like 144?” user judgment |
+| Repeatable `F_SP121` gate (observe s 6–12, floor 127) | Saved AppData preset, no drive env |
+| Labeled A/B (config, exe source) | Final sign-off before commit |
+
+**Do not** use `armogohma_shield` or heavy combat automation as FPS baselines (existing handoff rule still applies).
+
+### Pre-flight (every batch)
+
+1. Build RelWithDebInfo first — prefer investigate worktree if main `build/` is suspect ([build-fps-guidelines.md addendum](build-fps-guidelines.md#addendum-build-artifact-failures-2026-06-25)).
+2. Do **not** start with `reconfigure_build.bat` on main.
+3. Do **not** pop `fps-probe-temp` onto main.
+4. Kill stray `dusklight.exe` before rebuild/drive.
+
+### Drive code location
+
+| Item | Rule |
+|------|------|
+| `src/dusk/drive.cpp`, `include/dusk/drive.h` | **Gitignored** — local automation only |
+| Hooks in `m_Do_main`, pad, `files.cmake` | **Not for shipping** — session overlay only; revert before handoff unless user keeps tooling |
+| Scripts | `local_dev_backup/session/` (gitignored) |
+| **`deploy_drive.ps1`** | **Avoid** — pad-hook patterns have broken good hooks |
+
+### Runners
+
+| Script | Role |
+|--------|------|
+| `local_dev_backup/session/run_load_save_drive.ps1` | Single dive: slot 0, config swap + restore, JSON result |
+| `local_dev_backup/session/fps_drive_loop.ps1` | Worktree build + drive until PASS; optional exe copy to main |
+
+Always pass **`-Dive N -Label descriptive-name`**. Example config: `$env:TEMP\dusklight-golden-minimal2.json` (document which config was used).
+
+### Expected log chain (`load_save`)
+
+```
+menu_nav → file_select_ready → menu_wait (12s) → save_load slot=0 → load_enter stage=F_SP121 → load_fps_gate_pass
+```
+
+**Automation gotchas (2026-06-25):**
+
+- Opening cutscene ~75s — pad inject alone may not reach file select; **`force_name_scene`** after grace is the recovery path (in local `drive.cpp` overlay).
+- **Do not** start the 12s menu FPS window at **t=0** — only after `file_select_ready`.
+
+### Pass / fail interpretation
+
+| Result | Meaning | Fix first |
+|--------|---------|-----------|
+| `gate_min ≥ 127`, `play_avg ~140–144` | **PASS** | — |
+| ~70 field, clean env | Wrong exe or dirty source | Exe A/B, stash audit — not HUD bisect |
+| ~32 everywhere | Bad build artifact | Worktree rebuild — stop driving |
+| `navigate_timeout`, `save_sent=0` | Automation bug | Drive navigation — not FPS code |
+
+### After a drive batch
+
+1. Clear `DUSK_DRIVE*` and `DUSK_DRIVE_STUB_*`.
+2. Confirm **`config.json` restored** (WIP toggles intact).
+3. One **manual** field check with no drive env.
+4. Revert temporary drive hooks from main if session added them.
+5. Do **not** commit drive artifacts or `local_dev_backup/`.
+
+### One-line agent mandate
+
+> Build clean RelWithDebInfo → run labeled `load_save` drive with config restore → PASS means ~144 on F_SP121 after real save load; otherwise fix **build, source hygiene, or automation** — not “revert the HUD.”
+
+---
 
 ## Related docs
 
 | Doc | Topic |
 |-----|--------|
 | [build-fps-guidelines.md](build-fps-guidelines.md) | **Agent build & launch contract** |
+| [build-fps-guidelines.md § Addendum (2026-06-25)](build-fps-guidelines.md#addendum-build-artifact-failures-2026-06-25) | Symptom → cause, exe A/B, recovery |
 | [commit-and-push.md](commit-and-push.md) | Fork remotes, commit/push workflow |
 | [performance-leaning-2026-06-18.md](performance-leaning-2026-06-18.md) | Full evidence tables |
 | [future-performance-leaning.md](future-performance-leaning.md) | Original suspicions + ineffective-methods note |

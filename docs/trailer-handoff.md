@@ -27,7 +27,7 @@ All `dusklight-*.png` files from the original Cursor session folder were copied 
 Original source (no longer needed unless re-exporting):
 
 ```
-C:\Users\<user>\.cursor\projects\c-Users-<user>-Documents-dusklight\assets\
+%USERPROFILE%\.cursor\projects\<workspace-hash>\assets\
 ```
 
 ---

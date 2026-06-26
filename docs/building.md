@@ -243,3 +243,18 @@ macOS builds an `.app` bundle which contains the executable and all necessary re
 ```sh
 build/{preset}/Dusklight.app/Contents/MacOS/Dusklight --dvd /path/to/game.iso
 ```
+
+---
+
+## FPS validation builds (addendum)
+
+For **performance validation** (target ~140–144 FPS in field play), use **RelWithDebInfo** only — not Debug or ASAN presets.
+
+| Task | Command / doc |
+|------|----------------|
+| **Default daily build (Windows)** | `build_run.bat` → `build/windows-msvc-relwithdebinfo/dusklight.exe` |
+| **Full agent contract** | [build-fps-guidelines.md](build-fps-guidelines.md) — preset, launch hygiene, validation checklist |
+| **Low FPS / bad exe / reconfigure issues** | [build-fps-guidelines.md § Addendum (2026-06-25)](build-fps-guidelines.md#addendum-build-artifact-failures-2026-06-25) |
+| **Automated drive oracle** | [performance-handoff.md § Drive session addendum (2026-06-25)](performance-handoff.md#addendum-drive-session-protocol-2026-06-25) |
+
+**Do not** use `reconfigure_build.bat` for routine perf checks — it is for CMake configure recovery only when fetch/offline deps are required. If main `build/` produces a suspect exe, build via the investigate worktree path documented in the build-fps addendum instead of wiping main `build/` first.

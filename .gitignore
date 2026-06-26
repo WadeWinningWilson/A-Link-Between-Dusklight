@@ -68,6 +68,16 @@ Diagnostic files/
 # Agent build logs
 build_stdout.txt
 build_stderr.txt
+build_stdout_*.txt
+build_stderr_*.txt
+golden_err*.txt
+
+# Local dev rebuild helpers (see build_run.bat / rebuild.bat in repo)
+clean_rebuild.bat
+reconfigure_build.bat
+
+# Cursor-export mockups (machine-specific paths; see docs/mockups/README.md)
+docs/mockups/c__Users_*
 
 # MacOS
 .DS_Store

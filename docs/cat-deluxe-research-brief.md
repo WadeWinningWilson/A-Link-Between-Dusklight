@@ -23,7 +23,7 @@
 
 **Context:** [shield-combat.md](shield-combat.md) — Dawnlight manual shield (R1–R7) is done. Shield **durability** is **not** in Dawnlight; it is in **Cat Deluxe** (exe-only).
 
-**ALBW target repo:** `C:\Users\<user>\Documents\dusklight` (ALBW-Dusklight).
+**ALBW target repo:** local clone of ALBW-Dusklight (repo root).
 
 ---
 

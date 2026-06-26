@@ -1,7 +1,10 @@
 """inspect_bfn.py — Parse BFN section headers and INF1 font metrics."""
 import struct
+from pathlib import Path
 
-with open(r'C:\Users\<user>\Documents\dusklight\tools\font_extract\bfn\rodan_b_24_22.bfn', 'rb') as f:
+BFN_PATH = Path(__file__).resolve().parent / "font_extract" / "bfn" / "rodan_b_24_22.bfn"
+
+with open(BFN_PATH, 'rb') as f:
     d = f.read()
 
 pos = 0x20

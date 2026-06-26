@@ -214,7 +214,7 @@ All `#if TARGET_PC` / existing ALBW shield module patterns.
 
 **Not gated by `shieldParryCombat`.** On PC builds, passive ALBW refill is skipped whenever Link is in a guard state:
 
-```505:507:c:\Users\<user>\Documents\dusklight\src\d\d_meter2.cpp
+```505:507:src/d/d_meter2.cpp
 static bool dMeter2_isALBWRecoveryPausedByGuard() {
     return daPy_getPlayerActorClass()->checkPlayerGuard() != 0;
 }
@@ -224,7 +224,7 @@ Used in the passive recovery tick (~2076–2117): `allowPassiveRecovery = !sALBW
 
 **What counts as “guarding”** (`checkPlayerGuard()` — broader than upper guard alone):
 
-```180:183:c:\Users\<user>\Documents\dusklight\src\d\actor\d_a_alink_guard.inc
+```180:183:src/d/actor/d_a_alink_guard.inc
 BOOL daAlink_c::checkPlayerGuard() const {
     return (checkSmallUpperGuardAnime() || (checkShieldGet() && checkHorseLieAnime())) ||
            checkUpperGuardAnime();
