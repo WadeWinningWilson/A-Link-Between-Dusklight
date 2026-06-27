@@ -28,12 +28,10 @@ Inspired by CaptainKittyCa2’s ALBW meter mod work. Base game by [TwilitRealm](
 | Wolf Link combat overhaul (optional) | ✅ |
 | Enemy HP multipliers — Normal / Mid-Boss / Boss / Final (optional) | ✅ |
 | Enemy Wealth + HUD popup (optional) | ✅ |
-| Colossal Wallet / final pricing pass | ⏳ |
-| Upstream Dusklight v1.3.1 merge | ⏳ |
+| Final Pricing Passes| ⏳ |
 | Postman shop — heart & ALBW meter upgrades (Master Quest) | ✅ (stamina row icon swap pending) |
-| Lockout boomerang — visual ranged-open feedback | ⏳ |
-| Enemy HP multiplier — finish true max-HP migration | ⏳ |
-| Zant & Ganon finale boss changes | ⏳ |
+| Enemy HP multiplier final touches| ⏳ |
+| Boss Refinement| ⏳ |
 
 Full gameplay, settings, and source file list: **[docs/albw-port.md](docs/albw-port.md)** (includes **Next on the docket**).
 
